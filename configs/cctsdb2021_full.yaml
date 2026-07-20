@@ -1,0 +1,15 @@
+# CCTSDB2021 full (day + night + weather mixed) — >10k images
+# Build with: python scripts/prepare_cctsdb_full.py
+# 3 super-classes aligned with CNTSSS ids
+
+path: ../data/processed/cctsdb2021_full
+train: train/images
+val: test/images
+test: test/images
+
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+
+nc: 3
