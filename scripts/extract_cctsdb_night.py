@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """Extract CCTSDB2021 night-condition test images into YOLO layout.
 
-CCTSDB2021 ships a package:
-  "classification based on weather and environment"
-with XML annotations for the 1500 positive test images, labeled by
-weather/lighting. This script finds night/dark/low-light XMLs and
-copies matching images + converts boxes to YOLO txt (3 classes).
+CCTSDB2021 layout (after unzip on server):
+  test_img/*.jpg          — test images numbered ~18992–20491 (1500)
+  weather_env/.../night/  — 500 VOC XMLs (stems may be 00552… not image ids)
+  xml/xml/*.xml           — full VOC for all images (prefer for boxes)
 
-Manual step first:
-  1. Download from https://github.com/csust7zhangjm/CCTSDB2021
-     Google Drive: https://drive.google.com/drive/folders/14Km2W-5hbixXDfz7WSqW_Rx7O5m8ZMFn
-  2. Unpack into data/raw/CCTSDB2021/ with at least:
-       - test images (test_img or similar)
-       - weather/environment classification XMLs
-       - optional: train_labels for class-name mapping
+Night XML stems often do NOT match image filenames. Resolution order:
+  1) <filename> inside night XML
+  2) exact stem match
+  3) if stem is integer i in [0, 1500): image id 18992+i (official test range start)
+  4) if stem is integer, try raw int as image stem (zero-pad variants)
 
-Class names in CCTSDB are typically: prohibitory, mandatory, warning
-(same 3 super-classes as CNTSSS).
+Usage:
+  python scripts/extract_cctsdb_night.py --list-only
+  python scripts/extract_cctsdb_night.py
 """
 from __future__ import annotations
 
@@ -29,13 +27,16 @@ from pathlib import Path
 
 IMG_EXTS = (".jpg", ".jpeg", ".png", ".bmp")
 
-# Keywords in path/filename/XML that suggest nighttime
 NIGHT_PATTERNS = re.compile(
-    r"(night|dark|low.?light|evening|dusk|dim|nighttime|nigh)",
+    r"(night|dark|low.?light|evening|dusk|dim|nighttime|/night[\\/])",
     re.IGNORECASE,
 )
 
-# Map common Chinese/English class names → id 0/1/2 (align with CNTSSS)
+# CCTSDB2021 positive test set numbering (README)
+TEST_ID_START = 18992
+TEST_ID_END = 20491  # inclusive
+TEST_COUNT = 1500
+
 CLASS_ALIASES = {
     "prohibitory": 0,
     "prohibition": 0,
@@ -44,19 +45,25 @@ CLASS_ALIASES = {
     "mandatorysign": 1,
     "warning": 2,
     "warning sign": 2,
-    # Chinese common names in CCTSDB papers
     "禁止": 0,
     "指示": 1,
     "警告": 2,
+    # numeric class ids sometimes appear
+    "0": 0,
+    "1": 1,
+    "2": 2,
 }
 
 
 def find_images(root: Path) -> dict[str, Path]:
-    """stem -> path for all images under root."""
     out: dict[str, Path] = {}
     for p in root.rglob("*"):
         if p.suffix.lower() in IMG_EXTS and p.is_file():
             out[p.stem] = p
+            # also index unpadded / padded numeric stems
+            if p.stem.isdigit():
+                out[str(int(p.stem))] = p
+                out[f"{int(p.stem):05d}"] = p
     return out
 
 
@@ -64,27 +71,16 @@ def find_xmls(root: Path) -> list[Path]:
     return sorted(root.rglob("*.xml"))
 
 
-def xml_is_night(xml_path: Path, tree: ET.ElementTree) -> bool:
-    """Heuristic: night if path or any text node matches night patterns."""
-    if NIGHT_PATTERNS.search(str(xml_path)):
+def is_night_path(xml_path: Path) -> bool:
+    """True if path clearly under a night condition folder."""
+    parts = [x.lower() for x in xml_path.parts]
+    # exact folder name night (weather package)
+    if "night" in parts:
         return True
-    root = tree.getroot()
-    # folder / filename / condition tags
-    for tag in ("folder", "filename", "condition", "weather", "time", "lighting", "scene"):
-        el = root.find(tag)
-        if el is not None and el.text and NIGHT_PATTERNS.search(el.text):
-            return True
-    # any descendant text
-    for el in root.iter():
-        if el.text and NIGHT_PATTERNS.search(el.text):
-            return True
-        if el.tail and NIGHT_PATTERNS.search(el.tail):
-            return True
-    return False
+    return bool(NIGHT_PATTERNS.search(str(xml_path)))
 
 
 def parse_voc_boxes(tree: ET.ElementTree) -> list[tuple[str, int, int, int, int]]:
-    """Return list of (class_name, xmin, ymin, xmax, ymax)."""
     boxes = []
     root = tree.getroot()
     for obj in root.findall("object"):
@@ -108,7 +104,6 @@ def class_to_id(name: str) -> int | None:
     key = name.strip().lower()
     if key in CLASS_ALIASES:
         return CLASS_ALIASES[key]
-    # fuzzy
     for k, v in CLASS_ALIASES.items():
         if k in key or key in k:
             return v
@@ -127,9 +122,7 @@ def voc_to_yolo(
         bh = max(0, ymax - ymin)
         cx = xmin + bw / 2
         cy = ymin + bh / 2
-        lines.append(
-            f"{cid} {cx / w:.6f} {cy / h:.6f} {bw / w:.6f} {bh / h:.6f}"
-        )
+        lines.append(f"{cid} {cx / w:.6f} {cy / h:.6f} {bw / w:.6f} {bh / h:.6f}")
     return lines
 
 
@@ -138,7 +131,7 @@ def image_size(path: Path) -> tuple[int, int]:
         from PIL import Image
 
         with Image.open(path) as im:
-            return im.size  # w, h
+            return im.size
     except Exception:
         import cv2
 
@@ -149,107 +142,153 @@ def image_size(path: Path) -> tuple[int, int]:
         return w, h
 
 
+def resolve_image_stem(
+    xml_path: Path, tree: ET.ElementTree, images: dict[str, Path]
+) -> tuple[str | None, str]:
+    """Return (matched_stem_in_images_dict, method) or (None, reason)."""
+    candidates: list[tuple[str, str]] = []
+
+    fn = tree.getroot().findtext("filename")
+    if fn:
+        candidates.append((Path(fn.strip()).stem, "xml.filename"))
+
+    candidates.append((xml_path.stem, "xml.stem"))
+
+    # numeric strategies
+    stem = xml_path.stem
+    if stem.isdigit():
+        i = int(stem)
+        candidates.append((str(i), "int"))
+        candidates.append((f"{i:05d}", "int05"))
+        # test-set index → absolute id (18992 + i)
+        if 0 <= i < TEST_COUNT:
+            candidates.append((str(TEST_ID_START + i), "test_offset"))
+            candidates.append((f"{TEST_ID_START + i:05d}", "test_offset05"))
+        # already absolute test id
+        if TEST_ID_START <= i <= TEST_ID_END:
+            candidates.append((str(i), "test_abs"))
+            candidates.append((f"{i:05d}", "test_abs05"))
+
+    for cand, method in candidates:
+        if cand in images:
+            return cand, method
+    return None, "no_match:" + ",".join(c for c, _ in candidates[:6])
+
+
+def find_label_xml(
+    img_stem: str, night_xml: Path, all_xml_by_stem: dict[str, Path]
+) -> Path:
+    """Prefer full VOC under xml/ for boxes; fall back to night xml."""
+    for key in (img_stem, f"{int(img_stem):05d}" if img_stem.isdigit() else img_stem):
+        if key in all_xml_by_stem:
+            # prefer non-weather full annotations if multiple
+            p = all_xml_by_stem[key]
+            return p
+    # any xml with this stem
+    return night_xml
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Extract CCTSDB2021 night test subset")
+    parser.add_argument("--src", type=Path, default=Path("data/raw/CCTSDB2021"))
+    parser.add_argument("--out", type=Path, default=Path("data/processed/cctsdb2021_night"))
+    parser.add_argument("--list-only", action="store_true")
     parser.add_argument(
-        "--src",
-        type=Path,
-        default=Path("data/raw/CCTSDB2021"),
-        help="Unpacked CCTSDB2021 root",
-    )
-    parser.add_argument(
-        "--out",
-        type=Path,
-        default=Path("data/processed/cctsdb2021_night"),
-        help="Output YOLO-layout folder",
-    )
-    parser.add_argument(
-        "--list-only",
-        action="store_true",
-        help="Only list night candidates, do not copy",
-    )
-    parser.add_argument(
-        "--force-all-test-xml",
-        action="store_true",
-        help="If night heuristics fail, print structure help",
+        "--night-glob",
+        default="**/night/**/*.xml",
+        help="Glob under --src for night XMLs (default: **/night/**/*.xml)",
     )
     args = parser.parse_args()
 
     if not args.src.exists():
         print(f"ERROR: {args.src} not found.")
-        print("Download CCTSDB2021 (Google Drive / Baidu) and unpack there.")
-        print("  https://github.com/csust7zhangjm/CCTSDB2021")
         return 1
 
     print(f"Scanning images under {args.src} ...")
     images = find_images(args.src)
-    print(f"  found {len(images)} images")
+    # unique paths
+    n_unique = len({id(p) for p in images.values()})
+    print(f"  indexed {len(images)} stem keys → {n_unique} unique files")
+    sample_imgs = sorted({p.name for p in images.values()})[:5]
+    print(f"  sample images: {sample_imgs}")
 
-    print(f"Scanning XMLs under {args.src} ...")
-    xmls = find_xmls(args.src)
-    print(f"  found {len(xmls)} XML files")
+    # Night XMLs: prefer folder named night
+    night_xmls = sorted(args.src.glob(args.night_glob))
+    if not night_xmls:
+        # fallback: any xml whose path matches night
+        night_xmls = [x for x in find_xmls(args.src) if is_night_path(x)]
+    print(f"Night XMLs: {len(night_xmls)}")
 
-    # Prefer weather/environment package if present
-    weather_xmls = [
-        x
-        for x in xmls
-        if re.search(r"weather|environment|condition|classif", str(x), re.I)
-    ]
-    scan_xmls = weather_xmls if weather_xmls else xmls
-    print(f"  scanning {len(scan_xmls)} XMLs for night condition")
+    if night_xmls:
+        # debug first xml
+        try:
+            t0 = ET.parse(night_xmls[0])
+            print(
+                f"  sample night xml: {night_xmls[0].name} "
+                f"filename={t0.getroot().findtext('filename')!r} "
+                f"objects={len(t0.getroot().findall('object'))}"
+            )
+        except ET.ParseError as e:
+            print(f"  sample parse fail: {e}")
 
-    night_stems: list[str] = []
-    night_xml_map: dict[str, Path] = {}
-    unmapped_classes: set[str] = set()
-    parent_folders: dict[str, int] = {}
+    all_xml_by_stem: dict[str, Path] = {}
+    for xp in find_xmls(args.src):
+        # prefer xml/ tree over weather for same stem (longer path with /xml/)
+        stem = xp.stem
+        prev = all_xml_by_stem.get(stem)
+        if prev is None:
+            all_xml_by_stem[stem] = xp
+        elif "weather" in str(prev).lower() and "weather" not in str(xp).lower():
+            all_xml_by_stem[stem] = xp
+        if stem.isdigit():
+            all_xml_by_stem[str(int(stem))] = all_xml_by_stem.get(
+                str(int(stem)), all_xml_by_stem[stem]
+            )
 
-    for xp in scan_xmls:
+    matched: list[tuple[str, Path, str]] = []  # img_stem, night_xml, method
+    missing = []
+    methods: dict[str, int] = {}
+
+    for xp in night_xmls:
         try:
             tree = ET.parse(xp)
         except ET.ParseError:
+            missing.append((xp.stem, "parse_error"))
             continue
-        if not xml_is_night(xp, tree):
+        img_stem, method = resolve_image_stem(xp, tree, images)
+        if img_stem is None:
+            missing.append((xp.stem, method))
             continue
-        stem = xp.stem
-        # VOC often uses filename tag
-        fn = tree.getroot().findtext("filename")
-        if fn:
-            stem = Path(fn).stem
-        night_stems.append(stem)
-        night_xml_map[stem] = xp
-        parent = str(xp.parent.relative_to(args.src)) if xp.is_relative_to(args.src) else str(xp.parent)
-        parent_folders[parent] = parent_folders.get(parent, 0) + 1
+        methods[method] = methods.get(method, 0) + 1
+        matched.append((img_stem, xp, method))
 
-    night_stems = sorted(set(night_stems))
-    print(f"\nNight candidates: {len(night_stems)}")
-    if parent_folders:
-        print("  by folder:")
-        for k, v in sorted(parent_folders.items(), key=lambda x: -x[1])[:15]:
-            print(f"    {v:4d}  {k}")
+    # dedupe by image stem (keep first)
+    seen = set()
+    deduped = []
+    for item in matched:
+        if item[0] in seen:
+            continue
+        seen.add(item[0])
+        deduped.append(item)
+    matched = deduped
 
-    matched = [s for s in night_stems if s in images]
-    missing_img = [s for s in night_stems if s not in images]
-    print(f"  matched images: {len(matched)} | missing image files: {len(missing_img)}")
-    if missing_img[:5]:
-        print(f"  sample missing: {missing_img[:5]}")
+    print(f"\nMatched images: {len(matched)} | unresolved XMLs: {len(missing)}")
+    print(f"  resolve methods: {methods}")
+    if missing[:5]:
+        print(f"  sample unresolved: {missing[:5]}")
+    if matched[:5]:
+        print("  sample matched:")
+        for s, xp, m in matched[:5]:
+            print(f"    {s}  via {m}  <- {xp.name}")
 
-    if len(matched) == 0:
-        print("\nWARN: No night images matched. Inspect folder names under:")
-        # show unique parent names of all xml
-        parents = sorted({str(x.parent) for x in xmls})[:30]
-        for p in parents:
-            print(f"  {p}")
-        print("\nTip: open a few XMLs and note the tag used for lighting condition,")
-        print("then adjust NIGHT_PATTERNS in this script.")
-        if args.force_all_test_xml:
-            print("--force-all-test-xml set but still no match heuristic — aborting copy.")
+    if not matched:
+        print("\nFAIL: still 0 matches. Debug with:")
+        print("  ls data/raw/CCTSDB2021/test_img | head")
+        print("  ls \"data/raw/CCTSDB2021/weather_env\"/*/night | head")
+        print("  head -30 one night xml")
         return 2
 
     if args.list_only:
-        for s in matched[:20]:
-            print(f"  {s} <- {night_xml_map[s]}")
-        if len(matched) > 20:
-            print(f"  ... +{len(matched) - 20} more")
         return 0
 
     out_img = args.out / "images"
@@ -257,43 +296,63 @@ def main() -> int:
     out_img.mkdir(parents=True, exist_ok=True)
     out_lab.mkdir(parents=True, exist_ok=True)
 
+    unmapped_classes: set[str] = set()
     written = 0
-    skipped_cls = 0
-    for stem in matched:
-        src_im = images[stem]
-        xp = night_xml_map[stem]
+    empty_boxes = 0
+
+    for img_stem, night_xml, _method in matched:
+        src_im = images[img_stem]
+        # label xml: try full VOC first
+        label_xml = night_xml
+        for key in (
+            img_stem,
+            f"{int(img_stem):05d}" if img_stem.isdigit() else None,
+            night_xml.stem,
+        ):
+            if key and key in all_xml_by_stem:
+                cand = all_xml_by_stem[key]
+                # prefer non-weather
+                if "weather" not in str(cand).lower() or "weather" in str(label_xml).lower():
+                    label_xml = cand
+                    if "weather" not in str(cand).lower():
+                        break
+
         try:
-            tree = ET.parse(xp)
+            tree = ET.parse(label_xml)
             boxes = parse_voc_boxes(tree)
+            if not boxes:
+                # retry night xml
+                tree = ET.parse(night_xml)
+                boxes = parse_voc_boxes(tree)
             for name, *_ in boxes:
                 if class_to_id(name) is None:
                     unmapped_classes.add(name)
             w, h = image_size(src_im)
             lines = voc_to_yolo(boxes, w, h)
-            if not lines and boxes:
-                skipped_cls += 1
-            # copy image
-            dst_im = out_img / f"{stem}{src_im.suffix.lower()}"
+            if not lines:
+                empty_boxes += 1
+            dst_im = out_img / f"{img_stem}{src_im.suffix.lower()}"
             if not dst_im.exists():
                 shutil.copy2(src_im, dst_im)
-            (out_lab / f"{stem}.txt").write_text(
+            (out_lab / f"{img_stem}.txt").write_text(
                 "\n".join(lines) + ("\n" if lines else ""), encoding="utf-8"
             )
             written += 1
         except Exception as e:
-            print(f"  FAIL {stem}: {e}", file=sys.stderr)
+            print(f"  FAIL {img_stem}: {e}", file=sys.stderr)
 
-    # write list file
-    list_path = args.out / "night_list.txt"
-    list_path.write_text("\n".join(matched) + "\n", encoding="utf-8")
+    (args.out / "night_list.txt").write_text(
+        "\n".join(s for s, _, _ in matched) + "\n", encoding="utf-8"
+    )
 
     print(f"\nWrote {written} images+labels → {args.out}")
-    print(f"  Expected ~500 night test (paper plan); got {written}")
+    print(f"  Expected ~500 night; got {written}")
+    print(f"  empty labels: {empty_boxes}")
     if unmapped_classes:
-        print(f"  Unmapped class names (fix CLASS_ALIASES): {sorted(unmapped_classes)}")
-    if skipped_cls:
-        print(f"  Images with boxes but no mapped class: {skipped_cls}")
-    print("Next: point configs/cctsdb2021_night.yaml path and run val.")
+        print(f"  Unmapped class names: {sorted(unmapped_classes)}")
+        print("  → fix CLASS_ALIASES if many empty labels")
+    print("Next:")
+    print("  python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_night.yaml")
     return 0
 
 
