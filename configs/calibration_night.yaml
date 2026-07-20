@@ -1,0 +1,10 @@
+# PTQ calibration: night-only (CNTSSS train subsample)
+# Used with: model.export(format="engine", quantize=8, data="configs/calibration_night.yaml", fraction=0.1)
+path: ../data/processed/calibration/night
+train: images
+val: images
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+nc: 3

@@ -1,0 +1,9 @@
+# PTQ calibration: day-only (CCTSDB day images subsample — for domain-gap ablation)
+path: ../data/processed/calibration/day
+train: images
+val: images
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+nc: 3

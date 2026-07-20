@@ -1,0 +1,15 @@
+# CCTSDB2021 night subset for cross-dataset evaluation
+# Built by: python scripts/extract_cctsdb_night.py
+# Labels: 3 classes (prohibitory / mandatory / warning)
+
+path: ../data/processed/cctsdb2021_night
+train:  # not used for Bài 1 train (train on CNTSSS)
+val: images
+test: images
+
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+
+nc: 3

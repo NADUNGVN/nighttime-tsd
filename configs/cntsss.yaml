@@ -1,0 +1,19 @@
+# CNTSSS — Chinese Nighttime Traffic Sign Sample Set (YOLO format)
+# Source: https://github.com/linzy88/YOLO-LLTS
+#
+# path is relative to THIS yaml file (configs/) by default.
+# On server, either keep layout data/raw/CNTSSS or override:
+#   yolo train data=configs/cntsss.yaml  (after setting path below)
+
+path: ../data/raw/CNTSSS
+train: train/images
+val: test/images
+test: test/images
+
+# 3 super-classes (same taxonomy as CCTSDB2021)
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+
+nc: 3

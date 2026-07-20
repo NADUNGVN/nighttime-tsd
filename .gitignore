@@ -1,0 +1,50 @@
+# Data (large; never commit)
+data/raw/
+data/processed/
+data/external/
+*.zip
+*.tar
+*.tar.gz
+*.7z
+
+# Models & runs
+weights/
+runs/
+*.pt
+*.engine
+*.onnx
+*.trt
+*.cache
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.env
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs & notebooks
+logs/
+*.log
+.ipynb_checkpoints/
+
+# Calibration caches
+*.cache
+calibration_*.cache
+
+# Local secrets / machine notes
+secrets/
+local/
+*.local.md
