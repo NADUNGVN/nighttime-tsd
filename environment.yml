@@ -1,0 +1,32 @@
+# Isolated env for nighttime TSD — does NOT touch base or other AI envs
+# Create:  conda env create -f environment.yml
+# Activate: conda activate nighttime-tsd
+# Remove:   conda env remove -n nighttime-tsd
+
+name: nighttime-tsd
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - numpy
+  - pyyaml
+  - pillow
+  - matplotlib
+  - pandas
+  - seaborn
+  - tqdm
+  - psutil
+  - rich
+  - lxml
+  - opencv
+  # GPU monitor (Linux; also works if CUDA toolkit visible)
+  - nvitop
+  - pip:
+      - ultralytics>=8.3.0
+      - gdown>=5.0.0
+      # Install torch matching server CUDA separately if needed, e.g.:
+      # pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124

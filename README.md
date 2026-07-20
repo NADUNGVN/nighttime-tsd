@@ -30,11 +30,17 @@ python scripts/extract_cctsdb_night.py
 python scripts/build_calibration_sets.py --n 256
 ```
 
-### Server RTX 3090 — load + train
+### Server RTX 3090 — conda + load + train
 
-Chi tiết: [`docs/SERVER_TRAIN.md`](docs/SERVER_TRAIN.md)
+Chi tiết: [`docs/SERVER_TRAIN.md`](docs/SERVER_TRAIN.md) · [`docs/CONDA_ENV.md`](docs/CONDA_ENV.md)
 
 ```bash
+# Env riêng (không đụng env AI khác): nighttime-tsd
+bash scripts/setup_conda_env.sh --with-torch-cu124 --install-htop
+conda activate nighttime-tsd
+nvitop   # GPU
+htop     # CPU/RAM (system)
+
 # Data (không có trong git)
 python scripts/download_cntsss.py --extract && python scripts/verify_cntsss.py
 
@@ -43,9 +49,6 @@ python scripts/load_model.py --model yolo11n.pt --info
 
 # Train
 python scripts/train_baseline.py --model yolo11n.pt --batch 64 --epochs 100 --workers 8 --name yolo11n_cntsss
-
-# Load checkpoint sau train
-python scripts/load_model.py --model runs/detect/yolo11n_cntsss/weights/best.pt --val --data configs/cntsss.yaml
 ```
 
 Checklist: [`docs/WEEK1_CHECKLIST.md`](docs/WEEK1_CHECKLIST.md) · Verify: [`docs/VERIFY_STATUS_2026-07-20.md`](docs/VERIFY_STATUS_2026-07-20.md)
