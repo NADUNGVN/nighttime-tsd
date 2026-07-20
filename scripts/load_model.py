@@ -71,6 +71,11 @@ def main() -> int:
     parser.add_argument("--info", action="store_true", help="Print device + class info")
     parser.add_argument("--val", action="store_true", help="Run validation")
     parser.add_argument("--data", default="configs/cntsss.yaml")
+    parser.add_argument(
+        "--split",
+        default=None,
+        help="val|test (default: test for cntsss, val otherwise)",
+    )
     parser.add_argument("--predict", default=None, help="Image / folder / video path")
     parser.add_argument("--save", action="store_true", help="Save predict outputs")
     parser.add_argument("--imgsz", type=int, default=640)
@@ -98,13 +103,16 @@ def main() -> int:
             return 0
 
     if args.val:
+        split = args.split
+        if split is None:
+            split = "test" if "cntsss" in args.data.replace("\\", "/").lower() else "val"
         metrics = model.val(
             data=args.data,
             imgsz=args.imgsz,
             batch=args.batch,
             device=args.device,
             half=args.half,
-            split="test",
+            split=split,
         )
         summary = {
             "model": args.model,

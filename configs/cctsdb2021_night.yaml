@@ -2,8 +2,10 @@
 # Built by: python scripts/extract_cctsdb_night.py
 # Labels: 3 classes (prohibitory / mandatory / warning)
 
+# Only used for val/test (models trained on CNTSSS).
+# train=images so Ultralytics yaml validates; do not train on this file.
 path: ../data/processed/cctsdb2021_night
-train:  # not used for Bài 1 train (train on CNTSSS)
+train: images
 val: images
 test: images
 
