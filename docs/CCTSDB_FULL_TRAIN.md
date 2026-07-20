@@ -11,46 +11,42 @@ Protocol mới (thay train-only CNTSSS):
 
 > Paper framing: mixed-condition large-scale train + night cross-eval (không còn “train night-only”).
 
-## Trên server 3090
+## Trên server 3090 (gỡ nghẽn NFS)
+
+Phần cứng: [`Server_Hardware.md`](Server_Hardware.md) · tối ưu: [`BOTTLENECK_TRAIN_3090.md`](BOTTLENECK_TRAIN_3090.md)
+
+**Nút thắt:** data trên NFS + `workers=0` → GPU util ~0%.  
+**Cách gỡ:** copy data ra local (`/tmp`) → `workers=6` + `cache=ram` + `batch=96`.
 
 ```bash
 source $HOME/miniconda3/etc/profile.d/conda.sh
 conda activate nighttime-tsd
+export LD_LIBRARY_PATH=$CONDA_PREFIX/lib:$LD_LIBRARY_PATH
 cd ~/Dung_TDTU/nighttime-tsd
 git pull origin master
 
-# 1) Unzip phần còn thiếu (train_img ~1.2G)
-cd data/raw/CCTSDB2021
-unzip -q train_img.zip -d train_img
-unzip -q train_labels.zip -d train_labels
-# test_img / test_labels / xml đã có thì bỏ qua
-cd ~/Dung_TDTU/nighttime-tsd
+# 0) (một lần) prepare YOLO layout nếu chưa có
+# python scripts/prepare_cctsdb_full.py   # train≈16356
 
-# 2) Build YOLO layout
-python scripts/prepare_cctsdb_full.py
-# Kỳ vọng: train ≈ 16356, test ≈ 1500
+# 1) Stage khỏi NFS → local (QUAN TRỌNG)
+python scripts/stage_data_local.py --dst /tmp/cctsdb2021_full
 
-# 3) Train (screen khuyến nghị)
+# 2) Train tối ưu 3090
 screen -S cctsdb_full
-python scripts/train_baseline.py \
+python scripts/train_3090.py \
+  --local-data /tmp/cctsdb2021_full \
   --model yolo11n.pt \
-  --data configs/cctsdb2021_full.yaml \
-  --epochs 100 \
-  --batch 64 \
-  --workers 8 \
-  --device 0 \
-  --name yolo11n_cctsdb_full \
-  --cache ram
+  --name yolo11n_cctsdb_full
 
-# đối chứng
-python scripts/train_baseline.py \
+# 3) Sau khi 11n xong — YOLOv8n (không song song 1 GPU)
+python scripts/train_3090.py \
+  --local-data /tmp/cctsdb2021_full \
   --model yolov8n.pt \
-  --data configs/cctsdb2021_full.yaml \
-  --epochs 100 \
-  --batch 64 \
-  --name yolov8n_cctsdb_full \
-  --cache ram
+  --name yolov8n_cctsdb_full
 ```
+
+Nếu **không** stage được (hết chỗ /tmp):  
+`python scripts/train_3090.py --preset nfs --model yolo11n.pt` (chậm hơn, workers=2).
 
 ## Eval sau train
 
