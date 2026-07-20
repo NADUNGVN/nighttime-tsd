@@ -39,7 +39,13 @@ def main() -> int:
     parser.add_argument("--device", default="0")
     parser.add_argument("--project", default="runs/detect")
     parser.add_argument("--name", default=None)
-    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=0,
+        help="Dataloader workers. Use 0 on slow/NFS disks (avoids labels.cache hang). "
+        "Try 4–8 only on local SSD.",
+    )
     parser.add_argument("--resume", action="store_true", help="Resume from --model last.pt")
     parser.add_argument("--patience", type=int, default=50)
     parser.add_argument("--seed", type=int, default=0)
@@ -48,7 +54,13 @@ def main() -> int:
         default=False,
         nargs="?",
         const="ram",
-        help="Cache images: omit=off, --cache or --cache ram|disk (3090 often uses ram)",
+        help="Cache images: omit=off (recommended for CCTSDB full). "
+        "--cache or --cache ram|disk only on fast local disk.",
+    )
+    parser.add_argument(
+        "--plots",
+        action="store_true",
+        help="Save label plots at start (slower). Default off for large datasets.",
     )
     args = parser.parse_args()
 
@@ -88,11 +100,11 @@ def main() -> int:
         exist_ok=True,
         pretrained=True,
         resume=args.resume,
+        cache=False if not args.cache else args.cache,
+        plots=bool(args.plots),
     )
     if args.name is not None or not args.resume:
         train_kw["name"] = name if not args.resume else (args.name or name)
-    if args.cache:
-        train_kw["cache"] = args.cache
 
     results = model.train(**train_kw)
 
