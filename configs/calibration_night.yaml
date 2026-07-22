@@ -1,5 +1,5 @@
-# PTQ calibration: night-only (CNTSSS train subsample)
-# Used with: model.export(format="engine", quantize=8, data="configs/calibration_night.yaml", fraction=0.1)
+# PTQ calibration: night (CCTSDB weather night / processed night subset)
+# model.export(format="engine", quantize=8, data="configs/calibration_night.yaml", fraction=0.5)
 path: ../data/processed/calibration/night
 train: images
 val: images

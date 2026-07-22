@@ -1,6 +1,6 @@
-# CCTSDB2021 full (day + night + weather mixed) — >10k images
-# Build with: python scripts/prepare_cctsdb_full.py
-# 3 super-classes aligned with CNTSSS ids
+# CCTSDB2021 full — ONLY active train dataset in this repo
+# Train 16356 + test 1500 = 17856 positive (see docs/DATASET_CCTSDB2021.md)
+# Build: python scripts/prepare_cctsdb_full.py
 
 path: ../data/processed/cctsdb2021_full
 train: train/images
