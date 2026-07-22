@@ -1,0 +1,13 @@
+{
+  "model": "runs/detect/runs/detect/yolov8n_cctsdb_full/weights/best.pt",
+  "data": "configs/cntsss.yaml",
+  "mAP50": 0.23276290075359243,
+  "mAP50-95": 0.13383964983166505,
+  "precision": 0.29608545170004374,
+  "recall": 0.25876316902312063,
+  "per_class_ap50": [
+    0.007432200908463047,
+    0.018107491860677217,
+    0.6727490094916371
+  ]
+}

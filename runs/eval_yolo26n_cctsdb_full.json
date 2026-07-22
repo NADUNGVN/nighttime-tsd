@@ -1,0 +1,13 @@
+{
+  "model": "runs/detect/runs/detect/yolo26n_cctsdb_full/weights/best.pt",
+  "data": "configs/cctsdb2021_full_local.yaml",
+  "mAP50": 0.7802769911336398,
+  "mAP50-95": 0.5003124433283358,
+  "precision": 0.889582558156038,
+  "recall": 0.7135153403387108,
+  "per_class_ap50": [
+    0.7027553239467901,
+    0.7858207435374877,
+    0.8522549059166418
+  ]
+}
