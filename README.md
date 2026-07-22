@@ -67,9 +67,20 @@ JSON: `runs/eval_yolo*_cctsdb_full.json`, `runs/eval_*_on_cctsdb_night.json`.
 |---|---|
 | ✅ | Train 11n / 8n / 26n trên CCTSDB full |
 | ✅ | Eval test full + night subset |
-| ⏳ | Tách eval **test day-like** (~1000) tường minh |
+| ⏳ | **Tách test 50% day / 50% night** (`split_cctsdb_test_day_night.py`) rồi eval FP32 |
 | ⏳ | Calib + **FP16/INT8** → Δ mAP day vs night |
 | ⏳ | Orin: latency / power |
+
+### Gán sáng/tối cho test (bắt buộc trước quant theo điều kiện)
+
+```bash
+python scripts/split_cctsdb_test_day_night.py --list-only          # xem weather counts
+python scripts/split_cctsdb_test_day_night.py --balance 0.5        # ~750 night + ~750 day
+python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_day.yaml
+python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_night.yaml
+```
+
+Chi tiết: [`docs/DATASET_CCTSDB2021.md`](docs/DATASET_CCTSDB2021.md).
 
 ---
 

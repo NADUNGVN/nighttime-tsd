@@ -28,16 +28,47 @@ Số repo HELP: *“17856 images in training set and positive sample test set”
 
 ---
 
-## 2. Sáng / tối — chỉ biết trên **test 1500**
+## 2. Sáng / tối trên **test 1500** (bổ sung cho quant)
 
-| Split | Biết day/night? |
+| Split | Day/night? |
 |---|---|
-| Train 16 356 | **Không** (mixed, không metadata) |
-| Test 1 500 | **Có** — folder weather: night / sunny / foggy / rain / cloud / snow |
+| Train 16 356 | **Không** metadata chính thức (mixed) |
+| Test 1 500 | Weather XML + script cân bằng 50/50 |
 
-Ước lượng đã gặp khi extract: **night ~500**, **non-night ~1000** (đếm lại bằng script trên server).
+### Weather chính thức (không đủ 50–50)
 
-Dùng cho quant: eval **test-night** vs **test-day (non-night)** sau FP16/INT8.
+Thường: **night ~500** · **non-night ~1000** (sunny/fog/rain/cloud/snow).
+
+### Script chuẩn hóa 50% đêm / 50% sáng (trên test)
+
+```bash
+# Xem thống kê weather + kế hoạch balance
+python scripts/split_cctsdb_test_day_night.py --list-only
+
+# Tạo 750 night + 750 day (từ 1500 test)
+# - night: weather night + (nếu thiếu) ảnh tối nhất theo mean luminance
+# - day:   ảnh sáng nhất trong phần còn lại
+python scripts/split_cctsdb_test_day_night.py --balance 0.5 --target-total 1500
+```
+
+Output:
+
+| Path | Nội dung |
+|---|---|
+| `data/processed/cctsdb2021_test_night/` | ~750 ảnh + labels YOLO |
+| `data/processed/cctsdb2021_test_day/` | ~750 ảnh + labels YOLO |
+| `data/processed/cctsdb2021_test_day_night_manifest.csv` | stem, split, source (weather/heuristic), luminance |
+| `configs/cctsdb2021_test_night.yaml` | eval night |
+| `configs/cctsdb2021_test_day.yaml` | eval day |
+
+Eval:
+
+```bash
+python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_day.yaml
+python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_night.yaml
+```
+
+Sau quant: so Δ mAP **day vs night** (và per-class).
 
 ---
 
