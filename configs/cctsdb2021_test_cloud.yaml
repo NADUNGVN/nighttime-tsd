@@ -1,0 +1,10 @@
+# Auto: CCTSDB2021 official test domain: cloud
+path: ../data/processed/cctsdb2021_test_cloud
+train: images
+val: images
+test: images
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+nc: 3

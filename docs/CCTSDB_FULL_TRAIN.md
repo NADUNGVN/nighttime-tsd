@@ -4,17 +4,16 @@ Xem số ảnh Drive/train/test: [`DATASET_CCTSDB2021.md`](DATASET_CCTSDB2021.md
 
 ```text
 Train: 16_356 mixed
-Test:  1_500  → weather: night ~500 | non-night ~1000
+Test:  1_500  → weather: sunny 400 | cloud 300 | rain 160 | snow 100 | foggy 40 | night 500
 ```
 
 ```bash
-python scripts/prepare_cctsdb_full.py
-python scripts/stage_data_local.py --dst /tmp/cctsdb2021_full
-python scripts/train_baseline.py --model yolo11n.pt \
-  --data configs/cctsdb2021_full_local.yaml \
+python scripts/train_cctsdb.py --model yolo11n.pt \
+  --data configs/cctsdb2021_train.yaml \
   --epochs 100 --batch 64 --workers 8 --cache ram --name yolo11n_cctsdb_full
 
-python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_full_local.yaml
-python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_night.yaml
-python scripts/build_calibration_sets.py --n 256
+# Nếu server/ổ mạng chậm:
+python scripts/train_cctsdb.py --model yolo11n.pt \
+  --stage-to /tmp/cctsdb2021_full \
+  --epochs 100 --batch 64 --workers 8 --cache ram --name yolo11n_cctsdb_full
 ```

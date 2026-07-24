@@ -28,47 +28,59 @@ Số repo HELP: *“17856 images in training set and positive sample test set”
 
 ---
 
-## 2. Sáng / tối trên **test 1500** (bổ sung cho quant)
+## 2. Weather/light domain trên **test 1500** (bắt buộc cho quant)
 
-| Split | Day/night? |
+| Split | Weather/light domain? |
 |---|---|
 | Train 16 356 | **Không** metadata chính thức (mixed) |
-| Test 1 500 | Weather XML + script cân bằng 50/50 |
+| Test 1 500 | Weather XML chính thức, 6 domain |
 
-### Weather chính thức (không đủ 50–50)
+### Weather chính thức
 
-Thường: **night ~500** · **non-night ~1000** (sunny/fog/rain/cloud/snow).
+| Domain | Số ảnh |
+|---|---:|
+| sunny | 400 |
+| cloud | 300 |
+| rain | 160 |
+| snow | 100 |
+| foggy | 40 |
+| night | 500 |
+| **Tổng** | **1500** |
 
-### Script chuẩn hóa 50% đêm / 50% sáng (trên test)
+`daylike` là aggregate phụ: `sunny + cloud + rain + snow + foggy = 1000`.
+`foggy` chỉ có 40 ảnh nên report kèm caveat.
 
-```bash
-# Xem thống kê weather + kế hoạch balance
-python scripts/split_cctsdb_test_day_night.py --list-only
+### Domain official đã được tách sẵn
 
-# Tạo 750 night + 750 day (từ 1500 test)
-# - night: weather night + (nếu thiếu) ảnh tối nhất theo mean luminance
-# - day:   ảnh sáng nhất trong phần còn lại
-python scripts/split_cctsdb_test_day_night.py --balance 0.5 --target-total 1500
-```
+Trong bundle train server, các split này đã được chuẩn bị sẵn dưới `data/processed/`.
+Script tạo split được lưu ở `scripts_legacy/split_cctsdb_test_weather_domains.py` để tham chiếu, không cần chạy khi train.
 
 Output:
 
 | Path | Nội dung |
 |---|---|
-| `data/processed/cctsdb2021_test_night/` | ~750 ảnh + labels YOLO |
-| `data/processed/cctsdb2021_test_day/` | ~750 ảnh + labels YOLO |
-| `data/processed/cctsdb2021_test_day_night_manifest.csv` | stem, split, source (weather/heuristic), luminance |
-| `configs/cctsdb2021_test_night.yaml` | eval night |
-| `configs/cctsdb2021_test_day.yaml` | eval day |
+| `data/processed/cctsdb2021_test_sunny/` | 400 ảnh + labels YOLO |
+| `data/processed/cctsdb2021_test_cloud/` | 300 ảnh + labels YOLO |
+| `data/processed/cctsdb2021_test_rain/` | 160 ảnh + labels YOLO |
+| `data/processed/cctsdb2021_test_snow/` | 100 ảnh + labels YOLO |
+| `data/processed/cctsdb2021_test_foggy/` | 40 ảnh + labels YOLO |
+| `data/processed/cctsdb2021_test_night/` | 500 ảnh + labels YOLO |
+| `data/processed/cctsdb2021_test_daylike/` | 1000 ảnh + labels YOLO |
+| `data/processed/cctsdb2021_test_weather_manifest.csv` | stem, domain, aggregate, source_xml |
+| `configs/cctsdb2021_test_{domain}.yaml` | eval từng domain |
 
 Eval:
 
 ```bash
-python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_day.yaml
+python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_sunny.yaml
+python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_cloud.yaml
+python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_rain.yaml
+python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_snow.yaml
+python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_foggy.yaml
 python scripts/eval_map.py --weights .../best.pt --data configs/cctsdb2021_test_night.yaml
 ```
 
-Sau quant: so Δ mAP **day vs night** (và per-class).
+Sau quant: so Δ mAP **theo từng domain** và report thêm **daylike vs night** nếu cần.
 
 ---
 
@@ -100,7 +112,7 @@ Weights/eval CNTSSS cũ có thể còn trong `runs/` (lịch sử) — **không*
 ```text
 Train:  CCTSDB train 16 356 (mixed)
 Test:   CCTSDB test 1 500 (in-domain)
-        └─ tách weather: night ~500 | day-like ~1000  → phân tích quant
+        └─ tách weather: sunny/cloud/rain/snow/foggy/night → phân tích quant
 Models: YOLO11n, YOLOv8n, YOLO26n (FP32 done)
 Next:   FP16/INT8 + (Orin) power/latency
 ```

@@ -48,3 +48,8 @@ calibration_*.cache
 secrets/
 local/
 *.local.md
+
+# Local-only cleanup archives
+scripts_legacy/
+configs_legacy/
+scripts_bundle.b64

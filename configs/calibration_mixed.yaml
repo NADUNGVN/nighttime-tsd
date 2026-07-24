@@ -1,9 +1,0 @@
-# PTQ calibration: mixed day+night
-path: ../data/processed/calibration/mixed
-train: images
-val: images
-names:
-  0: prohibitory
-  1: mandatory
-  2: warning
-nc: 3

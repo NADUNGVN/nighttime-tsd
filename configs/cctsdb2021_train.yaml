@@ -1,0 +1,12 @@
+# CCTSDB2021 train/val config for YOLO training
+path: ../data/processed/cctsdb2021_full
+train: train/images
+val: test/images
+test: test/images
+
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+
+nc: 3
