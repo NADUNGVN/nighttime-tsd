@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
-"""Train YOLO on CCTSDB2021 full train split."""
+"""Train a reproducible CCTSDB2021 baseline without touching official test data."""
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import shutil
+import sys
 from pathlib import Path
 
 
 def stage_data(src: Path, dst: Path) -> Path:
-    if not (src / "train" / "images").exists() or not (src / "test" / "images").exists():
+    if not (src / "train" / "images").exists() or not (src / "dev" / "images").exists():
         raise FileNotFoundError(f"Invalid CCTSDB root: {src}")
     if dst.exists():
         return dst
@@ -24,7 +27,7 @@ def write_data_yaml(path: Path, data_root: Path) -> Path:
         f"""# Auto-generated local CCTSDB2021 train config
 path: {data_root.resolve().as_posix()}
 train: train/images
-val: test/images
+val: dev/images
 test: test/images
 names:
   0: prohibitory
@@ -37,6 +40,14 @@ nc: 3
     return path
 
 
+def sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Train YOLO on CCTSDB2021")
     parser.add_argument("--model", default="yolo11n.pt")
@@ -47,9 +58,9 @@ def main() -> int:
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--device", default="0")
     parser.add_argument("--project", default="runs/detect")
-    parser.add_argument("--name", default="yolo11n_cctsdb_full")
-    parser.add_argument("--patience", type=int, default=50)
-    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--name", default="yolo11n_cctsdb_clean_s42")
+    parser.add_argument("--patience", type=int, default=30)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--resume", action="store_true")
     parser.add_argument(
         "--cache",
@@ -62,7 +73,7 @@ def main() -> int:
         "--stage-to",
         type=Path,
         default=None,
-        help="Optional local SSD/tmp target, e.g. /tmp/cctsdb2021_full.",
+        help="Optional local SSD/tmp target, e.g. /tmp/cctsdb2021_clean.",
     )
     args = parser.parse_args()
 
@@ -74,9 +85,9 @@ def main() -> int:
 
     data_yaml = args.data
     if args.stage_to is not None:
-        src_root = Path("data/processed/cctsdb2021_full")
+        src_root = Path("data/processed/cctsdb2021_clean")
         staged_root = stage_data(src_root, args.stage_to)
-        data_yaml = write_data_yaml(Path("configs/cctsdb2021_train_local.yaml"), staged_root)
+        data_yaml = write_data_yaml(Path("local/cctsdb2021_train_local.yaml"), staged_root)
 
     if not data_yaml.exists():
         print(f"ERROR: missing data config: {data_yaml}")
@@ -109,6 +120,18 @@ def main() -> int:
     )
 
     best = Path(args.project) / args.name / "weights" / "best.pt"
+    run_dir = Path(args.project) / args.name
+    source_manifest = Path("data/processed/cctsdb2021_clean/manifests/dataset_manifest.json")
+    provenance = {
+        "command": sys.argv,
+        "data_yaml": str(data_yaml.resolve()),
+        "data_yaml_sha256": sha256(data_yaml),
+        "dataset_manifest": str(source_manifest.resolve()) if source_manifest.exists() else None,
+        "dataset_manifest_sha256": sha256(source_manifest) if source_manifest.exists() else None,
+        "seed": args.seed,
+    }
+    run_dir.mkdir(parents=True, exist_ok=True)
+    (run_dir / "provenance.json").write_text(json.dumps(provenance, indent=2), encoding="utf-8")
     print("DONE")
     print(f"best: {best}")
     return 0

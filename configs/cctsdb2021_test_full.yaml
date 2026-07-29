@@ -1,12 +1,9 @@
-# CCTSDB2021 full positive test set
-path: ../data/processed/cctsdb2021_full
+path: ../data/processed/cctsdb2021_clean
 train: train/images
 val: test/images
 test: test/images
-
 names:
   0: prohibitory
   1: mandatory
   2: warning
-
 nc: 3

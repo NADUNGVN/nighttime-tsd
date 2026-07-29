@@ -1,12 +1,10 @@
-# CCTSDB2021 train/val config for YOLO training
-path: ../data/processed/cctsdb2021_full
+# Generated data root: run scripts/prepare_cctsdb.py before training.
+path: ../data/processed/cctsdb2021_clean
 train: train/images
-val: test/images
+val: dev/images
 test: test/images
-
 names:
   0: prohibitory
   1: mandatory
   2: warning
-
 nc: 3

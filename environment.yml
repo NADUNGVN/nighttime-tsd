@@ -1,9 +1,8 @@
-# Isolated env for nighttime TSD — does NOT touch base or other AI envs
-# Create:  conda env create -f environment.yml
-# Activate: conda activate nighttime-tsd
-# Remove:   conda env remove -n nighttime-tsd
+# Isolated environment for the clean CCTSDB protocol.
+# Create: conda env create -f environment.yml
+# Activate: conda activate cctsdb-edge
 
-name: nighttime-tsd
+name: cctsdb-edge
 channels:
   - pytorch
   - nvidia

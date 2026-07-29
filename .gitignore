@@ -10,6 +10,7 @@ data/external/
 # Models & runs
 weights/
 runs/
+results/
 *.pt
 *.engine
 *.onnx
@@ -43,6 +44,7 @@ logs/
 # Calibration caches
 *.cache
 calibration_*.cache
+*.part
 
 # Local secrets / machine notes
 secrets/
