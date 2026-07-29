@@ -196,13 +196,31 @@ def materialize_split(images: dict[str, Path], labels: dict[str, Path], stems: l
 
 
 def link_domain(source: Path, destination: Path, stems: list[str]) -> Counter[int]:
-    return materialize_split(
-        {path.stem: path for path in (source / "images").glob("*")},
-        {path.stem: path for path in (source / "labels").glob("*.txt")},
-        stems,
-        destination,
-        move_images=False,
-    )
+    """Subset already-remapped clean test labels without applying RAW_TO_TARGET again."""
+    image_out, label_out = destination / "images", destination / "labels"
+    image_out.mkdir(parents=True, exist_ok=True)
+    label_out.mkdir(parents=True, exist_ok=True)
+    images = {path.stem: path for path in (source / "images").glob("*")}
+    labels = {path.stem: path for path in (source / "labels").glob("*.txt")}
+    class_counts: Counter[int] = Counter()
+    for stem in stems:
+        image, label = images.get(stem), labels.get(stem)
+        if image is None or label is None:
+            raise RuntimeError(f"Missing clean test image or label for domain stem {stem}")
+        try:
+            os.link(image, image_out / image.name)
+        except OSError:
+            shutil.copy2(image, image_out / image.name)
+        try:
+            os.link(label, label_out / label.name)
+        except OSError:
+            shutil.copy2(label, label_out / label.name)
+        for line in label.read_text(encoding="utf-8", errors="strict").splitlines():
+            target = int(line.split()[0])
+            if target not in NAMES:
+                raise ValueError(f"Unexpected clean class {target} in {label}")
+            class_counts[target] += 1
+    return class_counts
 
 
 def remove_output(path: Path) -> None:
