@@ -17,6 +17,9 @@ provenance were not compatible with this protocol.
   does not expose video grouping metadata.
 - INT8 calibration may use only `train/images`. A luminance-selected subset is
   called *low-luminance*, never *official night*.
+- FP32, FP16 TensorRT, and each INT8 calibration strategy must be evaluated
+  with the identical official-test YAMLs. The checkpoint is frozen before
+  export; only the inference representation changes.
 
 ## Build the dataset
 
@@ -54,3 +57,25 @@ python scripts/evaluate_cctsdb.py \
 Evaluate full, daylike, and all six domains. Report per-class results only
 when that class is represented in the corresponding domain; `foggy` has 40
 images and needs an explicit uncertainty caveat.
+
+## TensorRT calibration and export
+
+Create two 512-image calibration sets from `train/images` only. The first is
+a seeded uniform reference; the second deliberately selects the darkest train
+images by median grayscale luminance. These are calibration policies, not
+training subsets and not official-night data.
+
+```bash
+python scripts/build_calibration_set.py --strategy uniform --size 512 --seed 42 --name uniform_s42_n512
+python scripts/build_calibration_set.py --strategy low_luminance --size 512 --seed 42 --name low_luminance_n512
+```
+
+Export the same frozen checkpoint once as FP16 and once per INT8 calibration
+policy. Each export emits a JSON provenance record with hashes for the source
+checkpoint, calibration manifest, and generated engine. Engines are hardware
+specific and are not committed; commit only the JSON results and provenance.
+
+```bash
+python scripts/export_tensorrt.py --weights results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt --precision fp16 --out results/engines/yolo11n_cctsdb_clean_s42_v2_fp16.engine
+python scripts/export_tensorrt.py --weights results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt --precision int8 --data data/processed/cctsdb2021_clean/calibration/uniform_s42_n512/calibration.yaml --out results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform.engine
+```
