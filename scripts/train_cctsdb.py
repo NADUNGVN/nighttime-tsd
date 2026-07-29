@@ -76,7 +76,7 @@ def main() -> int:
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--workers", type=int, default=8)
     parser.add_argument("--device", default="0")
-    parser.add_argument("--project", default="runs/detect")
+    parser.add_argument("--project", default="results")
     parser.add_argument("--name", default="yolo11n_cctsdb_clean_s42")
     parser.add_argument("--patience", type=int, default=30)
     parser.add_argument("--seed", type=int, default=42)
@@ -116,9 +116,10 @@ def main() -> int:
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ.setdefault("MKL_NUM_THREADS", "1")
 
+    project_root = Path(args.project).resolve()
     print(f"model : {args.model}")
     print(f"data  : {data_yaml.resolve()}")
-    print(f"run   : {args.project}/{args.name}")
+    print(f"run   : {project_root / args.name}")
 
     model = YOLO(args.model)
     model.train(
@@ -128,7 +129,7 @@ def main() -> int:
         batch=args.batch,
         workers=args.workers,
         device=args.device,
-        project=args.project,
+        project=str(project_root),
         name=args.name,
         patience=args.patience,
         seed=args.seed,
@@ -139,8 +140,8 @@ def main() -> int:
         plots=False,
     )
 
-    best = Path(args.project) / args.name / "weights" / "best.pt"
-    run_dir = Path(args.project) / args.name
+    run_dir = Path(model.trainer.save_dir) if getattr(model, "trainer", None) else project_root / args.name
+    best = run_dir / "weights" / "best.pt"
     source_manifest = Path("data/processed/cctsdb2021_clean/manifests/dataset_manifest.json")
     provenance = {
         "command": sys.argv,
