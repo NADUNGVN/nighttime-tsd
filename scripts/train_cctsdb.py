@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -38,6 +39,24 @@ nc: 3
         encoding="utf-8",
     )
     return path
+
+
+def resolve_data_root(data_yaml: Path) -> Path:
+    """Resolve CCTSDB's root relative to the YAML, not Ultralytics settings."""
+    path_value: str | None = None
+    for line in data_yaml.read_text(encoding="utf-8").splitlines():
+        match = re.match(r"^\s*path:\s*(.+?)\s*(?:#.*)?$", line)
+        if match:
+            path_value = match.group(1).strip().strip("\"'")
+            break
+    if not path_value:
+        raise ValueError(f"Missing path: entry in {data_yaml}")
+    root = Path(path_value)
+    if not root.is_absolute():
+        root = (data_yaml.parent / root).resolve()
+    if not (root / "train" / "images").exists() or not (root / "dev" / "images").exists():
+        raise FileNotFoundError(f"Invalid CCTSDB root resolved from {data_yaml}: {root}")
+    return root
 
 
 def sha256(path: Path) -> str:
@@ -83,15 +102,16 @@ def main() -> int:
         print("ERROR: install dependencies first: pip install -r requirements.txt")
         return 1
 
+    if not args.data.exists():
+        print(f"ERROR: missing data config: {args.data}")
+        return 1
+    source_root = resolve_data_root(args.data)
     data_yaml = args.data
     if args.stage_to is not None:
-        src_root = Path("data/processed/cctsdb2021_clean")
-        staged_root = stage_data(src_root, args.stage_to)
+        staged_root = stage_data(source_root, args.stage_to)
         data_yaml = write_data_yaml(Path("local/cctsdb2021_train_local.yaml"), staged_root)
-
-    if not data_yaml.exists():
-        print(f"ERROR: missing data config: {data_yaml}")
-        return 1
+    else:
+        data_yaml = write_data_yaml(Path("local/cctsdb2021_train_absolute.yaml"), source_root)
 
     os.environ.setdefault("OMP_NUM_THREADS", "1")
     os.environ.setdefault("MKL_NUM_THREADS", "1")
