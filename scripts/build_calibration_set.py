@@ -48,7 +48,8 @@ def median_luminance(image_path: Path) -> float:
         raise RuntimeError("low_luminance calibration requires Pillow; install requirements.txt") from error
     with Image.open(image_path) as image:
         grayscale = image.convert("L").resize((64, 64))
-        return float(statistics.median(grayscale.getdata()))
+        pixels = grayscale.get_flattened_data() if hasattr(grayscale, "get_flattened_data") else grayscale.getdata()
+        return float(statistics.median(pixels))
 
 
 def materialize(source: Path, destination: Path) -> str:
