@@ -250,7 +250,10 @@ def main() -> int:
         train_labels = label_files(extracted["train_labels"])
         test_images = image_files(extracted["test_images"])
         test_labels = label_files(extracted["test_labels"])
-        weather_root = find_dir(extracted["weather"], "测试集天气光照情况分类")
+        # Official mirrors package the same weather XML tree with different
+        # top-level directory names.  The recursive assignment code below
+        # relies on domain folder names, so use the extracted weather root.
+        weather_root = extracted["weather"]
         if len(train_images) != 16356 or len(train_labels) != 16356 or len(test_images) != 1500 or len(test_labels) != 1500:
             raise RuntimeError(f"Unexpected raw counts: train images/labels={len(train_images)}/{len(train_labels)}, test={len(test_images)}/{len(test_labels)}")
         assignments = weather_assignments(weather_root, set(test_images))
