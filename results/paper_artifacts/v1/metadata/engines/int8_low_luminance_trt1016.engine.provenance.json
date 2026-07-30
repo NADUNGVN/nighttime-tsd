@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-07-30T02:47:04.992945+00:00",
+  "command": [
+    "scripts/export_tensorrt.py",
+    "--weights",
+    "results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+    "--precision",
+    "int8",
+    "--data",
+    "data/processed/cctsdb2021_clean/calibration/low_luminance_n512/calibration.yaml",
+    "--out",
+    "results/engines/yolo11n_cctsdb_clean_s42_v2_int8_low_luminance_n512_trt1016.engine"
+  ],
+  "precision": "int8",
+  "source_weights": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+  "source_weights_sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8",
+  "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/engines/yolo11n_cctsdb_clean_s42_v2_int8_low_luminance_n512_trt1016.engine",
+  "engine_sha256": "3b796e142667964ca04f5e4a87a94082d47803ed96074b9237cef4636abef32b",
+  "calibration_yaml": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/low_luminance_n512/calibration.yaml",
+  "calibration_yaml_sha256": "0d1065501cf9b0c110643d79371e0f65c0a0bb8cae74faddf62b7b20e33c80d3",
+  "calibration_manifest": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/low_luminance_n512/calibration_manifest.json",
+  "calibration_manifest_sha256": "993f4d40be802a173bf78a048808439b298bcba082d1c3c8b0ff2e34f4542574",
+  "export_args": {
+    "format": "engine",
+    "imgsz": 640,
+    "device": "0",
+    "batch": 1,
+    "half": false,
+    "int8": true,
+    "data": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/low_luminance_n512/calibration.yaml"
+  },
+  "environment": {
+    "python": "3.11.15",
+    "torch": "2.5.1+cu121",
+    "ultralytics": "8.4.102",
+    "cuda": "12.1",
+    "tensorrt_python": "10.16.1.11",
+    "trtexec_version": null
+  }
+}

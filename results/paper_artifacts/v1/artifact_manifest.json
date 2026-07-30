@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-07-30T08:24:38.723667+00:00",
+  "command": [
+    "scripts/collect_paper_artifacts.py",
+    "--run",
+    "yolo11n=results/yolo11n_cctsdb_clean_s42_v2",
+    "--run",
+    "yolov8n=results/yolov8n_cctsdb_clean_s42_v1",
+    "--run",
+    "yolo26n=results/yolo26n_cctsdb_clean_s42_v1",
+    "--engine",
+    "fp16_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine",
+    "--engine",
+    "int8_uniform_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform_s42_n512_trt1016.engine",
+    "--engine",
+    "int8_low_luminance_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_low_luminance_n512_trt1016.engine",
+    "--out-dir",
+    "results/paper_artifacts/v1"
+  ],
+  "contains_dataset_images": false,
+  "contains_engine_binaries": false,
+  "files": [
+    {
+      "path": "results/paper_artifacts/v1/metadata/dataset_manifest.json",
+      "sha256": "5d1b6f1c6df475efe14c8bc6e41c6312b5121dcb828041ec81bbcb2733ac0a2e",
+      "bytes": 2485,
+      "purpose": "prepared dataset split and label provenance"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/calibration/low_luminance_n512/calibration_manifest.json",
+      "sha256": "993f4d40be802a173bf78a048808439b298bcba082d1c3c8b0ff2e34f4542574",
+      "bytes": 72588,
+      "purpose": "INT8 calibration selection; contains paths and luminance only"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/calibration/uniform_s42_n512/calibration_manifest.json",
+      "sha256": "f0e50daa9c1ecf20e4df50ba4042593548f72bc522fefabc51ce22844c405055",
+      "bytes": 72598,
+      "purpose": "INT8 calibration selection; contains paths and luminance only"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/training/yolo11n/provenance.json",
+      "sha256": "d4f4f8b58941160a6141a93dd4b08045feed2f7497f8a43382b3a2c1a36c7a3d",
+      "bytes": 739,
+      "purpose": "training command and dataset hash"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/training/yolo11n/results.csv",
+      "sha256": "1d8edd6a854e46205a028b34b06749a01dc32d8a6b14790c7af85743103f7d3e",
+      "bytes": 16352,
+      "purpose": "per-epoch training and development metrics"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/training/yolov8n/provenance.json",
+      "sha256": "c29f7e12146d3fc1632483a45b06269b66781718cfe593909859c046f1c96d51",
+      "bytes": 739,
+      "purpose": "training command and dataset hash"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/training/yolov8n/results.csv",
+      "sha256": "137730d73c8b0090e2d7df8262707efd21e00564b953a48ecaeee1806d495aab",
+      "bytes": 16372,
+      "purpose": "per-epoch training and development metrics"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/training/yolo26n/provenance.json",
+      "sha256": "9c7f0e2d9a25d7732957f0a2d2dcadc6058e7013b8760c7c57e490b23917ca11",
+      "bytes": 739,
+      "purpose": "training command and dataset hash"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/training/yolo26n/results.csv",
+      "sha256": "6d32ca8f4e5701fa96be787d89ac06acb838535b2d7011ece47ef07a6575e374",
+      "bytes": 16347,
+      "purpose": "per-epoch training and development metrics"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/engines/fp16_trt1016.engine.provenance.json",
+      "sha256": "1ac401fc34f99b308d72d9e2d755308e20ebbbb5ac5bc63985b33f1573cd4431",
+      "bytes": 1227,
+      "purpose": "hardware-specific TensorRT engine provenance"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/engines/int8_uniform_trt1016.engine.provenance.json",
+      "sha256": "bd3bb5826615fe5fd0d1854ba700cfdcd7b3b011a9f7785cb30a0344239813af",
+      "bytes": 1859,
+      "purpose": "hardware-specific TensorRT engine provenance"
+    },
+    {
+      "path": "results/paper_artifacts/v1/metadata/engines/int8_low_luminance_trt1016.engine.provenance.json",
+      "sha256": "fa0df420a721afba4fda3d80f37cb7de59c59cc5a1ae8092b54c4a05130fd945",
+      "bytes": 1871,
+      "purpose": "hardware-specific TensorRT engine provenance"
+    },
+    {
+      "path": "environment.json",
+      "sha256": "3cdb9abac57fbacad81d312c6e0d14ae371c78a4860458e76e661ccc5067b2e4",
+      "bytes": 5010,
+      "purpose": "runtime environment lock"
+    },
+    {
+      "path": "model_inventory.json",
+      "sha256": "6bd02a4e387eed96b78e5c2119ea198aa24f5b96456794363444a16ef207d886",
+      "bytes": 1698,
+      "purpose": "checkpoint and engine sizes/hashes"
+    }
+  ]
+}

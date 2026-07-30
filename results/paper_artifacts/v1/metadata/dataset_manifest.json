@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-07-29T07:51:57.808427+00:00",
+  "source": {
+    "kind": "official_archives",
+    "items": {
+      "train_images": {
+        "file": "train_img.zip",
+        "bytes": 1259763275,
+        "modified_utc": "2022-10-24T10:44:53+00:00"
+      },
+      "train_labels": {
+        "file": "train_labels.zip",
+        "bytes": 3350861,
+        "modified_utc": "2022-10-24T10:45:15+00:00"
+      },
+      "test_images": {
+        "file": "test_img.zip",
+        "bytes": 294210884,
+        "modified_utc": "2022-10-24T08:16:20+00:00"
+      },
+      "test_labels": {
+        "file": "test_labels.zip",
+        "bytes": 319377,
+        "modified_utc": "2022-10-24T07:27:27+00:00"
+      },
+      "weather": {
+        "file": "Classification based on weather and environment.zip",
+        "bytes": 925344,
+        "modified_utc": "2022-10-24T07:27:21+00:00"
+      }
+    }
+  },
+  "class_mapping": {
+    "source_raw": {
+      "0": "mandatory",
+      "1": "prohibitory",
+      "2": "warning"
+    },
+    "target": {
+      "0": "prohibitory",
+      "1": "mandatory",
+      "2": "warning"
+    },
+    "raw_to_target": {
+      "0": 1,
+      "1": 0,
+      "2": 2
+    }
+  },
+  "mapping_validation": {
+    "remapped_raw": {
+      "0": 2177,
+      "1": 718,
+      "2": 333
+    },
+    "xml_semantic": {
+      "0": 2177,
+      "1": 718,
+      "2": 333
+    }
+  },
+  "development_split": {
+    "seed": 42,
+    "ratio": 0.1,
+    "method": "deterministic SHA-256 ranking by image stem; not a video-grouped split"
+  },
+  "images": {
+    "train": 14720,
+    "dev": 1636,
+    "official_test": 1500
+  },
+  "class_instances": {
+    "train": {
+      "0": 12475,
+      "1": 7531,
+      "2": 4126
+    },
+    "dev": {
+      "0": 1401,
+      "1": 833,
+      "2": 472
+    },
+    "test": {
+      "0": 2177,
+      "1": 718,
+      "2": 333
+    }
+  },
+  "weather_images": {
+    "sunny": 400,
+    "cloud": 300,
+    "rain": 160,
+    "snow": 100,
+    "foggy": 40,
+    "night": 500,
+    "daylike": 1000
+  },
+  "weather_class_instances": {
+    "sunny": {
+      "0": 343,
+      "1": 136,
+      "2": 100
+    },
+    "cloud": {
+      "0": 354,
+      "1": 198,
+      "2": 103
+    },
+    "rain": {
+      "0": 358,
+      "1": 128,
+      "2": 2
+    },
+    "snow": {
+      "0": 152,
+      "2": 14
+    },
+    "foggy": {
+      "0": 45,
+      "1": 16
+    },
+    "night": {
+      "0": 925,
+      "1": 240,
+      "2": 114
+    },
+    "daylike": {
+      "0": 1252,
+      "1": 478,
+      "2": 219
+    }
+  }
+}
