@@ -94,3 +94,11 @@ specific and are not committed; commit only the JSON results and provenance.
 python scripts/export_tensorrt.py --weights results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt --precision fp16 --out results/engines/yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine
 python scripts/export_tensorrt.py --weights results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt --precision int8 --data data/processed/cctsdb2021_clean/calibration/uniform_s42_n512/calibration.yaml --out results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform_s42_n512_trt1016.engine
 ```
+
+Evaluate all official splits at TensorRT's static export batch size of one.
+The suite refuses to overwrite any result, and writes a manifest containing
+every engine/result hash.
+
+```bash
+python scripts/evaluate_tensorrt_suite.py --engine fp16_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine --engine int8_uniform_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform_s42_n512_trt1016.engine --engine int8_low_luminance_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_low_luminance_n512_trt1016.engine --out-dir results/eval/tensorrt10 --batch 1
+```
