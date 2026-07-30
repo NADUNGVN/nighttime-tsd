@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-07-30T02:54:33.366869+00:00",
+  "label": "int8_low_luminance_trt1016",
+  "model": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/engines/yolo11n_cctsdb_clean_s42_v2_int8_low_luminance_n512_trt1016.engine",
+  "model_sha256": "3b796e142667964ca04f5e4a87a94082d47803ed96074b9237cef4636abef32b",
+  "data": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/cctsdb2021_test_snow.yaml",
+  "data_sha256": "a5de9299bd4f436d2c30ce075aeff2731e1a4da875732cec355a9f4ec4fce0d6",
+  "resolved_data": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/local/cctsdb2021_test_snow_absolute.yaml",
+  "resolved_data_sha256": "9c386e34ba111f5ded5783bf2e6e48ad56697453d238a32f4db07ca8150c33d0",
+  "metrics": {
+    "map50": 0.660085449891977,
+    "map50_95": 0.3660166249635731,
+    "precision": 0.8314085987677464,
+    "recall": 0.6653965166291259,
+    "per_class_ap50": {
+      "prohibitory": 0.7477093613224154,
+      "mandatory": 0.5724615384615386
+    }
+  },
+  "environment": {
+    "python": "3.11.15",
+    "torch": "2.5.1+cu121",
+    "ultralytics": "8.4.102",
+    "cuda": "12.1"
+  }
+}

@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-07-30T02:54:38.691880+00:00",
+  "command": [
+    "scripts/evaluate_tensorrt_suite.py",
+    "--engine",
+    "fp16_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine",
+    "--engine",
+    "int8_uniform_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform_s42_n512_trt1016.engine",
+    "--engine",
+    "int8_low_luminance_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_low_luminance_n512_trt1016.engine",
+    "--out-dir",
+    "results/eval/tensorrt10",
+    "--batch",
+    "1"
+  ],
+  "engines": {
+    "fp16_trt1016": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/engines/yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine",
+      "sha256": "6e92697dbc633013d9dec6aa183657f05a4bed395e518255931fa89a81fad11f"
+    },
+    "int8_uniform_trt1016": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform_s42_n512_trt1016.engine",
+      "sha256": "40be2a162a4f3efca4e04158e6c062efffa6a0687d65273c1f863515d43dc048"
+    },
+    "int8_low_luminance_trt1016": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/engines/yolo11n_cctsdb_clean_s42_v2_int8_low_luminance_n512_trt1016.engine",
+      "sha256": "3b796e142667964ca04f5e4a87a94082d47803ed96074b9237cef4636abef32b"
+    }
+  },
+  "splits": {
+    "full": "configs/cctsdb2021_test_full.yaml",
+    "daylike": "configs/cctsdb2021_test_daylike.yaml",
+    "sunny": "configs/cctsdb2021_test_sunny.yaml",
+    "cloud": "configs/cctsdb2021_test_cloud.yaml",
+    "night": "configs/cctsdb2021_test_night.yaml",
+    "rain": "configs/cctsdb2021_test_rain.yaml",
+    "snow": "configs/cctsdb2021_test_snow.yaml",
+    "foggy": "configs/cctsdb2021_test_foggy.yaml"
+  },
+  "results": [
+    {
+      "label": "fp16_trt1016",
+      "split": "full",
+      "result": "results/eval/tensorrt10/fp16_trt1016_full.json",
+      "result_sha256": "2713c4acbba125215bac2566afe354f8e581f0911bbca2092c12b16bd2c268bc"
+    },
+    {
+      "label": "fp16_trt1016",
+      "split": "daylike",
+      "result": "results/eval/tensorrt10/fp16_trt1016_daylike.json",
+      "result_sha256": "7497eb5354ac546f415f61e0298d3f971d1b684d76a7b85eab83a776b788d50b"
+    },
+    {
+      "label": "fp16_trt1016",
+      "split": "sunny",
+      "result": "results/eval/tensorrt10/fp16_trt1016_sunny.json",
+      "result_sha256": "17c4e2f409ab49b95c7e25089d6545ca0b39a9bd6b3b3cad01d935a57bbd54ee"
+    },
+    {
+      "label": "fp16_trt1016",
+      "split": "cloud",
+      "result": "results/eval/tensorrt10/fp16_trt1016_cloud.json",
+      "result_sha256": "730ab07b096a27ecbbc60a13561cb0c313ab67a5a273041d8693efdaa96bbfdc"
+    },
+    {
+      "label": "fp16_trt1016",
+      "split": "night",
+      "result": "results/eval/tensorrt10/fp16_trt1016_night.json",
+      "result_sha256": "c1a3a5b21de1e5cfee85c97f2684eed604114279ae6ffd9fdd639d17d203750d"
+    },
+    {
+      "label": "fp16_trt1016",
+      "split": "rain",
+      "result": "results/eval/tensorrt10/fp16_trt1016_rain.json",
+      "result_sha256": "127ad71856af68f7ab2c143c74c75461d71d5ee3e0467bc76c168e825e33ab5e"
+    },
+    {
+      "label": "fp16_trt1016",
+      "split": "snow",
+      "result": "results/eval/tensorrt10/fp16_trt1016_snow.json",
+      "result_sha256": "5fbc67a7ee845832e04c9c006d068ff9bee9af9ee5cbe879a6fb99109a7c2d51"
+    },
+    {
+      "label": "fp16_trt1016",
+      "split": "foggy",
+      "result": "results/eval/tensorrt10/fp16_trt1016_foggy.json",
+      "result_sha256": "c947487bec6c8dfdb99ab3bf1f7fce12637325d8abb6f9410492ca1c41ca8b94"
+    },
+    {
+      "label": "int8_uniform_trt1016",
+      "split": "full",
+      "result": "results/eval/tensorrt10/int8_uniform_trt1016_full.json",
+      "result_sha256": "ece0a6f71e6334d80eb25c77963f09da06851e2797140e540fd2d75801c37b70"
+    },
+    {
+      "label": "int8_uniform_trt1016",
+      "split": "daylike",
+      "result": "results/eval/tensorrt10/int8_uniform_trt1016_daylike.json",
+      "result_sha256": "b8bbbd71ed916deef7996c4f5fb42b6048d305d116188db3b5091c75b81c9255"
+    },
+    {
+      "label": "int8_uniform_trt1016",
+      "split": "sunny",
+      "result": "results/eval/tensorrt10/int8_uniform_trt1016_sunny.json",
+      "result_sha256": "a918dbaed467d4764b4d5e3841e45806a99cb95f262f89363e8c15af5005e2f0"
+    },
+    {
+      "label": "int8_uniform_trt1016",
+      "split": "cloud",
+      "result": "results/eval/tensorrt10/int8_uniform_trt1016_cloud.json",
+      "result_sha256": "bb5edf0f756f57ecc6b4696b41aa7e55b3ba51388b10402ac36bfb3e1accd2e3"
+    },
+    {
+      "label": "int8_uniform_trt1016",
+      "split": "night",
+      "result": "results/eval/tensorrt10/int8_uniform_trt1016_night.json",
+      "result_sha256": "57116a1d5ad43f8c62a30be840fd03ac60cb12c61f757414aa9e79a3251ed331"
+    },
+    {
+      "label": "int8_uniform_trt1016",
+      "split": "rain",
+      "result": "results/eval/tensorrt10/int8_uniform_trt1016_rain.json",
+      "result_sha256": "106414fafde1f04f14e7766640fee3f0052d65010c439170baacd1464eb7a78e"
+    },
+    {
+      "label": "int8_uniform_trt1016",
+      "split": "snow",
+      "result": "results/eval/tensorrt10/int8_uniform_trt1016_snow.json",
+      "result_sha256": "ce355760ad75371fd9901da3b03c994efbba12eb27366de02b2312ae451d2573"
+    },
+    {
+      "label": "int8_uniform_trt1016",
+      "split": "foggy",
+      "result": "results/eval/tensorrt10/int8_uniform_trt1016_foggy.json",
+      "result_sha256": "8c7783260b113a5fcfb8a0fcc2fbe2f3037d0189c4f658b2d0a42dfaef6e1cf3"
+    },
+    {
+      "label": "int8_low_luminance_trt1016",
+      "split": "full",
+      "result": "results/eval/tensorrt10/int8_low_luminance_trt1016_full.json",
+      "result_sha256": "8e6fad888149ecf30d0fa8fb67e7325a08d982a8f87cb4730b176b887e9eedf5"
+    },
+    {
+      "label": "int8_low_luminance_trt1016",
+      "split": "daylike",
+      "result": "results/eval/tensorrt10/int8_low_luminance_trt1016_daylike.json",
+      "result_sha256": "35580d0d0f8c396855e52b4b733835e0a3120418e5f0425c0c33a0f56920b2c8"
+    },
+    {
+      "label": "int8_low_luminance_trt1016",
+      "split": "sunny",
+      "result": "results/eval/tensorrt10/int8_low_luminance_trt1016_sunny.json",
+      "result_sha256": "5222945f7280cecdb13e2d0bc411489ddf2dda3dd53a0a39f6f2be4eedfc18b7"
+    },
+    {
+      "label": "int8_low_luminance_trt1016",
+      "split": "cloud",
+      "result": "results/eval/tensorrt10/int8_low_luminance_trt1016_cloud.json",
+      "result_sha256": "32e1fa578351f50080ffc142dddeea5e08e8be38bfbdd6c3415a2f39acc519cf"
+    },
+    {
+      "label": "int8_low_luminance_trt1016",
+      "split": "night",
+      "result": "results/eval/tensorrt10/int8_low_luminance_trt1016_night.json",
+      "result_sha256": "58b1f4fa334e2911f86f802ca41f4cc9ed9370ad25d9a20dd9184ad7195319c5"
+    },
+    {
+      "label": "int8_low_luminance_trt1016",
+      "split": "rain",
+      "result": "results/eval/tensorrt10/int8_low_luminance_trt1016_rain.json",
+      "result_sha256": "c3740960db2a5f0230f5ebdbe498ada4fb083d7c6a0374c6a77a5973d4f0a4e3"
+    },
+    {
+      "label": "int8_low_luminance_trt1016",
+      "split": "snow",
+      "result": "results/eval/tensorrt10/int8_low_luminance_trt1016_snow.json",
+      "result_sha256": "ee51c99c59bccfc8d6cc13086b48844595de0c0278d9ba07f33ba351dd26156c"
+    },
+    {
+      "label": "int8_low_luminance_trt1016",
+      "split": "foggy",
+      "result": "results/eval/tensorrt10/int8_low_luminance_trt1016_foggy.json",
+      "result_sha256": "3172d0743451b5f34f3a1013a8fbc32ed44e3cfef0511813a94a4296c1dec5d8"
+    }
+  ]
+}
