@@ -111,3 +111,23 @@ every engine/result hash.
 ```bash
 python scripts/evaluate_tensorrt_suite.py --engine fp16_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine --engine int8_uniform_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform_s42_n512_trt1016.engine --engine int8_low_luminance_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_low_luminance_n512_trt1016.engine --out-dir results/eval/tensorrt10 --batch 1
 ```
+
+## Paper artifacts and deployment benchmark
+
+Do not commit images, labels, or TensorRT engine binaries. Instead, collect
+the split/calibration manifests, training CSVs, environment lock, and model
+inventory; these small artifacts make the experiments auditable without
+duplicating CCTSDB. The collector copies manifests and CSV/JSON only.
+
+```bash
+python scripts/collect_paper_artifacts.py --run yolo11n=results/yolo11n_cctsdb_clean_s42_v2 --run yolov8n=results/yolov8n_cctsdb_clean_s42_v1 --run yolo26n=results/yolo26n_cctsdb_clean_s42_v1 --engine fp16_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine --engine int8_uniform_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform_s42_n512_trt1016.engine --engine int8_low_luminance_trt1016=results/engines/yolo11n_cctsdb_clean_s42_v2_int8_low_luminance_n512_trt1016.engine --out-dir results/paper_artifacts/v1
+```
+
+`configs/deployment/yolo11n_fp16_trt10.json` is the current FP16 deployment
+contract. Its confidence threshold is provisional and must be selected on the
+development split, never on the official test. Benchmark end-to-end batch-one
+latency on preloaded images (disk decode is excluded):
+
+```bash
+python scripts/benchmark_tensorrt_engine.py --engine results/engines/yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine --images data/processed/cctsdb2021_clean/dev/images --out results/benchmark/fp16_trt1016_server.json --warmup 50 --samples 500
+```

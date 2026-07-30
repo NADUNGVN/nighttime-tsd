@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "status": "provisional; confidence threshold must be selected on the development split before release",
+  "model": {
+    "family": "YOLO11n",
+    "checkpoint_sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8",
+    "engine_file": "yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine",
+    "engine_sha256": "6e92697dbc633013d9dec6aa183657f05a4bed395e518255931fa89a81fad11f",
+    "precision": "FP16 TensorRT 10.16.1.11"
+  },
+  "classes": {
+    "0": "prohibitory",
+    "1": "mandatory",
+    "2": "warning"
+  },
+  "input": {
+    "image_size": 640,
+    "channels": 3,
+    "preprocessing": "Ultralytics letterbox preserving aspect ratio, then RGB float scaling to [0, 1]",
+    "accepted_decoder_output": "OpenCV-style BGR image; deployment wrapper converts to the model tensor"
+  },
+  "postprocessing": {
+    "confidence_threshold": 0.25,
+    "iou_threshold": 0.7,
+    "max_detections": 300,
+    "threshold_selection": "provisional default; do not tune on official test"
+  },
+  "portability": "TensorRT engines are hardware-specific. Rebuild the engine on the target Orin using the same checkpoint, TensorRT major version, image size, and calibration policy."
+}
