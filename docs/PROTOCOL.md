@@ -58,6 +58,15 @@ Evaluate full, daylike, and all six domains. Report per-class results only
 when that class is represented in the corresponding domain; `foggy` has 40
 images and needs an explicit uncertainty caveat.
 
+For architecture comparisons, train every candidate with the same fixed split,
+seed, epochs, image size, and batch size. Evaluate frozen checkpoints through
+the suite below; it refuses to overwrite results and records checkpoint and
+result hashes in a manifest.
+
+```bash
+python scripts/evaluate_weights_suite.py --weights fp32_yolov8n=results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt --weights fp32_yolo26n=results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt --out-dir results/eval/fp32_architecture --batch 64
+```
+
 ## TensorRT calibration and export
 
 The server export stack is pinned to Python 3.11, PyTorch `2.5.1+cu121`,
