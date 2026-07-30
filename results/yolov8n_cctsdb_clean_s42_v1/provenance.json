@@ -1,0 +1,26 @@
+{
+  "command": [
+    "scripts/train_cctsdb.py",
+    "--model",
+    "yolov8n.pt",
+    "--data",
+    "configs/cctsdb2021_train.yaml",
+    "--epochs",
+    "100",
+    "--batch",
+    "64",
+    "--workers",
+    "8",
+    "--device",
+    "0",
+    "--seed",
+    "42",
+    "--name",
+    "yolov8n_cctsdb_clean_s42_v1"
+  ],
+  "data_yaml": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/local/cctsdb2021_train_absolute.yaml",
+  "data_yaml_sha256": "22640e244f7533c73db3819aa09d46afedb42d0a4f9e6f48315985b380d50cfc",
+  "dataset_manifest": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/manifests/dataset_manifest.json",
+  "dataset_manifest_sha256": "5d1b6f1c6df475efe14c8bc6e41c6312b5121dcb828041ec81bbcb2733ac0a2e",
+  "seed": 42
+}

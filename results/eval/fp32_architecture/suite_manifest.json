@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-07-30T07:37:25.723944+00:00",
+  "command": [
+    "scripts/evaluate_weights_suite.py",
+    "--weights",
+    "fp32_yolov8n=results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo26n=results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+    "--out-dir",
+    "results/eval/fp32_architecture",
+    "--batch",
+    "64"
+  ],
+  "checkpoints": {
+    "fp32_yolov8n": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+    },
+    "fp32_yolo26n": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e"
+    }
+  },
+  "splits": {
+    "full": "configs/cctsdb2021_test_full.yaml",
+    "daylike": "configs/cctsdb2021_test_daylike.yaml",
+    "sunny": "configs/cctsdb2021_test_sunny.yaml",
+    "cloud": "configs/cctsdb2021_test_cloud.yaml",
+    "night": "configs/cctsdb2021_test_night.yaml",
+    "rain": "configs/cctsdb2021_test_rain.yaml",
+    "snow": "configs/cctsdb2021_test_snow.yaml",
+    "foggy": "configs/cctsdb2021_test_foggy.yaml"
+  },
+  "results": [
+    {
+      "label": "fp32_yolov8n",
+      "split": "full",
+      "result": "results/eval/fp32_architecture/fp32_yolov8n_full.json",
+      "result_sha256": "8f8c495564486aca0b93a89db81d9668d56f5bb6d93532fe674d812b31f24255"
+    },
+    {
+      "label": "fp32_yolov8n",
+      "split": "daylike",
+      "result": "results/eval/fp32_architecture/fp32_yolov8n_daylike.json",
+      "result_sha256": "99661e945c460df1bf3f307675cc744eefc985cb1275a7514fb8e8985be9a142"
+    },
+    {
+      "label": "fp32_yolov8n",
+      "split": "sunny",
+      "result": "results/eval/fp32_architecture/fp32_yolov8n_sunny.json",
+      "result_sha256": "45b891187cbf2ad403f6fca3247a9f010d42a25d497a5fd8b14e4d44166a43b7"
+    },
+    {
+      "label": "fp32_yolov8n",
+      "split": "cloud",
+      "result": "results/eval/fp32_architecture/fp32_yolov8n_cloud.json",
+      "result_sha256": "db0492ecb366fc02349ed5fd5846b7b3eee065f353a964bc63879d0b7536f7ac"
+    },
+    {
+      "label": "fp32_yolov8n",
+      "split": "night",
+      "result": "results/eval/fp32_architecture/fp32_yolov8n_night.json",
+      "result_sha256": "6a343b05f16ccdd19faa187840413e8eca1b50042db4f571596747cd2c0c4013"
+    },
+    {
+      "label": "fp32_yolov8n",
+      "split": "rain",
+      "result": "results/eval/fp32_architecture/fp32_yolov8n_rain.json",
+      "result_sha256": "e2146dc1e37f19c1cffbbb3b3d761ab19a3812509700e24b3f5cb6a6d383c3db"
+    },
+    {
+      "label": "fp32_yolov8n",
+      "split": "snow",
+      "result": "results/eval/fp32_architecture/fp32_yolov8n_snow.json",
+      "result_sha256": "d3fbdd002c3e6c90c6c3f8c5f54ece6e951b891327cd44392f20121c2d46aab3"
+    },
+    {
+      "label": "fp32_yolov8n",
+      "split": "foggy",
+      "result": "results/eval/fp32_architecture/fp32_yolov8n_foggy.json",
+      "result_sha256": "d1b686d3662f31e975b237576591b974b41f8c37ec2c402d18537a9d1bbffd2d"
+    },
+    {
+      "label": "fp32_yolo26n",
+      "split": "full",
+      "result": "results/eval/fp32_architecture/fp32_yolo26n_full.json",
+      "result_sha256": "6f5a1b508e030ba63c3e9b6b14a903a693b4219a6783aaf2d02982b0990b30cf"
+    },
+    {
+      "label": "fp32_yolo26n",
+      "split": "daylike",
+      "result": "results/eval/fp32_architecture/fp32_yolo26n_daylike.json",
+      "result_sha256": "4e001e3f7948fac5ae5544232ed2fe99123d8536f9e40ba0b2427f877102667b"
+    },
+    {
+      "label": "fp32_yolo26n",
+      "split": "sunny",
+      "result": "results/eval/fp32_architecture/fp32_yolo26n_sunny.json",
+      "result_sha256": "db10329e300ebeb5dcb7d6c88fcb47c8298b14bff10ac3ec3f9e9db8906ef158"
+    },
+    {
+      "label": "fp32_yolo26n",
+      "split": "cloud",
+      "result": "results/eval/fp32_architecture/fp32_yolo26n_cloud.json",
+      "result_sha256": "1c870a9da8dfc9f7c3b1b77be198f89a2374c9161da87588a6d9b1258411f692"
+    },
+    {
+      "label": "fp32_yolo26n",
+      "split": "night",
+      "result": "results/eval/fp32_architecture/fp32_yolo26n_night.json",
+      "result_sha256": "2120f90258bceea94f1b64f489816eaf81f6f2f4bddc1a9ebfe7cbc184da6243"
+    },
+    {
+      "label": "fp32_yolo26n",
+      "split": "rain",
+      "result": "results/eval/fp32_architecture/fp32_yolo26n_rain.json",
+      "result_sha256": "ffb04e5c8b68ac8a6fcd72c983684269cb6aa8c0157a80b7280e28d580021150"
+    },
+    {
+      "label": "fp32_yolo26n",
+      "split": "snow",
+      "result": "results/eval/fp32_architecture/fp32_yolo26n_snow.json",
+      "result_sha256": "8b419a3d17141de17694933fe45e1d71beccd5d4681be880b9ffe06d0f2546e8"
+    },
+    {
+      "label": "fp32_yolo26n",
+      "split": "foggy",
+      "result": "results/eval/fp32_architecture/fp32_yolo26n_foggy.json",
+      "result_sha256": "3bb2b2d7daf418ce837860e14760ad5ca58efc8fa1548e167b81cebe94e529ff"
+    }
+  ]
+}
