@@ -116,6 +116,10 @@ def main() -> int:
     records.append({"path": "environment.json", "sha256": sha256(args.out_dir / "environment.json"), "bytes": (args.out_dir / "environment.json").stat().st_size, "purpose": "runtime environment lock"})
     (args.out_dir / "model_inventory.json").write_text(json.dumps(inventory, indent=2) + "\n", encoding="utf-8")
     records.append({"path": "model_inventory.json", "sha256": sha256(args.out_dir / "model_inventory.json"), "bytes": (args.out_dir / "model_inventory.json").stat().st_size, "purpose": "checkpoint and engine sizes/hashes"})
+    for record in records:
+        record_path = Path(str(record["path"]))
+        if record_path != Path("environment.json") and record_path != Path("model_inventory.json"):
+            record["path"] = record_path.relative_to(args.out_dir).as_posix()
     manifest = {"schema_version": 1, "created_utc": datetime.now(timezone.utc).isoformat(), "command": sys.argv, "contains_dataset_images": False, "contains_engine_binaries": False, "files": records}
     (args.out_dir / "artifact_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"Prepared {args.out_dir}")
