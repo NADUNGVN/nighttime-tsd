@@ -60,6 +60,21 @@ images and needs an explicit uncertainty caveat.
 
 ## TensorRT calibration and export
 
+The server export stack is pinned to Python 3.11, PyTorch `2.5.1+cu121`,
+Ultralytics `8.4.102`, and TensorRT `10.16.1.11`. Do **not** install an
+unbounded `tensorrt-cu12` package: TensorRT 11 routes Ultralytics INT8 export
+through NVIDIA ModelOpt, whose current Torch requirement is incompatible with
+the frozen baseline environment. TensorRT 10 uses the native calibration path.
+
+Install or repair this stack with the following exact commands in the active
+`nighttime-tsd` Conda environment:
+
+```bash
+python -m pip install --force-reinstall --no-cache-dir torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+python -m pip uninstall -y nvidia-modelopt tensorrt-cu12 tensorrt-cu12-bindings tensorrt-cu12-libs
+python -m pip install --no-cache-dir tensorrt-cu12==10.16.1.11
+```
+
 Create two 512-image calibration sets from `train/images` only. The first is
 a seeded uniform reference; the second deliberately selects the darkest train
 images by median grayscale luminance. These are calibration policies, not
@@ -76,6 +91,6 @@ checkpoint, calibration manifest, and generated engine. Engines are hardware
 specific and are not committed; commit only the JSON results and provenance.
 
 ```bash
-python scripts/export_tensorrt.py --weights results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt --precision fp16 --out results/engines/yolo11n_cctsdb_clean_s42_v2_fp16.engine
-python scripts/export_tensorrt.py --weights results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt --precision int8 --data data/processed/cctsdb2021_clean/calibration/uniform_s42_n512/calibration.yaml --out results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform.engine
+python scripts/export_tensorrt.py --weights results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt --precision fp16 --out results/engines/yolo11n_cctsdb_clean_s42_v2_fp16_trt1016.engine
+python scripts/export_tensorrt.py --weights results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt --precision int8 --data data/processed/cctsdb2021_clean/calibration/uniform_s42_n512/calibration.yaml --out results/engines/yolo11n_cctsdb_clean_s42_v2_int8_uniform_s42_n512_trt1016.engine
 ```

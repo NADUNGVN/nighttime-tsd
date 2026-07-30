@@ -51,9 +51,18 @@ def main() -> int:
     if args.out.exists():
         raise FileExistsError(f"Refusing to overwrite existing engine: {args.out}")
 
+    import tensorrt as trt
     from ultralytics import YOLO
     import torch
     import ultralytics
+
+    trt_major = int(trt.__version__.split(".", 1)[0])
+    if trt_major != 10:
+        raise RuntimeError(
+            f"This CCTSDB protocol requires TensorRT 10 native PTQ, found TensorRT {trt.__version__}. "
+            "TensorRT 11 routes Ultralytics INT8 export through ModelOpt and is not compatible with the pinned "
+            "Torch 2.5.1+cu121 training environment."
+        )
 
     export_args = {
         "format": "engine",
@@ -94,7 +103,7 @@ def main() -> int:
             "torch": torch.__version__,
             "ultralytics": ultralytics.__version__,
             "cuda": torch.version.cuda,
-            "tensorrt_python": command_version([sys.executable, "-c", "import tensorrt; print(tensorrt.__version__)"]),
+            "tensorrt_python": trt.__version__,
             "trtexec_version": command_version(["trtexec", "--version"]),
         },
     }
