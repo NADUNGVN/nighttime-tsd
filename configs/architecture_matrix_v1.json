@@ -6,7 +6,7 @@
     "data": "configs/cctsdb2021_train.yaml",
     "epochs": 100,
     "imgsz": 640,
-    "workers": 8,
+    "workers": 2,
     "device": "0",
     "seed": 42,
     "patience": 30,
@@ -14,7 +14,7 @@
   },
   "execution": {
     "mode": "serial",
-    "hardware_assumption": "Server GPU is Quadro RTX 8000 with 48 GB VRAM. Batch sizes retain the nominal batch size of 64 through Ultralytics gradient accumulation when needed.",
+    "hardware_assumption": "Server GPU is Quadro RTX 8000 with 48 GB VRAM. Batch sizes retain the nominal batch size of 64 through Ultralytics gradient accumulation when needed. Use two dataloader workers because the server's shared-memory capacity caused a Bus error with eight workers.",
     "official_test_policy": "Never use official test data during training, early stopping, or model selection."
   },
   "models": [

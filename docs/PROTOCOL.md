@@ -76,8 +76,9 @@ python scripts/evaluate_weights_suite.py --weights fp32_yolov8n=results/yolov8n_
 checkpoints are reused; the remaining twelve runs are serial so one server GPU
 is never shared by concurrent training jobs. Batch size is reduced by scale to
 fit the 48 GB RTX 8000; Ultralytics keeps its nominal batch size at 64 through
-gradient accumulation. Each newly trained run records both requested and
-effective Ultralytics arguments in its provenance file.
+gradient accumulation. The server uses two dataloader workers because eight
+workers exhausted its shared-memory allocation. Each newly trained run records
+both requested and effective Ultralytics arguments in its provenance file.
 
 First inspect the plan and server state, then start the serial queue. The
 runner stops on the first failure and never overwrites a finished `best.pt`.
