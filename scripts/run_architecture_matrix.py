@@ -42,10 +42,15 @@ def selected_models(plan: dict[str, Any], raw_only: str | None) -> list[dict[str
 
 def status_for(repo: Path, entry: dict[str, Any]) -> tuple[str, Path]:
     run_dir = repo / "results" / entry["run_name"]
-    if (run_dir / "weights" / "best.pt").is_file():
+    best = run_dir / "weights" / "best.pt"
+    last = run_dir / "weights" / "last.pt"
+    provenance = run_dir / "provenance.json"
+    if best.is_file() and provenance.is_file():
         return "complete", run_dir
-    if (run_dir / "weights" / "last.pt").is_file():
+    if last.is_file():
         return "incomplete", run_dir
+    if best.is_file():
+        return "partial_best_without_last", run_dir
     if run_dir.exists():
         return "started_without_checkpoint", run_dir
     return "pending", run_dir
@@ -85,7 +90,7 @@ def print_status(repo: Path, models: list[dict[str, Any]]) -> None:
         print(f"{entry['label']:<10} {entry['batch']:>5}  {status}")
 
 
-def training_command(repo: Path, plan: dict[str, Any], entry: dict[str, Any], resume: bool) -> list[str]:
+def training_command(repo: Path, plan: dict[str, Any], entry: dict[str, Any], resume_checkpoint: Path | None) -> list[str]:
     training = plan["training"]
     command = [
         sys.executable,
@@ -102,8 +107,8 @@ def training_command(repo: Path, plan: dict[str, Any], entry: dict[str, Any], re
         "--patience", str(training["patience"]),
         "--seed", str(training["seed"]),
     ]
-    if resume:
-        command.append("--resume")
+    if resume_checkpoint is not None:
+        command.extend(["--resume", str(resume_checkpoint)])
     return command
 
 
@@ -113,14 +118,15 @@ def run_train(repo: Path, plan_path: Path, plan: dict[str, Any], models: list[di
         if status == "complete":
             print(f"SKIP complete: {entry['label']}", flush=True)
             continue
-        if status in {"incomplete", "started_without_checkpoint"} and not resume_incomplete:
+        if status in {"incomplete", "started_without_checkpoint", "partial_best_without_last"} and not resume_incomplete:
             print_status(repo, models)
             print(f"STOP: {entry['label']} is {status}. Inspect it, then rerun with --resume-incomplete if it has a valid last.pt.")
             return 2
-        if status == "started_without_checkpoint":
+        if status in {"started_without_checkpoint", "partial_best_without_last"}:
             print(f"STOP: {entry['label']} has no last.pt and cannot be resumed safely.")
             return 2
-        command = training_command(repo, plan, entry, resume=status == "incomplete")
+        run_dir = repo / "results" / entry["run_name"]
+        command = training_command(repo, plan, entry, run_dir / "weights" / "last.pt" if status == "incomplete" else None)
         print("\nSTART " + entry["label"] + ": " + " ".join(command), flush=True)
         write_manifest(repo, plan_path, plan, models, "train")
         try:

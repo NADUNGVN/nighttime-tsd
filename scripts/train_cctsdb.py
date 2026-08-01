@@ -93,7 +93,12 @@ def main() -> int:
     parser.add_argument("--name", default="yolo11n_cctsdb_clean_s42")
     parser.add_argument("--patience", type=int, default=30)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--resume",
+        type=Path,
+        default=None,
+        help="Explicit last.pt path to resume. A bare --resume is intentionally unsupported.",
+    )
     parser.add_argument(
         "--cache",
         default=False,
@@ -117,6 +122,9 @@ def main() -> int:
 
     if not args.data.exists():
         print(f"ERROR: missing data config: {args.data}")
+        return 1
+    if args.resume is not None and not args.resume.is_file():
+        print(f"ERROR: missing resume checkpoint: {args.resume}")
         return 1
     source_root = resolve_data_root(args.data)
     data_yaml = args.data
@@ -148,7 +156,7 @@ def main() -> int:
         seed=args.seed,
         exist_ok=True,
         pretrained=True,
-        resume=args.resume,
+        resume=str(args.resume) if args.resume is not None else False,
         cache=False if not args.cache else args.cache,
         plots=False,
     )
@@ -170,6 +178,7 @@ def main() -> int:
             "patience": args.patience,
             "seed": args.seed,
             "cache": args.cache,
+            "resume": str(args.resume) if args.resume is not None else None,
         },
         "effective_ultralytics_args": json_safe(effective_args),
         "data_yaml": str(data_yaml.resolve()),
