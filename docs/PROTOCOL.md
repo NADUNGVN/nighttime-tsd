@@ -59,12 +59,43 @@ when that class is represented in the corresponding domain; `foggy` has 40
 images and needs an explicit uncertainty caveat.
 
 For architecture comparisons, train every candidate with the same fixed split,
-seed, epochs, image size, and batch size. Evaluate frozen checkpoints through
+seed, epochs, image size, and nominal batch size. Per-device mini-batch may
+decrease for larger scales; keep Ultralytics' nominal batch size fixed through
+gradient accumulation. Evaluate frozen checkpoints through
 the suite below; it refuses to overwrite results and records checkpoint and
 result hashes in a manifest.
 
 ```bash
 python scripts/evaluate_weights_suite.py --weights fp32_yolov8n=results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt --weights fp32_yolo26n=results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt --out-dir results/eval/fp32_architecture --batch 64
+```
+
+### Full-scale architecture matrix
+
+`configs/architecture_matrix_v1.json` defines all five detection scales
+(`n`, `s`, `m`, `l`, `x`) for YOLOv8, YOLO11, and YOLO26. The completed `n`
+checkpoints are reused; the remaining twelve runs are serial so one server GPU
+is never shared by concurrent training jobs. Batch size is reduced by scale to
+fit the 48 GB RTX 8000; Ultralytics keeps its nominal batch size at 64 through
+gradient accumulation. Each newly trained run records both requested and
+effective Ultralytics arguments in its provenance file.
+
+First inspect the plan and server state, then start the serial queue. The
+runner stops on the first failure and never overwrites a finished `best.pt`.
+Only use `--resume-incomplete` when the corresponding `last.pt` exists and
+you intentionally want to resume that exact run.
+
+```bash
+python scripts/run_architecture_matrix.py --phase status
+python scripts/run_architecture_matrix.py --phase train
+python scripts/run_architecture_matrix.py --phase train --resume-incomplete
+```
+
+After all 15 checkpoints are complete, evaluate each frozen FP32 model across
+the same eight official-test splits. This command refuses to evaluate an
+incomplete matrix and writes a separate manifest and 120 result JSON files.
+
+```bash
+python scripts/run_architecture_matrix.py --phase evaluate
 ```
 
 ## TensorRT calibration and export

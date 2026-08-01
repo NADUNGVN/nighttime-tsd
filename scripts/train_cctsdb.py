@@ -67,6 +67,19 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def json_safe(value: object) -> object:
+    """Convert Ultralytics' configuration values into JSON-safe primitives."""
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item) for item in value]
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    return str(value)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Train YOLO on CCTSDB2021")
     parser.add_argument("--model", default="yolo11n.pt")
@@ -143,8 +156,22 @@ def main() -> int:
     run_dir = Path(model.trainer.save_dir) if getattr(model, "trainer", None) else project_root / args.name
     best = run_dir / "weights" / "best.pt"
     source_manifest = Path("data/processed/cctsdb2021_clean/manifests/dataset_manifest.json")
+    trainer_args = getattr(getattr(model, "trainer", None), "args", None)
+    effective_args = vars(trainer_args) if hasattr(trainer_args, "__dict__") else {}
     provenance = {
         "command": sys.argv,
+        "requested_training": {
+            "model": args.model,
+            "epochs": args.epochs,
+            "imgsz": args.imgsz,
+            "batch": args.batch,
+            "workers": args.workers,
+            "device": args.device,
+            "patience": args.patience,
+            "seed": args.seed,
+            "cache": args.cache,
+        },
+        "effective_ultralytics_args": json_safe(effective_args),
         "data_yaml": str(data_yaml.resolve()),
         "data_yaml_sha256": sha256(data_yaml),
         "dataset_manifest": str(source_manifest.resolve()) if source_manifest.exists() else None,

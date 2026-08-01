@@ -1,0 +1,115 @@
+{
+  "schema_version": 1,
+  "name": "cctsdb2021_architecture_matrix_v1",
+  "purpose": "FP32 architecture comparison; frozen official test evaluation occurs only after training.",
+  "training": {
+    "data": "configs/cctsdb2021_train.yaml",
+    "epochs": 100,
+    "imgsz": 640,
+    "workers": 8,
+    "device": "0",
+    "seed": 42,
+    "patience": 30,
+    "project": "results"
+  },
+  "execution": {
+    "mode": "serial",
+    "hardware_assumption": "Server GPU is Quadro RTX 8000 with 48 GB VRAM. Batch sizes retain the nominal batch size of 64 through Ultralytics gradient accumulation when needed.",
+    "official_test_policy": "Never use official test data during training, early stopping, or model selection."
+  },
+  "models": [
+    {
+      "label": "yolov8n",
+      "model": "yolov8n.pt",
+      "run_name": "yolov8n_cctsdb_clean_s42_v1",
+      "batch": 64,
+      "reuse_complete": true
+    },
+    {
+      "label": "yolov8s",
+      "model": "yolov8s.pt",
+      "run_name": "yolov8s_cctsdb_clean_s42_v1",
+      "batch": 48
+    },
+    {
+      "label": "yolov8m",
+      "model": "yolov8m.pt",
+      "run_name": "yolov8m_cctsdb_clean_s42_v1",
+      "batch": 32
+    },
+    {
+      "label": "yolov8l",
+      "model": "yolov8l.pt",
+      "run_name": "yolov8l_cctsdb_clean_s42_v1",
+      "batch": 24
+    },
+    {
+      "label": "yolov8x",
+      "model": "yolov8x.pt",
+      "run_name": "yolov8x_cctsdb_clean_s42_v1",
+      "batch": 16
+    },
+    {
+      "label": "yolo11n",
+      "model": "yolo11n.pt",
+      "run_name": "yolo11n_cctsdb_clean_s42_v2",
+      "batch": 64,
+      "reuse_complete": true
+    },
+    {
+      "label": "yolo11s",
+      "model": "yolo11s.pt",
+      "run_name": "yolo11s_cctsdb_clean_s42_v1",
+      "batch": 48
+    },
+    {
+      "label": "yolo11m",
+      "model": "yolo11m.pt",
+      "run_name": "yolo11m_cctsdb_clean_s42_v1",
+      "batch": 32
+    },
+    {
+      "label": "yolo11l",
+      "model": "yolo11l.pt",
+      "run_name": "yolo11l_cctsdb_clean_s42_v1",
+      "batch": 24
+    },
+    {
+      "label": "yolo11x",
+      "model": "yolo11x.pt",
+      "run_name": "yolo11x_cctsdb_clean_s42_v1",
+      "batch": 16
+    },
+    {
+      "label": "yolo26n",
+      "model": "yolo26n.pt",
+      "run_name": "yolo26n_cctsdb_clean_s42_v1",
+      "batch": 64,
+      "reuse_complete": true
+    },
+    {
+      "label": "yolo26s",
+      "model": "yolo26s.pt",
+      "run_name": "yolo26s_cctsdb_clean_s42_v1",
+      "batch": 48
+    },
+    {
+      "label": "yolo26m",
+      "model": "yolo26m.pt",
+      "run_name": "yolo26m_cctsdb_clean_s42_v1",
+      "batch": 32
+    },
+    {
+      "label": "yolo26l",
+      "model": "yolo26l.pt",
+      "run_name": "yolo26l_cctsdb_clean_s42_v1",
+      "batch": 24
+    },
+    {
+      "label": "yolo26x",
+      "model": "yolo26x.pt",
+      "run_name": "yolo26x_cctsdb_clean_s42_v1",
+      "batch": 16
+    }
+  ]
+}
