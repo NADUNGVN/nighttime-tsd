@@ -164,13 +164,41 @@ def run_eval(repo: Path, plan_path: Path, plan: dict[str, Any], models: list[dic
     return 0
 
 
+def run_benchmark(repo: Path, plan_path: Path, plan: dict[str, Any], models: list[dict[str, Any]], out_dir: Path, images: Path, warmup: int, samples: int) -> int:
+    incomplete = [entry["label"] for entry in models if status_for(repo, entry)[0] != "complete"]
+    if incomplete:
+        print("STOP: cannot benchmark; missing complete checkpoints: " + ", ".join(incomplete))
+        return 2
+    command = [sys.executable, "scripts/benchmark_weights_suite.py"]
+    for entry in models:
+        checkpoint = Path("results") / entry["run_name"] / "weights" / "best.pt"
+        command.extend(["--weights", f"fp32_{entry['label']}={checkpoint.as_posix()}"])
+    command.extend([
+        "--images", str(images),
+        "--out-dir", str(out_dir),
+        "--device", str(plan["training"]["device"]),
+        "--imgsz", str(plan["training"]["imgsz"]),
+        "--warmup", str(warmup),
+        "--samples", str(samples),
+    ])
+    print("START benchmark: " + " ".join(command), flush=True)
+    write_manifest(repo, plan_path, plan, models, "benchmark")
+    subprocess.run(command, cwd=repo, check=True)
+    write_manifest(repo, plan_path, plan, models, "benchmark_complete")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Serial CCTSDB FP32 training/evaluation matrix for YOLOv8, YOLO11, and YOLO26")
     parser.add_argument("--plan", type=Path, default=Path("configs/architecture_matrix_v1.json"))
-    parser.add_argument("--phase", choices=("status", "train", "evaluate"), default="status")
+    parser.add_argument("--phase", choices=("status", "train", "evaluate", "benchmark"), default="status")
     parser.add_argument("--only", help="Comma-separated labels, for example yolo11s,yolo11m")
     parser.add_argument("--resume-incomplete", action="store_true", help="Resume only entries that contain weights/last.pt")
     parser.add_argument("--eval-out-dir", type=Path, default=Path("results/eval/fp32_architecture_matrix_v1"))
+    parser.add_argument("--benchmark-out-dir", type=Path, default=Path("results/benchmark/fp32_architecture_matrix_v1"))
+    parser.add_argument("--benchmark-images", type=Path, default=Path("data/processed/cctsdb2021_clean/dev/images"))
+    parser.add_argument("--benchmark-warmup", type=int, default=50)
+    parser.add_argument("--benchmark-samples", type=int, default=500)
     args = parser.parse_args()
 
     repo = Path(__file__).resolve().parents[1]
@@ -184,7 +212,9 @@ def main() -> int:
         return 0
     if args.phase == "train":
         return run_train(repo, plan_path, plan, models, args.resume_incomplete)
-    return run_eval(repo, plan_path, plan, models, args.eval_out_dir)
+    if args.phase == "evaluate":
+        return run_eval(repo, plan_path, plan, models, args.eval_out_dir)
+    return run_benchmark(repo, plan_path, plan, models, args.benchmark_out_dir, args.benchmark_images, args.benchmark_warmup, args.benchmark_samples)
 
 
 if __name__ == "__main__":

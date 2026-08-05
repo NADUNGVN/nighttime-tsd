@@ -99,6 +99,16 @@ incomplete matrix and writes a separate manifest and 120 result JSON files.
 python scripts/run_architecture_matrix.py --phase evaluate
 ```
 
+Benchmark the same frozen FP32 checkpoints separately from accuracy. This is a
+batch-one server-runtime comparison: CCTSDB development images are preloaded,
+disk decoding is excluded, and each measured call includes preprocessing,
+inference, and post-processing. It is not an edge-device or energy result and
+must not be reported as a Jetson measurement.
+
+```bash
+python scripts/run_architecture_matrix.py --phase benchmark
+```
+
 ## TensorRT calibration and export
 
 The server export stack is pinned to Python 3.11, PyTorch `2.5.1+cu121`,
