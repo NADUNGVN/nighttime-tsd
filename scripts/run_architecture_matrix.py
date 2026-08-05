@@ -4,11 +4,50 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+try:
+    import fcntl
+except ImportError:  # Windows is used only for local inspection in this project.
+    fcntl = None
+
+
+class GpuPhaseLock:
+    """One host-wide lock for matrix phases that use the GPU."""
+
+    def __init__(self, path: Path, phase: str) -> None:
+        self.path = path
+        self.phase = phase
+        self.handle = None
+
+    def __enter__(self) -> "GpuPhaseLock":
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.handle = self.path.open("a+", encoding="utf-8")
+        if fcntl is None:
+            return self
+        try:
+            fcntl.flock(self.handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as error:
+            self.handle.seek(0)
+            owner = self.handle.read().strip() or "unknown process"
+            self.handle.close()
+            raise RuntimeError(f"Another matrix GPU phase is already running: {owner}") from error
+        self.handle.seek(0)
+        self.handle.truncate()
+        self.handle.write(json.dumps({"pid": os.getpid(), "phase": self.phase, "started_utc": datetime.now(timezone.utc).isoformat()}) + "\n")
+        self.handle.flush()
+        return self
+
+    def __exit__(self, exc_type: object, exc: object, traceback: object) -> None:
+        if self.handle is not None:
+            if fcntl is not None:
+                fcntl.flock(self.handle.fileno(), fcntl.LOCK_UN)
+            self.handle.close()
 
 
 def read_plan(path: Path) -> dict[str, Any]:
@@ -207,14 +246,14 @@ def main() -> int:
     models = selected_models(plan, args.only)
     if args.phase == "status":
         print_status(repo, models)
-        manifest = write_manifest(repo, plan_path, plan, models, "status")
-        print(f"manifest: {manifest.relative_to(repo)}")
         return 0
-    if args.phase == "train":
-        return run_train(repo, plan_path, plan, models, args.resume_incomplete)
-    if args.phase == "evaluate":
-        return run_eval(repo, plan_path, plan, models, args.eval_out_dir)
-    return run_benchmark(repo, plan_path, plan, models, args.benchmark_out_dir, args.benchmark_images, args.benchmark_warmup, args.benchmark_samples)
+    lock_path = repo / "results" / "architecture_matrix_v1" / ".gpu_phase.lock"
+    with GpuPhaseLock(lock_path, args.phase):
+        if args.phase == "train":
+            return run_train(repo, plan_path, plan, models, args.resume_incomplete)
+        if args.phase == "evaluate":
+            return run_eval(repo, plan_path, plan, models, args.eval_out_dir)
+        return run_benchmark(repo, plan_path, plan, models, args.benchmark_out_dir, args.benchmark_images, args.benchmark_warmup, args.benchmark_samples)
 
 
 if __name__ == "__main__":

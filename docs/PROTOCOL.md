@@ -85,6 +85,10 @@ runner stops on the first failure and never overwrites a finished `best.pt`.
 Only use `--resume-incomplete` when the corresponding `last.pt` exists and
 you intentionally want to resume that exact run.
 
+The train, evaluation, and FP32 benchmark phases take one shared host lock.
+Do not run two of these phases concurrently: a benchmark under a competing GPU
+workload is not a valid latency measurement.
+
 ```bash
 python scripts/run_architecture_matrix.py --phase status
 python scripts/run_architecture_matrix.py --phase train
