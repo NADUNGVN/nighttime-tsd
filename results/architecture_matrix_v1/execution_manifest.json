@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-08-05T08:10:52.512957+00:00",
+  "plan": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/architecture_matrix_v1.json",
+  "phase": "benchmark_complete",
+  "training": {
+    "data": "configs/cctsdb2021_train.yaml",
+    "epochs": 100,
+    "imgsz": 640,
+    "workers": 2,
+    "device": "0",
+    "seed": 42,
+    "patience": 30,
+    "project": "results"
+  },
+  "models": [
+    {
+      "label": "yolov8n",
+      "model": "yolov8n.pt",
+      "run_name": "yolov8n_cctsdb_clean_s42_v1",
+      "batch": 64,
+      "reuse_complete": true,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8n_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolov8s",
+      "model": "yolov8s.pt",
+      "run_name": "yolov8s_cctsdb_clean_s42_v1",
+      "batch": 48,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8s_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolov8m",
+      "model": "yolov8m.pt",
+      "run_name": "yolov8m_cctsdb_clean_s42_v1",
+      "batch": 32,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8m_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolov8l",
+      "model": "yolov8l.pt",
+      "run_name": "yolov8l_cctsdb_clean_s42_v1",
+      "batch": 24,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8l_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolov8x",
+      "model": "yolov8x.pt",
+      "run_name": "yolov8x_cctsdb_clean_s42_v1",
+      "batch": 16,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8x_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolo11n",
+      "model": "yolo11n.pt",
+      "run_name": "yolo11n_cctsdb_clean_s42_v2",
+      "batch": 64,
+      "reuse_complete": true,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2"
+    },
+    {
+      "label": "yolo11s",
+      "model": "yolo11s.pt",
+      "run_name": "yolo11s_cctsdb_clean_s42_v1",
+      "batch": 48,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11s_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolo11m",
+      "model": "yolo11m.pt",
+      "run_name": "yolo11m_cctsdb_clean_s42_v1",
+      "batch": 32,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11m_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolo11l",
+      "model": "yolo11l.pt",
+      "run_name": "yolo11l_cctsdb_clean_s42_v1",
+      "batch": 24,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11l_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolo11x",
+      "model": "yolo11x.pt",
+      "run_name": "yolo11x_cctsdb_clean_s42_v1",
+      "batch": 16,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11x_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolo26n",
+      "model": "yolo26n.pt",
+      "run_name": "yolo26n_cctsdb_clean_s42_v1",
+      "batch": 64,
+      "reuse_complete": true,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26n_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolo26s",
+      "model": "yolo26s.pt",
+      "run_name": "yolo26s_cctsdb_clean_s42_v1",
+      "batch": 48,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26s_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolo26m",
+      "model": "yolo26m.pt",
+      "run_name": "yolo26m_cctsdb_clean_s42_v1",
+      "batch": 32,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26m_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolo26l",
+      "model": "yolo26l.pt",
+      "run_name": "yolo26l_cctsdb_clean_s42_v1",
+      "batch": 24,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26l_cctsdb_clean_s42_v1"
+    },
+    {
+      "label": "yolo26x",
+      "model": "yolo26x.pt",
+      "run_name": "yolo26x_cctsdb_clean_s42_v1",
+      "batch": 16,
+      "reuse_complete": false,
+      "status": "complete",
+      "run_dir": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26x_cctsdb_clean_s42_v1"
+    }
+  ]
+}

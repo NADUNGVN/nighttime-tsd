@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-08-05T08:10:50.151665+00:00",
+  "command": [
+    "scripts/benchmark_weights_suite.py",
+    "--weights",
+    "fp32_yolov8n=results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolov8s=results/yolov8s_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolov8m=results/yolov8m_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolov8l=results/yolov8l_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolov8x=results/yolov8x_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo11n=results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+    "--weights",
+    "fp32_yolo11s=results/yolo11s_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo11m=results/yolo11m_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo11l=results/yolo11l_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo11x=results/yolo11x_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo26n=results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo26s=results/yolo26s_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo26m=results/yolo26m_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo26l=results/yolo26l_cctsdb_clean_s42_v1/weights/best.pt",
+    "--weights",
+    "fp32_yolo26x=results/yolo26x_cctsdb_clean_s42_v1/weights/best.pt",
+    "--images",
+    "data/processed/cctsdb2021_clean/dev/images",
+    "--out-dir",
+    "results/benchmark/fp32_architecture_matrix_v1",
+    "--device",
+    "0",
+    "--imgsz",
+    "640",
+    "--warmup",
+    "50",
+    "--samples",
+    "500"
+  ],
+  "checkpoints": {
+    "fp32_yolov8n": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+    },
+    "fp32_yolov8s": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8s_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "9c99b730dd8603737f53e331c87eb6c394c335f92fc5c4c1f68fe4decd0bad80"
+    },
+    "fp32_yolov8m": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8m_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "c6a1c27dc3e1fc4377a31f4571319411aef0f0873112e827ec3123c15d67e285"
+    },
+    "fp32_yolov8l": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8l_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "ccf55bb3ce407d882bea081383045a7d434f902991fe01d70e77b61b0ef60547"
+    },
+    "fp32_yolov8x": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8x_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "32edf92a8b8832d9b6ab5c2b516fc90f70c876972ef928bce0211b27db4f4aca"
+    },
+    "fp32_yolo11n": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+      "sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
+    },
+    "fp32_yolo11s": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11s_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "7c4168232e6f8291a4312327c2dc0aefced077788243e311e2a52cc46636002a"
+    },
+    "fp32_yolo11m": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11m_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "ebf8fa735ca02328753c30b91bcb3474a457539b045316f085e0ccd8f677e13a"
+    },
+    "fp32_yolo11l": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11l_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "51011addac1ae74f018706abaaaf5b61537884514535be8ff8128e077127cd41"
+    },
+    "fp32_yolo11x": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11x_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "1699bf4f091252b52159bd3711b3c7476db71b8132894538ac7836b06cac5f5c"
+    },
+    "fp32_yolo26n": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e"
+    },
+    "fp32_yolo26s": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26s_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "684d5ab1ffa72715c342c1b5aad3a0db393f6c6e471744ef547b6f573bacacc4"
+    },
+    "fp32_yolo26m": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26m_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "8f2f46384f2eb3fe6f679be682f5bfd28c304642d4e71b78b8aa253573460e38"
+    },
+    "fp32_yolo26l": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26l_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "4932c0b2dbe8a0f2e6239d352467ee596e64f78ac0cdbce33e85cdcd2e2cca6e"
+    },
+    "fp32_yolo26x": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo26x_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "76aa49640d581adea771907712eab78faf7c3d6d4c7ffe7b4c1eaaa04dff186a"
+    }
+  },
+  "results": [
+    {
+      "label": "fp32_yolov8n",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolov8n.json",
+      "result_sha256": "910cd7a3d3b8bed65d05999e75554cf8ca8e1936d7a9788ef9ef968e9e799d72"
+    },
+    {
+      "label": "fp32_yolov8s",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolov8s.json",
+      "result_sha256": "37206fdaf57e4a6523c1cec145d8c305a71d7d3b1fda7043e4b813b0cf7d2812"
+    },
+    {
+      "label": "fp32_yolov8m",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolov8m.json",
+      "result_sha256": "2efc008e312c0daa4e19ec57bc6dbc95ebb5680c9a3c2c1de3fe768197eb8cd8"
+    },
+    {
+      "label": "fp32_yolov8l",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolov8l.json",
+      "result_sha256": "74114f64bc27f9bc686dd1894f31dd1ea1b81a0e65a57e289f00ca09a45c180b"
+    },
+    {
+      "label": "fp32_yolov8x",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolov8x.json",
+      "result_sha256": "2b454ad0a4e7a34db88c9875b42fc68a77d027cf2eaff295740bc31d7e244db8"
+    },
+    {
+      "label": "fp32_yolo11n",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo11n.json",
+      "result_sha256": "63b7fb0110b217124cb94fe064de7b1bf6ba7b76f9975e0a243ba75dcc69eb14"
+    },
+    {
+      "label": "fp32_yolo11s",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo11s.json",
+      "result_sha256": "e6115c08373bdf76be991f5d9d58fbce747429a1b35a343a560a6414e8056259"
+    },
+    {
+      "label": "fp32_yolo11m",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo11m.json",
+      "result_sha256": "9853feeff41a768ed7f7b1d64302705dc9f7f19d5558c774ba18a83ca1bb5690"
+    },
+    {
+      "label": "fp32_yolo11l",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo11l.json",
+      "result_sha256": "a87ef6f8411af223dfd6cc4e7a4147d96498c32cbfb9e9bda4946e7903957c85"
+    },
+    {
+      "label": "fp32_yolo11x",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo11x.json",
+      "result_sha256": "1f7f01bd6aa07e21a8e04d5ac5840cf6dade71ebada3c550232be5fc8939defc"
+    },
+    {
+      "label": "fp32_yolo26n",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo26n.json",
+      "result_sha256": "7d7e37da2ec974083387ae12e3d96ab049e8f56f7025a9b2903ef6f74c6a9e24"
+    },
+    {
+      "label": "fp32_yolo26s",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo26s.json",
+      "result_sha256": "cd944adc32aeeecf61e5df169d3865a55802f9cf41e1a4c58084006613291378"
+    },
+    {
+      "label": "fp32_yolo26m",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo26m.json",
+      "result_sha256": "574eae52f5c4664e7cebb6c4ff395a3f0b9c107d836bdcd5746a9ee1f83bb7df"
+    },
+    {
+      "label": "fp32_yolo26l",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo26l.json",
+      "result_sha256": "99b5aac5a3e07d6c9eee7bf116680393b0aa13a6f195bc2cef61c6361d57d76a"
+    },
+    {
+      "label": "fp32_yolo26x",
+      "result": "results/benchmark/fp32_architecture_matrix_v1/fp32_yolo26x.json",
+      "result_sha256": "2af23c5723691ec3ee634534fb6143776e6ea39e33542f3695a4e9c30d9b557d"
+    }
+  ]
+}

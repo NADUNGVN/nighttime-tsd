@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-08-05T08:09:27.849584+00:00",
+  "label": "fp32_yolov8s",
+  "model": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolov8s_cctsdb_clean_s42_v1/weights/best.pt",
+  "model_sha256": "9c99b730dd8603737f53e331c87eb6c394c335f92fc5c4c1f68fe4decd0bad80",
+  "model_bytes": 22504291,
+  "images": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/dev/images",
+  "image_pool_size": 1636,
+  "image_decode_in_timing": false,
+  "batch": 1,
+  "warmup": 50,
+  "samples": 500,
+  "runtime": {
+    "imgsz": 640,
+    "confidence": 0.25,
+    "iou": 0.7,
+    "device": "0",
+    "representation": "PyTorch FP32"
+  },
+  "latency_ms": {
+    "mean": 5.684997434262186,
+    "p50": 5.493902135640383,
+    "p90": 6.257473025470972,
+    "p95": 6.41971081495285,
+    "min": 4.881920060142875,
+    "max": 23.80986395291984
+  },
+  "throughput_fps": 175.9015745501005,
+  "gpu_before": "Quadro RTX 8000, 123.94, 704, 49152",
+  "gpu_after": "Quadro RTX 8000, 152.13, 704, 49152",
+  "environment": {
+    "python": "3.11.15",
+    "torch": "2.5.1+cu121",
+    "cuda": "12.1",
+    "ultralytics": "8.4.102"
+  }
+}
