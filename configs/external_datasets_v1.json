@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "purpose": "Acquisition and audit contract for external training data. CCTSDB2021 official test remains the immutable benchmark.",
+  "global_rules": [
+    "Raw archives, images, labels, derived YOLO labels, and prepared external datasets must never be committed to Git.",
+    "No external dataset may be mixed with CCTSDB2021 official test or used to select a result on that test.",
+    "Inspect the received release and freeze a manifest before writing a dataset-specific converter or beginning training.",
+    "A source split must respect its video, sequence, capture-session, or location grouping when that metadata exists."
+  ],
+  "datasets": {
+    "mtsd": {
+      "display_name": "Mapillary Traffic Sign Dataset",
+      "official_dataset_url": "https://www.mapillary.com/dataset/trafficsign",
+      "paper_url": "https://arxiv.org/abs/1909.04422",
+      "license_url": "https://www.mapillary.com/dataset/assets/mapillary-object-dataset-research-use-license-2019.pdf",
+      "access": "Download only after accepting the official Mapillary research-use license.",
+      "raw_root": "../nighttime-tsd/data/raw/MTSD",
+      "required_release_content": [
+        "Fully annotated images and their annotations",
+        "Official metadata and class taxonomy",
+        "Official split metadata, if supplied"
+      ],
+      "allowed_source_subset": "Only fully annotated images may be used for detector training; partially annotated images are excluded to avoid false negatives.",
+      "planned_role": "External pretraining or pretraining-plus-CCTSDB fine-tuning candidate, never a replacement for CCTSDB2021 evaluation.",
+      "status": "access_pending"
+    },
+    "cure_tsd": {
+      "display_name": "CURE-TSD",
+      "official_dataset_url": "https://alregib.ece.gatech.edu/software-and-datasets/cure-tsd-challenging-unreal-and-real-environments-for-traffic-sign-detection/",
+      "paper_url": "https://arxiv.org/abs/1902.06857",
+      "code_url": "https://github.com/olivesgatech/CURE-TSD",
+      "access": "Request the official download link and accept the provider conditions. Obtain CURE-TSD detection frames and annotations, not only CURE-TSR cropped recognition images.",
+      "raw_root": "../nighttime-tsd/data/raw/CURE-TSD",
+      "required_release_content": [
+        "Detection video frames and bounding-box annotations",
+        "Sequence identifiers",
+        "Challenge type and severity metadata",
+        "Terms of use supplied with the release"
+      ],
+      "allowed_source_subset": "Split by source sequence before selecting frames. Do not random-split correlated video frames. The mapping of its 14 source sign types into the CCTSDB super-classes must be audited before conversion.",
+      "planned_role": "Controlled robustness/adaptation source. It is not evidence of real nighttime performance unless a reported subset explicitly supports that claim.",
+      "status": "access_pending"
+    }
+  }
+}
