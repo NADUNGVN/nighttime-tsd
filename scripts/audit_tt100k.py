@@ -135,8 +135,17 @@ def main() -> int:
     expected_paths = {f"{split}/{image_id}.jpg" for split, image_ids in split_ids.items() for image_id in image_ids}
     missing_annotations = sorted(expected_paths - image_paths)
     extra_annotations = sorted(image_paths - expected_paths)
-    if missing_annotations or extra_annotations:
-        raise ValueError(f"Official image-ID and annotation mismatch: missing={len(missing_annotations)}, extra={len(extra_annotations)}")
+    # Some official split IDs have no entry in imgs. Treat these as background
+    # images when their JPEG is present; a converter must write an empty label
+    # file for them. Annotation entries outside the split lists remain invalid.
+    missing_annotation_image_files = [path for path in missing_annotations if not (data_root / path).is_file()]
+    if missing_annotation_image_files or extra_annotations:
+        raise ValueError(
+            "Official image-ID and annotation mismatch: "
+            f"background_candidates={len(missing_annotations)}, missing_files={len(missing_annotation_image_files)}, "
+            f"extra_annotations={len(extra_annotations)}"
+        )
+    background_by_split = Counter(Path(path).parts[0] for path in missing_annotations)
 
     manifest = {
         "schema_version": 1,
@@ -146,17 +155,29 @@ def main() -> int:
         "annotation_file": str(annotation_path),
         "raw_data_modified": False,
         "official_splits": {
-            split: {"images_from_ids": len(ids), "images_annotated": split_image_counts[split], "instances": split_instance_counts[split]}
+            split: {
+                "images_from_ids": len(ids),
+                "images_annotated": split_image_counts[split],
+                "background_images_without_annotation": background_by_split[split],
+                "instances": split_instance_counts[split],
+            }
             for split, ids in split_ids.items()
         },
-        "totals": {"images": len(image_paths), "instances": sum(category_counts.values()), "category_codes": len(types)},
+        "totals": {
+            "images": len(expected_paths),
+            "images_annotated": len(image_paths),
+            "background_images_without_annotation": len(missing_annotations),
+            "instances": sum(category_counts.values()),
+            "category_codes": len(types),
+        },
         "category_codes": types,
         "instances_by_category": {category: category_counts[category] for category in sorted(category_counts)},
         "instances_by_lexical_family": {family: family_counts[family] for family in sorted(family_counts)},
         "integrity": {
             "missing_image_files": missing_image_count,
             "missing_image_files_sample": missing_images,
-            "missing_annotations": len(missing_annotations),
+            "background_images_without_annotation": len(missing_annotations),
+            "background_images_without_annotation_sample": missing_annotations[:args.sample_limit],
             "extra_annotations": len(extra_annotations),
             "unknown_categories": {category: unknown_categories[category] for category in sorted(unknown_categories)},
             "invalid_bbox_sample": invalid_boxes,
