@@ -33,7 +33,7 @@ the separate release directory. Check that the server has at least 100 GB free
 before running it, as the official tutorial recommends.
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && df -h ../nighttime-tsd/data/raw && wget -c --https-only -O ../nighttime-tsd/data/raw/TT100K/incoming/data.zip https://cg.cs.tsinghua.edu.cn/traffic-sign/data_model_code/data.zip && sha256sum ../nighttime-tsd/data/raw/TT100K/incoming/data.zip | tee ../nighttime-tsd/data/raw/TT100K/checksums/data.zip.sha256 && unzip -q ../nighttime-tsd/data/raw/TT100K/incoming/data.zip -d ../nighttime-tsd/data/raw/TT100K/release
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && df -h ../nighttime-tsd/data/raw && wget -c -O ../nighttime-tsd/data/raw/TT100K/incoming/data.zip https://cg.cs.tsinghua.edu.cn/traffic-sign/data_model_code/data.zip && sha256sum ../nighttime-tsd/data/raw/TT100K/incoming/data.zip | tee ../nighttime-tsd/data/raw/TT100K/checksums/data.zip.sha256 && unzip -q ../nighttime-tsd/data/raw/TT100K/incoming/data.zip -d ../nighttime-tsd/data/raw/TT100K/release
 ```
 
 MTSD and CURE-TSD require their corresponding official terms to be accepted;
