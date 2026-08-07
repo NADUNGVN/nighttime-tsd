@@ -1,8 +1,8 @@
 # CCTSDB2021 protocol
 
-This repository uses CCTSDB2021 as its immutable benchmark. MTSD and CURE-TSD
-may be admitted as external *training* sources only through the controlled
-intake protocol in [EXTERNAL_DATASETS.md](EXTERNAL_DATASETS.md). Historical
+This repository uses CCTSDB2021 as its immutable benchmark. TT100K, MTSD, and
+CURE-TSD may be admitted as external *training* sources only through the
+controlled intake protocol in [EXTERNAL_DATASETS.md](EXTERNAL_DATASETS.md). Historical
 CNTSSS and incompatible artifacts were removed because their label semantics
 and/or provenance were not compatible with this protocol.
 
@@ -22,10 +22,10 @@ and/or provenance were not compatible with this protocol.
 - FP32, FP16 TensorRT, and each INT8 calibration strategy must be evaluated
   with the identical official-test YAMLs. The checkpoint is frozen before
   export; only the inference representation changes.
-- MTSD and CURE-TSD raw data stay outside Git and may not be used until their
-  official terms, release layout, taxonomy, and leakage-safe split unit have
-  been audited. They are never mixed into the CCTSDB official test or its
-  INT8 calibration set.
+- TT100K, MTSD, and CURE-TSD raw data stay outside Git and may not be used
+  until their official terms, release layout, taxonomy, and leakage-safe split
+  unit have been audited. They are never mixed into the CCTSDB official test
+  or its INT8 calibration set.
 
 ## Build the dataset
 

@@ -5,7 +5,7 @@ change lightweight traffic-sign detection across CCTSDB2021 weather/light
 domains, then measures latency and energy on Jetson AGX Orin.
 
 The repository contains a clean CCTSDB benchmark pipeline and controlled
-intake scaffolding for MTSD and CURE-TSD. Historical models, results,
+intake scaffolding for TT100K, MTSD, and CURE-TSD. Historical models, results,
 datasets, and scripts were intentionally removed because they were either
 unreproducible or used an incompatible class mapping.
 

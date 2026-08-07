@@ -8,6 +8,23 @@
     "A source split must respect its video, sequence, capture-session, or location grouping when that metadata exists."
   ],
   "datasets": {
+    "tt100k": {
+      "display_name": "Tsinghua-Tencent 100K",
+      "official_dataset_url": "https://cg.cs.tsinghua.edu.cn/traffic-sign/",
+      "official_archive_url": "https://cg.cs.tsinghua.edu.cn/traffic-sign/data_model_code/data.zip",
+      "tutorial_url": "https://cg.cs.tsinghua.edu.cn/traffic-sign/tutorial.html",
+      "license": "CC BY-NC as stated by the official dataset page; non-commercial research only.",
+      "access": "Direct download from the official Tsinghua server. Retain the original archive and checksum.",
+      "raw_root": "../nighttime-tsd/data/raw/TT100K",
+      "required_release_content": [
+        "Original data.zip archive",
+        "annotations.json",
+        "Original train, test, and other image directories and identifiers"
+      ],
+      "allowed_source_subset": "Do not use the CCTSDB official test for selection. TT100K image grouping and the 221-category taxonomy must be inspected before mapping selected categories into CCTSDB super-classes.",
+      "planned_role": "External pretraining or pretraining-plus-CCTSDB fine-tuning candidate, never a replacement for CCTSDB2021 evaluation.",
+      "status": "official_direct_download"
+    },
     "mtsd": {
       "display_name": "Mapillary Traffic Sign Dataset",
       "official_dataset_url": "https://www.mapillary.com/dataset/trafficsign",

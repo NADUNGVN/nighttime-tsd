@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-DATASETS = {"mtsd", "cure_tsd"}
+DATASETS = {"tt100k", "mtsd", "cure_tsd"}
 ANNOTATION_SUFFIXES = {".json", ".xml", ".txt", ".csv", ".yaml", ".yml"}
 ARCHIVE_SUFFIXES = {".zip", ".tar", ".gz", ".tgz", ".7z", ".rar"}
 
@@ -29,7 +29,7 @@ def is_inside(child: Path, parent: Path) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Inventory an externally acquired MTSD or CURE-TSD release without modifying it")
+    parser = argparse.ArgumentParser(description="Inventory an externally acquired TT100K, MTSD, or CURE-TSD release without modifying it")
     parser.add_argument("--dataset", choices=sorted(DATASETS), required=True)
     parser.add_argument("--raw", type=Path, required=True, help="Root of the received official release")
     parser.add_argument("--out", type=Path, required=True, help="Output JSON path; must not be inside --raw")
