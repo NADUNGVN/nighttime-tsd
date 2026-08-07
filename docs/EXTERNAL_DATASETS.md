@@ -66,6 +66,14 @@ does not alter raw files and is intentionally not a data converter.
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/inspect_external_dataset.py --dataset tt100k --raw ../nighttime-tsd/data/raw/TT100K/release --out data/external/tt100k_release_inventory.json
 ```
 
+Then audit the official TT100K annotation file. This checks the image-ID
+splits, bounding-box validity, category frequencies, and lexical category
+families but deliberately does not guess a three-class semantic mapping.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/audit_tt100k.py --raw ../nighttime-tsd/data/raw/TT100K/release --out data/external/tt100k_annotation_audit.json
+```
+
 ```bash
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/inspect_external_dataset.py --dataset mtsd --raw ../nighttime-tsd/data/raw/MTSD/release --out data/external/mtsd_release_inventory.json
 ```

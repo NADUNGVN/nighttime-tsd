@@ -21,7 +21,7 @@
         "annotations.json",
         "Original train, test, and other image directories and identifiers"
       ],
-      "allowed_source_subset": "Do not use the CCTSDB official test for selection. TT100K image grouping and the 221-category taxonomy must be inspected before mapping selected categories into CCTSDB super-classes.",
+      "allowed_source_subset": "Use only scene images listed by the official train/test/other IDs; exclude the 128 sign templates in marks/. Do not use the CCTSDB official test for selection. TT100K image grouping and the 221-category taxonomy must be inspected before mapping selected categories into CCTSDB super-classes.",
       "planned_role": "External pretraining or pretraining-plus-CCTSDB fine-tuning candidate, never a replacement for CCTSDB2021 evaluation.",
       "status": "official_direct_download"
     },
