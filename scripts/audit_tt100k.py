@@ -61,8 +61,12 @@ def main() -> int:
     annotation = json.loads(annotation_path.read_text(encoding="utf-8"))
     if set(annotation) != {"imgs", "types"}:
         raise ValueError(f"Unexpected annotations.json top-level keys: {sorted(annotation)}")
-    if not isinstance(annotation["imgs"], list) or not isinstance(annotation["types"], list):
-        raise ValueError("TT100K annotations must contain list-valued imgs and types")
+    if not isinstance(annotation["imgs"], (list, dict)) or not isinstance(annotation["types"], list):
+        raise ValueError("TT100K annotations must contain list/dictionary-valued imgs and list-valued types")
+    # The official 2016 archive stores imgs as a dictionary keyed by image ID.
+    # Accept a list as well so the audit remains compatible with equivalent
+    # official serializations, but normalize before inspecting records.
+    image_records = annotation["imgs"].values() if isinstance(annotation["imgs"], dict) else annotation["imgs"]
 
     split_ids = {split: read_ids(data_root / split / "ids.txt") for split in ("train", "test", "other")}
     id_sets = {split: set(ids) for split, ids in split_ids.items()}
@@ -83,7 +87,7 @@ def main() -> int:
     invalid_boxes: list[dict[str, object]] = []
     image_paths: set[str] = set()
 
-    for image in annotation["imgs"]:
+    for image in image_records:
         if not isinstance(image, dict) or "path" not in image or "objects" not in image:
             raise ValueError(f"Invalid image record: {image!r}")
         relative_path = str(image["path"])
