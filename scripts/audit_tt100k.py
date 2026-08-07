@@ -70,8 +70,9 @@ def main() -> int:
 
     split_ids = {split: read_ids(data_root / split / "ids.txt") for split in ("train", "test", "other")}
     id_sets = {split: set(ids) for split, ids in split_ids.items()}
-    if any(id_sets[left] & id_sets[right] for left in id_sets for right in id_sets if left < right):
-        raise ValueError("Official TT100K split ID files overlap")
+    # Image IDs are only unique within an official split.  The source path
+    # (train/<id>.jpg, test/<id>.jpg, or other/<id>.jpg) is the global image
+    # identity, so numeric IDs may legitimately recur across split files.
 
     types = annotation["types"]
     if len(types) != len(set(types)):
