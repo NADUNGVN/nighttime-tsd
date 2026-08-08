@@ -185,6 +185,7 @@ def main() -> int:
         "data_yaml_sha256": sha256(data_yaml),
         "dataset_manifest": str(source_manifest.resolve()) if source_manifest.exists() else None,
         "dataset_manifest_sha256": sha256(source_manifest) if source_manifest.exists() else None,
+        "source_model_sha256": sha256(Path(args.model)) if Path(args.model).is_file() else None,
         "seed": args.seed,
     }
     run_dir.mkdir(parents=True, exist_ok=True)
