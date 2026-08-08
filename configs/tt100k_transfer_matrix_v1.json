@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "name": "tt100k221_to_cctsdb_transfer_matrix_v1",
+  "purpose": "Apply the same TT100K 221-class pretraining then CCTSDB 3-class fine-tuning protocol to all 15 YOLO family/scale models. Official CCTSDB test is excluded until all transfer checkpoints are frozen.",
+  "pretraining": {
+    "data": "data/processed/tt100k_221/tt100k_221.yaml",
+    "epochs": 100,
+    "imgsz": 640,
+    "workers": 2,
+    "device": "0",
+    "seed": 42,
+    "patience": 30,
+    "project": "results"
+  },
+  "fine_tuning": {
+    "data": "configs/cctsdb2021_train.yaml",
+    "epochs": 100,
+    "imgsz": 640,
+    "workers": 2,
+    "device": "0",
+    "seed": 42,
+    "patience": 30,
+    "project": "results"
+  },
+  "execution": {
+    "mode": "serial",
+    "hardware_assumption": "One Quadro RTX 8000 48 GB GPU. Run only one train, evaluation, or benchmark process at a time. Two dataloader workers avoid the previous shared-memory failure.",
+    "official_test_policy": "CCTSDB official test is prohibited during TT100K pretraining, CCTSDB fine-tuning, early stopping, and rollout decisions. CCTSDB dev is the only CCTSDB selection split.",
+    "transfer_policy": "TT100K retains its 221 original categories. Each CCTSDB stage initializes from that model's frozen TT100K best.pt and replaces the detection head for the three CCTSDB classes."
+  },
+  "models": [
+    {"label": "yolov8n", "model": "yolov8n.pt", "rollout": "phase1", "batch": 64, "pretrain_run": "yolov8n_tt100k221_s42_pretrain_v1", "finetune_run": "yolov8n_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo11n", "model": "yolo11n.pt", "rollout": "phase1", "batch": 64, "pretrain_run": "yolo11n_tt100k221_s42_pretrain_v1", "finetune_run": "yolo11n_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo26n", "model": "yolo26n.pt", "rollout": "phase1", "batch": 64, "pretrain_run": "yolo26n_tt100k221_s42_pretrain_v1", "finetune_run": "yolo26n_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolov8s", "model": "yolov8s.pt", "rollout": "phase2", "batch": 48, "pretrain_run": "yolov8s_tt100k221_s42_pretrain_v1", "finetune_run": "yolov8s_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolov8m", "model": "yolov8m.pt", "rollout": "phase2", "batch": 32, "pretrain_run": "yolov8m_tt100k221_s42_pretrain_v1", "finetune_run": "yolov8m_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolov8l", "model": "yolov8l.pt", "rollout": "phase2", "batch": 24, "pretrain_run": "yolov8l_tt100k221_s42_pretrain_v1", "finetune_run": "yolov8l_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolov8x", "model": "yolov8x.pt", "rollout": "phase2", "batch": 16, "pretrain_run": "yolov8x_tt100k221_s42_pretrain_v1", "finetune_run": "yolov8x_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo11s", "model": "yolo11s.pt", "rollout": "phase2", "batch": 48, "pretrain_run": "yolo11s_tt100k221_s42_pretrain_v1", "finetune_run": "yolo11s_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo11m", "model": "yolo11m.pt", "rollout": "phase2", "batch": 32, "pretrain_run": "yolo11m_tt100k221_s42_pretrain_v1", "finetune_run": "yolo11m_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo11l", "model": "yolo11l.pt", "rollout": "phase2", "batch": 24, "pretrain_run": "yolo11l_tt100k221_s42_pretrain_v1", "finetune_run": "yolo11l_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo11x", "model": "yolo11x.pt", "rollout": "phase2", "batch": 16, "pretrain_run": "yolo11x_tt100k221_s42_pretrain_v1", "finetune_run": "yolo11x_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo26s", "model": "yolo26s.pt", "rollout": "phase2", "batch": 48, "pretrain_run": "yolo26s_tt100k221_s42_pretrain_v1", "finetune_run": "yolo26s_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo26m", "model": "yolo26m.pt", "rollout": "phase2", "batch": 32, "pretrain_run": "yolo26m_tt100k221_s42_pretrain_v1", "finetune_run": "yolo26m_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo26l", "model": "yolo26l.pt", "rollout": "phase2", "batch": 24, "pretrain_run": "yolo26l_tt100k221_s42_pretrain_v1", "finetune_run": "yolo26l_tt100k221_to_cctsdb_s42_v1"},
+    {"label": "yolo26x", "model": "yolo26x.pt", "rollout": "phase2", "batch": 16, "pretrain_run": "yolo26x_tt100k221_s42_pretrain_v1", "finetune_run": "yolo26x_tt100k221_to_cctsdb_s42_v1"}
+  ]
+}

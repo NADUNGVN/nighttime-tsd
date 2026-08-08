@@ -84,19 +84,30 @@ manifest. It never modifies the raw release.
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/prepare_tt100k.py --raw ../nighttime-tsd/data/raw/TT100K/release
 ```
 
-The first transfer pilot is sequential, never joint-label training: pretrain
-with all 221 TT100K classes, then fine-tune that checkpoint on the locked
-CCTSDB three-class train/dev split. Begin with a single `yolo11n` pilot;
-expand only after comparing the CCTSDB development result to the locked
-baseline. The official CCTSDB test remains untouched during this decision.
+All 15 models use the same sequential transfer protocol: retain all 221
+TT100K classes for pretraining, then initialize CCTSDB fine-tuning from the
+corresponding frozen TT100K checkpoint. This never joins incompatible label
+taxonomies. The matrix has two rollout stages: phase 1 runs the three nano
+models (`yolov8n`, `yolo11n`, `yolo26n`); phase 2 runs the remaining twelve
+`s/m/l/x` models. Run each phase serially, finish all its TT100K pretraining,
+then fine-tune its checkpoints on CCTSDB train/dev. The CCTSDB official test
+remains untouched until all 15 fine-tuned checkpoints are frozen.
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/train_tt100k.py --model yolo11n.pt --epochs 100 --imgsz 640 --batch 64 --workers 2 --device 0 --seed 42 --name yolo11n_tt100k221_s42_pretrain_v1
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/run_tt100k_transfer_matrix.py --phase status --rollout phase1
 ```
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/train_cctsdb.py --model results/yolo11n_tt100k221_s42_pretrain_v1/weights/best.pt --data configs/cctsdb2021_train.yaml --epochs 100 --imgsz 640 --batch 64 --workers 2 --device 0 --seed 42 --name yolo11n_tt100k221_to_cctsdb_s42_v1
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/run_tt100k_transfer_matrix.py --phase pretrain --rollout phase1
 ```
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/run_tt100k_transfer_matrix.py --phase finetune --rollout phase1
+```
+
+After phase 1 is complete, replace `phase1` with `phase2` in the two commands
+above to run the remaining twelve models. Use `--resume-incomplete` only after
+inspecting the exact stage's `last.pt`.
 
 ```bash
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/inspect_external_dataset.py --dataset mtsd --raw ../nighttime-tsd/data/raw/MTSD/release --out data/external/mtsd_release_inventory.json
