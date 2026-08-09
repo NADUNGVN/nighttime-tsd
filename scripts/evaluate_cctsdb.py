@@ -52,6 +52,7 @@ def main() -> int:
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--batch", type=int, default=1)
     parser.add_argument("--label", default=None, help="e.g. fp32, fp16_trt, int8_mixed")
+    parser.add_argument("--predictions-out", type=Path, help="Optional raw per-image predictions for bootstrap analysis")
     args = parser.parse_args()
     from ultralytics import YOLO
     import torch
@@ -60,8 +61,13 @@ def main() -> int:
     model_path = args.engine or args.weights
     if not model_path.is_file() or not args.data.is_file():
         raise FileNotFoundError(f"Missing model or data YAML: {model_path}, {args.data}")
+    if args.out.exists():
+        raise FileExistsError(f"Refusing to overwrite evaluation: {args.out}")
+    if args.predictions_out is not None and args.predictions_out.exists():
+        raise FileExistsError(f"Refusing to overwrite predictions: {args.predictions_out}")
     resolved_data = absolute_data_yaml(args.data)
-    metrics = YOLO(str(model_path)).val(data=str(resolved_data), split="val", imgsz=args.imgsz, batch=args.batch, device=args.device, plots=False, verbose=False)
+    model = YOLO(str(model_path))
+    metrics = model.val(data=str(resolved_data), split="val", imgsz=args.imgsz, batch=args.batch, device=args.device, plots=False, verbose=False)
     summary = {
         "schema_version": 1,
         "created_utc": datetime.now(timezone.utc).isoformat(),
@@ -75,6 +81,39 @@ def main() -> int:
         "metrics": {"map50": float(metrics.box.map50), "map50_95": float(metrics.box.map), "precision": float(metrics.box.mp), "recall": float(metrics.box.mr), "per_class_ap50": {NAMES[index]: float(value) for index, value in enumerate(metrics.box.ap50.tolist())}},
         "environment": {"python": platform.python_version(), "torch": torch.__version__, "ultralytics": ultralytics.__version__, "cuda": torch.version.cuda},
     }
+    if args.predictions_out is not None:
+        text = resolved_data.read_text(encoding="utf-8")
+        root_match = re.search(r"(?m)^\s*path:\s*(.+?)\s*(?:#.*)?$", text)
+        split_match = re.search(r"(?m)^\s*val:\s*(.+?)\s*(?:#.*)?$", text)
+        if root_match is None or split_match is None:
+            raise ValueError(f"Could not resolve val images from {resolved_data}")
+        image_root = Path(root_match.group(1).strip().strip("\"'")) / split_match.group(1).strip().strip("\"'")
+        paths = sorted(path for path in image_root.iterdir() if path.suffix.lower() in {".bmp", ".jpeg", ".jpg", ".png"})
+        records = []
+        for result in model.predict(source=[str(path) for path in paths], stream=True, imgsz=args.imgsz, batch=args.batch, device=args.device, conf=0.001, iou=0.7, verbose=False):
+            boxes = result.boxes
+            records.append(
+                {
+                    "image": Path(result.path).name,
+                    "orig_shape": list(result.orig_shape),
+                    "xyxy": [] if boxes is None else boxes.xyxy.detach().cpu().tolist(),
+                    "confidence": [] if boxes is None else boxes.conf.detach().cpu().tolist(),
+                    "class_id": [] if boxes is None else [int(value) for value in boxes.cls.detach().cpu().tolist()],
+                }
+            )
+        prediction_payload = {
+            "schema_version": 1,
+            "created_utc": datetime.now(timezone.utc).isoformat(),
+            "model": str(model_path.resolve()),
+            "model_sha256": sha256(model_path),
+            "data": str(args.data.resolve()),
+            "data_sha256": sha256(args.data),
+            "prediction_runtime": {"confidence": 0.001, "iou": 0.7, "imgsz": args.imgsz, "batch": args.batch},
+            "records": records,
+        }
+        args.predictions_out.parent.mkdir(parents=True, exist_ok=True)
+        args.predictions_out.write_text(json.dumps(prediction_payload) + "\n", encoding="utf-8")
+        summary["per_image_predictions"] = {"path": str(args.predictions_out.resolve()), "sha256": sha256(args.predictions_out), "images": len(records)}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(summary, indent=2))

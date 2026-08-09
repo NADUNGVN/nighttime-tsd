@@ -88,7 +88,7 @@ def write_yaml(destination: Path) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build a CCTSDB INT8 calibration subset from training images only")
     parser.add_argument("--data", type=Path, default=Path("configs/cctsdb2021_train.yaml"))
-    parser.add_argument("--strategy", choices=["uniform", "low_luminance"], required=True)
+    parser.add_argument("--strategy", choices=["uniform", "low_luminance", "luminance_stratified"], required=True)
     parser.add_argument("--size", type=int, default=512)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--name", required=True, help="Directory name under data_root/calibration")
@@ -112,12 +112,23 @@ def main() -> int:
         raise FileNotFoundError(f"Missing labels for {len(missing_labels)} train images; first: {missing_labels[0]}")
 
     luminance: dict[Path, float] = {}
-    if args.strategy == "low_luminance":
+    if args.strategy in {"low_luminance", "luminance_stratified"}:
         for index, image_path in enumerate(candidates, start=1):
             luminance[image_path] = median_luminance(image_path)
             if index % 1000 == 0:
                 print(f"Measured luminance: {index}/{len(candidates)}")
-        selected = sorted(candidates, key=lambda path: (luminance[path], path.name))[: args.size]
+        if args.strategy == "low_luminance":
+            selected = sorted(candidates, key=lambda path: (luminance[path], path.name))[: args.size]
+        else:
+            if args.size % 4 != 0:
+                raise ValueError("luminance_stratified requires --size divisible by 4")
+            ordered = sorted(candidates, key=lambda path: (luminance[path], path.name))
+            strata = [ordered[index * len(ordered) // 4 : (index + 1) * len(ordered) // 4] for index in range(4)]
+            quota = args.size // 4
+            if any(len(stratum) < quota for stratum in strata):
+                raise ValueError("Not enough images in a luminance stratum for the requested size")
+            rng = random.Random(args.seed)
+            selected = sorted((path for stratum in strata for path in rng.sample(stratum, quota)), key=lambda path: path.name)
     else:
         selected = sorted(random.Random(args.seed).sample(candidates, args.size), key=lambda path: path.name)
 
@@ -153,6 +164,14 @@ def main() -> int:
         "source_data_yaml_sha256": sha256(args.data),
         "source_data_root": str(data_root),
         "strategy": args.strategy,
+        "stratification": None
+        if args.strategy != "luminance_stratified"
+        else {
+            "feature": "median grayscale intensity after 64x64 resize",
+            "strata": 4,
+            "construction": "sort all candidates by (luminance, filename), split into four equal-count contiguous strata, sample an equal seeded quota from each",
+            "quota_per_stratum": args.size // 4,
+        },
         "seed": args.seed,
         "requested_size": args.size,
         "selected_size": len(selected_records),

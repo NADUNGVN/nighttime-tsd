@@ -1,4 +1,8 @@
-# Jetson continuation checklist
+# Historical Jetson pilot checklist
+
+> This document preserves the YOLO11n pilot context. The active multi-device
+> protocol is [IVC_STUDY_V1.md](IVC_STUDY_V1.md); follow that document for all
+> new work.
 
 This file records the state of the CCTSDB2021 study before Jetson hardware is
 available. It is deliberately a checklist, not a claim of final deployment
@@ -17,10 +21,10 @@ performance.
 - On the Quadro RTX 8000 server, FP16 is both more accurate and faster than
   either current INT8 engine. This is a server-only observation.
 
-## Claims that must wait for Jetson
+## Claims that must wait for target-device measurement
 
-- Do not claim latency, throughput, memory, power, energy, or speed-up on
-  Orin from the RTX 8000 benchmarks.
+- Do not claim latency, throughput, memory, power, energy, or speed-up on a
+  target device from the RTX 8000 benchmarks.
 - Do not copy an x86 RTX 8000 `.engine` to Jetson. TensorRT engines are
   hardware-specific and must be rebuilt on the target.
 - Do not claim INT8 is faster than FP16: the current server measurements show

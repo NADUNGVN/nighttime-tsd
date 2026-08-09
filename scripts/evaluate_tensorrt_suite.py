@@ -47,6 +47,7 @@ def main() -> int:
     parser.add_argument("--device", default="0")
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--batch", type=int, default=1, help="Must match static TensorRT engine batch size")
+    parser.add_argument("--predictions-full-dir", type=Path, help="Optional directory for raw per-image predictions on the full official split only")
     args = parser.parse_args()
 
     engines = dict(args.engine)
@@ -86,6 +87,11 @@ def main() -> int:
                 "--label",
                 label,
             ]
+            if args.predictions_full_dir is not None and split == "full":
+                prediction_path = args.predictions_full_dir / f"{label}_full_predictions.json"
+                if prediction_path.exists():
+                    raise FileExistsError(f"Refusing to overwrite predictions: {prediction_path}")
+                command.extend(["--predictions-out", str(prediction_path)])
             print(f"\n=== {label}: {split} ===", flush=True)
             subprocess.run(command, check=True)
             results.append({"label": label, "split": split, "result": str(output), "result_sha256": sha256(output)})

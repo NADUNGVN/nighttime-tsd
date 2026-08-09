@@ -1,5 +1,10 @@
 # CCTSDB2021 protocol
 
+> **Current manuscript scope.** The active study is fixed in
+> [IVC_STUDY_V1.md](IVC_STUDY_V1.md): CCTSDB only, 15 frozen YOLO checkpoints,
+> and train-only calibration-policy analysis. External datasets are not part
+> of the IVC result matrix.
+
 This repository uses CCTSDB2021 as its immutable benchmark. TT100K, MTSD, and
 CURE-TSD may be admitted as external *training* sources only through the
 controlled intake protocol in [EXTERNAL_DATASETS.md](EXTERNAL_DATASETS.md). Historical
@@ -121,6 +126,10 @@ python scripts/run_architecture_matrix.py --phase benchmark
 
 ## TensorRT calibration and export
 
+The commands in this section document the historical YOLO11n 512-image pilot.
+For all new work, use the 1,024-image, 15-model IVC execution matrix in
+[IVC_STUDY_V1.md](IVC_STUDY_V1.md). Do not mix pilot and final result files.
+
 The server export stack is pinned to Python 3.11, PyTorch `2.5.1+cu121`,
 Ultralytics `8.4.102`, and TensorRT `10.16.1.11`. Do **not** install an
 unbounded `tensorrt-cu12` package: TensorRT 11 routes Ultralytics INT8 export
@@ -165,6 +174,10 @@ python scripts/evaluate_tensorrt_suite.py --engine fp16_trt1016=results/engines/
 ```
 
 ## Paper artifacts and deployment benchmark
+
+This is also pilot documentation. Final IVC artifacts must be collected from
+the versioned `results/ivc_study_v1/<target>/` directories after the locked
+matrix completes.
 
 Do not commit images, labels, or TensorRT engine binaries. Instead, collect
 the split/calibration manifests, training CSVs, environment lock, and model

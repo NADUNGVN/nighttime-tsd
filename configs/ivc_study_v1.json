@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "name": "ivc_domain_robust_int8_v1",
+  "purpose": "Frozen IVC experiment: domain-wise TensorRT INT8 calibration robustness for the completed 15-model CCTSDB matrix.",
+  "architecture_plan": "configs/architecture_matrix_v1.json",
+  "data": {
+    "train_yaml": "configs/cctsdb2021_train.yaml",
+    "benchmark_images": "data/processed/cctsdb2021_clean/dev/images",
+    "official_split_count": 8,
+    "official_test_policy": "Official test is evaluation-only. Calibration uses CCTSDB train/images only."
+  },
+  "runtime": {
+    "imgsz": 640,
+    "batch": 1,
+    "confidence": 0.25,
+    "iou": 0.7,
+    "warmup": 50,
+    "benchmark_samples": 1000,
+    "benchmark_repetitions": 3
+  },
+  "calibration": {
+    "size": 1024,
+    "seed": 42,
+    "policies": {
+      "uniform": {"strategy": "uniform", "name": "uniform_s42_n1024"},
+      "low_luminance": {"strategy": "low_luminance", "name": "low_luminance_n1024"},
+      "luminance_stratified": {"strategy": "luminance_stratified", "name": "luminance_stratified_s42_n1024"}
+    }
+  },
+  "nvidia_targets": {
+    "rtx8000": {"description": "Reference server GPU", "int8_supported": true},
+    "xavier_nx": {"description": "Jetson Xavier NX GPU TensorRT", "int8_supported": true},
+    "agx_xavier": {"description": "Jetson AGX Xavier GPU TensorRT", "int8_supported": true},
+    "jetson_nano": {"description": "Jetson Nano GPU TensorRT feasibility baseline", "int8_supported": false}
+  }
+}

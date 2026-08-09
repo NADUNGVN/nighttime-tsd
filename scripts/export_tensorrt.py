@@ -40,6 +40,7 @@ def main() -> int:
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--batch", type=int, default=1)
     parser.add_argument("--workspace", type=float, default=None, help="TensorRT workspace limit in GiB, if needed")
+    parser.add_argument("--expected-tensorrt-major", type=int, default=10, help="Fail if the local TensorRT major version differs; use the target device's recorded major version")
     args = parser.parse_args()
 
     if not args.weights.is_file():
@@ -57,11 +58,13 @@ def main() -> int:
     import ultralytics
 
     trt_major = int(trt.__version__.split(".", 1)[0])
-    if trt_major != 10:
+    if args.expected_tensorrt_major < 8 or args.expected_tensorrt_major > 10:
+        raise ValueError("This protocol supports native TensorRT PTQ majors 8, 9, or 10 only")
+    if trt_major != args.expected_tensorrt_major:
         raise RuntimeError(
-            f"This CCTSDB protocol requires TensorRT 10 native PTQ, found TensorRT {trt.__version__}. "
-            "TensorRT 11 routes Ultralytics INT8 export through ModelOpt and is not compatible with the pinned "
-            "Torch 2.5.1+cu121 training environment."
+            f"Expected TensorRT {args.expected_tensorrt_major}.x but found TensorRT {trt.__version__}. "
+            "Record the target environment and pass its supported native PTQ major explicitly. TensorRT 11 is not "
+            "supported by this protocol because Ultralytics routes INT8 export through ModelOpt."
         )
 
     export_args = {
@@ -98,6 +101,7 @@ def main() -> int:
         "calibration_manifest": None if calibration_manifest is None or not calibration_manifest.is_file() else str(calibration_manifest.resolve()),
         "calibration_manifest_sha256": None if calibration_manifest is None or not calibration_manifest.is_file() else sha256(calibration_manifest),
         "export_args": export_args,
+        "expected_tensorrt_major": args.expected_tensorrt_major,
         "environment": {
             "python": platform.python_version(),
             "torch": torch.__version__,
