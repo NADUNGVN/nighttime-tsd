@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from run_architecture_matrix import GpuPhaseLock
+
 
 SPLITS = ("full", "daylike", "sunny", "cloud", "night", "rain", "snow", "foggy")
 INT8_MODES = ("int8_uniform", "int8_low_luminance", "int8_luminance_stratified")
@@ -214,11 +216,13 @@ def main() -> int:
         return 0
     if args.phase == "calibrations":
         return prepare_calibrations(repo, study)
-    if args.phase == "export":
-        return export_all(repo, study, root, models, modes, args.expected_tensorrt_major, args.device)
-    if args.phase == "evaluate":
-        return evaluate_all(repo, study, root, models, modes, args.device, args.save_full_predictions)
-    return benchmark_all(repo, study, root, models, modes, args.device, repetitions)
+    lock_path = repo / "results" / "architecture_matrix_v1" / ".gpu_phase.lock"
+    with GpuPhaseLock(lock_path, f"ivc_{args.target}_{args.phase}"):
+        if args.phase == "export":
+            return export_all(repo, study, root, models, modes, args.expected_tensorrt_major, args.device)
+        if args.phase == "evaluate":
+            return evaluate_all(repo, study, root, models, modes, args.device, args.save_full_predictions)
+        return benchmark_all(repo, study, root, models, modes, args.device, repetitions)
 
 
 if __name__ == "__main__":
