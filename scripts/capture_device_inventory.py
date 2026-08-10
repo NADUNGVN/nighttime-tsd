@@ -37,6 +37,15 @@ def package_version(name: str) -> str | None:
         return None
 
 
+def module_version(name: str) -> str | None:
+    try:
+        module = __import__(name)
+    except Exception:
+        return None
+    value = getattr(module, "__version__", None)
+    return None if value is None else str(value)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Capture the environment of a target benchmark device")
     parser.add_argument("--target", required=True, help="Stable identifier, e.g. xavier_nx_8gb")
@@ -66,7 +75,8 @@ def main() -> int:
         "target": args.target,
         "notes": args.notes or None,
         "python": {"version": platform.python_version(), "executable": sys.executable},
-        "packages": {name: package_version(name) for name in ("torch", "torchvision", "ultralytics", "tensorrt", "onnxruntime", "hailort")},
+        "packages": {name: package_version(name) for name in ("torch", "torchvision", "ultralytics", "tensorrt", "tensorrt-cu12", "onnxruntime", "hailort")},
+        "modules": {name: module_version(name) for name in ("torch", "torchvision", "ultralytics", "tensorrt", "onnxruntime")},
         "commands": {name: run(command) for name, command in commands.items()},
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
