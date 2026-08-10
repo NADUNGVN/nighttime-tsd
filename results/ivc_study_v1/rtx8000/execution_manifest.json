@@ -1,0 +1,461 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-08-10T04:51:31.279437+00:00",
+  "study": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/ivc_study_v1.json",
+  "study_sha256": "518722466d90f70686268df7e98c96c4acc2c15a2c96fbbfaf943dfb832a728d",
+  "target": "rtx8000",
+  "expected_tensorrt_major": 10,
+  "phase": "calibrations",
+  "models": [
+    {
+      "label": "yolov8n",
+      "run_name": "yolov8n_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8n_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8n_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8n_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8n_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolov8s",
+      "run_name": "yolov8s_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8s_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8s_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8s_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8s_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolov8m",
+      "run_name": "yolov8m_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8m_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8m_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8m_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8m_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolov8l",
+      "run_name": "yolov8l_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8l_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8l_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8l_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8l_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolov8x",
+      "run_name": "yolov8x_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8x_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8x_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8x_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolov8x_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo11n",
+      "run_name": "yolo11n_cctsdb_clean_s42_v2",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11n_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11n_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11n_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11n_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo11s",
+      "run_name": "yolo11s_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11s_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11s_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11s_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11s_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo11m",
+      "run_name": "yolo11m_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11m_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11m_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11m_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11m_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo11l",
+      "run_name": "yolo11l_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11l_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11l_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11l_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11l_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo11x",
+      "run_name": "yolo11x_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11x_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11x_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11x_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo11x_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo26n",
+      "run_name": "yolo26n_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26n_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26n_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26n_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26n_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo26s",
+      "run_name": "yolo26s_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26s_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26s_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26s_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26s_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo26m",
+      "run_name": "yolo26m_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26m_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26m_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26m_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26m_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo26l",
+      "run_name": "yolo26l_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26l_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26l_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26l_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26l_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    },
+    {
+      "label": "yolo26x",
+      "run_name": "yolo26x_cctsdb_clean_s42_v1",
+      "modes": {
+        "fp16": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26x_fp16_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_uniform": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26x_int8_uniform_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_low_luminance": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26x_int8_low_luminance_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        },
+        "int8_luminance_stratified": {
+          "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/ivc_study_v1/rtx8000/engines/yolo26x_int8_luminance_stratified_b1.engine",
+          "engine_complete": false,
+          "evaluation_complete": false,
+          "benchmark_complete": false
+        }
+      }
+    }
+  ]
+}

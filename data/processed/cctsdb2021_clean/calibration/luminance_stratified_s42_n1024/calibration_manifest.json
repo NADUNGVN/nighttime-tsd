@@ -1,0 +1,5156 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-08-10T04:54:46.603220+00:00",
+  "purpose": "INT8 calibration only; selected exclusively from CCTSDB train/images",
+  "source_data_yaml": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/cctsdb2021_train.yaml",
+  "source_data_yaml_sha256": "02ffa945eb7f90df191bf6549452c3d1a5215d6f3f4cf758c1e4ebd326644911",
+  "source_data_root": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean",
+  "strategy": "luminance_stratified",
+  "stratification": {
+    "feature": "median grayscale intensity after 64x64 resize",
+    "strata": 4,
+    "construction": "sort all candidates by (luminance, filename), split into four equal-count contiguous strata, sample an equal seeded quota from each",
+    "quota_per_stratum": 256
+  },
+  "seed": 42,
+  "requested_size": 1024,
+  "selected_size": 1024,
+  "candidate_size": 14720,
+  "link_modes": [
+    "hardlink"
+  ],
+  "luminance_definition": "median grayscale intensity after 64x64 resize, range 0-255",
+  "candidate_luminance": {
+    "min": 0.0,
+    "median": 75.0,
+    "max": 255.0
+  },
+  "selected_luminance": {
+    "min": 0.0,
+    "median": 74.5,
+    "max": 237.0
+  },
+  "calibration_yaml": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/luminance_stratified_s42_n1024/calibration.yaml",
+  "files": [
+    {
+      "source_image": "train/images/00006.jpg",
+      "source_label": "train/labels/00006.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/00007.jpg",
+      "source_label": "train/labels/00007.txt",
+      "median_luminance": 130.0
+    },
+    {
+      "source_image": "train/images/00032.jpg",
+      "source_label": "train/labels/00032.txt",
+      "median_luminance": 230.0
+    },
+    {
+      "source_image": "train/images/00046.jpg",
+      "source_label": "train/labels/00046.txt",
+      "median_luminance": 207.0
+    },
+    {
+      "source_image": "train/images/00066.jpg",
+      "source_label": "train/labels/00066.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/00095.jpg",
+      "source_label": "train/labels/00095.txt",
+      "median_luminance": 97.0
+    },
+    {
+      "source_image": "train/images/00116.jpg",
+      "source_label": "train/labels/00116.txt",
+      "median_luminance": 116.0
+    },
+    {
+      "source_image": "train/images/00128.jpg",
+      "source_label": "train/labels/00128.txt",
+      "median_luminance": 129.0
+    },
+    {
+      "source_image": "train/images/00145.jpg",
+      "source_label": "train/labels/00145.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/00172.jpg",
+      "source_label": "train/labels/00172.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/00188.jpg",
+      "source_label": "train/labels/00188.txt",
+      "median_luminance": 237.0
+    },
+    {
+      "source_image": "train/images/00205.jpg",
+      "source_label": "train/labels/00205.txt",
+      "median_luminance": 153.0
+    },
+    {
+      "source_image": "train/images/00206.jpg",
+      "source_label": "train/labels/00206.txt",
+      "median_luminance": 148.0
+    },
+    {
+      "source_image": "train/images/00225.jpg",
+      "source_label": "train/labels/00225.txt",
+      "median_luminance": 171.0
+    },
+    {
+      "source_image": "train/images/00235.jpg",
+      "source_label": "train/labels/00235.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/00280.jpg",
+      "source_label": "train/labels/00280.txt",
+      "median_luminance": 141.0
+    },
+    {
+      "source_image": "train/images/00316.jpg",
+      "source_label": "train/labels/00316.txt",
+      "median_luminance": 173.0
+    },
+    {
+      "source_image": "train/images/00322.jpg",
+      "source_label": "train/labels/00322.txt",
+      "median_luminance": 147.0
+    },
+    {
+      "source_image": "train/images/00326.jpg",
+      "source_label": "train/labels/00326.txt",
+      "median_luminance": 165.0
+    },
+    {
+      "source_image": "train/images/00334.jpg",
+      "source_label": "train/labels/00334.txt",
+      "median_luminance": 47.0
+    },
+    {
+      "source_image": "train/images/00361.jpg",
+      "source_label": "train/labels/00361.txt",
+      "median_luminance": 129.0
+    },
+    {
+      "source_image": "train/images/00380.jpg",
+      "source_label": "train/labels/00380.txt",
+      "median_luminance": 78.0
+    },
+    {
+      "source_image": "train/images/00383.jpg",
+      "source_label": "train/labels/00383.txt",
+      "median_luminance": 123.0
+    },
+    {
+      "source_image": "train/images/00398.jpg",
+      "source_label": "train/labels/00398.txt",
+      "median_luminance": 123.0
+    },
+    {
+      "source_image": "train/images/00401.jpg",
+      "source_label": "train/labels/00401.txt",
+      "median_luminance": 122.0
+    },
+    {
+      "source_image": "train/images/00404.jpg",
+      "source_label": "train/labels/00404.txt",
+      "median_luminance": 128.0
+    },
+    {
+      "source_image": "train/images/00413.jpg",
+      "source_label": "train/labels/00413.txt",
+      "median_luminance": 138.0
+    },
+    {
+      "source_image": "train/images/00415.jpg",
+      "source_label": "train/labels/00415.txt",
+      "median_luminance": 131.0
+    },
+    {
+      "source_image": "train/images/00417.jpg",
+      "source_label": "train/labels/00417.txt",
+      "median_luminance": 122.0
+    },
+    {
+      "source_image": "train/images/00431.jpg",
+      "source_label": "train/labels/00431.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/00457.jpg",
+      "source_label": "train/labels/00457.txt",
+      "median_luminance": 115.0
+    },
+    {
+      "source_image": "train/images/00498.jpg",
+      "source_label": "train/labels/00498.txt",
+      "median_luminance": 163.0
+    },
+    {
+      "source_image": "train/images/00515.jpg",
+      "source_label": "train/labels/00515.txt",
+      "median_luminance": 108.0
+    },
+    {
+      "source_image": "train/images/00531.jpg",
+      "source_label": "train/labels/00531.txt",
+      "median_luminance": 147.0
+    },
+    {
+      "source_image": "train/images/00535.jpg",
+      "source_label": "train/labels/00535.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/00542.jpg",
+      "source_label": "train/labels/00542.txt",
+      "median_luminance": 160.0
+    },
+    {
+      "source_image": "train/images/00545.jpg",
+      "source_label": "train/labels/00545.txt",
+      "median_luminance": 124.0
+    },
+    {
+      "source_image": "train/images/00552.jpg",
+      "source_label": "train/labels/00552.txt",
+      "median_luminance": 116.0
+    },
+    {
+      "source_image": "train/images/00560.jpg",
+      "source_label": "train/labels/00560.txt",
+      "median_luminance": 149.0
+    },
+    {
+      "source_image": "train/images/00598.jpg",
+      "source_label": "train/labels/00598.txt",
+      "median_luminance": 140.0
+    },
+    {
+      "source_image": "train/images/00656.jpg",
+      "source_label": "train/labels/00656.txt",
+      "median_luminance": 117.0
+    },
+    {
+      "source_image": "train/images/00679.jpg",
+      "source_label": "train/labels/00679.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/00680.jpg",
+      "source_label": "train/labels/00680.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/00704.jpg",
+      "source_label": "train/labels/00704.txt",
+      "median_luminance": 121.0
+    },
+    {
+      "source_image": "train/images/00727.jpg",
+      "source_label": "train/labels/00727.txt",
+      "median_luminance": 110.0
+    },
+    {
+      "source_image": "train/images/00739.jpg",
+      "source_label": "train/labels/00739.txt",
+      "median_luminance": 179.0
+    },
+    {
+      "source_image": "train/images/00748.jpg",
+      "source_label": "train/labels/00748.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/00811.jpg",
+      "source_label": "train/labels/00811.txt",
+      "median_luminance": 170.0
+    },
+    {
+      "source_image": "train/images/00821.jpg",
+      "source_label": "train/labels/00821.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/00829.jpg",
+      "source_label": "train/labels/00829.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/00851.jpg",
+      "source_label": "train/labels/00851.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/00865.jpg",
+      "source_label": "train/labels/00865.txt",
+      "median_luminance": 123.0
+    },
+    {
+      "source_image": "train/images/00894.jpg",
+      "source_label": "train/labels/00894.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/00916.jpg",
+      "source_label": "train/labels/00916.txt",
+      "median_luminance": 141.0
+    },
+    {
+      "source_image": "train/images/00926.jpg",
+      "source_label": "train/labels/00926.txt",
+      "median_luminance": 109.0
+    },
+    {
+      "source_image": "train/images/00967.jpg",
+      "source_label": "train/labels/00967.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/00968.jpg",
+      "source_label": "train/labels/00968.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/00978.jpg",
+      "source_label": "train/labels/00978.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/01007.jpg",
+      "source_label": "train/labels/01007.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/01032.jpg",
+      "source_label": "train/labels/01032.txt",
+      "median_luminance": 121.0
+    },
+    {
+      "source_image": "train/images/01072.jpg",
+      "source_label": "train/labels/01072.txt",
+      "median_luminance": 129.0
+    },
+    {
+      "source_image": "train/images/01078.jpg",
+      "source_label": "train/labels/01078.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/01097.jpg",
+      "source_label": "train/labels/01097.txt",
+      "median_luminance": 121.0
+    },
+    {
+      "source_image": "train/images/01130.jpg",
+      "source_label": "train/labels/01130.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/01147.jpg",
+      "source_label": "train/labels/01147.txt",
+      "median_luminance": 118.0
+    },
+    {
+      "source_image": "train/images/01163.jpg",
+      "source_label": "train/labels/01163.txt",
+      "median_luminance": 121.0
+    },
+    {
+      "source_image": "train/images/01168.jpg",
+      "source_label": "train/labels/01168.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/01179.jpg",
+      "source_label": "train/labels/01179.txt",
+      "median_luminance": 136.0
+    },
+    {
+      "source_image": "train/images/01180.jpg",
+      "source_label": "train/labels/01180.txt",
+      "median_luminance": 131.0
+    },
+    {
+      "source_image": "train/images/01182.jpg",
+      "source_label": "train/labels/01182.txt",
+      "median_luminance": 127.0
+    },
+    {
+      "source_image": "train/images/01221.jpg",
+      "source_label": "train/labels/01221.txt",
+      "median_luminance": 111.0
+    },
+    {
+      "source_image": "train/images/01238.jpg",
+      "source_label": "train/labels/01238.txt",
+      "median_luminance": 161.0
+    },
+    {
+      "source_image": "train/images/01240.jpg",
+      "source_label": "train/labels/01240.txt",
+      "median_luminance": 183.0
+    },
+    {
+      "source_image": "train/images/01249.jpg",
+      "source_label": "train/labels/01249.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/01265.jpg",
+      "source_label": "train/labels/01265.txt",
+      "median_luminance": 107.0
+    },
+    {
+      "source_image": "train/images/01274.jpg",
+      "source_label": "train/labels/01274.txt",
+      "median_luminance": 212.0
+    },
+    {
+      "source_image": "train/images/01325.jpg",
+      "source_label": "train/labels/01325.txt",
+      "median_luminance": 118.5
+    },
+    {
+      "source_image": "train/images/01342.jpg",
+      "source_label": "train/labels/01342.txt",
+      "median_luminance": 95.0
+    },
+    {
+      "source_image": "train/images/01343.jpg",
+      "source_label": "train/labels/01343.txt",
+      "median_luminance": 138.0
+    },
+    {
+      "source_image": "train/images/01362.jpg",
+      "source_label": "train/labels/01362.txt",
+      "median_luminance": 116.0
+    },
+    {
+      "source_image": "train/images/01387.jpg",
+      "source_label": "train/labels/01387.txt",
+      "median_luminance": 96.0
+    },
+    {
+      "source_image": "train/images/01398.jpg",
+      "source_label": "train/labels/01398.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/01416.jpg",
+      "source_label": "train/labels/01416.txt",
+      "median_luminance": 136.0
+    },
+    {
+      "source_image": "train/images/01437.jpg",
+      "source_label": "train/labels/01437.txt",
+      "median_luminance": 120.0
+    },
+    {
+      "source_image": "train/images/01466.jpg",
+      "source_label": "train/labels/01466.txt",
+      "median_luminance": 117.0
+    },
+    {
+      "source_image": "train/images/01469.jpg",
+      "source_label": "train/labels/01469.txt",
+      "median_luminance": 146.0
+    },
+    {
+      "source_image": "train/images/01480.jpg",
+      "source_label": "train/labels/01480.txt",
+      "median_luminance": 133.0
+    },
+    {
+      "source_image": "train/images/01482.jpg",
+      "source_label": "train/labels/01482.txt",
+      "median_luminance": 119.0
+    },
+    {
+      "source_image": "train/images/01488.jpg",
+      "source_label": "train/labels/01488.txt",
+      "median_luminance": 132.0
+    },
+    {
+      "source_image": "train/images/01492.jpg",
+      "source_label": "train/labels/01492.txt",
+      "median_luminance": 114.0
+    },
+    {
+      "source_image": "train/images/01496.jpg",
+      "source_label": "train/labels/01496.txt",
+      "median_luminance": 107.0
+    },
+    {
+      "source_image": "train/images/01503.jpg",
+      "source_label": "train/labels/01503.txt",
+      "median_luminance": 95.0
+    },
+    {
+      "source_image": "train/images/01505.jpg",
+      "source_label": "train/labels/01505.txt",
+      "median_luminance": 149.0
+    },
+    {
+      "source_image": "train/images/01534.jpg",
+      "source_label": "train/labels/01534.txt",
+      "median_luminance": 207.0
+    },
+    {
+      "source_image": "train/images/01570.jpg",
+      "source_label": "train/labels/01570.txt",
+      "median_luminance": 108.0
+    },
+    {
+      "source_image": "train/images/01580.jpg",
+      "source_label": "train/labels/01580.txt",
+      "median_luminance": 123.0
+    },
+    {
+      "source_image": "train/images/01583.jpg",
+      "source_label": "train/labels/01583.txt",
+      "median_luminance": 88.0
+    },
+    {
+      "source_image": "train/images/01586.jpg",
+      "source_label": "train/labels/01586.txt",
+      "median_luminance": 127.0
+    },
+    {
+      "source_image": "train/images/01591.jpg",
+      "source_label": "train/labels/01591.txt",
+      "median_luminance": 186.0
+    },
+    {
+      "source_image": "train/images/01602.jpg",
+      "source_label": "train/labels/01602.txt",
+      "median_luminance": 166.0
+    },
+    {
+      "source_image": "train/images/01604.jpg",
+      "source_label": "train/labels/01604.txt",
+      "median_luminance": 125.0
+    },
+    {
+      "source_image": "train/images/01630.jpg",
+      "source_label": "train/labels/01630.txt",
+      "median_luminance": 136.0
+    },
+    {
+      "source_image": "train/images/01652.jpg",
+      "source_label": "train/labels/01652.txt",
+      "median_luminance": 120.0
+    },
+    {
+      "source_image": "train/images/01656.jpg",
+      "source_label": "train/labels/01656.txt",
+      "median_luminance": 197.0
+    },
+    {
+      "source_image": "train/images/01667.jpg",
+      "source_label": "train/labels/01667.txt",
+      "median_luminance": 84.0
+    },
+    {
+      "source_image": "train/images/01676.jpg",
+      "source_label": "train/labels/01676.txt",
+      "median_luminance": 89.0
+    },
+    {
+      "source_image": "train/images/01697.jpg",
+      "source_label": "train/labels/01697.txt",
+      "median_luminance": 147.0
+    },
+    {
+      "source_image": "train/images/01710.jpg",
+      "source_label": "train/labels/01710.txt",
+      "median_luminance": 198.0
+    },
+    {
+      "source_image": "train/images/01716.jpg",
+      "source_label": "train/labels/01716.txt",
+      "median_luminance": 178.0
+    },
+    {
+      "source_image": "train/images/01725.jpg",
+      "source_label": "train/labels/01725.txt",
+      "median_luminance": 118.0
+    },
+    {
+      "source_image": "train/images/01750.jpg",
+      "source_label": "train/labels/01750.txt",
+      "median_luminance": 173.0
+    },
+    {
+      "source_image": "train/images/01834.jpg",
+      "source_label": "train/labels/01834.txt",
+      "median_luminance": 134.0
+    },
+    {
+      "source_image": "train/images/01837.jpg",
+      "source_label": "train/labels/01837.txt",
+      "median_luminance": 122.0
+    },
+    {
+      "source_image": "train/images/01839.jpg",
+      "source_label": "train/labels/01839.txt",
+      "median_luminance": 131.0
+    },
+    {
+      "source_image": "train/images/01865.jpg",
+      "source_label": "train/labels/01865.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/01878.jpg",
+      "source_label": "train/labels/01878.txt",
+      "median_luminance": 171.0
+    },
+    {
+      "source_image": "train/images/01897.jpg",
+      "source_label": "train/labels/01897.txt",
+      "median_luminance": 151.0
+    },
+    {
+      "source_image": "train/images/01907.jpg",
+      "source_label": "train/labels/01907.txt",
+      "median_luminance": 157.0
+    },
+    {
+      "source_image": "train/images/01908.jpg",
+      "source_label": "train/labels/01908.txt",
+      "median_luminance": 151.0
+    },
+    {
+      "source_image": "train/images/01911.jpg",
+      "source_label": "train/labels/01911.txt",
+      "median_luminance": 205.0
+    },
+    {
+      "source_image": "train/images/01920.jpg",
+      "source_label": "train/labels/01920.txt",
+      "median_luminance": 92.0
+    },
+    {
+      "source_image": "train/images/01923.jpg",
+      "source_label": "train/labels/01923.txt",
+      "median_luminance": 138.0
+    },
+    {
+      "source_image": "train/images/01927.jpg",
+      "source_label": "train/labels/01927.txt",
+      "median_luminance": 137.0
+    },
+    {
+      "source_image": "train/images/01929.jpg",
+      "source_label": "train/labels/01929.txt",
+      "median_luminance": 92.0
+    },
+    {
+      "source_image": "train/images/01935.jpg",
+      "source_label": "train/labels/01935.txt",
+      "median_luminance": 86.5
+    },
+    {
+      "source_image": "train/images/01947.jpg",
+      "source_label": "train/labels/01947.txt",
+      "median_luminance": 133.0
+    },
+    {
+      "source_image": "train/images/01951.jpg",
+      "source_label": "train/labels/01951.txt",
+      "median_luminance": 125.0
+    },
+    {
+      "source_image": "train/images/02013.jpg",
+      "source_label": "train/labels/02013.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/02026.jpg",
+      "source_label": "train/labels/02026.txt",
+      "median_luminance": 132.0
+    },
+    {
+      "source_image": "train/images/02082.jpg",
+      "source_label": "train/labels/02082.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/02087.jpg",
+      "source_label": "train/labels/02087.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/02097.jpg",
+      "source_label": "train/labels/02097.txt",
+      "median_luminance": 169.0
+    },
+    {
+      "source_image": "train/images/02803.jpg",
+      "source_label": "train/labels/02803.txt",
+      "median_luminance": 86.0
+    },
+    {
+      "source_image": "train/images/02809.jpg",
+      "source_label": "train/labels/02809.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/02862.jpg",
+      "source_label": "train/labels/02862.txt",
+      "median_luminance": 86.0
+    },
+    {
+      "source_image": "train/images/02878.jpg",
+      "source_label": "train/labels/02878.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/02879.jpg",
+      "source_label": "train/labels/02879.txt",
+      "median_luminance": 84.0
+    },
+    {
+      "source_image": "train/images/02912.jpg",
+      "source_label": "train/labels/02912.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/02918.jpg",
+      "source_label": "train/labels/02918.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/02946.jpg",
+      "source_label": "train/labels/02946.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/02949.jpg",
+      "source_label": "train/labels/02949.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/02992.jpg",
+      "source_label": "train/labels/02992.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/03013.jpg",
+      "source_label": "train/labels/03013.txt",
+      "median_luminance": 41.0
+    },
+    {
+      "source_image": "train/images/03041.jpg",
+      "source_label": "train/labels/03041.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/03044.jpg",
+      "source_label": "train/labels/03044.txt",
+      "median_luminance": 89.0
+    },
+    {
+      "source_image": "train/images/03046.jpg",
+      "source_label": "train/labels/03046.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/03054.jpg",
+      "source_label": "train/labels/03054.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/03055.jpg",
+      "source_label": "train/labels/03055.txt",
+      "median_luminance": 89.0
+    },
+    {
+      "source_image": "train/images/03072.jpg",
+      "source_label": "train/labels/03072.txt",
+      "median_luminance": 28.0
+    },
+    {
+      "source_image": "train/images/03103.jpg",
+      "source_label": "train/labels/03103.txt",
+      "median_luminance": 58.0
+    },
+    {
+      "source_image": "train/images/03116.jpg",
+      "source_label": "train/labels/03116.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/03121.jpg",
+      "source_label": "train/labels/03121.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/03122.jpg",
+      "source_label": "train/labels/03122.txt",
+      "median_luminance": 96.0
+    },
+    {
+      "source_image": "train/images/03148.jpg",
+      "source_label": "train/labels/03148.txt",
+      "median_luminance": 130.0
+    },
+    {
+      "source_image": "train/images/03158.jpg",
+      "source_label": "train/labels/03158.txt",
+      "median_luminance": 113.0
+    },
+    {
+      "source_image": "train/images/03194.jpg",
+      "source_label": "train/labels/03194.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/03210.jpg",
+      "source_label": "train/labels/03210.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/03224.jpg",
+      "source_label": "train/labels/03224.txt",
+      "median_luminance": 112.5
+    },
+    {
+      "source_image": "train/images/03228.jpg",
+      "source_label": "train/labels/03228.txt",
+      "median_luminance": 86.0
+    },
+    {
+      "source_image": "train/images/03232.jpg",
+      "source_label": "train/labels/03232.txt",
+      "median_luminance": 99.0
+    },
+    {
+      "source_image": "train/images/03263.jpg",
+      "source_label": "train/labels/03263.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/03267.jpg",
+      "source_label": "train/labels/03267.txt",
+      "median_luminance": 130.0
+    },
+    {
+      "source_image": "train/images/03295.jpg",
+      "source_label": "train/labels/03295.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/03299.jpg",
+      "source_label": "train/labels/03299.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/03300.jpg",
+      "source_label": "train/labels/03300.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/03314.jpg",
+      "source_label": "train/labels/03314.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/03325.jpg",
+      "source_label": "train/labels/03325.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/03327.jpg",
+      "source_label": "train/labels/03327.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/03331.jpg",
+      "source_label": "train/labels/03331.txt",
+      "median_luminance": 96.0
+    },
+    {
+      "source_image": "train/images/03380.jpg",
+      "source_label": "train/labels/03380.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/03446.jpg",
+      "source_label": "train/labels/03446.txt",
+      "median_luminance": 104.5
+    },
+    {
+      "source_image": "train/images/03448.jpg",
+      "source_label": "train/labels/03448.txt",
+      "median_luminance": 88.0
+    },
+    {
+      "source_image": "train/images/03451.jpg",
+      "source_label": "train/labels/03451.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/03489.jpg",
+      "source_label": "train/labels/03489.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/03555.jpg",
+      "source_label": "train/labels/03555.txt",
+      "median_luminance": 80.0
+    },
+    {
+      "source_image": "train/images/03556.jpg",
+      "source_label": "train/labels/03556.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/03582.jpg",
+      "source_label": "train/labels/03582.txt",
+      "median_luminance": 119.0
+    },
+    {
+      "source_image": "train/images/03588.jpg",
+      "source_label": "train/labels/03588.txt",
+      "median_luminance": 121.0
+    },
+    {
+      "source_image": "train/images/03592.jpg",
+      "source_label": "train/labels/03592.txt",
+      "median_luminance": 120.0
+    },
+    {
+      "source_image": "train/images/03612.jpg",
+      "source_label": "train/labels/03612.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/03620.jpg",
+      "source_label": "train/labels/03620.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/03633.jpg",
+      "source_label": "train/labels/03633.txt",
+      "median_luminance": 105.0
+    },
+    {
+      "source_image": "train/images/03653.jpg",
+      "source_label": "train/labels/03653.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/03660.jpg",
+      "source_label": "train/labels/03660.txt",
+      "median_luminance": 130.0
+    },
+    {
+      "source_image": "train/images/03679.jpg",
+      "source_label": "train/labels/03679.txt",
+      "median_luminance": 115.0
+    },
+    {
+      "source_image": "train/images/03682.jpg",
+      "source_label": "train/labels/03682.txt",
+      "median_luminance": 115.0
+    },
+    {
+      "source_image": "train/images/03722.jpg",
+      "source_label": "train/labels/03722.txt",
+      "median_luminance": 126.0
+    },
+    {
+      "source_image": "train/images/03752.jpg",
+      "source_label": "train/labels/03752.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/03770.jpg",
+      "source_label": "train/labels/03770.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/03772.jpg",
+      "source_label": "train/labels/03772.txt",
+      "median_luminance": 58.5
+    },
+    {
+      "source_image": "train/images/03809.jpg",
+      "source_label": "train/labels/03809.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/03830.jpg",
+      "source_label": "train/labels/03830.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/03841.jpg",
+      "source_label": "train/labels/03841.txt",
+      "median_luminance": 109.0
+    },
+    {
+      "source_image": "train/images/03883.jpg",
+      "source_label": "train/labels/03883.txt",
+      "median_luminance": 95.0
+    },
+    {
+      "source_image": "train/images/03910.jpg",
+      "source_label": "train/labels/03910.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/03911.jpg",
+      "source_label": "train/labels/03911.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/03930.jpg",
+      "source_label": "train/labels/03930.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/03946.jpg",
+      "source_label": "train/labels/03946.txt",
+      "median_luminance": 116.0
+    },
+    {
+      "source_image": "train/images/03956.jpg",
+      "source_label": "train/labels/03956.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/03966.jpg",
+      "source_label": "train/labels/03966.txt",
+      "median_luminance": 127.0
+    },
+    {
+      "source_image": "train/images/03986.jpg",
+      "source_label": "train/labels/03986.txt",
+      "median_luminance": 105.0
+    },
+    {
+      "source_image": "train/images/03991.jpg",
+      "source_label": "train/labels/03991.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/04001.jpg",
+      "source_label": "train/labels/04001.txt",
+      "median_luminance": 196.0
+    },
+    {
+      "source_image": "train/images/04017.jpg",
+      "source_label": "train/labels/04017.txt",
+      "median_luminance": 84.0
+    },
+    {
+      "source_image": "train/images/04038.jpg",
+      "source_label": "train/labels/04038.txt",
+      "median_luminance": 97.0
+    },
+    {
+      "source_image": "train/images/04043.jpg",
+      "source_label": "train/labels/04043.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/04052.jpg",
+      "source_label": "train/labels/04052.txt",
+      "median_luminance": 91.0
+    },
+    {
+      "source_image": "train/images/04056.jpg",
+      "source_label": "train/labels/04056.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/04096.jpg",
+      "source_label": "train/labels/04096.txt",
+      "median_luminance": 177.5
+    },
+    {
+      "source_image": "train/images/04105.jpg",
+      "source_label": "train/labels/04105.txt",
+      "median_luminance": 167.0
+    },
+    {
+      "source_image": "train/images/04126.jpg",
+      "source_label": "train/labels/04126.txt",
+      "median_luminance": 180.0
+    },
+    {
+      "source_image": "train/images/04150.jpg",
+      "source_label": "train/labels/04150.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/04183.jpg",
+      "source_label": "train/labels/04183.txt",
+      "median_luminance": 178.0
+    },
+    {
+      "source_image": "train/images/04189.jpg",
+      "source_label": "train/labels/04189.txt",
+      "median_luminance": 126.0
+    },
+    {
+      "source_image": "train/images/04196.jpg",
+      "source_label": "train/labels/04196.txt",
+      "median_luminance": 104.0
+    },
+    {
+      "source_image": "train/images/04212.jpg",
+      "source_label": "train/labels/04212.txt",
+      "median_luminance": 99.0
+    },
+    {
+      "source_image": "train/images/04245.jpg",
+      "source_label": "train/labels/04245.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/04249.jpg",
+      "source_label": "train/labels/04249.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/04269.jpg",
+      "source_label": "train/labels/04269.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/04294.jpg",
+      "source_label": "train/labels/04294.txt",
+      "median_luminance": 127.0
+    },
+    {
+      "source_image": "train/images/04311.jpg",
+      "source_label": "train/labels/04311.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/04315.jpg",
+      "source_label": "train/labels/04315.txt",
+      "median_luminance": 92.0
+    },
+    {
+      "source_image": "train/images/04321.jpg",
+      "source_label": "train/labels/04321.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/04357.jpg",
+      "source_label": "train/labels/04357.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/04429.jpg",
+      "source_label": "train/labels/04429.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/04453.jpg",
+      "source_label": "train/labels/04453.txt",
+      "median_luminance": 102.0
+    },
+    {
+      "source_image": "train/images/04461.jpg",
+      "source_label": "train/labels/04461.txt",
+      "median_luminance": 116.0
+    },
+    {
+      "source_image": "train/images/04462.jpg",
+      "source_label": "train/labels/04462.txt",
+      "median_luminance": 118.0
+    },
+    {
+      "source_image": "train/images/04466.jpg",
+      "source_label": "train/labels/04466.txt",
+      "median_luminance": 116.0
+    },
+    {
+      "source_image": "train/images/04469.jpg",
+      "source_label": "train/labels/04469.txt",
+      "median_luminance": 120.0
+    },
+    {
+      "source_image": "train/images/04478.jpg",
+      "source_label": "train/labels/04478.txt",
+      "median_luminance": 124.0
+    },
+    {
+      "source_image": "train/images/04483.jpg",
+      "source_label": "train/labels/04483.txt",
+      "median_luminance": 124.0
+    },
+    {
+      "source_image": "train/images/04491.jpg",
+      "source_label": "train/labels/04491.txt",
+      "median_luminance": 124.0
+    },
+    {
+      "source_image": "train/images/04508.jpg",
+      "source_label": "train/labels/04508.txt",
+      "median_luminance": 127.0
+    },
+    {
+      "source_image": "train/images/04518.jpg",
+      "source_label": "train/labels/04518.txt",
+      "median_luminance": 118.5
+    },
+    {
+      "source_image": "train/images/04531.jpg",
+      "source_label": "train/labels/04531.txt",
+      "median_luminance": 116.0
+    },
+    {
+      "source_image": "train/images/04537.jpg",
+      "source_label": "train/labels/04537.txt",
+      "median_luminance": 91.0
+    },
+    {
+      "source_image": "train/images/04573.jpg",
+      "source_label": "train/labels/04573.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/04626.jpg",
+      "source_label": "train/labels/04626.txt",
+      "median_luminance": 109.0
+    },
+    {
+      "source_image": "train/images/04649.jpg",
+      "source_label": "train/labels/04649.txt",
+      "median_luminance": 107.0
+    },
+    {
+      "source_image": "train/images/04656.jpg",
+      "source_label": "train/labels/04656.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/04659.jpg",
+      "source_label": "train/labels/04659.txt",
+      "median_luminance": 97.0
+    },
+    {
+      "source_image": "train/images/04668.jpg",
+      "source_label": "train/labels/04668.txt",
+      "median_luminance": 98.5
+    },
+    {
+      "source_image": "train/images/04676.jpg",
+      "source_label": "train/labels/04676.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/04685.jpg",
+      "source_label": "train/labels/04685.txt",
+      "median_luminance": 111.0
+    },
+    {
+      "source_image": "train/images/04716.jpg",
+      "source_label": "train/labels/04716.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/04741.jpg",
+      "source_label": "train/labels/04741.txt",
+      "median_luminance": 104.0
+    },
+    {
+      "source_image": "train/images/04750.jpg",
+      "source_label": "train/labels/04750.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/04761.jpg",
+      "source_label": "train/labels/04761.txt",
+      "median_luminance": 99.0
+    },
+    {
+      "source_image": "train/images/04773.jpg",
+      "source_label": "train/labels/04773.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/04781.jpg",
+      "source_label": "train/labels/04781.txt",
+      "median_luminance": 97.0
+    },
+    {
+      "source_image": "train/images/04789.jpg",
+      "source_label": "train/labels/04789.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/04800.jpg",
+      "source_label": "train/labels/04800.txt",
+      "median_luminance": 92.5
+    },
+    {
+      "source_image": "train/images/04805.jpg",
+      "source_label": "train/labels/04805.txt",
+      "median_luminance": 97.0
+    },
+    {
+      "source_image": "train/images/04818.jpg",
+      "source_label": "train/labels/04818.txt",
+      "median_luminance": 99.0
+    },
+    {
+      "source_image": "train/images/04837.jpg",
+      "source_label": "train/labels/04837.txt",
+      "median_luminance": 93.0
+    },
+    {
+      "source_image": "train/images/04862.jpg",
+      "source_label": "train/labels/04862.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/04865.jpg",
+      "source_label": "train/labels/04865.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/04866.jpg",
+      "source_label": "train/labels/04866.txt",
+      "median_luminance": 95.0
+    },
+    {
+      "source_image": "train/images/04868.jpg",
+      "source_label": "train/labels/04868.txt",
+      "median_luminance": 95.0
+    },
+    {
+      "source_image": "train/images/04885.jpg",
+      "source_label": "train/labels/04885.txt",
+      "median_luminance": 89.0
+    },
+    {
+      "source_image": "train/images/04940.jpg",
+      "source_label": "train/labels/04940.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/05082.jpg",
+      "source_label": "train/labels/05082.txt",
+      "median_luminance": 95.0
+    },
+    {
+      "source_image": "train/images/05092.jpg",
+      "source_label": "train/labels/05092.txt",
+      "median_luminance": 91.0
+    },
+    {
+      "source_image": "train/images/05096.jpg",
+      "source_label": "train/labels/05096.txt",
+      "median_luminance": 91.0
+    },
+    {
+      "source_image": "train/images/05288.jpg",
+      "source_label": "train/labels/05288.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/05290.jpg",
+      "source_label": "train/labels/05290.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/05299.jpg",
+      "source_label": "train/labels/05299.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/05306.jpg",
+      "source_label": "train/labels/05306.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/05310.jpg",
+      "source_label": "train/labels/05310.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/05415.jpg",
+      "source_label": "train/labels/05415.txt",
+      "median_luminance": 113.0
+    },
+    {
+      "source_image": "train/images/05417.jpg",
+      "source_label": "train/labels/05417.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/05497.jpg",
+      "source_label": "train/labels/05497.txt",
+      "median_luminance": 120.0
+    },
+    {
+      "source_image": "train/images/05508.jpg",
+      "source_label": "train/labels/05508.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/05525.jpg",
+      "source_label": "train/labels/05525.txt",
+      "median_luminance": 139.5
+    },
+    {
+      "source_image": "train/images/05537.jpg",
+      "source_label": "train/labels/05537.txt",
+      "median_luminance": 141.0
+    },
+    {
+      "source_image": "train/images/05541.jpg",
+      "source_label": "train/labels/05541.txt",
+      "median_luminance": 138.0
+    },
+    {
+      "source_image": "train/images/05555.jpg",
+      "source_label": "train/labels/05555.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/05565.jpg",
+      "source_label": "train/labels/05565.txt",
+      "median_luminance": 105.0
+    },
+    {
+      "source_image": "train/images/05570.jpg",
+      "source_label": "train/labels/05570.txt",
+      "median_luminance": 123.0
+    },
+    {
+      "source_image": "train/images/05588.jpg",
+      "source_label": "train/labels/05588.txt",
+      "median_luminance": 89.0
+    },
+    {
+      "source_image": "train/images/05605.jpg",
+      "source_label": "train/labels/05605.txt",
+      "median_luminance": 113.0
+    },
+    {
+      "source_image": "train/images/05611.jpg",
+      "source_label": "train/labels/05611.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/05666.jpg",
+      "source_label": "train/labels/05666.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/05700.jpg",
+      "source_label": "train/labels/05700.txt",
+      "median_luminance": 109.0
+    },
+    {
+      "source_image": "train/images/05721.jpg",
+      "source_label": "train/labels/05721.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/05733.jpg",
+      "source_label": "train/labels/05733.txt",
+      "median_luminance": 105.0
+    },
+    {
+      "source_image": "train/images/05792.jpg",
+      "source_label": "train/labels/05792.txt",
+      "median_luminance": 111.0
+    },
+    {
+      "source_image": "train/images/05807.jpg",
+      "source_label": "train/labels/05807.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/05836.jpg",
+      "source_label": "train/labels/05836.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/05842.jpg",
+      "source_label": "train/labels/05842.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/05870.jpg",
+      "source_label": "train/labels/05870.txt",
+      "median_luminance": 91.0
+    },
+    {
+      "source_image": "train/images/05874.jpg",
+      "source_label": "train/labels/05874.txt",
+      "median_luminance": 92.0
+    },
+    {
+      "source_image": "train/images/05889.jpg",
+      "source_label": "train/labels/05889.txt",
+      "median_luminance": 97.0
+    },
+    {
+      "source_image": "train/images/05910.jpg",
+      "source_label": "train/labels/05910.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/05935.jpg",
+      "source_label": "train/labels/05935.txt",
+      "median_luminance": 89.0
+    },
+    {
+      "source_image": "train/images/05938.jpg",
+      "source_label": "train/labels/05938.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/05969.jpg",
+      "source_label": "train/labels/05969.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/05973.jpg",
+      "source_label": "train/labels/05973.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/05975.jpg",
+      "source_label": "train/labels/05975.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/05998.jpg",
+      "source_label": "train/labels/05998.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/06006.jpg",
+      "source_label": "train/labels/06006.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/06012.jpg",
+      "source_label": "train/labels/06012.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/06030.jpg",
+      "source_label": "train/labels/06030.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/06085.jpg",
+      "source_label": "train/labels/06085.txt",
+      "median_luminance": 51.0
+    },
+    {
+      "source_image": "train/images/06110.jpg",
+      "source_label": "train/labels/06110.txt",
+      "median_luminance": 49.0
+    },
+    {
+      "source_image": "train/images/06112.jpg",
+      "source_label": "train/labels/06112.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/06118.jpg",
+      "source_label": "train/labels/06118.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/06159.jpg",
+      "source_label": "train/labels/06159.txt",
+      "median_luminance": 57.0
+    },
+    {
+      "source_image": "train/images/06183.jpg",
+      "source_label": "train/labels/06183.txt",
+      "median_luminance": 58.0
+    },
+    {
+      "source_image": "train/images/06193.jpg",
+      "source_label": "train/labels/06193.txt",
+      "median_luminance": 68.5
+    },
+    {
+      "source_image": "train/images/06206.jpg",
+      "source_label": "train/labels/06206.txt",
+      "median_luminance": 71.5
+    },
+    {
+      "source_image": "train/images/06217.jpg",
+      "source_label": "train/labels/06217.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/06221.jpg",
+      "source_label": "train/labels/06221.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/06245.jpg",
+      "source_label": "train/labels/06245.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/06255.jpg",
+      "source_label": "train/labels/06255.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/06270.jpg",
+      "source_label": "train/labels/06270.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/06287.jpg",
+      "source_label": "train/labels/06287.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/06394.jpg",
+      "source_label": "train/labels/06394.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/06399.jpg",
+      "source_label": "train/labels/06399.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/06479.jpg",
+      "source_label": "train/labels/06479.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/06481.jpg",
+      "source_label": "train/labels/06481.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/06547.jpg",
+      "source_label": "train/labels/06547.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/06559.jpg",
+      "source_label": "train/labels/06559.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/06562.jpg",
+      "source_label": "train/labels/06562.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/06564.jpg",
+      "source_label": "train/labels/06564.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/06609.jpg",
+      "source_label": "train/labels/06609.txt",
+      "median_luminance": 113.0
+    },
+    {
+      "source_image": "train/images/06619.jpg",
+      "source_label": "train/labels/06619.txt",
+      "median_luminance": 106.0
+    },
+    {
+      "source_image": "train/images/06651.jpg",
+      "source_label": "train/labels/06651.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/06665.jpg",
+      "source_label": "train/labels/06665.txt",
+      "median_luminance": 95.0
+    },
+    {
+      "source_image": "train/images/06714.jpg",
+      "source_label": "train/labels/06714.txt",
+      "median_luminance": 118.0
+    },
+    {
+      "source_image": "train/images/06725.jpg",
+      "source_label": "train/labels/06725.txt",
+      "median_luminance": 116.0
+    },
+    {
+      "source_image": "train/images/06730.jpg",
+      "source_label": "train/labels/06730.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/06752.jpg",
+      "source_label": "train/labels/06752.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/06770.jpg",
+      "source_label": "train/labels/06770.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/06822.jpg",
+      "source_label": "train/labels/06822.txt",
+      "median_luminance": 70.5
+    },
+    {
+      "source_image": "train/images/06830.jpg",
+      "source_label": "train/labels/06830.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/06836.jpg",
+      "source_label": "train/labels/06836.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/06856.jpg",
+      "source_label": "train/labels/06856.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/06868.jpg",
+      "source_label": "train/labels/06868.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/06919.jpg",
+      "source_label": "train/labels/06919.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/06938.jpg",
+      "source_label": "train/labels/06938.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/06947.jpg",
+      "source_label": "train/labels/06947.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/06979.jpg",
+      "source_label": "train/labels/06979.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/06990.jpg",
+      "source_label": "train/labels/06990.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/06995.jpg",
+      "source_label": "train/labels/06995.txt",
+      "median_luminance": 80.0
+    },
+    {
+      "source_image": "train/images/07058.jpg",
+      "source_label": "train/labels/07058.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/07065.jpg",
+      "source_label": "train/labels/07065.txt",
+      "median_luminance": 83.5
+    },
+    {
+      "source_image": "train/images/07070.jpg",
+      "source_label": "train/labels/07070.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/07075.jpg",
+      "source_label": "train/labels/07075.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/07095.jpg",
+      "source_label": "train/labels/07095.txt",
+      "median_luminance": 92.0
+    },
+    {
+      "source_image": "train/images/07257.jpg",
+      "source_label": "train/labels/07257.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/07280.jpg",
+      "source_label": "train/labels/07280.txt",
+      "median_luminance": 38.0
+    },
+    {
+      "source_image": "train/images/07283.jpg",
+      "source_label": "train/labels/07283.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/07284.jpg",
+      "source_label": "train/labels/07284.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/07293.jpg",
+      "source_label": "train/labels/07293.txt",
+      "median_luminance": 62.5
+    },
+    {
+      "source_image": "train/images/07309.jpg",
+      "source_label": "train/labels/07309.txt",
+      "median_luminance": 86.0
+    },
+    {
+      "source_image": "train/images/07355.jpg",
+      "source_label": "train/labels/07355.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/07356.jpg",
+      "source_label": "train/labels/07356.txt",
+      "median_luminance": 58.0
+    },
+    {
+      "source_image": "train/images/07359.jpg",
+      "source_label": "train/labels/07359.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/07429.jpg",
+      "source_label": "train/labels/07429.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/07431.jpg",
+      "source_label": "train/labels/07431.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/07447.jpg",
+      "source_label": "train/labels/07447.txt",
+      "median_luminance": 84.0
+    },
+    {
+      "source_image": "train/images/07465.jpg",
+      "source_label": "train/labels/07465.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/07468.jpg",
+      "source_label": "train/labels/07468.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/07515.jpg",
+      "source_label": "train/labels/07515.txt",
+      "median_luminance": 76.0
+    },
+    {
+      "source_image": "train/images/07526.jpg",
+      "source_label": "train/labels/07526.txt",
+      "median_luminance": 76.0
+    },
+    {
+      "source_image": "train/images/07596.jpg",
+      "source_label": "train/labels/07596.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/07615.jpg",
+      "source_label": "train/labels/07615.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/07626.jpg",
+      "source_label": "train/labels/07626.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/07641.jpg",
+      "source_label": "train/labels/07641.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/07654.jpg",
+      "source_label": "train/labels/07654.txt",
+      "median_luminance": 62.5
+    },
+    {
+      "source_image": "train/images/07666.jpg",
+      "source_label": "train/labels/07666.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/07677.jpg",
+      "source_label": "train/labels/07677.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/07693.jpg",
+      "source_label": "train/labels/07693.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/07695.jpg",
+      "source_label": "train/labels/07695.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/07697.jpg",
+      "source_label": "train/labels/07697.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/07700.jpg",
+      "source_label": "train/labels/07700.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/07746.jpg",
+      "source_label": "train/labels/07746.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/07751.jpg",
+      "source_label": "train/labels/07751.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/07765.jpg",
+      "source_label": "train/labels/07765.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/07783.jpg",
+      "source_label": "train/labels/07783.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/07784.jpg",
+      "source_label": "train/labels/07784.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/07789.jpg",
+      "source_label": "train/labels/07789.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/07867.jpg",
+      "source_label": "train/labels/07867.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/07875.jpg",
+      "source_label": "train/labels/07875.txt",
+      "median_luminance": 76.0
+    },
+    {
+      "source_image": "train/images/07881.jpg",
+      "source_label": "train/labels/07881.txt",
+      "median_luminance": 92.0
+    },
+    {
+      "source_image": "train/images/07900.jpg",
+      "source_label": "train/labels/07900.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/07904.jpg",
+      "source_label": "train/labels/07904.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/07919.jpg",
+      "source_label": "train/labels/07919.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/07961.jpg",
+      "source_label": "train/labels/07961.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/07968.jpg",
+      "source_label": "train/labels/07968.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/07993.jpg",
+      "source_label": "train/labels/07993.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/08000.jpg",
+      "source_label": "train/labels/08000.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/08004.jpg",
+      "source_label": "train/labels/08004.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/08013.jpg",
+      "source_label": "train/labels/08013.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/08041.jpg",
+      "source_label": "train/labels/08041.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/08091.jpg",
+      "source_label": "train/labels/08091.txt",
+      "median_luminance": 93.5
+    },
+    {
+      "source_image": "train/images/08099.jpg",
+      "source_label": "train/labels/08099.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/08111.jpg",
+      "source_label": "train/labels/08111.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/08116.jpg",
+      "source_label": "train/labels/08116.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/08158.jpg",
+      "source_label": "train/labels/08158.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/08164.jpg",
+      "source_label": "train/labels/08164.txt",
+      "median_luminance": 80.0
+    },
+    {
+      "source_image": "train/images/08179.jpg",
+      "source_label": "train/labels/08179.txt",
+      "median_luminance": 78.0
+    },
+    {
+      "source_image": "train/images/08185.jpg",
+      "source_label": "train/labels/08185.txt",
+      "median_luminance": 78.0
+    },
+    {
+      "source_image": "train/images/08210.jpg",
+      "source_label": "train/labels/08210.txt",
+      "median_luminance": 78.0
+    },
+    {
+      "source_image": "train/images/08221.jpg",
+      "source_label": "train/labels/08221.txt",
+      "median_luminance": 78.0
+    },
+    {
+      "source_image": "train/images/08232.jpg",
+      "source_label": "train/labels/08232.txt",
+      "median_luminance": 76.0
+    },
+    {
+      "source_image": "train/images/08237.jpg",
+      "source_label": "train/labels/08237.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/08238.jpg",
+      "source_label": "train/labels/08238.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/08252.jpg",
+      "source_label": "train/labels/08252.txt",
+      "median_luminance": 75.5
+    },
+    {
+      "source_image": "train/images/08308.jpg",
+      "source_label": "train/labels/08308.txt",
+      "median_luminance": 80.0
+    },
+    {
+      "source_image": "train/images/08326.jpg",
+      "source_label": "train/labels/08326.txt",
+      "median_luminance": 80.0
+    },
+    {
+      "source_image": "train/images/08435.jpg",
+      "source_label": "train/labels/08435.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/08444.jpg",
+      "source_label": "train/labels/08444.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/08446.jpg",
+      "source_label": "train/labels/08446.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/08454.jpg",
+      "source_label": "train/labels/08454.txt",
+      "median_luminance": 80.0
+    },
+    {
+      "source_image": "train/images/08468.jpg",
+      "source_label": "train/labels/08468.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/08538.jpg",
+      "source_label": "train/labels/08538.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/08572.jpg",
+      "source_label": "train/labels/08572.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/08579.jpg",
+      "source_label": "train/labels/08579.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/08592.jpg",
+      "source_label": "train/labels/08592.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/08608.jpg",
+      "source_label": "train/labels/08608.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/08617.jpg",
+      "source_label": "train/labels/08617.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/08631.jpg",
+      "source_label": "train/labels/08631.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/08655.jpg",
+      "source_label": "train/labels/08655.txt",
+      "median_luminance": 87.5
+    },
+    {
+      "source_image": "train/images/08682.jpg",
+      "source_label": "train/labels/08682.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/08689.jpg",
+      "source_label": "train/labels/08689.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/08694.jpg",
+      "source_label": "train/labels/08694.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/08717.jpg",
+      "source_label": "train/labels/08717.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/08721.jpg",
+      "source_label": "train/labels/08721.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/08740.jpg",
+      "source_label": "train/labels/08740.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/08752.jpg",
+      "source_label": "train/labels/08752.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/08801.jpg",
+      "source_label": "train/labels/08801.txt",
+      "median_luminance": 96.0
+    },
+    {
+      "source_image": "train/images/08806.jpg",
+      "source_label": "train/labels/08806.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/08821.jpg",
+      "source_label": "train/labels/08821.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/08822.jpg",
+      "source_label": "train/labels/08822.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/08823.jpg",
+      "source_label": "train/labels/08823.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/08836.jpg",
+      "source_label": "train/labels/08836.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/08882.jpg",
+      "source_label": "train/labels/08882.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/08896.jpg",
+      "source_label": "train/labels/08896.txt",
+      "median_luminance": 78.0
+    },
+    {
+      "source_image": "train/images/08935.jpg",
+      "source_label": "train/labels/08935.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/08936.jpg",
+      "source_label": "train/labels/08936.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/08941.jpg",
+      "source_label": "train/labels/08941.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/08959.jpg",
+      "source_label": "train/labels/08959.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/08976.jpg",
+      "source_label": "train/labels/08976.txt",
+      "median_luminance": 80.0
+    },
+    {
+      "source_image": "train/images/09024.jpg",
+      "source_label": "train/labels/09024.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/09039.jpg",
+      "source_label": "train/labels/09039.txt",
+      "median_luminance": 84.0
+    },
+    {
+      "source_image": "train/images/09042.jpg",
+      "source_label": "train/labels/09042.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/09048.jpg",
+      "source_label": "train/labels/09048.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/09058.jpg",
+      "source_label": "train/labels/09058.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/09134.jpg",
+      "source_label": "train/labels/09134.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/09200.jpg",
+      "source_label": "train/labels/09200.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/09216.jpg",
+      "source_label": "train/labels/09216.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/09221.jpg",
+      "source_label": "train/labels/09221.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/09223.jpg",
+      "source_label": "train/labels/09223.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/09228.jpg",
+      "source_label": "train/labels/09228.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/09236.jpg",
+      "source_label": "train/labels/09236.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/09240.jpg",
+      "source_label": "train/labels/09240.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/09275.jpg",
+      "source_label": "train/labels/09275.txt",
+      "median_luminance": 17.0
+    },
+    {
+      "source_image": "train/images/09286.jpg",
+      "source_label": "train/labels/09286.txt",
+      "median_luminance": 18.0
+    },
+    {
+      "source_image": "train/images/09289.jpg",
+      "source_label": "train/labels/09289.txt",
+      "median_luminance": 22.0
+    },
+    {
+      "source_image": "train/images/09310.jpg",
+      "source_label": "train/labels/09310.txt",
+      "median_luminance": 31.0
+    },
+    {
+      "source_image": "train/images/09336.jpg",
+      "source_label": "train/labels/09336.txt",
+      "median_luminance": 27.0
+    },
+    {
+      "source_image": "train/images/09339.jpg",
+      "source_label": "train/labels/09339.txt",
+      "median_luminance": 30.0
+    },
+    {
+      "source_image": "train/images/09405.jpg",
+      "source_label": "train/labels/09405.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/09410.jpg",
+      "source_label": "train/labels/09410.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/09413.jpg",
+      "source_label": "train/labels/09413.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/09417.jpg",
+      "source_label": "train/labels/09417.txt",
+      "median_luminance": 58.5
+    },
+    {
+      "source_image": "train/images/09422.jpg",
+      "source_label": "train/labels/09422.txt",
+      "median_luminance": 38.0
+    },
+    {
+      "source_image": "train/images/09486.jpg",
+      "source_label": "train/labels/09486.txt",
+      "median_luminance": 51.0
+    },
+    {
+      "source_image": "train/images/09533.jpg",
+      "source_label": "train/labels/09533.txt",
+      "median_luminance": 26.0
+    },
+    {
+      "source_image": "train/images/09539.jpg",
+      "source_label": "train/labels/09539.txt",
+      "median_luminance": 26.0
+    },
+    {
+      "source_image": "train/images/09542.jpg",
+      "source_label": "train/labels/09542.txt",
+      "median_luminance": 27.0
+    },
+    {
+      "source_image": "train/images/09545.jpg",
+      "source_label": "train/labels/09545.txt",
+      "median_luminance": 28.0
+    },
+    {
+      "source_image": "train/images/09571.jpg",
+      "source_label": "train/labels/09571.txt",
+      "median_luminance": 29.0
+    },
+    {
+      "source_image": "train/images/09580.jpg",
+      "source_label": "train/labels/09580.txt",
+      "median_luminance": 26.0
+    },
+    {
+      "source_image": "train/images/09659.jpg",
+      "source_label": "train/labels/09659.txt",
+      "median_luminance": 31.0
+    },
+    {
+      "source_image": "train/images/09689.jpg",
+      "source_label": "train/labels/09689.txt",
+      "median_luminance": 25.0
+    },
+    {
+      "source_image": "train/images/09691.jpg",
+      "source_label": "train/labels/09691.txt",
+      "median_luminance": 24.0
+    },
+    {
+      "source_image": "train/images/09732.jpg",
+      "source_label": "train/labels/09732.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/09738.jpg",
+      "source_label": "train/labels/09738.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/09747.jpg",
+      "source_label": "train/labels/09747.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/09749.jpg",
+      "source_label": "train/labels/09749.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/09768.jpg",
+      "source_label": "train/labels/09768.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/09798.jpg",
+      "source_label": "train/labels/09798.txt",
+      "median_luminance": 50.0
+    },
+    {
+      "source_image": "train/images/09831.jpg",
+      "source_label": "train/labels/09831.txt",
+      "median_luminance": 41.0
+    },
+    {
+      "source_image": "train/images/09845.jpg",
+      "source_label": "train/labels/09845.txt",
+      "median_luminance": 40.0
+    },
+    {
+      "source_image": "train/images/09852.jpg",
+      "source_label": "train/labels/09852.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/09853.jpg",
+      "source_label": "train/labels/09853.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/09877.jpg",
+      "source_label": "train/labels/09877.txt",
+      "median_luminance": 42.0
+    },
+    {
+      "source_image": "train/images/09902.jpg",
+      "source_label": "train/labels/09902.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/09922.jpg",
+      "source_label": "train/labels/09922.txt",
+      "median_luminance": 49.0
+    },
+    {
+      "source_image": "train/images/09933.jpg",
+      "source_label": "train/labels/09933.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/09939.jpg",
+      "source_label": "train/labels/09939.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/09940.jpg",
+      "source_label": "train/labels/09940.txt",
+      "median_luminance": 49.0
+    },
+    {
+      "source_image": "train/images/09942.jpg",
+      "source_label": "train/labels/09942.txt",
+      "median_luminance": 51.0
+    },
+    {
+      "source_image": "train/images/09943.jpg",
+      "source_label": "train/labels/09943.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/09956.jpg",
+      "source_label": "train/labels/09956.txt",
+      "median_luminance": 54.0
+    },
+    {
+      "source_image": "train/images/09969.jpg",
+      "source_label": "train/labels/09969.txt",
+      "median_luminance": 47.0
+    },
+    {
+      "source_image": "train/images/09985.jpg",
+      "source_label": "train/labels/09985.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/09989.jpg",
+      "source_label": "train/labels/09989.txt",
+      "median_luminance": 36.0
+    },
+    {
+      "source_image": "train/images/09992.jpg",
+      "source_label": "train/labels/09992.txt",
+      "median_luminance": 35.0
+    },
+    {
+      "source_image": "train/images/10007.jpg",
+      "source_label": "train/labels/10007.txt",
+      "median_luminance": 35.0
+    },
+    {
+      "source_image": "train/images/10008.jpg",
+      "source_label": "train/labels/10008.txt",
+      "median_luminance": 35.0
+    },
+    {
+      "source_image": "train/images/10020.jpg",
+      "source_label": "train/labels/10020.txt",
+      "median_luminance": 31.0
+    },
+    {
+      "source_image": "train/images/10040.jpg",
+      "source_label": "train/labels/10040.txt",
+      "median_luminance": 31.0
+    },
+    {
+      "source_image": "train/images/10065.jpg",
+      "source_label": "train/labels/10065.txt",
+      "median_luminance": 46.0
+    },
+    {
+      "source_image": "train/images/10072.jpg",
+      "source_label": "train/labels/10072.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/10074.jpg",
+      "source_label": "train/labels/10074.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/10075.jpg",
+      "source_label": "train/labels/10075.txt",
+      "median_luminance": 53.0
+    },
+    {
+      "source_image": "train/images/10082.jpg",
+      "source_label": "train/labels/10082.txt",
+      "median_luminance": 33.0
+    },
+    {
+      "source_image": "train/images/10101.jpg",
+      "source_label": "train/labels/10101.txt",
+      "median_luminance": 36.0
+    },
+    {
+      "source_image": "train/images/10102.jpg",
+      "source_label": "train/labels/10102.txt",
+      "median_luminance": 35.0
+    },
+    {
+      "source_image": "train/images/10113.jpg",
+      "source_label": "train/labels/10113.txt",
+      "median_luminance": 38.0
+    },
+    {
+      "source_image": "train/images/10132.jpg",
+      "source_label": "train/labels/10132.txt",
+      "median_luminance": 43.0
+    },
+    {
+      "source_image": "train/images/10149.jpg",
+      "source_label": "train/labels/10149.txt",
+      "median_luminance": 41.0
+    },
+    {
+      "source_image": "train/images/10202.jpg",
+      "source_label": "train/labels/10202.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/10282.jpg",
+      "source_label": "train/labels/10282.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/10516.jpg",
+      "source_label": "train/labels/10516.txt",
+      "median_luminance": 43.0
+    },
+    {
+      "source_image": "train/images/10521.jpg",
+      "source_label": "train/labels/10521.txt",
+      "median_luminance": 45.0
+    },
+    {
+      "source_image": "train/images/10536.jpg",
+      "source_label": "train/labels/10536.txt",
+      "median_luminance": 44.0
+    },
+    {
+      "source_image": "train/images/10538.jpg",
+      "source_label": "train/labels/10538.txt",
+      "median_luminance": 43.0
+    },
+    {
+      "source_image": "train/images/10546.jpg",
+      "source_label": "train/labels/10546.txt",
+      "median_luminance": 40.0
+    },
+    {
+      "source_image": "train/images/10559.jpg",
+      "source_label": "train/labels/10559.txt",
+      "median_luminance": 46.0
+    },
+    {
+      "source_image": "train/images/10563.jpg",
+      "source_label": "train/labels/10563.txt",
+      "median_luminance": 47.0
+    },
+    {
+      "source_image": "train/images/10568.jpg",
+      "source_label": "train/labels/10568.txt",
+      "median_luminance": 43.0
+    },
+    {
+      "source_image": "train/images/10574.jpg",
+      "source_label": "train/labels/10574.txt",
+      "median_luminance": 43.0
+    },
+    {
+      "source_image": "train/images/10601.jpg",
+      "source_label": "train/labels/10601.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/10607.jpg",
+      "source_label": "train/labels/10607.txt",
+      "median_luminance": 54.0
+    },
+    {
+      "source_image": "train/images/10611.jpg",
+      "source_label": "train/labels/10611.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/10654.jpg",
+      "source_label": "train/labels/10654.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/10661.jpg",
+      "source_label": "train/labels/10661.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/10663.jpg",
+      "source_label": "train/labels/10663.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/10671.jpg",
+      "source_label": "train/labels/10671.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/10753.jpg",
+      "source_label": "train/labels/10753.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/10834.jpg",
+      "source_label": "train/labels/10834.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/10838.jpg",
+      "source_label": "train/labels/10838.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/10865.jpg",
+      "source_label": "train/labels/10865.txt",
+      "median_luminance": 76.0
+    },
+    {
+      "source_image": "train/images/10891.jpg",
+      "source_label": "train/labels/10891.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/10904.jpg",
+      "source_label": "train/labels/10904.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/10954.jpg",
+      "source_label": "train/labels/10954.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/10961.jpg",
+      "source_label": "train/labels/10961.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/10965.jpg",
+      "source_label": "train/labels/10965.txt",
+      "median_luminance": 65.5
+    },
+    {
+      "source_image": "train/images/10999.jpg",
+      "source_label": "train/labels/10999.txt",
+      "median_luminance": 34.0
+    },
+    {
+      "source_image": "train/images/11004.jpg",
+      "source_label": "train/labels/11004.txt",
+      "median_luminance": 54.0
+    },
+    {
+      "source_image": "train/images/11006.jpg",
+      "source_label": "train/labels/11006.txt",
+      "median_luminance": 51.0
+    },
+    {
+      "source_image": "train/images/11012.jpg",
+      "source_label": "train/labels/11012.txt",
+      "median_luminance": 46.0
+    },
+    {
+      "source_image": "train/images/11017.jpg",
+      "source_label": "train/labels/11017.txt",
+      "median_luminance": 42.0
+    },
+    {
+      "source_image": "train/images/11034.jpg",
+      "source_label": "train/labels/11034.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/11041.jpg",
+      "source_label": "train/labels/11041.txt",
+      "median_luminance": 39.0
+    },
+    {
+      "source_image": "train/images/11044.jpg",
+      "source_label": "train/labels/11044.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/11047.jpg",
+      "source_label": "train/labels/11047.txt",
+      "median_luminance": 36.0
+    },
+    {
+      "source_image": "train/images/11048.jpg",
+      "source_label": "train/labels/11048.txt",
+      "median_luminance": 36.0
+    },
+    {
+      "source_image": "train/images/11057.jpg",
+      "source_label": "train/labels/11057.txt",
+      "median_luminance": 39.0
+    },
+    {
+      "source_image": "train/images/11065.jpg",
+      "source_label": "train/labels/11065.txt",
+      "median_luminance": 32.0
+    },
+    {
+      "source_image": "train/images/11066.jpg",
+      "source_label": "train/labels/11066.txt",
+      "median_luminance": 31.0
+    },
+    {
+      "source_image": "train/images/11102.jpg",
+      "source_label": "train/labels/11102.txt",
+      "median_luminance": 31.0
+    },
+    {
+      "source_image": "train/images/11106.jpg",
+      "source_label": "train/labels/11106.txt",
+      "median_luminance": 31.0
+    },
+    {
+      "source_image": "train/images/11110.jpg",
+      "source_label": "train/labels/11110.txt",
+      "median_luminance": 29.0
+    },
+    {
+      "source_image": "train/images/11137.jpg",
+      "source_label": "train/labels/11137.txt",
+      "median_luminance": 31.0
+    },
+    {
+      "source_image": "train/images/11153.jpg",
+      "source_label": "train/labels/11153.txt",
+      "median_luminance": 41.0
+    },
+    {
+      "source_image": "train/images/11173.jpg",
+      "source_label": "train/labels/11173.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/11174.jpg",
+      "source_label": "train/labels/11174.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/11186.jpg",
+      "source_label": "train/labels/11186.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/11210.jpg",
+      "source_label": "train/labels/11210.txt",
+      "median_luminance": 58.0
+    },
+    {
+      "source_image": "train/images/11220.jpg",
+      "source_label": "train/labels/11220.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/11228.jpg",
+      "source_label": "train/labels/11228.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/11264.jpg",
+      "source_label": "train/labels/11264.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/11273.jpg",
+      "source_label": "train/labels/11273.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/11290.jpg",
+      "source_label": "train/labels/11290.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/11299.jpg",
+      "source_label": "train/labels/11299.txt",
+      "median_luminance": 52.5
+    },
+    {
+      "source_image": "train/images/11304.jpg",
+      "source_label": "train/labels/11304.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/11326.jpg",
+      "source_label": "train/labels/11326.txt",
+      "median_luminance": 42.0
+    },
+    {
+      "source_image": "train/images/11329.jpg",
+      "source_label": "train/labels/11329.txt",
+      "median_luminance": 44.0
+    },
+    {
+      "source_image": "train/images/11331.jpg",
+      "source_label": "train/labels/11331.txt",
+      "median_luminance": 44.0
+    },
+    {
+      "source_image": "train/images/11340.jpg",
+      "source_label": "train/labels/11340.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/11365.jpg",
+      "source_label": "train/labels/11365.txt",
+      "median_luminance": 84.0
+    },
+    {
+      "source_image": "train/images/11366.jpg",
+      "source_label": "train/labels/11366.txt",
+      "median_luminance": 86.0
+    },
+    {
+      "source_image": "train/images/11369.jpg",
+      "source_label": "train/labels/11369.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/11370.jpg",
+      "source_label": "train/labels/11370.txt",
+      "median_luminance": 83.0
+    },
+    {
+      "source_image": "train/images/11388.jpg",
+      "source_label": "train/labels/11388.txt",
+      "median_luminance": 54.0
+    },
+    {
+      "source_image": "train/images/11412.jpg",
+      "source_label": "train/labels/11412.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/11423.jpg",
+      "source_label": "train/labels/11423.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/11454.jpg",
+      "source_label": "train/labels/11454.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/11457.jpg",
+      "source_label": "train/labels/11457.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/11486.jpg",
+      "source_label": "train/labels/11486.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/11489.jpg",
+      "source_label": "train/labels/11489.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/11542.jpg",
+      "source_label": "train/labels/11542.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/11552.jpg",
+      "source_label": "train/labels/11552.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/11593.jpg",
+      "source_label": "train/labels/11593.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/11599.jpg",
+      "source_label": "train/labels/11599.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/11601.jpg",
+      "source_label": "train/labels/11601.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/11603.jpg",
+      "source_label": "train/labels/11603.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/11607.jpg",
+      "source_label": "train/labels/11607.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/11633.jpg",
+      "source_label": "train/labels/11633.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/11679.jpg",
+      "source_label": "train/labels/11679.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/11708.jpg",
+      "source_label": "train/labels/11708.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/11750.jpg",
+      "source_label": "train/labels/11750.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/11762.jpg",
+      "source_label": "train/labels/11762.txt",
+      "median_luminance": 64.5
+    },
+    {
+      "source_image": "train/images/11771.jpg",
+      "source_label": "train/labels/11771.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/11791.jpg",
+      "source_label": "train/labels/11791.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/11831.jpg",
+      "source_label": "train/labels/11831.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/11917.jpg",
+      "source_label": "train/labels/11917.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/11921.jpg",
+      "source_label": "train/labels/11921.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/11923.jpg",
+      "source_label": "train/labels/11923.txt",
+      "median_luminance": 57.0
+    },
+    {
+      "source_image": "train/images/11927.jpg",
+      "source_label": "train/labels/11927.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/11929.jpg",
+      "source_label": "train/labels/11929.txt",
+      "median_luminance": 58.0
+    },
+    {
+      "source_image": "train/images/11932.jpg",
+      "source_label": "train/labels/11932.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/11936.jpg",
+      "source_label": "train/labels/11936.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/11942.jpg",
+      "source_label": "train/labels/11942.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/11948.jpg",
+      "source_label": "train/labels/11948.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/11971.jpg",
+      "source_label": "train/labels/11971.txt",
+      "median_luminance": 57.0
+    },
+    {
+      "source_image": "train/images/12007.jpg",
+      "source_label": "train/labels/12007.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/12023.jpg",
+      "source_label": "train/labels/12023.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/12044.jpg",
+      "source_label": "train/labels/12044.txt",
+      "median_luminance": 38.5
+    },
+    {
+      "source_image": "train/images/12073.jpg",
+      "source_label": "train/labels/12073.txt",
+      "median_luminance": 36.0
+    },
+    {
+      "source_image": "train/images/12091.jpg",
+      "source_label": "train/labels/12091.txt",
+      "median_luminance": 35.0
+    },
+    {
+      "source_image": "train/images/12117.jpg",
+      "source_label": "train/labels/12117.txt",
+      "median_luminance": 36.0
+    },
+    {
+      "source_image": "train/images/12135.jpg",
+      "source_label": "train/labels/12135.txt",
+      "median_luminance": 38.0
+    },
+    {
+      "source_image": "train/images/12152.jpg",
+      "source_label": "train/labels/12152.txt",
+      "median_luminance": 49.0
+    },
+    {
+      "source_image": "train/images/12160.jpg",
+      "source_label": "train/labels/12160.txt",
+      "median_luminance": 50.0
+    },
+    {
+      "source_image": "train/images/12163.jpg",
+      "source_label": "train/labels/12163.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/12170.jpg",
+      "source_label": "train/labels/12170.txt",
+      "median_luminance": 50.0
+    },
+    {
+      "source_image": "train/images/12189.jpg",
+      "source_label": "train/labels/12189.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/12206.jpg",
+      "source_label": "train/labels/12206.txt",
+      "median_luminance": 53.0
+    },
+    {
+      "source_image": "train/images/12221.jpg",
+      "source_label": "train/labels/12221.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/12225.jpg",
+      "source_label": "train/labels/12225.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/12243.jpg",
+      "source_label": "train/labels/12243.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/12273.jpg",
+      "source_label": "train/labels/12273.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/12286.jpg",
+      "source_label": "train/labels/12286.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/12289.jpg",
+      "source_label": "train/labels/12289.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/12296.jpg",
+      "source_label": "train/labels/12296.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/12316.jpg",
+      "source_label": "train/labels/12316.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/12323.jpg",
+      "source_label": "train/labels/12323.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/12327.jpg",
+      "source_label": "train/labels/12327.txt",
+      "median_luminance": 62.5
+    },
+    {
+      "source_image": "train/images/12375.jpg",
+      "source_label": "train/labels/12375.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/12416.jpg",
+      "source_label": "train/labels/12416.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/12449.jpg",
+      "source_label": "train/labels/12449.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/12455.jpg",
+      "source_label": "train/labels/12455.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/12493.jpg",
+      "source_label": "train/labels/12493.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/12533.jpg",
+      "source_label": "train/labels/12533.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/12553.jpg",
+      "source_label": "train/labels/12553.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/12574.jpg",
+      "source_label": "train/labels/12574.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/12624.jpg",
+      "source_label": "train/labels/12624.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/12635.jpg",
+      "source_label": "train/labels/12635.txt",
+      "median_luminance": 85.5
+    },
+    {
+      "source_image": "train/images/12654.jpg",
+      "source_label": "train/labels/12654.txt",
+      "median_luminance": 92.0
+    },
+    {
+      "source_image": "train/images/12694.jpg",
+      "source_label": "train/labels/12694.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/12706.jpg",
+      "source_label": "train/labels/12706.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/12720.jpg",
+      "source_label": "train/labels/12720.txt",
+      "median_luminance": 58.0
+    },
+    {
+      "source_image": "train/images/12722.jpg",
+      "source_label": "train/labels/12722.txt",
+      "median_luminance": 57.0
+    },
+    {
+      "source_image": "train/images/12751.jpg",
+      "source_label": "train/labels/12751.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/12816.jpg",
+      "source_label": "train/labels/12816.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/12826.jpg",
+      "source_label": "train/labels/12826.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/12830.jpg",
+      "source_label": "train/labels/12830.txt",
+      "median_luminance": 60.5
+    },
+    {
+      "source_image": "train/images/12861.jpg",
+      "source_label": "train/labels/12861.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/12873.jpg",
+      "source_label": "train/labels/12873.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/12880.jpg",
+      "source_label": "train/labels/12880.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/12911.jpg",
+      "source_label": "train/labels/12911.txt",
+      "median_luminance": 57.0
+    },
+    {
+      "source_image": "train/images/12918.jpg",
+      "source_label": "train/labels/12918.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/12927.jpg",
+      "source_label": "train/labels/12927.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/12930.jpg",
+      "source_label": "train/labels/12930.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/12933.jpg",
+      "source_label": "train/labels/12933.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/12935.jpg",
+      "source_label": "train/labels/12935.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/12936.jpg",
+      "source_label": "train/labels/12936.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/12948.jpg",
+      "source_label": "train/labels/12948.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/12982.jpg",
+      "source_label": "train/labels/12982.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/13014.jpg",
+      "source_label": "train/labels/13014.txt",
+      "median_luminance": 41.0
+    },
+    {
+      "source_image": "train/images/13016.jpg",
+      "source_label": "train/labels/13016.txt",
+      "median_luminance": 41.0
+    },
+    {
+      "source_image": "train/images/13023.jpg",
+      "source_label": "train/labels/13023.txt",
+      "median_luminance": 43.0
+    },
+    {
+      "source_image": "train/images/13042.jpg",
+      "source_label": "train/labels/13042.txt",
+      "median_luminance": 34.0
+    },
+    {
+      "source_image": "train/images/13093.jpg",
+      "source_label": "train/labels/13093.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/13098.jpg",
+      "source_label": "train/labels/13098.txt",
+      "median_luminance": 45.0
+    },
+    {
+      "source_image": "train/images/13117.jpg",
+      "source_label": "train/labels/13117.txt",
+      "median_luminance": 33.0
+    },
+    {
+      "source_image": "train/images/13174.jpg",
+      "source_label": "train/labels/13174.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/13197.jpg",
+      "source_label": "train/labels/13197.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/13239.jpg",
+      "source_label": "train/labels/13239.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/13250.jpg",
+      "source_label": "train/labels/13250.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/13296.jpg",
+      "source_label": "train/labels/13296.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/13298.jpg",
+      "source_label": "train/labels/13298.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/13313.jpg",
+      "source_label": "train/labels/13313.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/13336.jpg",
+      "source_label": "train/labels/13336.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/13362.jpg",
+      "source_label": "train/labels/13362.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/13369.jpg",
+      "source_label": "train/labels/13369.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/13372.jpg",
+      "source_label": "train/labels/13372.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/13378.jpg",
+      "source_label": "train/labels/13378.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/13409.jpg",
+      "source_label": "train/labels/13409.txt",
+      "median_luminance": 57.0
+    },
+    {
+      "source_image": "train/images/13411.jpg",
+      "source_label": "train/labels/13411.txt",
+      "median_luminance": 58.0
+    },
+    {
+      "source_image": "train/images/13422.jpg",
+      "source_label": "train/labels/13422.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/13423.jpg",
+      "source_label": "train/labels/13423.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/13450.jpg",
+      "source_label": "train/labels/13450.txt",
+      "median_luminance": 53.0
+    },
+    {
+      "source_image": "train/images/13455.jpg",
+      "source_label": "train/labels/13455.txt",
+      "median_luminance": 53.0
+    },
+    {
+      "source_image": "train/images/13457.jpg",
+      "source_label": "train/labels/13457.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/13462.jpg",
+      "source_label": "train/labels/13462.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/13467.jpg",
+      "source_label": "train/labels/13467.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/13484.jpg",
+      "source_label": "train/labels/13484.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/13527.jpg",
+      "source_label": "train/labels/13527.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/13543.jpg",
+      "source_label": "train/labels/13543.txt",
+      "median_luminance": 51.0
+    },
+    {
+      "source_image": "train/images/13582.jpg",
+      "source_label": "train/labels/13582.txt",
+      "median_luminance": 53.0
+    },
+    {
+      "source_image": "train/images/13596.jpg",
+      "source_label": "train/labels/13596.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/13607.jpg",
+      "source_label": "train/labels/13607.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/13620.jpg",
+      "source_label": "train/labels/13620.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/13621.jpg",
+      "source_label": "train/labels/13621.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/13622.jpg",
+      "source_label": "train/labels/13622.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/13630.jpg",
+      "source_label": "train/labels/13630.txt",
+      "median_luminance": 49.0
+    },
+    {
+      "source_image": "train/images/13631.jpg",
+      "source_label": "train/labels/13631.txt",
+      "median_luminance": 49.0
+    },
+    {
+      "source_image": "train/images/13636.jpg",
+      "source_label": "train/labels/13636.txt",
+      "median_luminance": 50.0
+    },
+    {
+      "source_image": "train/images/13638.jpg",
+      "source_label": "train/labels/13638.txt",
+      "median_luminance": 50.5
+    },
+    {
+      "source_image": "train/images/13647.jpg",
+      "source_label": "train/labels/13647.txt",
+      "median_luminance": 50.0
+    },
+    {
+      "source_image": "train/images/13659.jpg",
+      "source_label": "train/labels/13659.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/13671.jpg",
+      "source_label": "train/labels/13671.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/13678.jpg",
+      "source_label": "train/labels/13678.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/13694.jpg",
+      "source_label": "train/labels/13694.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/13700.jpg",
+      "source_label": "train/labels/13700.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/13714.jpg",
+      "source_label": "train/labels/13714.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/13740.jpg",
+      "source_label": "train/labels/13740.txt",
+      "median_luminance": 46.0
+    },
+    {
+      "source_image": "train/images/13762.jpg",
+      "source_label": "train/labels/13762.txt",
+      "median_luminance": 44.0
+    },
+    {
+      "source_image": "train/images/13844.jpg",
+      "source_label": "train/labels/13844.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/13851.jpg",
+      "source_label": "train/labels/13851.txt",
+      "median_luminance": 86.0
+    },
+    {
+      "source_image": "train/images/13895.jpg",
+      "source_label": "train/labels/13895.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/13902.jpg",
+      "source_label": "train/labels/13902.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/13923.jpg",
+      "source_label": "train/labels/13923.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/13986.jpg",
+      "source_label": "train/labels/13986.txt",
+      "median_luminance": 30.0
+    },
+    {
+      "source_image": "train/images/14045.jpg",
+      "source_label": "train/labels/14045.txt",
+      "median_luminance": 35.0
+    },
+    {
+      "source_image": "train/images/14048.jpg",
+      "source_label": "train/labels/14048.txt",
+      "median_luminance": 34.0
+    },
+    {
+      "source_image": "train/images/14094.jpg",
+      "source_label": "train/labels/14094.txt",
+      "median_luminance": 36.5
+    },
+    {
+      "source_image": "train/images/14098.jpg",
+      "source_label": "train/labels/14098.txt",
+      "median_luminance": 35.0
+    },
+    {
+      "source_image": "train/images/14111.jpg",
+      "source_label": "train/labels/14111.txt",
+      "median_luminance": 34.0
+    },
+    {
+      "source_image": "train/images/14130.jpg",
+      "source_label": "train/labels/14130.txt",
+      "median_luminance": 41.0
+    },
+    {
+      "source_image": "train/images/14166.jpg",
+      "source_label": "train/labels/14166.txt",
+      "median_luminance": 44.0
+    },
+    {
+      "source_image": "train/images/14213.jpg",
+      "source_label": "train/labels/14213.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/14221.jpg",
+      "source_label": "train/labels/14221.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/14223.jpg",
+      "source_label": "train/labels/14223.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/14231.jpg",
+      "source_label": "train/labels/14231.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/14232.jpg",
+      "source_label": "train/labels/14232.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/14243.jpg",
+      "source_label": "train/labels/14243.txt",
+      "median_luminance": 40.0
+    },
+    {
+      "source_image": "train/images/14262.jpg",
+      "source_label": "train/labels/14262.txt",
+      "median_luminance": 41.0
+    },
+    {
+      "source_image": "train/images/14308.jpg",
+      "source_label": "train/labels/14308.txt",
+      "median_luminance": 43.0
+    },
+    {
+      "source_image": "train/images/14320.jpg",
+      "source_label": "train/labels/14320.txt",
+      "median_luminance": 46.0
+    },
+    {
+      "source_image": "train/images/14343.jpg",
+      "source_label": "train/labels/14343.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/14358.jpg",
+      "source_label": "train/labels/14358.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/14374.jpg",
+      "source_label": "train/labels/14374.txt",
+      "median_luminance": 78.0
+    },
+    {
+      "source_image": "train/images/14382.jpg",
+      "source_label": "train/labels/14382.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/14387.jpg",
+      "source_label": "train/labels/14387.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/14456.jpg",
+      "source_label": "train/labels/14456.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/14459.jpg",
+      "source_label": "train/labels/14459.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/14472.jpg",
+      "source_label": "train/labels/14472.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/14489.jpg",
+      "source_label": "train/labels/14489.txt",
+      "median_luminance": 81.0
+    },
+    {
+      "source_image": "train/images/14540.jpg",
+      "source_label": "train/labels/14540.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/14557.jpg",
+      "source_label": "train/labels/14557.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/14573.jpg",
+      "source_label": "train/labels/14573.txt",
+      "median_luminance": 76.0
+    },
+    {
+      "source_image": "train/images/14600.jpg",
+      "source_label": "train/labels/14600.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/14603.jpg",
+      "source_label": "train/labels/14603.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/14623.jpg",
+      "source_label": "train/labels/14623.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/14646.jpg",
+      "source_label": "train/labels/14646.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/14672.jpg",
+      "source_label": "train/labels/14672.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/14696.jpg",
+      "source_label": "train/labels/14696.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/14725.jpg",
+      "source_label": "train/labels/14725.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/14726.jpg",
+      "source_label": "train/labels/14726.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/14752.jpg",
+      "source_label": "train/labels/14752.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/14763.jpg",
+      "source_label": "train/labels/14763.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/14770.jpg",
+      "source_label": "train/labels/14770.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/14816.jpg",
+      "source_label": "train/labels/14816.txt",
+      "median_luminance": 53.0
+    },
+    {
+      "source_image": "train/images/14834.jpg",
+      "source_label": "train/labels/14834.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/14840.jpg",
+      "source_label": "train/labels/14840.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/14884.jpg",
+      "source_label": "train/labels/14884.txt",
+      "median_luminance": 40.0
+    },
+    {
+      "source_image": "train/images/14899.jpg",
+      "source_label": "train/labels/14899.txt",
+      "median_luminance": 49.0
+    },
+    {
+      "source_image": "train/images/14902.jpg",
+      "source_label": "train/labels/14902.txt",
+      "median_luminance": 50.0
+    },
+    {
+      "source_image": "train/images/14912.jpg",
+      "source_label": "train/labels/14912.txt",
+      "median_luminance": 40.0
+    },
+    {
+      "source_image": "train/images/14919.jpg",
+      "source_label": "train/labels/14919.txt",
+      "median_luminance": 40.0
+    },
+    {
+      "source_image": "train/images/14941.jpg",
+      "source_label": "train/labels/14941.txt",
+      "median_luminance": 44.0
+    },
+    {
+      "source_image": "train/images/14974.jpg",
+      "source_label": "train/labels/14974.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/15037.jpg",
+      "source_label": "train/labels/15037.txt",
+      "median_luminance": 38.0
+    },
+    {
+      "source_image": "train/images/15040.jpg",
+      "source_label": "train/labels/15040.txt",
+      "median_luminance": 37.0
+    },
+    {
+      "source_image": "train/images/15042.jpg",
+      "source_label": "train/labels/15042.txt",
+      "median_luminance": 72.0
+    },
+    {
+      "source_image": "train/images/15046.jpg",
+      "source_label": "train/labels/15046.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/15047.jpg",
+      "source_label": "train/labels/15047.txt",
+      "median_luminance": 68.0
+    },
+    {
+      "source_image": "train/images/15054.jpg",
+      "source_label": "train/labels/15054.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/15066.jpg",
+      "source_label": "train/labels/15066.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/15068.jpg",
+      "source_label": "train/labels/15068.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/15104.jpg",
+      "source_label": "train/labels/15104.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/15113.jpg",
+      "source_label": "train/labels/15113.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/15160.jpg",
+      "source_label": "train/labels/15160.txt",
+      "median_luminance": 58.0
+    },
+    {
+      "source_image": "train/images/15172.jpg",
+      "source_label": "train/labels/15172.txt",
+      "median_luminance": 53.0
+    },
+    {
+      "source_image": "train/images/15181.jpg",
+      "source_label": "train/labels/15181.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/15206.jpg",
+      "source_label": "train/labels/15206.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/15216.jpg",
+      "source_label": "train/labels/15216.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/15217.jpg",
+      "source_label": "train/labels/15217.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/15231.jpg",
+      "source_label": "train/labels/15231.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/15252.jpg",
+      "source_label": "train/labels/15252.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/15261.jpg",
+      "source_label": "train/labels/15261.txt",
+      "median_luminance": 57.0
+    },
+    {
+      "source_image": "train/images/15271.jpg",
+      "source_label": "train/labels/15271.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/15303.jpg",
+      "source_label": "train/labels/15303.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/15305.jpg",
+      "source_label": "train/labels/15305.txt",
+      "median_luminance": 54.0
+    },
+    {
+      "source_image": "train/images/15331.jpg",
+      "source_label": "train/labels/15331.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/15356.jpg",
+      "source_label": "train/labels/15356.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/15369.jpg",
+      "source_label": "train/labels/15369.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/15376.jpg",
+      "source_label": "train/labels/15376.txt",
+      "median_luminance": 64.0
+    },
+    {
+      "source_image": "train/images/15381.jpg",
+      "source_label": "train/labels/15381.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/15402.jpg",
+      "source_label": "train/labels/15402.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/15405.jpg",
+      "source_label": "train/labels/15405.txt",
+      "median_luminance": 48.0
+    },
+    {
+      "source_image": "train/images/15413.jpg",
+      "source_label": "train/labels/15413.txt",
+      "median_luminance": 50.0
+    },
+    {
+      "source_image": "train/images/15419.jpg",
+      "source_label": "train/labels/15419.txt",
+      "median_luminance": 51.0
+    },
+    {
+      "source_image": "train/images/15437.jpg",
+      "source_label": "train/labels/15437.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/15453.jpg",
+      "source_label": "train/labels/15453.txt",
+      "median_luminance": 65.0
+    },
+    {
+      "source_image": "train/images/15458.jpg",
+      "source_label": "train/labels/15458.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/15466.jpg",
+      "source_label": "train/labels/15466.txt",
+      "median_luminance": 69.0
+    },
+    {
+      "source_image": "train/images/15497.jpg",
+      "source_label": "train/labels/15497.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/15505.jpg",
+      "source_label": "train/labels/15505.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/15509.jpg",
+      "source_label": "train/labels/15509.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/15516.jpg",
+      "source_label": "train/labels/15516.txt",
+      "median_luminance": 56.0
+    },
+    {
+      "source_image": "train/images/15551.jpg",
+      "source_label": "train/labels/15551.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/15554.jpg",
+      "source_label": "train/labels/15554.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/15574.jpg",
+      "source_label": "train/labels/15574.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/15604.jpg",
+      "source_label": "train/labels/15604.txt",
+      "median_luminance": 52.0
+    },
+    {
+      "source_image": "train/images/15609.jpg",
+      "source_label": "train/labels/15609.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/15631.jpg",
+      "source_label": "train/labels/15631.txt",
+      "median_luminance": 55.0
+    },
+    {
+      "source_image": "train/images/15645.jpg",
+      "source_label": "train/labels/15645.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/15652.jpg",
+      "source_label": "train/labels/15652.txt",
+      "median_luminance": 59.0
+    },
+    {
+      "source_image": "train/images/15659.jpg",
+      "source_label": "train/labels/15659.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/15663.jpg",
+      "source_label": "train/labels/15663.txt",
+      "median_luminance": 61.0
+    },
+    {
+      "source_image": "train/images/15669.jpg",
+      "source_label": "train/labels/15669.txt",
+      "median_luminance": 60.0
+    },
+    {
+      "source_image": "train/images/15679.jpg",
+      "source_label": "train/labels/15679.txt",
+      "median_luminance": 66.0
+    },
+    {
+      "source_image": "train/images/15818.jpg",
+      "source_label": "train/labels/15818.txt",
+      "median_luminance": 9.0
+    },
+    {
+      "source_image": "train/images/15869.jpg",
+      "source_label": "train/labels/15869.txt",
+      "median_luminance": 53.0
+    },
+    {
+      "source_image": "train/images/15875.jpg",
+      "source_label": "train/labels/15875.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/15880.jpg",
+      "source_label": "train/labels/15880.txt",
+      "median_luminance": 105.0
+    },
+    {
+      "source_image": "train/images/15913.jpg",
+      "source_label": "train/labels/15913.txt",
+      "median_luminance": 12.0
+    },
+    {
+      "source_image": "train/images/15928.jpg",
+      "source_label": "train/labels/15928.txt",
+      "median_luminance": 0.0
+    },
+    {
+      "source_image": "train/images/15956.jpg",
+      "source_label": "train/labels/15956.txt",
+      "median_luminance": 25.0
+    },
+    {
+      "source_image": "train/images/15958.jpg",
+      "source_label": "train/labels/15958.txt",
+      "median_luminance": 39.0
+    },
+    {
+      "source_image": "train/images/15965.jpg",
+      "source_label": "train/labels/15965.txt",
+      "median_luminance": 71.0
+    },
+    {
+      "source_image": "train/images/15980.jpg",
+      "source_label": "train/labels/15980.txt",
+      "median_luminance": 26.0
+    },
+    {
+      "source_image": "train/images/16005.jpg",
+      "source_label": "train/labels/16005.txt",
+      "median_luminance": 9.0
+    },
+    {
+      "source_image": "train/images/16041.jpg",
+      "source_label": "train/labels/16041.txt",
+      "median_luminance": 40.0
+    },
+    {
+      "source_image": "train/images/16066.jpg",
+      "source_label": "train/labels/16066.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/16111.jpg",
+      "source_label": "train/labels/16111.txt",
+      "median_luminance": 24.0
+    },
+    {
+      "source_image": "train/images/16116.jpg",
+      "source_label": "train/labels/16116.txt",
+      "median_luminance": 10.0
+    },
+    {
+      "source_image": "train/images/16129.jpg",
+      "source_label": "train/labels/16129.txt",
+      "median_luminance": 77.0
+    },
+    {
+      "source_image": "train/images/16136.jpg",
+      "source_label": "train/labels/16136.txt",
+      "median_luminance": 35.0
+    },
+    {
+      "source_image": "train/images/16139.jpg",
+      "source_label": "train/labels/16139.txt",
+      "median_luminance": 25.0
+    },
+    {
+      "source_image": "train/images/16155.jpg",
+      "source_label": "train/labels/16155.txt",
+      "median_luminance": 35.0
+    },
+    {
+      "source_image": "train/images/16173.jpg",
+      "source_label": "train/labels/16173.txt",
+      "median_luminance": 21.0
+    },
+    {
+      "source_image": "train/images/16180.jpg",
+      "source_label": "train/labels/16180.txt",
+      "median_luminance": 10.0
+    },
+    {
+      "source_image": "train/images/16184.jpg",
+      "source_label": "train/labels/16184.txt",
+      "median_luminance": 31.0
+    },
+    {
+      "source_image": "train/images/16191.jpg",
+      "source_label": "train/labels/16191.txt",
+      "median_luminance": 15.0
+    },
+    {
+      "source_image": "train/images/16204.jpg",
+      "source_label": "train/labels/16204.txt",
+      "median_luminance": 5.0
+    },
+    {
+      "source_image": "train/images/16232.jpg",
+      "source_label": "train/labels/16232.txt",
+      "median_luminance": 7.0
+    },
+    {
+      "source_image": "train/images/16234.jpg",
+      "source_label": "train/labels/16234.txt",
+      "median_luminance": 0.0
+    },
+    {
+      "source_image": "train/images/16236.jpg",
+      "source_label": "train/labels/16236.txt",
+      "median_luminance": 16.0
+    },
+    {
+      "source_image": "train/images/16241.jpg",
+      "source_label": "train/labels/16241.txt",
+      "median_luminance": 26.0
+    },
+    {
+      "source_image": "train/images/16247.jpg",
+      "source_label": "train/labels/16247.txt",
+      "median_luminance": 12.0
+    },
+    {
+      "source_image": "train/images/16297.jpg",
+      "source_label": "train/labels/16297.txt",
+      "median_luminance": 34.0
+    },
+    {
+      "source_image": "train/images/16328.jpg",
+      "source_label": "train/labels/16328.txt",
+      "median_luminance": 12.0
+    },
+    {
+      "source_image": "train/images/16363.jpg",
+      "source_label": "train/labels/16363.txt",
+      "median_luminance": 25.0
+    },
+    {
+      "source_image": "train/images/16365.jpg",
+      "source_label": "train/labels/16365.txt",
+      "median_luminance": 17.0
+    },
+    {
+      "source_image": "train/images/16372.jpg",
+      "source_label": "train/labels/16372.txt",
+      "median_luminance": 27.0
+    },
+    {
+      "source_image": "train/images/16376.jpg",
+      "source_label": "train/labels/16376.txt",
+      "median_luminance": 17.0
+    },
+    {
+      "source_image": "train/images/16418.jpg",
+      "source_label": "train/labels/16418.txt",
+      "median_luminance": 26.0
+    },
+    {
+      "source_image": "train/images/16424.jpg",
+      "source_label": "train/labels/16424.txt",
+      "median_luminance": 51.0
+    },
+    {
+      "source_image": "train/images/16445.jpg",
+      "source_label": "train/labels/16445.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/16455.jpg",
+      "source_label": "train/labels/16455.txt",
+      "median_luminance": 9.0
+    },
+    {
+      "source_image": "train/images/16465.jpg",
+      "source_label": "train/labels/16465.txt",
+      "median_luminance": 14.0
+    },
+    {
+      "source_image": "train/images/16506.jpg",
+      "source_label": "train/labels/16506.txt",
+      "median_luminance": 95.0
+    },
+    {
+      "source_image": "train/images/16510.jpg",
+      "source_label": "train/labels/16510.txt",
+      "median_luminance": 111.0
+    },
+    {
+      "source_image": "train/images/16526.jpg",
+      "source_label": "train/labels/16526.txt",
+      "median_luminance": 102.0
+    },
+    {
+      "source_image": "train/images/16529.jpg",
+      "source_label": "train/labels/16529.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/16532.jpg",
+      "source_label": "train/labels/16532.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/16549.jpg",
+      "source_label": "train/labels/16549.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/16599.jpg",
+      "source_label": "train/labels/16599.txt",
+      "median_luminance": 124.0
+    },
+    {
+      "source_image": "train/images/16603.jpg",
+      "source_label": "train/labels/16603.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/16607.jpg",
+      "source_label": "train/labels/16607.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/16616.jpg",
+      "source_label": "train/labels/16616.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/16628.jpg",
+      "source_label": "train/labels/16628.txt",
+      "median_luminance": 86.0
+    },
+    {
+      "source_image": "train/images/16635.jpg",
+      "source_label": "train/labels/16635.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/16649.jpg",
+      "source_label": "train/labels/16649.txt",
+      "median_luminance": 99.0
+    },
+    {
+      "source_image": "train/images/16655.jpg",
+      "source_label": "train/labels/16655.txt",
+      "median_luminance": 90.5
+    },
+    {
+      "source_image": "train/images/16702.jpg",
+      "source_label": "train/labels/16702.txt",
+      "median_luminance": 0.0
+    },
+    {
+      "source_image": "train/images/16707.jpg",
+      "source_label": "train/labels/16707.txt",
+      "median_luminance": 152.0
+    },
+    {
+      "source_image": "train/images/16709.jpg",
+      "source_label": "train/labels/16709.txt",
+      "median_luminance": 134.0
+    },
+    {
+      "source_image": "train/images/16720.jpg",
+      "source_label": "train/labels/16720.txt",
+      "median_luminance": 135.0
+    },
+    {
+      "source_image": "train/images/16721.jpg",
+      "source_label": "train/labels/16721.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/16722.jpg",
+      "source_label": "train/labels/16722.txt",
+      "median_luminance": 111.0
+    },
+    {
+      "source_image": "train/images/16759.jpg",
+      "source_label": "train/labels/16759.txt",
+      "median_luminance": 129.0
+    },
+    {
+      "source_image": "train/images/16804.jpg",
+      "source_label": "train/labels/16804.txt",
+      "median_luminance": 122.0
+    },
+    {
+      "source_image": "train/images/16807.jpg",
+      "source_label": "train/labels/16807.txt",
+      "median_luminance": 107.0
+    },
+    {
+      "source_image": "train/images/16842.jpg",
+      "source_label": "train/labels/16842.txt",
+      "median_luminance": 134.0
+    },
+    {
+      "source_image": "train/images/16854.jpg",
+      "source_label": "train/labels/16854.txt",
+      "median_luminance": 50.0
+    },
+    {
+      "source_image": "train/images/16860.jpg",
+      "source_label": "train/labels/16860.txt",
+      "median_luminance": 86.0
+    },
+    {
+      "source_image": "train/images/16862.jpg",
+      "source_label": "train/labels/16862.txt",
+      "median_luminance": 88.0
+    },
+    {
+      "source_image": "train/images/16887.jpg",
+      "source_label": "train/labels/16887.txt",
+      "median_luminance": 111.0
+    },
+    {
+      "source_image": "train/images/16894.jpg",
+      "source_label": "train/labels/16894.txt",
+      "median_luminance": 84.0
+    },
+    {
+      "source_image": "train/images/16897.jpg",
+      "source_label": "train/labels/16897.txt",
+      "median_luminance": 118.5
+    },
+    {
+      "source_image": "train/images/16938.jpg",
+      "source_label": "train/labels/16938.txt",
+      "median_luminance": 131.0
+    },
+    {
+      "source_image": "train/images/16944.jpg",
+      "source_label": "train/labels/16944.txt",
+      "median_luminance": 127.0
+    },
+    {
+      "source_image": "train/images/16961.jpg",
+      "source_label": "train/labels/16961.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/16989.jpg",
+      "source_label": "train/labels/16989.txt",
+      "median_luminance": 75.0
+    },
+    {
+      "source_image": "train/images/16998.jpg",
+      "source_label": "train/labels/16998.txt",
+      "median_luminance": 115.0
+    },
+    {
+      "source_image": "train/images/17019.jpg",
+      "source_label": "train/labels/17019.txt",
+      "median_luminance": 99.0
+    },
+    {
+      "source_image": "train/images/17041.jpg",
+      "source_label": "train/labels/17041.txt",
+      "median_luminance": 62.0
+    },
+    {
+      "source_image": "train/images/17047.jpg",
+      "source_label": "train/labels/17047.txt",
+      "median_luminance": 106.0
+    },
+    {
+      "source_image": "train/images/17050.jpg",
+      "source_label": "train/labels/17050.txt",
+      "median_luminance": 107.0
+    },
+    {
+      "source_image": "train/images/17118.jpg",
+      "source_label": "train/labels/17118.txt",
+      "median_luminance": 51.0
+    },
+    {
+      "source_image": "train/images/17143.jpg",
+      "source_label": "train/labels/17143.txt",
+      "median_luminance": 151.0
+    },
+    {
+      "source_image": "train/images/17144.jpg",
+      "source_label": "train/labels/17144.txt",
+      "median_luminance": 105.0
+    },
+    {
+      "source_image": "train/images/17161.jpg",
+      "source_label": "train/labels/17161.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/17180.jpg",
+      "source_label": "train/labels/17180.txt",
+      "median_luminance": 118.0
+    },
+    {
+      "source_image": "train/images/17195.jpg",
+      "source_label": "train/labels/17195.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/17204.jpg",
+      "source_label": "train/labels/17204.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/17229.jpg",
+      "source_label": "train/labels/17229.txt",
+      "median_luminance": 78.0
+    },
+    {
+      "source_image": "train/images/17235.jpg",
+      "source_label": "train/labels/17235.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/17236.jpg",
+      "source_label": "train/labels/17236.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/17238.jpg",
+      "source_label": "train/labels/17238.txt",
+      "median_luminance": 54.0
+    },
+    {
+      "source_image": "train/images/17248.jpg",
+      "source_label": "train/labels/17248.txt",
+      "median_luminance": 108.0
+    },
+    {
+      "source_image": "train/images/17253.jpg",
+      "source_label": "train/labels/17253.txt",
+      "median_luminance": 111.0
+    },
+    {
+      "source_image": "train/images/17276.jpg",
+      "source_label": "train/labels/17276.txt",
+      "median_luminance": 90.0
+    },
+    {
+      "source_image": "train/images/17294.jpg",
+      "source_label": "train/labels/17294.txt",
+      "median_luminance": 91.0
+    },
+    {
+      "source_image": "train/images/17307.jpg",
+      "source_label": "train/labels/17307.txt",
+      "median_luminance": 121.0
+    },
+    {
+      "source_image": "train/images/17310.jpg",
+      "source_label": "train/labels/17310.txt",
+      "median_luminance": 150.0
+    },
+    {
+      "source_image": "train/images/17313.jpg",
+      "source_label": "train/labels/17313.txt",
+      "median_luminance": 113.0
+    },
+    {
+      "source_image": "train/images/17333.jpg",
+      "source_label": "train/labels/17333.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/17360.jpg",
+      "source_label": "train/labels/17360.txt",
+      "median_luminance": 132.0
+    },
+    {
+      "source_image": "train/images/17382.jpg",
+      "source_label": "train/labels/17382.txt",
+      "median_luminance": 74.0
+    },
+    {
+      "source_image": "train/images/17391.jpg",
+      "source_label": "train/labels/17391.txt",
+      "median_luminance": 134.0
+    },
+    {
+      "source_image": "train/images/17408.jpg",
+      "source_label": "train/labels/17408.txt",
+      "median_luminance": 95.0
+    },
+    {
+      "source_image": "train/images/17454.jpg",
+      "source_label": "train/labels/17454.txt",
+      "median_luminance": 132.0
+    },
+    {
+      "source_image": "train/images/17460.jpg",
+      "source_label": "train/labels/17460.txt",
+      "median_luminance": 104.0
+    },
+    {
+      "source_image": "train/images/17485.jpg",
+      "source_label": "train/labels/17485.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/17535.jpg",
+      "source_label": "train/labels/17535.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/17552.jpg",
+      "source_label": "train/labels/17552.txt",
+      "median_luminance": 73.0
+    },
+    {
+      "source_image": "train/images/17559.jpg",
+      "source_label": "train/labels/17559.txt",
+      "median_luminance": 85.0
+    },
+    {
+      "source_image": "train/images/17578.jpg",
+      "source_label": "train/labels/17578.txt",
+      "median_luminance": 94.0
+    },
+    {
+      "source_image": "train/images/17580.jpg",
+      "source_label": "train/labels/17580.txt",
+      "median_luminance": 124.0
+    },
+    {
+      "source_image": "train/images/17583.jpg",
+      "source_label": "train/labels/17583.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/17593.jpg",
+      "source_label": "train/labels/17593.txt",
+      "median_luminance": 55.5
+    },
+    {
+      "source_image": "train/images/17598.jpg",
+      "source_label": "train/labels/17598.txt",
+      "median_luminance": 87.0
+    },
+    {
+      "source_image": "train/images/17645.jpg",
+      "source_label": "train/labels/17645.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/17690.jpg",
+      "source_label": "train/labels/17690.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/17693.jpg",
+      "source_label": "train/labels/17693.txt",
+      "median_luminance": 88.5
+    },
+    {
+      "source_image": "train/images/17699.jpg",
+      "source_label": "train/labels/17699.txt",
+      "median_luminance": 115.0
+    },
+    {
+      "source_image": "train/images/17714.jpg",
+      "source_label": "train/labels/17714.txt",
+      "median_luminance": 96.0
+    },
+    {
+      "source_image": "train/images/17745.jpg",
+      "source_label": "train/labels/17745.txt",
+      "median_luminance": 91.0
+    },
+    {
+      "source_image": "train/images/17754.jpg",
+      "source_label": "train/labels/17754.txt",
+      "median_luminance": 168.0
+    },
+    {
+      "source_image": "train/images/17760.jpg",
+      "source_label": "train/labels/17760.txt",
+      "median_luminance": 96.0
+    },
+    {
+      "source_image": "train/images/17790.jpg",
+      "source_label": "train/labels/17790.txt",
+      "median_luminance": 96.0
+    },
+    {
+      "source_image": "train/images/17803.jpg",
+      "source_label": "train/labels/17803.txt",
+      "median_luminance": 96.0
+    },
+    {
+      "source_image": "train/images/17806.jpg",
+      "source_label": "train/labels/17806.txt",
+      "median_luminance": 133.0
+    },
+    {
+      "source_image": "train/images/17807.jpg",
+      "source_label": "train/labels/17807.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/17813.jpg",
+      "source_label": "train/labels/17813.txt",
+      "median_luminance": 142.0
+    },
+    {
+      "source_image": "train/images/17815.jpg",
+      "source_label": "train/labels/17815.txt",
+      "median_luminance": 106.0
+    },
+    {
+      "source_image": "train/images/17817.jpg",
+      "source_label": "train/labels/17817.txt",
+      "median_luminance": 141.0
+    },
+    {
+      "source_image": "train/images/17833.jpg",
+      "source_label": "train/labels/17833.txt",
+      "median_luminance": 136.0
+    },
+    {
+      "source_image": "train/images/17835.jpg",
+      "source_label": "train/labels/17835.txt",
+      "median_luminance": 93.0
+    },
+    {
+      "source_image": "train/images/17846.jpg",
+      "source_label": "train/labels/17846.txt",
+      "median_luminance": 110.0
+    },
+    {
+      "source_image": "train/images/17854.jpg",
+      "source_label": "train/labels/17854.txt",
+      "median_luminance": 119.0
+    },
+    {
+      "source_image": "train/images/17867.jpg",
+      "source_label": "train/labels/17867.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/17903.jpg",
+      "source_label": "train/labels/17903.txt",
+      "median_luminance": 108.0
+    },
+    {
+      "source_image": "train/images/17907.jpg",
+      "source_label": "train/labels/17907.txt",
+      "median_luminance": 108.0
+    },
+    {
+      "source_image": "train/images/17929.jpg",
+      "source_label": "train/labels/17929.txt",
+      "median_luminance": 123.0
+    },
+    {
+      "source_image": "train/images/17956.jpg",
+      "source_label": "train/labels/17956.txt",
+      "median_luminance": 169.0
+    },
+    {
+      "source_image": "train/images/17959.jpg",
+      "source_label": "train/labels/17959.txt",
+      "median_luminance": 121.0
+    },
+    {
+      "source_image": "train/images/17987.jpg",
+      "source_label": "train/labels/17987.txt",
+      "median_luminance": 148.0
+    },
+    {
+      "source_image": "train/images/17994.jpg",
+      "source_label": "train/labels/17994.txt",
+      "median_luminance": 89.0
+    },
+    {
+      "source_image": "train/images/18005.jpg",
+      "source_label": "train/labels/18005.txt",
+      "median_luminance": 122.0
+    },
+    {
+      "source_image": "train/images/18012.jpg",
+      "source_label": "train/labels/18012.txt",
+      "median_luminance": 135.0
+    },
+    {
+      "source_image": "train/images/18040.jpg",
+      "source_label": "train/labels/18040.txt",
+      "median_luminance": 117.0
+    },
+    {
+      "source_image": "train/images/18051.jpg",
+      "source_label": "train/labels/18051.txt",
+      "median_luminance": 108.0
+    },
+    {
+      "source_image": "train/images/18069.jpg",
+      "source_label": "train/labels/18069.txt",
+      "median_luminance": 118.0
+    },
+    {
+      "source_image": "train/images/18075.jpg",
+      "source_label": "train/labels/18075.txt",
+      "median_luminance": 131.0
+    },
+    {
+      "source_image": "train/images/18077.jpg",
+      "source_label": "train/labels/18077.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/18098.jpg",
+      "source_label": "train/labels/18098.txt",
+      "median_luminance": 123.0
+    },
+    {
+      "source_image": "train/images/18107.jpg",
+      "source_label": "train/labels/18107.txt",
+      "median_luminance": 101.0
+    },
+    {
+      "source_image": "train/images/18133.jpg",
+      "source_label": "train/labels/18133.txt",
+      "median_luminance": 92.0
+    },
+    {
+      "source_image": "train/images/18148.jpg",
+      "source_label": "train/labels/18148.txt",
+      "median_luminance": 124.0
+    },
+    {
+      "source_image": "train/images/18151.jpg",
+      "source_label": "train/labels/18151.txt",
+      "median_luminance": 173.0
+    },
+    {
+      "source_image": "train/images/18165.jpg",
+      "source_label": "train/labels/18165.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/18187.jpg",
+      "source_label": "train/labels/18187.txt",
+      "median_luminance": 110.0
+    },
+    {
+      "source_image": "train/images/18192.jpg",
+      "source_label": "train/labels/18192.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/18204.jpg",
+      "source_label": "train/labels/18204.txt",
+      "median_luminance": 120.0
+    },
+    {
+      "source_image": "train/images/18213.jpg",
+      "source_label": "train/labels/18213.txt",
+      "median_luminance": 157.0
+    },
+    {
+      "source_image": "train/images/18245.jpg",
+      "source_label": "train/labels/18245.txt",
+      "median_luminance": 104.0
+    },
+    {
+      "source_image": "train/images/18250.jpg",
+      "source_label": "train/labels/18250.txt",
+      "median_luminance": 63.0
+    },
+    {
+      "source_image": "train/images/18270.jpg",
+      "source_label": "train/labels/18270.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/18276.jpg",
+      "source_label": "train/labels/18276.txt",
+      "median_luminance": 98.0
+    },
+    {
+      "source_image": "train/images/18308.jpg",
+      "source_label": "train/labels/18308.txt",
+      "median_luminance": 138.0
+    },
+    {
+      "source_image": "train/images/18310.jpg",
+      "source_label": "train/labels/18310.txt",
+      "median_luminance": 54.0
+    },
+    {
+      "source_image": "train/images/18319.jpg",
+      "source_label": "train/labels/18319.txt",
+      "median_luminance": 80.0
+    },
+    {
+      "source_image": "train/images/18345.jpg",
+      "source_label": "train/labels/18345.txt",
+      "median_luminance": 79.0
+    },
+    {
+      "source_image": "train/images/18361.jpg",
+      "source_label": "train/labels/18361.txt",
+      "median_luminance": 100.0
+    },
+    {
+      "source_image": "train/images/18372.jpg",
+      "source_label": "train/labels/18372.txt",
+      "median_luminance": 156.0
+    },
+    {
+      "source_image": "train/images/18377.jpg",
+      "source_label": "train/labels/18377.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/18416.jpg",
+      "source_label": "train/labels/18416.txt",
+      "median_luminance": 144.0
+    },
+    {
+      "source_image": "train/images/18426.jpg",
+      "source_label": "train/labels/18426.txt",
+      "median_luminance": 148.0
+    },
+    {
+      "source_image": "train/images/18438.jpg",
+      "source_label": "train/labels/18438.txt",
+      "median_luminance": 113.0
+    },
+    {
+      "source_image": "train/images/18453.jpg",
+      "source_label": "train/labels/18453.txt",
+      "median_luminance": 67.0
+    },
+    {
+      "source_image": "train/images/18494.jpg",
+      "source_label": "train/labels/18494.txt",
+      "median_luminance": 129.0
+    },
+    {
+      "source_image": "train/images/18507.jpg",
+      "source_label": "train/labels/18507.txt",
+      "median_luminance": 82.0
+    },
+    {
+      "source_image": "train/images/18515.jpg",
+      "source_label": "train/labels/18515.txt",
+      "median_luminance": 120.0
+    },
+    {
+      "source_image": "train/images/18522.jpg",
+      "source_label": "train/labels/18522.txt",
+      "median_luminance": 113.0
+    },
+    {
+      "source_image": "train/images/18550.jpg",
+      "source_label": "train/labels/18550.txt",
+      "median_luminance": 120.0
+    },
+    {
+      "source_image": "train/images/18581.jpg",
+      "source_label": "train/labels/18581.txt",
+      "median_luminance": 144.0
+    },
+    {
+      "source_image": "train/images/18605.jpg",
+      "source_label": "train/labels/18605.txt",
+      "median_luminance": 136.0
+    },
+    {
+      "source_image": "train/images/18636.jpg",
+      "source_label": "train/labels/18636.txt",
+      "median_luminance": 153.0
+    },
+    {
+      "source_image": "train/images/18641.jpg",
+      "source_label": "train/labels/18641.txt",
+      "median_luminance": 109.0
+    },
+    {
+      "source_image": "train/images/18651.jpg",
+      "source_label": "train/labels/18651.txt",
+      "median_luminance": 116.0
+    },
+    {
+      "source_image": "train/images/18652.jpg",
+      "source_label": "train/labels/18652.txt",
+      "median_luminance": 143.0
+    },
+    {
+      "source_image": "train/images/18672.jpg",
+      "source_label": "train/labels/18672.txt",
+      "median_luminance": 119.0
+    },
+    {
+      "source_image": "train/images/18713.jpg",
+      "source_label": "train/labels/18713.txt",
+      "median_luminance": 58.0
+    },
+    {
+      "source_image": "train/images/18718.jpg",
+      "source_label": "train/labels/18718.txt",
+      "median_luminance": 114.0
+    },
+    {
+      "source_image": "train/images/18723.jpg",
+      "source_label": "train/labels/18723.txt",
+      "median_luminance": 131.0
+    },
+    {
+      "source_image": "train/images/18727.jpg",
+      "source_label": "train/labels/18727.txt",
+      "median_luminance": 130.0
+    },
+    {
+      "source_image": "train/images/18730.jpg",
+      "source_label": "train/labels/18730.txt",
+      "median_luminance": 129.0
+    },
+    {
+      "source_image": "train/images/18756.jpg",
+      "source_label": "train/labels/18756.txt",
+      "median_luminance": 97.0
+    },
+    {
+      "source_image": "train/images/18772.jpg",
+      "source_label": "train/labels/18772.txt",
+      "median_luminance": 113.0
+    },
+    {
+      "source_image": "train/images/18804.jpg",
+      "source_label": "train/labels/18804.txt",
+      "median_luminance": 70.0
+    },
+    {
+      "source_image": "train/images/18835.jpg",
+      "source_label": "train/labels/18835.txt",
+      "median_luminance": 112.0
+    },
+    {
+      "source_image": "train/images/18841.jpg",
+      "source_label": "train/labels/18841.txt",
+      "median_luminance": 111.0
+    },
+    {
+      "source_image": "train/images/18905.jpg",
+      "source_label": "train/labels/18905.txt",
+      "median_luminance": 127.0
+    },
+    {
+      "source_image": "train/images/18907.jpg",
+      "source_label": "train/labels/18907.txt",
+      "median_luminance": 151.0
+    },
+    {
+      "source_image": "train/images/18932.jpg",
+      "source_label": "train/labels/18932.txt",
+      "median_luminance": 152.0
+    },
+    {
+      "source_image": "train/images/18935.jpg",
+      "source_label": "train/labels/18935.txt",
+      "median_luminance": 103.0
+    },
+    {
+      "source_image": "train/images/18944.jpg",
+      "source_label": "train/labels/18944.txt",
+      "median_luminance": 153.0
+    },
+    {
+      "source_image": "train/images/18980.jpg",
+      "source_label": "train/labels/18980.txt",
+      "median_luminance": 104.0
+    },
+    {
+      "source_image": "train/images/18989.jpg",
+      "source_label": "train/labels/18989.txt",
+      "median_luminance": 103.0
+    }
+  ]
+}
