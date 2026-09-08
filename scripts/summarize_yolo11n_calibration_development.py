@@ -57,7 +57,8 @@ def main() -> int:
     if args.out_dir.exists():
         raise FileExistsError(f"Refusing to overwrite summary directory: {args.out_dir}")
     config = read(args.config)
-    seeds = [int(value) for value in config["calibration"]["stability_seeds"]]
+    default_seeds = [int(value) for value in config["calibration"]["stability_seeds"]]
+    seed_plan = {policy: [int(value) for value in config["calibration"].get("policy_stability_seeds", {}).get(policy, default_seeds)] for policy in POLICIES}
     reference_dir = args.root / "eval" / "yolo11n_fp16_reference"
     reference = {split: metric(reference_dir / f"yolo11n_fp16_reference_{split}.json") for split in ("full", *DOMAINS) if (reference_dir / f"yolo11n_fp16_reference_{split}.json").is_file()}
     reference_size_path = args.root / "size" / "yolo11n_fp16_reference.json"
@@ -68,7 +69,7 @@ def main() -> int:
         omissions.extend({"policy": "fp16", "seed": "reference", "missing": split} for split in sorted(required_reference - set(reference)))
     rows: list[dict[str, object]] = []
     for policy in POLICIES:
-        for seed in seeds:
+        for seed in seed_plan[policy]:
             directory = args.root / "eval" / f"yolo11n_int8_{policy}_s{seed}"
             metrics = {}
             for split in ("full", *DOMAINS):
@@ -128,8 +129,8 @@ def main() -> int:
         summaries.append(summary)
     summary_by_policy = {row["policy"]: row for row in summaries}
     recommendation = "INCOMPLETE"
-    explanation = "Five-seed results are not complete for Uniform, Low-Luminance, and VCSC."
-    if all(policy in summary_by_policy and summary_by_policy[policy]["seeds_completed"] == len(seeds) for policy in POLICIES):
+    explanation = "Required stability results are not complete: five seeds for Uniform/VCSC and the one deterministic Low-Luminance baseline."
+    if all(policy in summary_by_policy and summary_by_policy[policy]["seeds_completed"] == len(seed_plan[policy]) for policy in POLICIES):
         vcsc, uniform = summary_by_policy["vcsc"], summary_by_policy["uniform"]
         advantage = float(vcsc["macro_domain_delta_map50_mean"]) - float(uniform["macro_domain_delta_map50_mean"])
         full_ok = float(vcsc["full_map50_mean"]) >= float(uniform["full_map50_mean"])
@@ -159,6 +160,7 @@ def main() -> int:
         "policy_summaries": summaries,
         "recommendation": recommendation,
         "explanation": explanation,
+        "policy_stability_seeds": seed_plan,
         "decision_rule": config["decision_rule"],
         "omissions": len(omissions),
     }

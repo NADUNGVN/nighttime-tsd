@@ -76,19 +76,22 @@ with the audited archive or extracted folder and run:
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase negative --seeds initial --negative-source NEGATIVE_SOURCE
 ```
 
-For the five-seed stability campaign, rerun the same three phases with
-`--seeds stability`. Existing seed-42 artifacts are never overwritten.
+For the five-seed stability campaign, run Uniform and VCSC with
+`--seeds stability --policies uniform,vcsc`. Existing seed-42 artifacts are
+never overwritten. Low-Luminance is an exact ranked baseline: its selection is
+identical across seeds, so it is retained once at seed 42 rather than being
+misreported as five sampling replicates.
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase calibrations --seeds stability
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/run_yolo11n_calibration_development.py --phase calibrations --seeds stability --policies uniform,vcsc
 ```
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase export --seeds stability
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/run_yolo11n_calibration_development.py --phase export --seeds stability --policies uniform,vcsc
 ```
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase evaluate --seeds stability
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/run_yolo11n_calibration_development.py --phase evaluate --seeds stability --policies uniform,vcsc
 ```
 
 Create the decision table only after all five seeds are complete:

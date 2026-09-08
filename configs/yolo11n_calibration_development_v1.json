@@ -17,6 +17,7 @@
     "size": 1024,
     "initial_seed": 42,
     "stability_seeds": [42, 43, 44, 45, 46],
+    "policy_stability_seeds": {"uniform": [42, 43, 44, 45, 46], "low_luminance": [42], "vcsc": [42, 43, 44, 45, 46]},
     "policies": {
       "uniform": {"strategy": "uniform", "name_template": "uniform_s{seed}_n{size}"},
       "low_luminance": {"strategy": "low_luminance", "name_template": "low_luminance_s{seed}_n{size}"},

@@ -45,6 +45,14 @@ def parse_seeds(raw: str, config: dict[str, Any]) -> list[int]:
     return values
 
 
+def parse_policies(raw: str, config: dict[str, Any]) -> list[str]:
+    available = config["calibration"]["policies"]
+    values = list(available) if raw == "all" else [value.strip() for value in raw.split(",") if value.strip()]
+    if not values or len(values) != len(set(values)) or any(value not in available for value in values):
+        raise ValueError(f"--policies must be all or a unique comma-separated subset of: {', '.join(available)}")
+    return values
+
+
 def calibration_name(config: dict[str, Any], policy: str, seed: int) -> str:
     item = config["calibration"]["policies"][policy]
     return item["name_template"].format(seed=seed, size=config["calibration"]["size"])
@@ -69,7 +77,7 @@ def execute(command: list[str], repo: Path) -> None:
     subprocess.run(command, cwd=repo, check=True)
 
 
-def write_manifest(repo: Path, config_path: Path, config: dict[str, Any], seeds: list[int], phase: str) -> None:
+def write_manifest(repo: Path, config_path: Path, config: dict[str, Any], seeds: list[int], policies: list[str], phase: str) -> None:
     destination = root(repo)
     manifest_dir = destination / "manifests"
     manifest_dir.mkdir(parents=True, exist_ok=True)
@@ -87,17 +95,18 @@ def write_manifest(repo: Path, config_path: Path, config: dict[str, Any], seeds:
         "phase": phase,
         "frozen_model": {"weights": config["model"]["weights"], "sha256": sha256(repo / config["model"]["weights"])},
         "seeds": seeds,
-        "policies": config["calibration"]["policies"],
+        "policies": {policy: config["calibration"]["policies"][policy] for policy in policies},
         "policy": "Development-only YOLO11n gate. Do not interpret this manifest as authorizing 15-model scale-up.",
     }
     manifest_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
-def build_calibrations(repo: Path, config: dict[str, Any], seeds: list[int]) -> None:
+def build_calibrations(repo: Path, config: dict[str, Any], seeds: list[int], policies: list[str]) -> None:
     script = repo / "scripts" / "build_calibration_set.py"
     data_root = repo / "data" / "processed" / "cctsdb2021_clean" / "calibration"
     for seed in seeds:
-        for policy, item in config["calibration"]["policies"].items():
+        for policy in policies:
+            item = config["calibration"]["policies"][policy]
             name = calibration_name(config, policy, seed)
             destination = data_root / name
             if destination.is_dir():
@@ -121,7 +130,7 @@ def build_calibrations(repo: Path, config: dict[str, Any], seeds: list[int]) -> 
             execute(command, repo)
 
 
-def export(repo: Path, config: dict[str, Any], seeds: list[int]) -> None:
+def export(repo: Path, config: dict[str, Any], seeds: list[int], policies: list[str]) -> None:
     script = repo / "scripts" / "export_tensorrt.py"
     output = root(repo)
     weights = repo / config["model"]["weights"]
@@ -129,7 +138,7 @@ def export(repo: Path, config: dict[str, Any], seeds: list[int]) -> None:
     if not fp16.exists():
         execute([sys.executable, str(script), "--weights", str(weights), "--precision", "fp16", "--out", str(fp16), "--device", str(config["runtime"]["device"]), "--imgsz", str(config["runtime"]["imgsz"]), "--batch", str(config["runtime"]["batch"]), "--expected-tensorrt-major", str(config["runtime"]["expected_tensorrt_major"])], repo)
     for seed in seeds:
-        for policy in config["calibration"]["policies"]:
+        for policy in policies:
             output_engine = engine(output, f"int8_{policy}", seed)
             if output_engine.exists():
                 if not output_engine.with_suffix(".engine.provenance.json").is_file():
@@ -168,18 +177,18 @@ def evaluate_one(repo: Path, config: dict[str, Any], mode: str, source_engine: P
     execute([sys.executable, str(repo / "scripts" / "evaluate_cctsdb_size.py"), "--predictions", str(root(repo) / "predictions" / f"{label}_full_predictions.json"), "--xml", str((repo / config["data"]["official_xml"]).resolve()), "--out", str(size_output)], repo)
 
 
-def evaluate(repo: Path, config: dict[str, Any], seeds: list[int]) -> None:
+def evaluate(repo: Path, config: dict[str, Any], seeds: list[int], policies: list[str]) -> None:
     evaluate_one(repo, config, "fp16", engine(root(repo), "fp16"), None)
     for seed in seeds:
-        for policy in config["calibration"]["policies"]:
+        for policy in policies:
             mode = f"int8_{policy}"
             evaluate_one(repo, config, mode, engine(root(repo), mode, seed), seed)
 
 
-def negative(repo: Path, config: dict[str, Any], seeds: list[int], source: Path) -> None:
+def negative(repo: Path, config: dict[str, Any], seeds: list[int], policies: list[str], source: Path) -> None:
     script = repo / "scripts" / "evaluate_cctsdb_negatives.py"
     output = root(repo) / "negative"
-    targets = [("fp16", engine(root(repo), "fp16"), None)] + [(f"int8_{policy}", engine(root(repo), f"int8_{policy}", seed), seed) for seed in seeds for policy in config["calibration"]["policies"]]
+    targets = [("fp16", engine(root(repo), "fp16"), None)] + [(f"int8_{policy}", engine(root(repo), f"int8_{policy}", seed), seed) for seed in seeds for policy in policies]
     for mode, source_engine, seed in targets:
         suffix = "reference" if seed is None else f"s{seed}"
         path = output / f"yolo11n_{mode}_{suffix}.json"
@@ -194,32 +203,34 @@ def main() -> int:
     parser.add_argument("--config", type=Path, default=Path("configs/yolo11n_calibration_development_v1.json"))
     parser.add_argument("--phase", choices=("status", "calibrations", "export", "evaluate", "negative"), default="status")
     parser.add_argument("--seeds", default="initial", help="initial, stability, or comma-separated calibration seeds")
+    parser.add_argument("--policies", default="all", help="all or comma-separated subset, e.g. uniform,vcsc")
     parser.add_argument("--negative-source", type=Path, help="Required only for --phase negative; official 500-image negative directory/ZIP")
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     config_path = args.config if args.config.is_absolute() else repo / args.config
     config = load(config_path)
     seeds = parse_seeds(args.seeds, config)
+    policies = parse_policies(args.policies, config)
     weights = repo / config["model"]["weights"]
     if not weights.is_file():
         raise FileNotFoundError(f"Frozen YOLO11n weights not found: {weights}")
-    write_manifest(repo, config_path, config, seeds, args.phase)
+    write_manifest(repo, config_path, config, seeds, policies, args.phase)
     if args.phase == "status":
-        print(json.dumps({"development_model": config["model"]["label"], "seeds": seeds, "frozen_weights": str(weights), "results_root": str(root(repo)), "scale_up": "blocked pending decision gate"}, indent=2))
+        print(json.dumps({"development_model": config["model"]["label"], "seeds": seeds, "policies": policies, "frozen_weights": str(weights), "results_root": str(root(repo)), "scale_up": "blocked pending decision gate"}, indent=2))
         return 0
     if args.phase == "calibrations":
-        build_calibrations(repo, config, seeds)
+        build_calibrations(repo, config, seeds, policies)
         return 0
     lock = repo / "results" / "architecture_matrix_v1" / ".gpu_phase.lock"
     with GpuPhaseLock(lock, f"yolo11n_calibration_development_{args.phase}"):
         if args.phase == "export":
-            export(repo, config, seeds)
+            export(repo, config, seeds, policies)
         elif args.phase == "evaluate":
-            evaluate(repo, config, seeds)
+            evaluate(repo, config, seeds, policies)
         else:
             if args.negative_source is None:
                 raise ValueError("--negative-source is required for --phase negative")
-            negative(repo, config, seeds, args.negative_source)
+            negative(repo, config, seeds, policies, args.negative_source)
     return 0
 
 
