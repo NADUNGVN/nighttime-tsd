@@ -36,6 +36,10 @@ This is mandatory because TensorRT 8--10 calibration caches are adjacent to the
 intermediate ONNX file; no calibration cache may be shared by two policies or
 seeds. The provenance records the fresh cache hash.
 
+If a log reports that it is reading a cache while a new policy/seed is being
+exported, stop the run and quarantine those INT8 artifacts. They are not valid
+evidence of their declared calibration sets.
+
 ## Official size and negative protocols
 
 CCTSDB2021 officially defines sign-size thresholds:
