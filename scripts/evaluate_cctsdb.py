@@ -90,7 +90,15 @@ def main() -> int:
         image_root = Path(root_match.group(1).strip().strip("\"'")) / split_match.group(1).strip().strip("\"'")
         paths = sorted(path for path in image_root.iterdir() if path.suffix.lower() in {".bmp", ".jpeg", ".jpg", ".png"})
         records = []
-        for result in model.predict(source=[str(path) for path in paths], stream=True, imgsz=args.imgsz, batch=args.batch, device=args.device, conf=0.001, iou=0.7, verbose=False):
+        # TensorRT engines in this study are static batch-1. Passing the full
+        # image list to Ultralytics makes its predictor warm up at N=1500,
+        # even when --batch=1, which is invalid for the engine. Keep the
+        # persistent model but submit one image per prediction call.
+        for index, path in enumerate(paths, start=1):
+            prediction = model.predict(source=str(path), stream=False, imgsz=args.imgsz, batch=1, device=args.device, conf=0.001, iou=0.7, verbose=False)
+            if len(prediction) != 1:
+                raise RuntimeError(f"Expected one prediction for {path}, got {len(prediction)}")
+            result = prediction[0]
             boxes = result.boxes
             records.append(
                 {
@@ -101,6 +109,8 @@ def main() -> int:
                     "class_id": [] if boxes is None else [int(value) for value in boxes.cls.detach().cpu().tolist()],
                 }
             )
+            if index % 100 == 0:
+                print(f"Saved raw predictions: {index}/{len(paths)}", flush=True)
         prediction_payload = {
             "schema_version": 1,
             "created_utc": datetime.now(timezone.utc).isoformat(),

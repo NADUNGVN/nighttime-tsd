@@ -146,7 +146,15 @@ def evaluate_one(repo: Path, config: dict[str, Any], mode: str, source_engine: P
                 raise RuntimeError(f"Completed suite lacks full-test predictions required for size evaluation: {prediction}")
             execute([sys.executable, str(repo / "scripts" / "evaluate_cctsdb_size.py"), "--predictions", str(prediction), "--xml", str((repo / config["data"]["official_xml"]).resolve()), "--out", str(size_output)], repo)
             return
-        raise RuntimeError(f"Partial evaluation output exists: {directory}")
+        # The only recoverable partial state is a first full-split evaluation
+        # that failed while saving raw predictions. It has no suite manifest,
+        # no JSON result, and no prediction payload; delete only this empty
+        # runner directory so the immutable evaluation can be retried.
+        leftovers = sorted(path.name for path in directory.iterdir())
+        if not leftovers:
+            directory.rmdir()
+        else:
+            raise RuntimeError(f"Partial evaluation output exists: {directory}; inspect and quarantine it before retrying: {leftovers}")
     command = [sys.executable, str(repo / "scripts" / "evaluate_tensorrt_suite.py"), "--engine", f"yolo11n_{mode}_{'reference' if seed is None else f's{seed}'}={source_engine}", "--out-dir", str(directory), "--device", str(config["runtime"]["device"]), "--imgsz", str(config["runtime"]["imgsz"]), "--batch", str(config["runtime"]["batch"]), "--predictions-full-dir", str(root(repo) / "predictions")]
     execute(command, repo)
     execute([sys.executable, str(repo / "scripts" / "evaluate_cctsdb_size.py"), "--predictions", str(root(repo) / "predictions" / f"{label}_full_predictions.json"), "--xml", str((repo / config["data"]["official_xml"]).resolve()), "--out", str(size_output)], repo)
