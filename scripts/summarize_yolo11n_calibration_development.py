@@ -28,6 +28,15 @@ def stdev(values: list[float]) -> float:
     return statistics.stdev(values) if len(values) > 1 else 0.0
 
 
+def aggregate(prefix: str, values: list[float]) -> dict[str, float]:
+    return {
+        f"{prefix}_mean": mean(values),
+        f"{prefix}_std": stdev(values),
+        f"{prefix}_min": min(values),
+        f"{prefix}_max": max(values),
+    }
+
+
 def metric(path: Path) -> dict:
     return read(path)["metrics"]
 
@@ -103,22 +112,20 @@ def main() -> int:
         subset = [row for row in rows if row["policy"] == policy]
         if not subset:
             continue
-        summaries.append(
-            {
-                "policy": policy,
-                "seeds_completed": len(subset),
-                "full_map50_mean": mean([float(row["full_map50"]) for row in subset]),
-                "full_map50_std": stdev([float(row["full_map50"]) for row in subset]),
-                "full_map50_95_mean": mean([float(row["full_map50_95"]) for row in subset]),
-                "macro_domain_delta_map50_mean": mean([float(row["macro_domain_delta_map50"]) for row in subset]),
-                "macro_domain_delta_map50_std": stdev([float(row["macro_domain_delta_map50"]) for row in subset]),
-                "macro_domain_retention_map50_mean": mean([float(row["macro_domain_retention_map50"]) for row in subset]),
-                "worst_domain_delta_map50_mean": mean([float(row["worst_domain_delta_map50"]) for row in subset]),
-                "xs_delta_map50_mean": mean([float(row["xs_delta_map50"]) for row in subset]),
-                "s_delta_map50_mean": mean([float(row["s_delta_map50"]) for row in subset]),
-                "negative_fp_per_image_at_025_mean": None if any(row["negative_fp_per_image_at_025"] is None for row in subset) else mean([float(row["negative_fp_per_image_at_025"]) for row in subset]),
-            }
-        )
+        summary: dict[str, object] = {"policy": policy, "seeds_completed": len(subset)}
+        for prefix, key in (
+            ("full_map50", "full_map50"),
+            ("full_map50_95", "full_map50_95"),
+            ("full_delta_map50", "full_delta_map50"),
+            ("macro_domain_delta_map50", "macro_domain_delta_map50"),
+            ("macro_domain_retention_map50", "macro_domain_retention_map50"),
+            ("worst_domain_delta_map50", "worst_domain_delta_map50"),
+            ("xs_delta_map50", "xs_delta_map50"),
+            ("s_delta_map50", "s_delta_map50"),
+        ):
+            summary.update(aggregate(prefix, [float(row[key]) for row in subset]))
+        summary["negative_fp_per_image_at_025_mean"] = None if any(row["negative_fp_per_image_at_025"] is None for row in subset) else mean([float(row["negative_fp_per_image_at_025"]) for row in subset])
+        summaries.append(summary)
     summary_by_policy = {row["policy"]: row for row in summaries}
     recommendation = "INCOMPLETE"
     explanation = "Five-seed results are not complete for Uniform, Low-Luminance, and VCSC."

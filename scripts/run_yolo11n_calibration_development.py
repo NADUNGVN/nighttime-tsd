@@ -71,7 +71,13 @@ def execute(command: list[str], repo: Path) -> None:
 
 def write_manifest(repo: Path, config_path: Path, config: dict[str, Any], seeds: list[int], phase: str) -> None:
     destination = root(repo)
-    destination.mkdir(parents=True, exist_ok=True)
+    manifest_dir = destination / "manifests"
+    manifest_dir.mkdir(parents=True, exist_ok=True)
+    seed_tag = "_".join(str(seed) for seed in seeds)
+    manifest_path = manifest_dir / f"{phase}_seeds_{seed_tag}.json"
+    if manifest_path.exists():
+        print(f"SKIP manifest: {manifest_path}")
+        return
     payload = {
         "schema_version": 1,
         "created_utc": datetime.now(timezone.utc).isoformat(),
@@ -84,7 +90,7 @@ def write_manifest(repo: Path, config_path: Path, config: dict[str, Any], seeds:
         "policies": config["calibration"]["policies"],
         "policy": "Development-only YOLO11n gate. Do not interpret this manifest as authorizing 15-model scale-up.",
     }
-    (destination / "execution_manifest.json").write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    manifest_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
 def build_calibrations(repo: Path, config: dict[str, Any], seeds: list[int]) -> None:
