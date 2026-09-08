@@ -47,18 +47,25 @@ def size_bin(area: float) -> str:
     return "xl"
 
 
-def xml_ground_truth(path: Path) -> dict[str, dict[int, list[tuple[list[float], str]]]]:
+def xml_ground_truth(path: Path, expected_images: set[str]) -> dict[str, dict[int, list[tuple[list[float], str]]]]:
     if not path.is_file() or path.suffix.lower() != ".zip":
         raise FileNotFoundError("--xml must be the official CCTSDB xml.zip archive")
     output: dict[str, dict[int, list[tuple[list[float], str]]]] = {}
     with zipfile.ZipFile(path) as archive:
         members = [member for member in archive.namelist() if member.lower().endswith(".xml")]
-        if len(members) != 1500:
-            raise ValueError(f"Expected 1,500 XML annotations in {path}, found {len(members)}")
+        # The supplied xml.zip contains annotations for both official train
+        # and test images (17,856 XMLs in the observed release).  Membership
+        # is determined only by the already fixed positive full-test image IDs.
+        if len(members) < len(expected_images):
+            raise ValueError(f"XML archive has only {len(members)} entries for {len(expected_images)} predicted test images")
         for member in members:
             root = ET.fromstring(archive.read(member))
             filename = (root.findtext("filename") or f"{Path(member).stem}.jpg").strip()
             image = Path(filename).name
+            if not Path(image).suffix:
+                image += ".jpg"
+            if image not in expected_images:
+                continue
             entries = {index: [] for index in range(len(NAMES))}
             for object_node in root.findall("object"):
                 name = (object_node.findtext("name") or "").strip().lower()
@@ -127,7 +134,7 @@ def main() -> int:
         raise FileExistsError(f"Refusing to overwrite size result: {args.out}")
     payload = json.loads(args.predictions.read_text(encoding="utf-8"))
     records = {record["image"]: record for record in payload["records"]}
-    truth = xml_ground_truth(args.xml)
+    truth = xml_ground_truth(args.xml, set(records))
     if set(records) != set(truth):
         missing, extra = sorted(set(truth) - set(records)), sorted(set(records) - set(truth))
         raise ValueError(f"Full-test prediction/XML mismatch: missing={len(missing)}, extra={len(extra)}")
