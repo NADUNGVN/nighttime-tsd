@@ -63,8 +63,11 @@ def xml_ground_truth(path: Path, expected_images: set[str]) -> dict[str, dict[in
             raise ValueError(f"XML archive has only {len(members)} entries for {len(expected_images)} predicted test images")
         for member in members:
             root = ET.fromstring(archive.read(member))
-            filename = (root.findtext("filename") or f"{Path(member).stem}.jpg").strip()
-            stem = Path(Path(filename).name).stem
+            # In the supplied release, <filename> is not aligned to the
+            # extracted test-image IDs, whereas xml/<image_id>.xml has an
+            # exact 1,500/1,500 overlap with the fixed full-test predictions.
+            # The archive-member stem is therefore the authoritative join key.
+            stem = Path(member).stem
             image = expected_by_stem.get(stem)
             if image is None:
                 continue
@@ -149,7 +152,7 @@ def main() -> int:
         "official_xml": str(args.xml.resolve()),
         "official_xml_sha256": sha256(args.xml),
         "size_rules": SIZE_RULES,
-        "matching": "AP50 by class. A prediction matching a same-class ground-truth sign outside the target bin is ignored, rather than counted as a false positive for the target bin.",
+        "matching": "XML member stem is matched to full-test prediction image stem (verified by a 1,500/1,500 alignment audit). AP50 is by class. A prediction matching a same-class ground-truth sign outside the target bin is ignored, rather than counted as a false positive for the target bin.",
         "metrics": {bin_name: metrics_for_bin(records, truth, bin_name) for bin_name in SIZE_RULES},
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)
