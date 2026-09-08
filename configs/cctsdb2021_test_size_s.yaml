@@ -1,0 +1,5 @@
+path: ../data/processed/cctsdb2021_clean
+train: train/images
+val: domains/size_s/images
+names: {0: prohibitory, 1: mandatory, 2: warning}
+nc: 3

@@ -1,8 +1,14 @@
-# Locked IVC study: domain-robust INT8 calibration
+# Superseded 15-model IVC scale-up template
+
+> **Execution blocked.** Do not use this matrix until the frozen YOLO11n
+> calibration-method decision gate in
+> [YOLO11N_CALIBRATION_DEVELOPMENT_V1.md](YOLO11N_CALIBRATION_DEVELOPMENT_V1.md)
+> concludes `SCALE`. The previous luminance-stratified four-bin policy is
+> historical only and is not the proposed method.
 
 ## Claim and scope
 
-The paper investigates whether the selection of **CCTSDB training images** for
+The future paper investigates whether the selection of **CCTSDB training images** for
 post-training INT8 calibration changes accuracy retention across environmental
 domains. It is a controlled detector-deployment study, not a new detector or
 an external-data transfer-learning paper.
@@ -18,29 +24,34 @@ size 640 and seed 42:
 
 - `uniform_s42_n1024`: seeded uniform random sample.
 - `low_luminance_n1024`: 1,024 lowest median grayscale-luminance images.
-- `luminance_stratified_s42_n1024`: sort all train images by the same
-  luminance statistic, divide into four equal-count strata, and sample 256
-  images from each stratum using seed 42.
+- `vcsc_k8_s42_n1024`: reserved for Visual-Condition Stratified Calibration
+  after its YOLO11n development gate passes.
 
 No policy uses an official-test image, weather label, or test result. The
 already committed 512-image YOLO11n engines are pilots and are not the final
 experiment.
 
-## Target execution matrix
+## Future execution scope after the gate
 
-| Target | Required representations | Interpretation |
+After `SCALE`, the accuracy matrix is run on the RTX 8000 for all 15 frozen
+models in FP16, Uniform INT8, Low-Luminance INT8, and VCSC INT8. Cross-device
+deployment is deliberately a later, smaller experiment: choose one nano and
+one medium model (and optionally one large supported model) based on the
+accuracy matrix, then test only those representatives on the target boards.
+
+| Target | Future role | Interpretation |
 |---|---|---|
-| RTX 8000 reference | FP16 + all three INT8 policies, all 15 models | calibration-effect reference |
-| Xavier NX | FP16 + all three INT8 policies, all 15 models | target-device calibration evidence |
-| AGX Xavier | FP16 + all three INT8 policies, all 15 models | target-device calibration evidence |
-| Jetson Nano | TensorRT FP16, attempt all 15 | constrained feasibility baseline; no INT8 |
-| Raspberry Pi 5 CPU | one pinned FP32 CPU backend, attempt all 15 | CPU baseline |
-| Raspberry Pi 5 + Hailo | Hailo INT8 with LSC, attempt all 15 | accelerator feasibility/deployment |
+| RTX 8000 reference | Full 15-model accuracy matrix | calibration-effect reference |
+| Xavier NX / AGX Xavier | Representative models | target-device TensorRT deployment |
+| Jetson Nano | Representative feasible model | constrained feasibility baseline |
+| Raspberry Pi 5 CPU | Representative model | CPU baseline |
+| Raspberry Pi 5 + Hailo | Representative model, backend-native INT8 | accelerator deployment |
 
-For every successful engine, evaluate `full`, `daylike`, `sunny`, `cloud`,
-`night`, `rain`, `snow`, and `foggy`. Every attempted but unsupported build or
-run is retained as a versioned failure record. TensorRT engines are built on
-the target device and never copied from the RTX server.
+For each successful accuracy engine, evaluate `full`, `daylike`, `sunny`,
+`cloud`, `night`, `rain`, `snow`, `foggy`, official size subsets, and per-class
+metrics. Every attempted but unsupported device build or run is retained as a
+versioned failure record. TensorRT engines are built on the target device and
+never copied from the RTX server.
 
 Jetson Nano is intentionally FP16-only: it has no native TensorRT INT8
 hardware support. Xavier-class devices support FP16 and INT8. See NVIDIA's
@@ -54,7 +65,7 @@ and [Jetson Nano guidance](https://forums.developer.nvidia.com/t/jetson-nano-ten
 - Fix confidence `0.25` and IoU `0.70` for latency tests. Disk decoding is
   excluded; preprocessing, inference, and post-processing are timed.
 - Use 50 warm-up inferences, 1,000 timed preloaded images, and three fresh
-  process repetitions per successful model/representation/device.
+  process repetitions per selected model/representation/device.
 - Run each board in its highest supported stable performance mode, with fixed
   cooling and no competing workload. Record the exact `nvpmodel`, clock,
   governor, software versions, RAM, and power supply.

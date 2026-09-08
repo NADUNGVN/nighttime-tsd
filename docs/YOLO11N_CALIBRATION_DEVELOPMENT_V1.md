@@ -1,0 +1,118 @@
+# YOLO11n calibration-method decision gate
+
+This is the only active INT8 experiment. The 15 FP32 checkpoints are frozen;
+there is no retraining, no external training data, and no 15-model TensorRT
+export until this gate is reviewed.
+
+## Fixed model and leakage boundary
+
+- Model: `results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt`.
+- Calibration candidates: only the 14,720 CCTSDB train images.
+- Development set: 1,636 images; it may support operational configuration but
+  never calibration construction.
+- Official 1,500 positive test, official size XML subsets, and 500 official
+  negative scenes are evaluation-only. They are never used for model choice,
+  early stopping, calibration construction, or policy design.
+
+## Calibration policies
+
+All use 1,024 train-only images. Uniform and low-luminance retain their prior
+definitions. VCSC creates a six-dimensional visual descriptor per training
+image: mean luminance, luminance standard deviation, mean saturation, entropy,
+Laplacian variance, and dark-channel mean. Features are standardized using
+only the training pool, clustered with deterministic K-means++ (`K=8`), and
+sampled approximately equally at 128 images/cluster.
+
+The VCSC manifest saves every candidate ID, raw and standardized descriptors,
+cluster assignment, selected IDs, seed, K, feature definitions, source hashes,
+script hash, and Git commit.
+
+## Official size and negative protocols
+
+CCTSDB2021 officially defines size subsets via the release's size XML package:
+XS ≤210 px²; S (210,400]; M (400,1000]; L (1000,2000]; XL >2000 px². The
+official package excludes images containing multiple sign sizes, so these are
+separate positive-test diagnostics rather than a partition that must total
+1,500. CCTSDB2021 also provides 500 negative images. They remain separate from
+mAP and are evaluated only for fixed-threshold false positives at 0.25, 0.50,
+and 0.75. [Official release README](https://github.com/csust7zhangjm/CCTSDB2021),
+[dataset paper](https://centaur.reading.ac.uk/106129/1/12-23.pdf).
+
+## Commands
+
+All commands are one physical shell line. First audit the official raw release
+for the size and negative packages; neither command changes the benchmark.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/audit_cctsdb_negative_set.py --raw ../nighttime-tsd/data/raw/CCTSDB2021 --out results/calibration_method_v1/rtx8000/yolo11n/negative_set_audit.json
+```
+
+Then materialize only the official positive-test size subsets.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/prepare_cctsdb_size_splits.py --raw ../nighttime-tsd/data/raw/CCTSDB2021 --processed data/processed/cctsdb2021_clean
+```
+
+Run the initial four-way seed-42 pilot in discrete phases. No command below
+trains a model.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase calibrations --seeds initial
+```
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase export --seeds initial
+```
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase evaluate --seeds initial
+```
+
+After the negative audit reports exactly 500 files, replace `NEGATIVE_SOURCE`
+with the audited archive or extracted folder and run:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase negative --seeds initial --negative-source NEGATIVE_SOURCE
+```
+
+For the five-seed stability campaign, rerun the same three phases with
+`--seeds stability`. Existing seed-42 artifacts are never overwritten.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase calibrations --seeds stability
+```
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase export --seeds stability
+```
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase evaluate --seeds stability
+```
+
+Create the decision table only after all five seeds are complete:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/summarize_yolo11n_calibration_development.py --out-dir results/calibration_method_v1/rtx8000/yolo11n/summary
+```
+
+The bootstrap command produces paired 1,000-resample intervals for full,
+weather, and macro-domain Delta mAP50. Change only the candidate filename for
+Uniform or Low-Luminance.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/bootstrap_yolo11n_calibration.py --fp16-predictions results/calibration_method_v1/rtx8000/yolo11n/predictions/yolo11n_fp16_reference_full_predictions.json --candidate-predictions results/calibration_method_v1/rtx8000/yolo11n/predictions/yolo11n_int8_vcsc_s42_full_predictions.json --out results/calibration_method_v1/rtx8000/yolo11n/bootstrap/vcsc_s42.json --iterations 1000 --seed 42
+```
+
+## Decision rule
+
+The summary emits one result:
+
+- `SCALE`: VCSC improves mean macro-domain Delta mAP50 over Uniform by ≥0.005,
+  does not reduce mean full-test mAP50, and is no more variable across five
+  calibration seeds.
+- `MODIFY_VCSC`: its macro-domain advantage is within ±0.005 of Uniform;
+  inspect descriptors/K/clusters instead of scaling.
+- `STOP`: VCSC is ≥0.005 worse in macro-domain Delta mAP50 or materially more
+  variable.
+- `INCOMPLETE`: missing evidence; scale-up remains blocked.

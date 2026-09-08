@@ -10,8 +10,11 @@ import random
 import re
 import shutil
 import statistics
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+
+import numpy as np
 
 NAMES = ["prohibitory", "mandatory", "warning"]
 IMAGE_SUFFIXES = {".bmp", ".jpeg", ".jpg", ".png"}
@@ -52,6 +55,84 @@ def median_luminance(image_path: Path) -> float:
         return float(statistics.median(pixels))
 
 
+def visual_descriptor(image_path: Path) -> dict[str, float]:
+    """Return deterministic, train-only low-cost scene descriptors for VCSC."""
+    try:
+        from PIL import Image
+    except ImportError as error:
+        raise RuntimeError("VCSC requires Pillow; install requirements.txt") from error
+    with Image.open(image_path) as source:
+        rgb = source.convert("RGB").resize((128, 128))
+        gray = np.asarray(rgb.convert("L"), dtype=np.float64)
+        hsv = np.asarray(rgb.convert("HSV"), dtype=np.float64)
+        red_green_blue = np.asarray(rgb, dtype=np.float64)
+    histogram = np.bincount(gray.astype(np.uint8).ravel(), minlength=256).astype(np.float64)
+    probabilities = histogram / histogram.sum()
+    entropy = -float(np.sum(probabilities[probabilities > 0] * np.log2(probabilities[probabilities > 0])))
+    laplacian = -4.0 * gray[1:-1, 1:-1] + gray[:-2, 1:-1] + gray[2:, 1:-1] + gray[1:-1, :-2] + gray[1:-1, 2:]
+    return {
+        "mean_luminance": float(gray.mean()),
+        "luminance_std": float(gray.std()),
+        "mean_saturation": float(hsv[:, :, 1].mean()),
+        "entropy_bits": entropy,
+        "laplacian_variance": float(laplacian.var()),
+        "dark_channel_mean": float(red_green_blue.min(axis=2).mean()),
+    }
+
+
+def git_commit() -> str | None:
+    try:
+        completed = subprocess.run(["git", "rev-parse", "HEAD"], text=True, capture_output=True, timeout=10, check=False)
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return None
+    return completed.stdout.strip() if completed.returncode == 0 else None
+
+
+def kmeans(features: np.ndarray, clusters: int, seed: int, iterations: int = 100) -> tuple[np.ndarray, np.ndarray]:
+    """Small deterministic K-means++ implementation; avoids a scikit-learn dependency."""
+    if features.ndim != 2 or len(features) < clusters:
+        raise ValueError("VCSC needs at least K feature rows")
+    rng = np.random.default_rng(seed)
+    centers = [features[int(rng.integers(len(features)))]]
+    for _ in range(1, clusters):
+        squared = np.min(np.sum((features[:, None, :] - np.asarray(centers)[None, :, :]) ** 2, axis=2), axis=1)
+        total = float(squared.sum())
+        if total <= 0:
+            candidate = next(index for index in range(len(features)) if not any(np.array_equal(features[index], center) for center in centers))
+        else:
+            candidate = int(rng.choice(len(features), p=squared / total))
+        centers.append(features[candidate])
+    centers_array = np.asarray(centers, dtype=np.float64)
+    assignments = np.full(len(features), -1, dtype=np.int64)
+    for _ in range(iterations):
+        distances = np.sum((features[:, None, :] - centers_array[None, :, :]) ** 2, axis=2)
+        next_assignments = np.argmin(distances, axis=1)
+        if np.array_equal(assignments, next_assignments):
+            break
+        assignments = next_assignments
+        for cluster in range(clusters):
+            members = features[assignments == cluster]
+            if len(members) == 0:
+                centers_array[cluster] = features[int(rng.integers(len(features)))]
+            else:
+                centers_array[cluster] = members.mean(axis=0)
+    return assignments, centers_array
+
+
+def balanced_cluster_sample(assignments: np.ndarray, size: int, clusters: int, seed: int) -> tuple[list[int], dict[int, int]]:
+    """Sample as evenly as possible while retaining exactly `size` examples."""
+    base, remainder = divmod(size, clusters)
+    quotas = {cluster: base + (1 if cluster < remainder else 0) for cluster in range(clusters)}
+    rng = random.Random(seed)
+    chosen: list[int] = []
+    for cluster in range(clusters):
+        members = np.flatnonzero(assignments == cluster).tolist()
+        if len(members) < quotas[cluster]:
+            raise ValueError(f"VCSC cluster {cluster} contains {len(members)} images, below required quota {quotas[cluster]}")
+        chosen.extend(rng.sample(members, quotas[cluster]))
+    return sorted(chosen), quotas
+
+
 def materialize(source: Path, destination: Path) -> str:
     """Hard-link when possible; copy only when the source is on another filesystem."""
     try:
@@ -88,14 +169,17 @@ def write_yaml(destination: Path) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build a CCTSDB INT8 calibration subset from training images only")
     parser.add_argument("--data", type=Path, default=Path("configs/cctsdb2021_train.yaml"))
-    parser.add_argument("--strategy", choices=["uniform", "low_luminance", "luminance_stratified"], required=True)
+    parser.add_argument("--strategy", choices=["uniform", "low_luminance", "vcsc"], required=True)
     parser.add_argument("--size", type=int, default=512)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--name", required=True, help="Directory name under data_root/calibration")
+    parser.add_argument("--clusters", type=int, default=8, help="VCSC K-means cluster count; ignored by other strategies")
     args = parser.parse_args()
 
     if args.size <= 0:
         raise ValueError("--size must be positive")
+    if args.clusters <= 1:
+        raise ValueError("--clusters must be at least two")
     if Path(args.name).name != args.name or args.name in {".", ".."}:
         raise ValueError("--name must be a single safe directory name")
     if not args.data.is_file():
@@ -112,23 +196,36 @@ def main() -> int:
         raise FileNotFoundError(f"Missing labels for {len(missing_labels)} train images; first: {missing_labels[0]}")
 
     luminance: dict[Path, float] = {}
-    if args.strategy in {"low_luminance", "luminance_stratified"}:
+    descriptors: dict[Path, dict[str, float]] = {}
+    standardized: dict[Path, dict[str, float]] = {}
+    assignments: dict[Path, int] = {}
+    centers: list[list[float]] | None = None
+    quotas: dict[int, int] | None = None
+    descriptor_names = ("mean_luminance", "luminance_std", "mean_saturation", "entropy_bits", "laplacian_variance", "dark_channel_mean")
+    if args.strategy == "low_luminance":
         for index, image_path in enumerate(candidates, start=1):
             luminance[image_path] = median_luminance(image_path)
             if index % 1000 == 0:
                 print(f"Measured luminance: {index}/{len(candidates)}")
-        if args.strategy == "low_luminance":
-            selected = sorted(candidates, key=lambda path: (luminance[path], path.name))[: args.size]
-        else:
-            if args.size % 4 != 0:
-                raise ValueError("luminance_stratified requires --size divisible by 4")
-            ordered = sorted(candidates, key=lambda path: (luminance[path], path.name))
-            strata = [ordered[index * len(ordered) // 4 : (index + 1) * len(ordered) // 4] for index in range(4)]
-            quota = args.size // 4
-            if any(len(stratum) < quota for stratum in strata):
-                raise ValueError("Not enough images in a luminance stratum for the requested size")
-            rng = random.Random(args.seed)
-            selected = sorted((path for stratum in strata for path in rng.sample(stratum, quota)), key=lambda path: path.name)
+        selected = sorted(candidates, key=lambda path: (luminance[path], path.name))[: args.size]
+    elif args.strategy == "vcsc":
+        for index, image_path in enumerate(candidates, start=1):
+            descriptors[image_path] = visual_descriptor(image_path)
+            if index % 1000 == 0:
+                print(f"Measured VCSC descriptors: {index}/{len(candidates)}")
+        matrix = np.asarray([[descriptors[path][name] for name in descriptor_names] for path in candidates], dtype=np.float64)
+        means = matrix.mean(axis=0)
+        stds = matrix.std(axis=0)
+        stds[stds == 0] = 1.0
+        normalized = (matrix - means) / stds
+        cluster_ids, cluster_centers = kmeans(normalized, args.clusters, args.seed)
+        selected_indices, quotas = balanced_cluster_sample(cluster_ids, args.size, args.clusters, args.seed)
+        selected = [candidates[index] for index in selected_indices]
+        centers = cluster_centers.tolist()
+        for index, image_path in enumerate(candidates):
+            standardized[image_path] = {name: float(normalized[index, feature]) for feature, name in enumerate(descriptor_names)}
+            assignments[image_path] = int(cluster_ids[index])
+        feature_standardization = {name: {"mean": float(means[index]), "std": float(stds[index])} for index, name in enumerate(descriptor_names)}
     else:
         selected = sorted(random.Random(args.seed).sample(candidates, args.size), key=lambda path: path.name)
 
@@ -151,6 +248,9 @@ def main() -> int:
                 "source_image": image_path.relative_to(data_root).as_posix(),
                 "source_label": label_path.relative_to(data_root).as_posix(),
                 "median_luminance": luminance.get(image_path),
+                "descriptor": descriptors.get(image_path),
+                "standardized_descriptor": standardized.get(image_path),
+                "cluster": assignments.get(image_path),
             }
         )
 
@@ -164,13 +264,23 @@ def main() -> int:
         "source_data_yaml_sha256": sha256(args.data),
         "source_data_root": str(data_root),
         "strategy": args.strategy,
-        "stratification": None
-        if args.strategy != "luminance_stratified"
+        "vcsc": None
+        if args.strategy != "vcsc"
         else {
-            "feature": "median grayscale intensity after 64x64 resize",
-            "strata": 4,
-            "construction": "sort all candidates by (luminance, filename), split into four equal-count contiguous strata, sample an equal seeded quota from each",
-            "quota_per_stratum": args.size // 4,
+            "clusters": args.clusters,
+            "sampling": "K-means++ initialized deterministic K-means over train-only standardized descriptors; equal quota per cluster where possible",
+            "descriptor_names": list(descriptor_names),
+            "descriptor_definitions": {
+                "mean_luminance": "mean grayscale intensity on 128x128 RGB-to-L resize, range 0-255",
+                "luminance_std": "standard deviation of grayscale intensity on the same resize",
+                "mean_saturation": "mean HSV saturation on the same resize, range 0-255",
+                "entropy_bits": "Shannon entropy of 256-bin grayscale histogram",
+                "laplacian_variance": "variance of four-neighbor grayscale Laplacian; sharpness proxy",
+                "dark_channel_mean": "mean per-pixel minimum RGB channel; visibility/haze-related proxy, not a ground-truth haze label",
+            },
+            "feature_standardization": feature_standardization,
+            "cluster_centers_standardized": centers,
+            "quota_by_cluster": {str(cluster): quota for cluster, quota in quotas.items()},
         },
         "seed": args.seed,
         "requested_size": args.size,
@@ -182,7 +292,28 @@ def main() -> int:
         "selected_luminance": None if not values else {"min": min(luminance[path] for path in selected), "median": float(statistics.median([luminance[path] for path in selected])), "max": max(luminance[path] for path in selected)},
         "calibration_yaml": str(yaml_path.resolve()),
         "files": selected_records,
+        "implementation": {"script": str(Path(__file__).resolve()), "script_sha256": sha256(Path(__file__)), "git_commit": git_commit()},
     }
+    if args.strategy == "vcsc":
+        candidate_path = destination / "vcsc_candidate_descriptors.json"
+        candidate_payload = {
+            "schema_version": 1,
+            "purpose": "Complete train-only VCSC feature and cluster audit trail",
+            "seed": args.seed,
+            "clusters": args.clusters,
+            "records": [
+                {
+                    "source_image": path.relative_to(data_root).as_posix(),
+                    "descriptor": descriptors[path],
+                    "standardized_descriptor": standardized[path],
+                    "cluster": assignments[path],
+                }
+                for path in candidates
+            ],
+        }
+        candidate_path.write_text(json.dumps(candidate_payload) + "\n", encoding="utf-8")
+        manifest["vcsc"]["candidate_descriptor_file"] = str(candidate_path.resolve())
+        manifest["vcsc"]["candidate_descriptor_file_sha256"] = sha256(candidate_path)
     manifest_path = destination / "calibration_manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(f"Prepared {destination}")

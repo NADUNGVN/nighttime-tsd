@@ -21,6 +21,13 @@ SPLITS = {
     "snow": "configs/cctsdb2021_test_snow.yaml",
     "foggy": "configs/cctsdb2021_test_foggy.yaml",
 }
+SIZE_SPLITS = {
+    "size_xs": "configs/cctsdb2021_test_size_xs.yaml",
+    "size_s": "configs/cctsdb2021_test_size_s.yaml",
+    "size_m": "configs/cctsdb2021_test_size_m.yaml",
+    "size_l": "configs/cctsdb2021_test_size_l.yaml",
+    "size_xl": "configs/cctsdb2021_test_size_xl.yaml",
+}
 
 
 def sha256(path: Path) -> str:
@@ -48,6 +55,7 @@ def main() -> int:
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--batch", type=int, default=1, help="Must match static TensorRT engine batch size")
     parser.add_argument("--predictions-full-dir", type=Path, help="Optional directory for raw per-image predictions on the full official split only")
+    parser.add_argument("--include-size-splits", action="store_true", help="Also evaluate official CCTSDB XML-defined XS/S/M/L/XL positive-test subsets")
     args = parser.parse_args()
 
     engines = dict(args.engine)
@@ -63,9 +71,10 @@ def main() -> int:
     if not evaluator.is_file():
         raise FileNotFoundError(f"Missing evaluator: {evaluator}")
     args.out_dir.mkdir(parents=True, exist_ok=True)
+    splits = {**SPLITS, **SIZE_SPLITS} if args.include_size_splits else SPLITS
     results: list[dict[str, str]] = []
     for label, engine in engines.items():
-        for split, data in SPLITS.items():
+        for split, data in splits.items():
             output = args.out_dir / f"{label}_{split}.json"
             if output.exists():
                 raise FileExistsError(f"Refusing to overwrite an existing evaluation: {output}")
@@ -101,7 +110,7 @@ def main() -> int:
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "command": sys.argv,
         "engines": {label: {"path": str(path.resolve()), "sha256": sha256(path)} for label, path in engines.items()},
-        "splits": SPLITS,
+        "splits": splits,
         "results": results,
     }
     manifest_path = args.out_dir / "suite_manifest.json"

@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "name": "yolo11n_vcsc_calibration_development_v1",
+  "purpose": "Calibration-method decision gate only. Frozen YOLO11n; do not scale to 15 models from this config.",
+  "model": {
+    "label": "yolo11n_cctsdb_clean_s42_v2",
+    "weights": "results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt"
+  },
+  "data": {
+    "train_yaml": "configs/cctsdb2021_train.yaml",
+    "positive_splits": ["full", "daylike", "sunny", "cloud", "night", "rain", "snow", "foggy"],
+    "size_splits": ["size_xs", "size_s", "size_m", "size_l", "size_xl"],
+    "official_test_policy": "Positive official test, official size XML subsets, and official negatives are evaluation-only. No test data or labels may affect calibration construction."
+  },
+  "runtime": {"imgsz": 640, "batch": 1, "device": "0", "expected_tensorrt_major": 10},
+  "calibration": {
+    "size": 1024,
+    "initial_seed": 42,
+    "stability_seeds": [42, 43, 44, 45, 46],
+    "policies": {
+      "uniform": {"strategy": "uniform", "name_template": "uniform_s{seed}_n{size}"},
+      "low_luminance": {"strategy": "low_luminance", "name_template": "low_luminance_s{seed}_n{size}"},
+      "vcsc": {"strategy": "vcsc", "clusters": 8, "name_template": "vcsc_k8_s{seed}_n{size}"}
+    }
+  },
+  "negative_thresholds": [0.25, 0.5, 0.75],
+  "bootstrap": {"iterations": 1000, "seed": 42},
+  "decision_rule": {
+    "scale_if": "VCSC has mean macro-domain Delta mAP50 at least 0.005 above Uniform, does not reduce full mAP50, and is no more variable than Uniform across calibration seeds.",
+    "modify_if": "Absolute mean macro-domain Delta mAP50 advantage versus Uniform is below 0.005.",
+    "stop_if": "VCSC macro-domain Delta mAP50 is at least 0.005 below Uniform or its sampling standard deviation exceeds Uniform by more than 0.005."
+  }
+}

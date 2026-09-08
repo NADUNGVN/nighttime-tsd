@@ -11,7 +11,8 @@ intake scaffolding for TT100K, MTSD, and CURE-TSD. Historical models, results,
 datasets, and scripts were intentionally removed because they were either
 unreproducible or used an incompatible class mapping.
 
-Start with [the immutable CCTSDB protocol](docs/PROTOCOL.md) and the
-[locked IVC study](docs/IVC_STUDY_V1.md). The official CCTSDB2021 release
+Start with [the immutable CCTSDB protocol](docs/PROTOCOL.md), the
+[YOLO11n calibration development gate](docs/YOLO11N_CALIBRATION_DEVELOPMENT_V1.md),
+and its [pre-experiment audit](docs/YOLO11N_CALIBRATION_AUDIT.md). The official CCTSDB2021 release
 contains 16,356 training images and 1,500 positive official-test images; use
 the dataset under its GPL-3.0 terms and cite its benchmark paper.

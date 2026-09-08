@@ -197,6 +197,11 @@ def main() -> int:
     repo = Path(__file__).resolve().parents[1]
     study_path = args.study if args.study.is_absolute() else repo / args.study
     study = read_json(study_path)
+    if args.phase != "status" and not study.get("scale_up_authorized", False):
+        raise RuntimeError(
+            "15-model scale-up is blocked by the locked protocol. Complete the YOLO11n VCSC decision gate first, "
+            "review its decision report, and record an explicit authorization in the study config before scaling."
+        )
     target = study["nvidia_targets"][args.target]
     architecture_path = repo / study["architecture_plan"]
     architecture = read_json(architecture_path)
