@@ -9,6 +9,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -80,11 +81,24 @@ def main() -> int:
     if args.workspace is not None:
         export_args["workspace"] = args.workspace
 
-    exported = Path(YOLO(str(args.weights)).export(**export_args))
-    if not exported.is_file():
-        raise FileNotFoundError(f"Ultralytics reported an engine that does not exist: {exported}")
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(exported, args.out)
+    # Ultralytics TensorRT 8--10 stores the INT8 calibration cache next to the
+    # intermediate ONNX path. Exporting every policy from the same best.pt
+    # location would therefore silently reuse best.cache across calibration
+    # policies. A fresh per-engine workspace makes the cache path unique and
+    # guarantees that this engine is calibrated from its declared YAML only.
+    with tempfile.TemporaryDirectory(prefix=f".{args.out.stem}_build_", dir=args.out.parent) as temporary:
+        workspace = Path(temporary)
+        staged_weights = workspace / args.weights.name
+        shutil.copy2(args.weights, staged_weights)
+        exported = Path(YOLO(str(staged_weights)).export(**export_args))
+        if not exported.is_file():
+            raise FileNotFoundError(f"Ultralytics reported an engine that does not exist: {exported}")
+        calibration_cache = staged_weights.with_suffix(".cache")
+        if args.precision == "int8" and not calibration_cache.is_file():
+            raise RuntimeError("INT8 export did not create a fresh calibration cache in its isolated workspace")
+        calibration_cache_sha256 = sha256(calibration_cache) if calibration_cache.is_file() else None
+        shutil.copy2(exported, args.out)
 
     calibration_manifest = args.data.parent / "calibration_manifest.json" if args.data is not None else None
     provenance = {
@@ -101,6 +115,10 @@ def main() -> int:
         "calibration_manifest": None if calibration_manifest is None or not calibration_manifest.is_file() else str(calibration_manifest.resolve()),
         "calibration_manifest_sha256": None if calibration_manifest is None or not calibration_manifest.is_file() else sha256(calibration_manifest),
         "export_args": export_args,
+        "calibration_cache": {
+            "isolation": "fresh per-engine temporary workspace; never shared across policies or seeds",
+            "sha256": calibration_cache_sha256,
+        },
         "expected_tensorrt_major": args.expected_tensorrt_major,
         "environment": {
             "python": platform.python_version(),

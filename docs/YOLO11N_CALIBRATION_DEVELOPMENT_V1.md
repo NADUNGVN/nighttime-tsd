@@ -31,6 +31,11 @@ The VCSC manifest saves every candidate ID, raw and standardized descriptors,
 cluster assignment, selected IDs, seed, K, feature definitions, source hashes,
 script hash, and Git commit.
 
+Each TensorRT INT8 engine is exported in a fresh engine-specific workspace.
+This is mandatory because TensorRT 8--10 calibration caches are adjacent to the
+intermediate ONNX file; no calibration cache may be shared by two policies or
+seeds. The provenance records the fresh cache hash.
+
 ## Official size and negative protocols
 
 CCTSDB2021 officially defines sign-size thresholds:
