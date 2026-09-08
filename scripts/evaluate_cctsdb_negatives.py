@@ -67,11 +67,22 @@ def main() -> int:
         if len(images) != 500:
             raise ValueError(f"Expected 500 official negative images, found {len(images)} in {args.negative_source}")
         model = YOLO(str(model_path))
+        # The TensorRT engines are static batch-1. Infer each scene separately
+        # and retain low-confidence post-NMS detections once; all preregistered
+        # thresholds are then simple filters of the same outputs. A lower-score
+        # box cannot suppress a higher-score box in confidence-ordered NMS.
+        confidence_by_image: list[list[float]] = []
+        for index, path in enumerate(images, start=1):
+            prediction = model.predict(source=str(path), stream=False, imgsz=args.imgsz, batch=1, device=args.device, conf=0.001, iou=args.iou, verbose=False)
+            if len(prediction) != 1:
+                raise RuntimeError(f"Expected one prediction for {path}, got {len(prediction)}")
+            boxes = prediction[0].boxes
+            confidence_by_image.append([] if boxes is None else [float(value) for value in boxes.conf.detach().cpu().tolist()])
+            if index % 100 == 0:
+                print(f"Scored negative scenes: {index}/{len(images)}", flush=True)
         results = {}
         for threshold in thresholds:
-            counts: list[int] = []
-            for prediction in model.predict(source=[str(path) for path in images], stream=True, imgsz=args.imgsz, batch=args.batch, device=args.device, conf=threshold, iou=args.iou, verbose=False):
-                counts.append(0 if prediction.boxes is None else len(prediction.boxes))
+            counts = [sum(value >= threshold for value in confidences) for confidences in confidence_by_image]
             results[f"{threshold:.2f}"] = {
                 "threshold": threshold,
                 "false_positives": sum(counts),
@@ -89,7 +100,7 @@ def main() -> int:
             "negative_source": str(args.negative_source.resolve()),
             "negative_source_sha256": sha256(args.negative_source) if args.negative_source.is_file() else None,
             "negative_images": len(images),
-            "runtime": {"imgsz": args.imgsz, "batch": args.batch, "iou": args.iou, "device": args.device, "thresholds": thresholds},
+            "runtime": {"imgsz": args.imgsz, "batch": 1, "iou": args.iou, "device": args.device, "thresholds": thresholds, "prediction_confidence": 0.001, "threshold_application": "confidence filtering of one low-confidence post-NMS prediction pass per image"},
             "metrics": results,
             "environment": {"python": platform.python_version(), "torch": torch.__version__, "ultralytics": ultralytics.__version__, "cuda": torch.version.cuda},
         }
