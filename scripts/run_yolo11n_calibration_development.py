@@ -97,6 +97,14 @@ def build_calibrations(repo: Path, config: dict[str, Any], seeds: list[int]) -> 
             if destination.is_dir():
                 if not (destination / "calibration.yaml").is_file() or not (destination / "calibration_manifest.json").is_file():
                     raise RuntimeError(f"Partial calibration output exists: {destination}")
+                manifest = load(destination / "calibration_manifest.json")
+                if manifest.get("strategy") != item["strategy"] or int(manifest.get("seed", -1)) != seed or int(manifest.get("selected_size", -1)) != int(config["calibration"]["size"]):
+                    raise RuntimeError(
+                        f"Existing calibration does not match the locked protocol: {destination} "
+                        f"(strategy={manifest.get('strategy')}, seed={manifest.get('seed')}, selected_size={manifest.get('selected_size')})"
+                    )
+                if item["strategy"] == "vcsc" and int((manifest.get("vcsc") or {}).get("clusters", -1)) != int(item["clusters"]):
+                    raise RuntimeError(f"Existing VCSC calibration has the wrong K: {destination}")
                 print(f"SKIP calibration: {policy} seed={seed}")
                 continue
             command = [sys.executable, str(script), "--data", config["data"]["train_yaml"], "--strategy", item["strategy"], "--size", str(config["calibration"]["size"]), "--seed", str(seed), "--name", name]
