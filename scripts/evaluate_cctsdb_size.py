@@ -50,6 +50,9 @@ def size_bin(area: float) -> str:
 def xml_ground_truth(path: Path, expected_images: set[str]) -> dict[str, dict[int, list[tuple[list[float], str]]]]:
     if not path.is_file() or path.suffix.lower() != ".zip":
         raise FileNotFoundError("--xml must be the official CCTSDB xml.zip archive")
+    expected_by_stem = {Path(image).stem: image for image in expected_images}
+    if len(expected_by_stem) != len(expected_images):
+        raise ValueError("Full-test prediction image IDs are not unique by filename stem")
     output: dict[str, dict[int, list[tuple[list[float], str]]]] = {}
     with zipfile.ZipFile(path) as archive:
         members = [member for member in archive.namelist() if member.lower().endswith(".xml")]
@@ -61,10 +64,9 @@ def xml_ground_truth(path: Path, expected_images: set[str]) -> dict[str, dict[in
         for member in members:
             root = ET.fromstring(archive.read(member))
             filename = (root.findtext("filename") or f"{Path(member).stem}.jpg").strip()
-            image = Path(filename).name
-            if not Path(image).suffix:
-                image += ".jpg"
-            if image not in expected_images:
+            stem = Path(Path(filename).name).stem
+            image = expected_by_stem.get(stem)
+            if image is None:
                 continue
             entries = {index: [] for index in range(len(NAMES))}
             for object_node in root.findall("object"):
