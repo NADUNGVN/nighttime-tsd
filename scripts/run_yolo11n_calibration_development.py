@@ -116,6 +116,8 @@ def build_calibrations(repo: Path, config: dict[str, Any], seeds: list[int]) -> 
             command = [sys.executable, str(script), "--data", config["data"]["train_yaml"], "--strategy", item["strategy"], "--size", str(config["calibration"]["size"]), "--seed", str(seed), "--name", name]
             if "clusters" in item:
                 command.extend(["--clusters", str(item["clusters"])])
+            if "kmeans_restarts" in item:
+                command.extend(["--kmeans-restarts", str(item["kmeans_restarts"])])
             execute(command, repo)
 
 

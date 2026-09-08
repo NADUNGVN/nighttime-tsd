@@ -174,12 +174,15 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--name", required=True, help="Directory name under data_root/calibration")
     parser.add_argument("--clusters", type=int, default=8, help="VCSC K-means cluster count; ignored by other strategies")
+    parser.add_argument("--kmeans-restarts", type=int, default=32, help="Deterministic VCSC K-means++ restarts; choose the first clustering that can satisfy all cluster quotas")
     args = parser.parse_args()
 
     if args.size <= 0:
         raise ValueError("--size must be positive")
     if args.clusters <= 1:
         raise ValueError("--clusters must be at least two")
+    if args.kmeans_restarts <= 0:
+        raise ValueError("--kmeans-restarts must be positive")
     if Path(args.name).name != args.name or args.name in {".", ".."}:
         raise ValueError("--name must be a single safe directory name")
     if not args.data.is_file():
@@ -201,6 +204,8 @@ def main() -> int:
     assignments: dict[Path, int] = {}
     centers: list[list[float]] | None = None
     quotas: dict[int, int] | None = None
+    selected_restart: int | None = None
+    kmeans_seed: int | None = None
     descriptor_names = ("mean_luminance", "luminance_std", "mean_saturation", "entropy_bits", "laplacian_variance", "dark_channel_mean")
     if args.strategy == "low_luminance":
         for index, image_path in enumerate(candidates, start=1):
@@ -218,8 +223,26 @@ def main() -> int:
         stds = matrix.std(axis=0)
         stds[stds == 0] = 1.0
         normalized = (matrix - means) / stds
-        cluster_ids, cluster_centers = kmeans(normalized, args.clusters, args.seed)
-        selected_indices, quotas = balanced_cluster_sample(cluster_ids, args.size, args.clusters, args.seed)
+        failures: list[dict[str, int]] = []
+        for restart in range(args.kmeans_restarts):
+            # Restart zero preserves the former single-start result whenever
+            # it is quota-feasible. Later starts remain deterministic functions
+            # of the calibration seed and never use test information.
+            trial_seed = args.seed + restart * 1_000_003
+            cluster_ids, cluster_centers = kmeans(normalized, args.clusters, trial_seed)
+            try:
+                selected_indices, quotas = balanced_cluster_sample(cluster_ids, args.size, args.clusters, args.seed)
+            except ValueError:
+                failures.append({str(cluster): int(np.count_nonzero(cluster_ids == cluster)) for cluster in range(args.clusters)})
+                continue
+            selected_restart = restart
+            kmeans_seed = trial_seed
+            break
+        else:
+            raise ValueError(
+                f"No quota-feasible VCSC clustering in {args.kmeans_restarts} deterministic restarts; "
+                f"required quota={args.size // args.clusters}, last_cluster_sizes={failures[-1] if failures else {}}"
+            )
         selected = [candidates[index] for index in selected_indices]
         centers = cluster_centers.tolist()
         for index, image_path in enumerate(candidates):
@@ -268,7 +291,10 @@ def main() -> int:
         if args.strategy != "vcsc"
         else {
             "clusters": args.clusters,
-            "sampling": "K-means++ initialized deterministic K-means over train-only standardized descriptors; equal quota per cluster where possible",
+            "sampling": "K-means++ initialized deterministic K-means over train-only standardized descriptors; first quota-feasible deterministic restart; equal quota per cluster",
+            "kmeans_restarts": args.kmeans_restarts,
+            "selected_restart": selected_restart,
+            "kmeans_seed": kmeans_seed,
             "descriptor_names": list(descriptor_names),
             "descriptor_definitions": {
                 "mean_luminance": "mean grayscale intensity on 128x128 RGB-to-L resize, range 0-255",

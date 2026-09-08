@@ -22,7 +22,10 @@ definitions. VCSC creates a six-dimensional visual descriptor per training
 image: mean luminance, luminance standard deviation, mean saturation, entropy,
 Laplacian variance, and dark-channel mean. Features are standardized using
 only the training pool, clustered with deterministic K-means++ (`K=8`), and
-sampled approximately equally at 128 images/cluster.
+sampled equally at 128 images/cluster. To avoid a pathological initialization
+that makes this quota impossible, VCSC tries up to 32 deterministic restarts
+derived only from the calibration seed and accepts the first quota-feasible
+result; the chosen restart and K-means seed are saved.
 
 The VCSC manifest saves every candidate ID, raw and standardized descriptors,
 cluster assignment, selected IDs, seed, K, feature definitions, source hashes,

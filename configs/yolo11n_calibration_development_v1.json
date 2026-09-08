@@ -20,7 +20,7 @@
     "policies": {
       "uniform": {"strategy": "uniform", "name_template": "uniform_s{seed}_n{size}"},
       "low_luminance": {"strategy": "low_luminance", "name_template": "low_luminance_s{seed}_n{size}"},
-      "vcsc": {"strategy": "vcsc", "clusters": 8, "name_template": "vcsc_k8_s{seed}_n{size}"}
+      "vcsc": {"strategy": "vcsc", "clusters": 8, "kmeans_restarts": 32, "name_template": "vcsc_k8_s{seed}_n{size}"}
     }
   },
   "negative_thresholds": [0.25, 0.5, 0.75],
