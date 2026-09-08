@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-08T13:57:10.146986+00:00",
+  "command": [
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/evaluate_tensorrt_suite.py",
+    "--engine",
+    "yolo11n_int8_vcsc_s42=/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_vcsc_s42.engine",
+    "--out-dir",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_vcsc_s42",
+    "--device",
+    "0",
+    "--imgsz",
+    "640",
+    "--batch",
+    "1",
+    "--predictions-full-dir",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/predictions"
+  ],
+  "engines": {
+    "yolo11n_int8_vcsc_s42": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_vcsc_s42.engine",
+      "sha256": "4eb040768a17e62617850c36eb401b8b74ca8b5dc756ecc85babd828e1bfd111"
+    }
+  },
+  "splits": {
+    "full": "configs/cctsdb2021_test_full.yaml",
+    "daylike": "configs/cctsdb2021_test_daylike.yaml",
+    "sunny": "configs/cctsdb2021_test_sunny.yaml",
+    "cloud": "configs/cctsdb2021_test_cloud.yaml",
+    "night": "configs/cctsdb2021_test_night.yaml",
+    "rain": "configs/cctsdb2021_test_rain.yaml",
+    "snow": "configs/cctsdb2021_test_snow.yaml",
+    "foggy": "configs/cctsdb2021_test_foggy.yaml"
+  },
+  "results": [
+    {
+      "label": "yolo11n_int8_vcsc_s42",
+      "split": "full",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_vcsc_s42/yolo11n_int8_vcsc_s42_full.json",
+      "result_sha256": "1ec722a1e1315a456a84bce7974dc62281069353f8bde4d4d7060b82766d1570"
+    },
+    {
+      "label": "yolo11n_int8_vcsc_s42",
+      "split": "daylike",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_vcsc_s42/yolo11n_int8_vcsc_s42_daylike.json",
+      "result_sha256": "09a38037c19b45c0fed1eab7b540b01ec0b8f6bf0ed66bb8fd73b917ee05747b"
+    },
+    {
+      "label": "yolo11n_int8_vcsc_s42",
+      "split": "sunny",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_vcsc_s42/yolo11n_int8_vcsc_s42_sunny.json",
+      "result_sha256": "d0ca44d3d8d3da58089fa1d4bcc43ed54864435ed4c432c45dff0deaff3a4618"
+    },
+    {
+      "label": "yolo11n_int8_vcsc_s42",
+      "split": "cloud",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_vcsc_s42/yolo11n_int8_vcsc_s42_cloud.json",
+      "result_sha256": "fb4a6c0f04500343c01b52961cd0ae8a7c85ae5e29cacb999bca5596654e8448"
+    },
+    {
+      "label": "yolo11n_int8_vcsc_s42",
+      "split": "night",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_vcsc_s42/yolo11n_int8_vcsc_s42_night.json",
+      "result_sha256": "1862e9e62f108a306780dc22f4355f76622821bdef55ed1d36fd9ecaf17f3b16"
+    },
+    {
+      "label": "yolo11n_int8_vcsc_s42",
+      "split": "rain",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_vcsc_s42/yolo11n_int8_vcsc_s42_rain.json",
+      "result_sha256": "da4a0afdd4d17301427dc9060fd9deba8bee1d889320a095d13f1bfdc06c2eea"
+    },
+    {
+      "label": "yolo11n_int8_vcsc_s42",
+      "split": "snow",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_vcsc_s42/yolo11n_int8_vcsc_s42_snow.json",
+      "result_sha256": "08436374662c5b5dc4555d4d934bbc8b194feafbd17f6d8c63b20f442753de7c"
+    },
+    {
+      "label": "yolo11n_int8_vcsc_s42",
+      "split": "foggy",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_vcsc_s42/yolo11n_int8_vcsc_s42_foggy.json",
+      "result_sha256": "9849d09c1bcf6c77fc53515f0cb6c4d4d38b865c455ab5f0b6a5e19b24811c25"
+    }
+  ]
+}

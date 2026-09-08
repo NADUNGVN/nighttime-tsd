@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-08T10:41:02.527845+00:00",
+  "source": "/home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/negative samples.zip",
+  "source_sha256": "e20054898205aa519243275ec32ce040d04954c078e8ee0d5654e4b9d74b24ca",
+  "negative_images": 500,
+  "expected_official_negative_images": 500,
+  "status": "available",
+  "sample_relative_paths": [
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01501.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01502.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01503.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01504.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01505.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01506.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01507.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01508.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01509.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01510.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01511.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01512.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01513.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01514.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01515.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01516.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01517.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01518.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01519.jpg",
+    "\u2593\u0393\u2569\u2558\u255d\u00bb\u2555\u2551\u2564\u2219\u2592\u255b/n_test/01520.jpg"
+  ],
+  "policy": "Negative images are a separate fixed-threshold false-positive stress test and are never included in the 1,500-image positive mAP benchmark or used for threshold selection."
+}

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-08T15:10:28.291104+00:00",
+  "purpose": "Separate fixed-threshold official-negative false-positive stress test; not mixed with positive mAP benchmark and not used for threshold selection",
+  "label": "yolo11n_fp16_reference",
+  "model": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_fp16_reference.engine",
+  "model_sha256": "be29c65cf51c43773ed2dfedc85d1bc8d3e8d24767f3b3f0e1702aaf485759a0",
+  "negative_source": "/home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/negative samples.zip",
+  "negative_source_sha256": "e20054898205aa519243275ec32ce040d04954c078e8ee0d5654e4b9d74b24ca",
+  "negative_images": 500,
+  "runtime": {
+    "imgsz": 640,
+    "batch": 1,
+    "iou": 0.7,
+    "device": "0",
+    "thresholds": [
+      0.25,
+      0.5,
+      0.75
+    ],
+    "prediction_confidence": 0.001,
+    "threshold_application": "confidence filtering of one low-confidence post-NMS prediction pass per image"
+  },
+  "metrics": {
+    "0.25": {
+      "threshold": 0.25,
+      "false_positives": 107,
+      "false_positives_per_image": 0.214,
+      "images_with_at_least_one_false_detection": 59,
+      "fraction_images_with_at_least_one_false_detection": 0.118
+    },
+    "0.50": {
+      "threshold": 0.5,
+      "false_positives": 39,
+      "false_positives_per_image": 0.078,
+      "images_with_at_least_one_false_detection": 23,
+      "fraction_images_with_at_least_one_false_detection": 0.046
+    },
+    "0.75": {
+      "threshold": 0.75,
+      "false_positives": 12,
+      "false_positives_per_image": 0.024,
+      "images_with_at_least_one_false_detection": 10,
+      "fraction_images_with_at_least_one_false_detection": 0.02
+    }
+  },
+  "environment": {
+    "python": "3.11.15",
+    "torch": "2.5.1+cu121",
+    "ultralytics": "8.4.102",
+    "cuda": "12.1"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-08T13:55:54.582503+00:00",
+  "command": [
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/evaluate_tensorrt_suite.py",
+    "--engine",
+    "yolo11n_int8_low_luminance_s42=/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_low_luminance_s42.engine",
+    "--out-dir",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42",
+    "--device",
+    "0",
+    "--imgsz",
+    "640",
+    "--batch",
+    "1",
+    "--predictions-full-dir",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/predictions"
+  ],
+  "engines": {
+    "yolo11n_int8_low_luminance_s42": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_low_luminance_s42.engine",
+      "sha256": "b1b9162fd3d4cb7446b7f8006f32cd5ebfea05942348765061dae771d47a1a18"
+    }
+  },
+  "splits": {
+    "full": "configs/cctsdb2021_test_full.yaml",
+    "daylike": "configs/cctsdb2021_test_daylike.yaml",
+    "sunny": "configs/cctsdb2021_test_sunny.yaml",
+    "cloud": "configs/cctsdb2021_test_cloud.yaml",
+    "night": "configs/cctsdb2021_test_night.yaml",
+    "rain": "configs/cctsdb2021_test_rain.yaml",
+    "snow": "configs/cctsdb2021_test_snow.yaml",
+    "foggy": "configs/cctsdb2021_test_foggy.yaml"
+  },
+  "results": [
+    {
+      "label": "yolo11n_int8_low_luminance_s42",
+      "split": "full",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_full.json",
+      "result_sha256": "838eeb20c573e7f7b33a34303027c6599cc867ad115cb9bdcec94cb671f7cff1"
+    },
+    {
+      "label": "yolo11n_int8_low_luminance_s42",
+      "split": "daylike",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_daylike.json",
+      "result_sha256": "3915877e56368e523165c32bb80912616c520d8c8f65b2b1fae42a48e451aa2e"
+    },
+    {
+      "label": "yolo11n_int8_low_luminance_s42",
+      "split": "sunny",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_sunny.json",
+      "result_sha256": "b47fb143bbbc88a739e5aee97d804df7e681a9aacd2fe6cf6c5974a2eed49110"
+    },
+    {
+      "label": "yolo11n_int8_low_luminance_s42",
+      "split": "cloud",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_cloud.json",
+      "result_sha256": "a3b56596f3605e38c35290d983394290be722f23f835e5c59f83b4515fb61784"
+    },
+    {
+      "label": "yolo11n_int8_low_luminance_s42",
+      "split": "night",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_night.json",
+      "result_sha256": "de06e22f9b95bddbfaec1feee4891f2761a739f08cc1699c7f9c25dcf721a8c6"
+    },
+    {
+      "label": "yolo11n_int8_low_luminance_s42",
+      "split": "rain",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_rain.json",
+      "result_sha256": "435e3aa61624f68032c05b929dfe4b7b3f361c50488557111ee2ae850a4e45ad"
+    },
+    {
+      "label": "yolo11n_int8_low_luminance_s42",
+      "split": "snow",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_snow.json",
+      "result_sha256": "cf1a4049c367c66956a5de0214e22f208c4127db43ab09a3b711416b5bf310cf"
+    },
+    {
+      "label": "yolo11n_int8_low_luminance_s42",
+      "split": "foggy",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_foggy.json",
+      "result_sha256": "813a31dd5b6318e035d7bf08c0f0581a05b33d9a6b998e5add95555dcdefcb54"
+    }
+  ]
+}

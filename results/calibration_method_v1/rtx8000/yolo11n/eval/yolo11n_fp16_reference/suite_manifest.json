@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-08T12:17:45.566936+00:00",
+  "command": [
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/evaluate_tensorrt_suite.py",
+    "--engine",
+    "yolo11n_fp16_reference=/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_fp16_reference.engine",
+    "--out-dir",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference",
+    "--device",
+    "0",
+    "--imgsz",
+    "640",
+    "--batch",
+    "1",
+    "--predictions-full-dir",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/predictions"
+  ],
+  "engines": {
+    "yolo11n_fp16_reference": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_fp16_reference.engine",
+      "sha256": "be29c65cf51c43773ed2dfedc85d1bc8d3e8d24767f3b3f0e1702aaf485759a0"
+    }
+  },
+  "splits": {
+    "full": "configs/cctsdb2021_test_full.yaml",
+    "daylike": "configs/cctsdb2021_test_daylike.yaml",
+    "sunny": "configs/cctsdb2021_test_sunny.yaml",
+    "cloud": "configs/cctsdb2021_test_cloud.yaml",
+    "night": "configs/cctsdb2021_test_night.yaml",
+    "rain": "configs/cctsdb2021_test_rain.yaml",
+    "snow": "configs/cctsdb2021_test_snow.yaml",
+    "foggy": "configs/cctsdb2021_test_foggy.yaml"
+  },
+  "results": [
+    {
+      "label": "yolo11n_fp16_reference",
+      "split": "full",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference/yolo11n_fp16_reference_full.json",
+      "result_sha256": "ee3a8ecc3a9f65712edd7544d8c635239c5baf01f3c908685191527324427105"
+    },
+    {
+      "label": "yolo11n_fp16_reference",
+      "split": "daylike",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference/yolo11n_fp16_reference_daylike.json",
+      "result_sha256": "b5a83c1be0a3beafad7c54dcbc26dc3de4730374506d44720b565778bedafe0c"
+    },
+    {
+      "label": "yolo11n_fp16_reference",
+      "split": "sunny",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference/yolo11n_fp16_reference_sunny.json",
+      "result_sha256": "09ec3e1d5856cc9adcd8f73a0fc71121b06cd2579d4ff1ba2d38e5f8022ba770"
+    },
+    {
+      "label": "yolo11n_fp16_reference",
+      "split": "cloud",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference/yolo11n_fp16_reference_cloud.json",
+      "result_sha256": "d4ebf1edb579366fa25c316b953d797ca912096544c8eda7bd525c152cde64a3"
+    },
+    {
+      "label": "yolo11n_fp16_reference",
+      "split": "night",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference/yolo11n_fp16_reference_night.json",
+      "result_sha256": "5d345d8cd988e437e83e41d6a085b4a4eadf824b477650e2abcf9eaa962ce152"
+    },
+    {
+      "label": "yolo11n_fp16_reference",
+      "split": "rain",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference/yolo11n_fp16_reference_rain.json",
+      "result_sha256": "1a7450ae3d8a37795fd6a2a75f9b5681f5da4eb233360368b417f1e075d93acd"
+    },
+    {
+      "label": "yolo11n_fp16_reference",
+      "split": "snow",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference/yolo11n_fp16_reference_snow.json",
+      "result_sha256": "700cf8e6ae7acae0bfd21ddafdc5826590033ede104481e67706b996fd3dcc3d"
+    },
+    {
+      "label": "yolo11n_fp16_reference",
+      "split": "foggy",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference/yolo11n_fp16_reference_foggy.json",
+      "result_sha256": "4c1739c382857065c70245567933d535f28db9e6e951efa7783b4cb054d68901"
+    }
+  ]
+}
