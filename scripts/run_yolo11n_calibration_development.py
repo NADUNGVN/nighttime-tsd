@@ -64,11 +64,6 @@ def eval_dir(root_dir: Path, mode: str, seed: int | None = None) -> Path:
     return root_dir / "eval" / f"yolo11n_{mode}_{suffix}"
 
 
-def complete_evaluation(directory: Path) -> bool:
-    expected = ("full", "daylike", "sunny", "cloud", "night", "rain", "snow", "foggy", "size_xs", "size_s", "size_m", "size_l", "size_xl")
-    return (directory / "suite_manifest.json").is_file() and all((directory / f"yolo11n_{directory.name.removeprefix('yolo11n_')}_{split}.json").is_file() for split in expected)
-
-
 def execute(command: list[str], repo: Path) -> None:
     print("START: " + " ".join(command), flush=True)
     subprocess.run(command, cwd=repo, check=True)
@@ -131,15 +126,22 @@ def export(repo: Path, config: dict[str, Any], seeds: list[int]) -> None:
 
 def evaluate_one(repo: Path, config: dict[str, Any], mode: str, source_engine: Path, seed: int | None) -> None:
     directory = eval_dir(root(repo), mode, seed)
+    label = f"yolo11n_{mode}_{'reference' if seed is None else f's{seed}'}"
+    size_output = root(repo) / "size" / f"{label}.json"
     if directory.exists() and any(directory.iterdir()):
         if (directory / "suite_manifest.json").is_file():
             print(f"SKIP evaluation: {mode} seed={seed}")
+            if size_output.is_file():
+                return
+            prediction = root(repo) / "predictions" / f"{label}_full_predictions.json"
+            if not prediction.is_file():
+                raise RuntimeError(f"Completed suite lacks full-test predictions required for size evaluation: {prediction}")
+            execute([sys.executable, str(repo / "scripts" / "evaluate_cctsdb_size.py"), "--predictions", str(prediction), "--xml", str((repo / config["data"]["official_xml"]).resolve()), "--out", str(size_output)], repo)
             return
         raise RuntimeError(f"Partial evaluation output exists: {directory}")
-    command = [sys.executable, str(repo / "scripts" / "evaluate_tensorrt_suite.py"), "--engine", f"yolo11n_{mode}_{'reference' if seed is None else f's{seed}'}={source_engine}", "--out-dir", str(directory), "--device", str(config["runtime"]["device"]), "--imgsz", str(config["runtime"]["imgsz"]), "--batch", str(config["runtime"]["batch"]), "--include-size-splits"]
-    if seed == config["calibration"]["initial_seed"] or seed is None:
-        command.extend(["--predictions-full-dir", str(root(repo) / "predictions")])
+    command = [sys.executable, str(repo / "scripts" / "evaluate_tensorrt_suite.py"), "--engine", f"yolo11n_{mode}_{'reference' if seed is None else f's{seed}'}={source_engine}", "--out-dir", str(directory), "--device", str(config["runtime"]["device"]), "--imgsz", str(config["runtime"]["imgsz"]), "--batch", str(config["runtime"]["batch"]), "--predictions-full-dir", str(root(repo) / "predictions")]
     execute(command, repo)
+    execute([sys.executable, str(repo / "scripts" / "evaluate_cctsdb_size.py"), "--predictions", str(root(repo) / "predictions" / f"{label}_full_predictions.json"), "--xml", str((repo / config["data"]["official_xml"]).resolve()), "--out", str(size_output)], repo)
 
 
 def evaluate(repo: Path, config: dict[str, Any], seeds: list[int]) -> None:

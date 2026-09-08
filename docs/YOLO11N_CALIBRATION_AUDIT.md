@@ -23,9 +23,10 @@ Audit date: 2026-09-08. This record precedes any VCSC engine export.
 - Replace the previous four-bin luminance policy with VCSC: train-only visual
   descriptors, training-pool standardization, deterministic K-means (`K=8`),
   and near-equal cluster sampling.
-- Build official size subsets only from the CCTSDB size XML package, not from
-  thresholds applied to labels or predictions. The official package excludes
-  mixed-size images.
+- Use the released `xml.zip` and CCTSDB's official area definitions for an
+  instance-level XS/S/M/L/XL AP50 diagnostic. Do not fabricate image subsets:
+  mixed-size scenes remain in the full test and predictions matching a
+  same-class out-of-bin object are ignored for the target-bin AP calculation.
 - Audit 500 official negatives separately and measure fixed-threshold false
   positives. They must never enter the 1,500-positive-image mAP benchmark.
 - Run only frozen YOLO11n through FP16, Uniform INT8, Low-Luminance INT8, and

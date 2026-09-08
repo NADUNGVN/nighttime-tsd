@@ -10,7 +10,8 @@ export until this gate is reviewed.
 - Calibration candidates: only the 14,720 CCTSDB train images.
 - Development set: 1,636 images; it may support operational configuration but
   never calibration construction.
-- Official 1,500 positive test, official size XML subsets, and 500 official
+- Official 1,500 positive test, official XML annotations for instance-level
+  size evaluation, and 500 official
   negative scenes are evaluation-only. They are never used for model choice,
   early stopping, calibration construction, or policy design.
 
@@ -29,32 +30,29 @@ script hash, and Git commit.
 
 ## Official size and negative protocols
 
-CCTSDB2021 officially defines size subsets via the release's size XML package:
+CCTSDB2021 officially defines sign-size thresholds:
 XS ≤210 px²; S (210,400]; M (400,1000]; L (1000,2000]; XL >2000 px². The
-official package excludes images containing multiple sign sizes, so these are
-separate positive-test diagnostics rather than a partition that must total
-1,500. CCTSDB2021 also provides 500 negative images. They remain separate from
+CCTSDB's released `xml.zip` provides one XML annotation per positive-test
+image. Because an image can contain multiple sign sizes, the implementation
+calculates AP50 at the **instance** level from complete full-test predictions;
+it does not fabricate image subsets or discard mixed-size scenes. CCTSDB2021
+also provides 500 negative images. They remain separate from
 mAP and are evaluated only for fixed-threshold false positives at 0.25, 0.50,
 and 0.75. [Official release README](https://github.com/csust7zhangjm/CCTSDB2021),
 [dataset paper](https://centaur.reading.ac.uk/106129/1/12-23.pdf).
 
 ## Commands
 
-All commands are one physical shell line. First audit the official raw release
-for the size and negative packages; neither command changes the benchmark.
+All commands are one physical shell line. First audit the official negative
+release. The output location has a default to avoid long command paths.
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/audit_cctsdb_negative_set.py --raw ../nighttime-tsd/data/raw/CCTSDB2021 --out results/calibration_method_v1/rtx8000/yolo11n/negative_set_audit.json
-```
-
-Then materialize only the official positive-test size subsets.
-
-```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/prepare_cctsdb_size_splits.py --raw ../nighttime-tsd/data/raw/CCTSDB2021 --processed data/processed/cctsdb2021_clean
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/audit_cctsdb_negative_set.py --raw ../nighttime-tsd/data/raw/CCTSDB2021
 ```
 
 Run the initial four-way seed-42 pilot in discrete phases. No command below
-trains a model.
+trains a model. The evaluation phase saves complete full-test predictions and
+automatically calculates XML-based XS/S/M/L/XL metrics.
 
 ```bash
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && conda activate nighttime-tsd && python scripts/run_yolo11n_calibration_development.py --phase calibrations --seeds initial

@@ -9,7 +9,7 @@
   "data": {
     "train_yaml": "configs/cctsdb2021_train.yaml",
     "positive_splits": ["full", "daylike", "sunny", "cloud", "night", "rain", "snow", "foggy"],
-    "size_splits": ["size_xs", "size_s", "size_m", "size_l", "size_xl"],
+    "official_xml": "../nighttime-tsd/data/raw/CCTSDB2021/xml.zip",
     "official_test_policy": "Positive official test, official size XML subsets, and official negatives are evaluation-only. No test data or labels may affect calibration construction."
   },
   "runtime": {"imgsz": 640, "batch": 1, "device": "0", "expected_tensorrt_major": 10},

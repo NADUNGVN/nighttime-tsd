@@ -35,7 +35,7 @@ def locate(raw: Path) -> tuple[Path, bool]:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Audit the official CCTSDB negative-image release without evaluating or copying it")
     parser.add_argument("--raw", type=Path, required=True)
-    parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--out", type=Path, default=Path("results/calibration_method_v1/rtx8000/yolo11n/negative_set_audit.json"))
     args = parser.parse_args()
     if args.out.exists():
         raise FileExistsError(f"Refusing to overwrite audit: {args.out}")

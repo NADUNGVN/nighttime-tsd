@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 DOMAINS = ("sunny", "cloud", "rain", "snow", "foggy", "night")
-SIZES = ("size_xs", "size_s", "size_m", "size_l", "size_xl")
+SIZES = ("xs", "s", "m", "l", "xl")
 POLICIES = ("uniform", "low_luminance", "vcsc")
 
 
@@ -50,8 +50,10 @@ def main() -> int:
     config = read(args.config)
     seeds = [int(value) for value in config["calibration"]["stability_seeds"]]
     reference_dir = args.root / "eval" / "yolo11n_fp16_reference"
-    reference = {split: metric(reference_dir / f"yolo11n_fp16_reference_{split}.json") for split in ("full", *DOMAINS, *SIZES) if (reference_dir / f"yolo11n_fp16_reference_{split}.json").is_file()}
-    required_reference = {"full", *DOMAINS, "size_xs", "size_s"}
+    reference = {split: metric(reference_dir / f"yolo11n_fp16_reference_{split}.json") for split in ("full", *DOMAINS) if (reference_dir / f"yolo11n_fp16_reference_{split}.json").is_file()}
+    reference_size_path = args.root / "size" / "yolo11n_fp16_reference.json"
+    reference_size = read(reference_size_path).get("metrics", {}) if reference_size_path.is_file() else {}
+    required_reference = {"full", *DOMAINS}
     omissions: list[dict[str, str]] = []
     if required_reference - set(reference):
         omissions.extend({"policy": "fp16", "seed": "reference", "missing": split} for split in sorted(required_reference - set(reference)))
@@ -60,13 +62,17 @@ def main() -> int:
         for seed in seeds:
             directory = args.root / "eval" / f"yolo11n_int8_{policy}_s{seed}"
             metrics = {}
-            for split in ("full", *DOMAINS, *SIZES):
+            for split in ("full", *DOMAINS):
                 path = directory / f"yolo11n_int8_{policy}_s{seed}_{split}.json"
                 if path.is_file():
                     metrics[split] = metric(path)
                 else:
                     omissions.append({"policy": policy, "seed": str(seed), "missing": split})
-            if "full" not in metrics or not required_reference.issubset(metrics) or not required_reference.issubset(reference):
+            size_path = args.root / "size" / f"yolo11n_int8_{policy}_s{seed}.json"
+            size_metrics = read(size_path).get("metrics", {}) if size_path.is_file() else {}
+            if "full" not in metrics or not required_reference.issubset(metrics) or not required_reference.issubset(reference) or not {"xs", "s"}.issubset(size_metrics) or not {"xs", "s"}.issubset(reference_size):
+                if not size_path.is_file():
+                    omissions.append({"policy": policy, "seed": str(seed), "missing": "size_metrics"})
                 continue
             domain_deltas = [metrics[domain]["map50"] - reference[domain]["map50"] for domain in DOMAINS]
             domain_retention = [metrics[domain]["map50"] / reference[domain]["map50"] if reference[domain]["map50"] else float("nan") for domain in DOMAINS]
@@ -83,10 +89,10 @@ def main() -> int:
                     "macro_domain_retention_map50": mean(domain_retention),
                     "worst_domain": DOMAINS[min(range(len(DOMAINS)), key=lambda index: domain_deltas[index])],
                     "worst_domain_delta_map50": min(domain_deltas),
-                    "xs_map50": metrics["size_xs"]["map50"],
-                    "xs_delta_map50": metrics["size_xs"]["map50"] - reference["size_xs"]["map50"],
-                    "s_map50": metrics["size_s"]["map50"],
-                    "s_delta_map50": metrics["size_s"]["map50"] - reference["size_s"]["map50"],
+                    "xs_map50": size_metrics["xs"]["map50"],
+                    "xs_delta_map50": size_metrics["xs"]["map50"] - reference_size["xs"]["map50"],
+                    "s_map50": size_metrics["s"]["map50"],
+                    "s_delta_map50": size_metrics["s"]["map50"] - reference_size["s"]["map50"],
                     "negative_fp_per_image_at_025": negative,
                 }
             )
