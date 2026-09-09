@@ -125,7 +125,13 @@ def main() -> int:
             ("s_delta_map50", "s_delta_map50"),
         ):
             summary.update(aggregate(prefix, [float(row[key]) for row in subset]))
-        summary["negative_fp_per_image_at_025_mean"] = None if any(row["negative_fp_per_image_at_025"] is None for row in subset) else mean([float(row["negative_fp_per_image_at_025"]) for row in subset])
+        available_negative = [float(row["negative_fp_per_image_at_025"]) for row in subset if row["negative_fp_per_image_at_025"] is not None]
+        # Negative scenes are a separate fixed-threshold stress test. The
+        # development protocol runs it for the seed-42 representative only;
+        # do not turn absent stability-seed negatives into a misleading null.
+        summary["negative_fp_per_image_at_025"] = mean(available_negative) if available_negative else None
+        summary["negative_fp_evaluations"] = len(available_negative)
+        summary["negative_fp_note"] = "fixed-threshold official-negative stress test; evaluated for available representative seed(s), not a calibration-sampling stability endpoint"
         summaries.append(summary)
     summary_by_policy = {row["policy"]: row for row in summaries}
     recommendation = "INCOMPLETE"
