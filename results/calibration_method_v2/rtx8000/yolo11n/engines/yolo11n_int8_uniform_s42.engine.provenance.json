@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-09T10:31:38.077614+00:00",
+  "command": [
+    "scripts/export_tensorrt.py",
+    "--weights",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+    "--precision",
+    "int8",
+    "--data",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_v2_s42_n1024/calibration.yaml",
+    "--out",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v2/rtx8000/yolo11n/engines/yolo11n_int8_uniform_s42.engine",
+    "--device",
+    "0",
+    "--imgsz",
+    "640",
+    "--batch",
+    "1",
+    "--expected-tensorrt-major",
+    "10"
+  ],
+  "precision": "int8",
+  "source_weights": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+  "source_weights_sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8",
+  "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v2/rtx8000/yolo11n/engines/yolo11n_int8_uniform_s42.engine",
+  "engine_sha256": "8cfc7eeef9e1c4bd76b701539124cbef2b6cf2500a458a9dab52439dc57f2eba",
+  "calibration_yaml": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_v2_s42_n1024/calibration.yaml",
+  "calibration_yaml_sha256": "43ac2cdd5f8e92aec0d13b69c8a85d43bea73e55f8455bcaefab2563fc3bdb57",
+  "calibration_manifest": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_v2_s42_n1024/calibration_manifest.json",
+  "calibration_manifest_sha256": "86901ad4018f5dd8cf25af1ac250e9d2d928aa133f6310b2a270d15c9e2b75c7",
+  "export_args": {
+    "format": "engine",
+    "imgsz": 640,
+    "device": "0",
+    "batch": 1,
+    "half": false,
+    "int8": true,
+    "data": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_v2_s42_n1024/calibration.yaml"
+  },
+  "calibration_cache": {
+    "isolation": "fresh per-engine temporary workspace; never shared across policies or seeds",
+    "sha256": "31e9d0b3f69470ac20f7380d8887c6dc47954afbe85d84be39870ba44e01a502"
+  },
+  "expected_tensorrt_major": 10,
+  "environment": {
+    "python": "3.11.15",
+    "torch": "2.5.1+cu121",
+    "ultralytics": "8.4.102",
+    "cuda": "12.1",
+    "tensorrt_python": "10.16.1.11",
+    "trtexec_version": null
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-09T10:35:42.410822+00:00",
+  "command": [
+    "scripts/export_tensorrt.py",
+    "--weights",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+    "--precision",
+    "int8",
+    "--data",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/low_luminance_v2_s42_n1024/calibration.yaml",
+    "--out",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v2/rtx8000/yolo11n/engines/yolo11n_int8_low_luminance_s42.engine",
+    "--device",
+    "0",
+    "--imgsz",
+    "640",
+    "--batch",
+    "1",
+    "--expected-tensorrt-major",
+    "10"
+  ],
+  "precision": "int8",
+  "source_weights": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+  "source_weights_sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8",
+  "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v2/rtx8000/yolo11n/engines/yolo11n_int8_low_luminance_s42.engine",
+  "engine_sha256": "322af76a4d089ac452817a1f5fc1258ad853deea1e186f9587280e93c2007155",
+  "calibration_yaml": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/low_luminance_v2_s42_n1024/calibration.yaml",
+  "calibration_yaml_sha256": "912a9c9bdee947b4988bf1eab6be6d090408ca67bea7ada302e358110de06c96",
+  "calibration_manifest": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/low_luminance_v2_s42_n1024/calibration_manifest.json",
+  "calibration_manifest_sha256": "9a826340d64331db9ab649fe5dff278722553fa8c53bff286f02df0d5b51f555",
+  "export_args": {
+    "format": "engine",
+    "imgsz": 640,
+    "device": "0",
+    "batch": 1,
+    "half": false,
+    "int8": true,
+    "data": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/low_luminance_v2_s42_n1024/calibration.yaml"
+  },
+  "calibration_cache": {
+    "isolation": "fresh per-engine temporary workspace; never shared across policies or seeds",
+    "sha256": "50881fd5c65082baaa3a4c0ecb99fd2b8016dc146e16809a523c4679a6f765eb"
+  },
+  "expected_tensorrt_major": 10,
+  "environment": {
+    "python": "3.11.15",
+    "torch": "2.5.1+cu121",
+    "ultralytics": "8.4.102",
+    "cuda": "12.1",
+    "tensorrt_python": "10.16.1.11",
+    "trtexec_version": null
+  }
+}
