@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "created_utc": "2026-09-08T13:57:11.338360+00:00",
+  "created_utc": "2026-09-08T23:58:28.866395+00:00",
   "purpose": "Official CCTSDB size-bin diagnostic from full positive test; no image-level size subset is constructed.",
   "predictions": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/predictions/yolo11n_int8_vcsc_s42_full_predictions.json",
-  "predictions_sha256": "58dff8bee3eaf195a89d871d54319be1b5ee7d513d71adee74d2d08856f73199",
+  "predictions_sha256": "67304a482b0eccc1f60f4eb14c61cabc202a571e34db95cf5b0deb9ecee6c684",
   "official_xml": "/home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip",
   "official_xml_sha256": "35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329",
   "size_rules": {
@@ -17,53 +17,53 @@
   "metrics": {
     "xs": {
       "instances": 813,
-      "map50": 0.3739735152989378,
+      "map50": 0.3524408960753056,
       "per_class_ap50": {
-        "prohibitory": 0.31853273206703303,
-        "mandatory": 0.4159587195555029,
-        "warning": 0.38742909427427746
+        "prohibitory": 0.34909803175905413,
+        "mandatory": 0.3784861510896736,
+        "warning": 0.32973850537718913
       },
-      "ignored_predictions_matching_out_of_bin_same_class": 2771
+      "ignored_predictions_matching_out_of_bin_same_class": 2788
     },
     "s": {
       "instances": 823,
-      "map50": 0.562572853906493,
+      "map50": 0.5473581156118615,
       "per_class_ap50": {
-        "prohibitory": 0.5862055599080208,
-        "mandatory": 0.5707216840718794,
-        "warning": 0.530791317739579
+        "prohibitory": 0.5914673703726456,
+        "mandatory": 0.5488674347847502,
+        "warning": 0.5017395416781888
       },
-      "ignored_predictions_matching_out_of_bin_same_class": 2602
+      "ignored_predictions_matching_out_of_bin_same_class": 2606
     },
     "m": {
       "instances": 812,
-      "map50": 0.7615637172224184,
+      "map50": 0.7642919906600318,
       "per_class_ap50": {
-        "prohibitory": 0.8175466319723106,
-        "mandatory": 0.7434015186580624,
-        "warning": 0.7237430010368823
+        "prohibitory": 0.826733320804957,
+        "mandatory": 0.7560865190650673,
+        "warning": 0.7100561321100711
       },
-      "ignored_predictions_matching_out_of_bin_same_class": 2629
+      "ignored_predictions_matching_out_of_bin_same_class": 2611
     },
     "l": {
       "instances": 408,
-      "map50": 0.7704725392439062,
+      "map50": 0.7729410734373796,
       "per_class_ap50": {
-        "prohibitory": 0.8002724436398878,
-        "mandatory": 0.6966459213819429,
-        "warning": 0.8144992527098882
+        "prohibitory": 0.797660882368381,
+        "mandatory": 0.720416492449638,
+        "warning": 0.80074584549412
       },
-      "ignored_predictions_matching_out_of_bin_same_class": 3181
+      "ignored_predictions_matching_out_of_bin_same_class": 3159
     },
     "xl": {
       "instances": 372,
-      "map50": 0.5567773410299363,
+      "map50": 0.5505161263752788,
       "per_class_ap50": {
-        "prohibitory": 0.7095340805447077,
-        "mandatory": 0.2916634912914349,
-        "warning": 0.6691344512536661
+        "prohibitory": 0.7391588767045538,
+        "mandatory": 0.30315195280464186,
+        "warning": 0.6092375496166407
       },
-      "ignored_predictions_matching_out_of_bin_same_class": 3385
+      "ignored_predictions_matching_out_of_bin_same_class": 3384
     }
   }
 }

@@ -1,22 +1,22 @@
 {
   "schema_version": 1,
-  "created_utc": "2026-09-08T13:56:35.542296+00:00",
+  "created_utc": "2026-09-08T23:57:51.347784+00:00",
   "label": "yolo11n_int8_vcsc_s42",
   "model": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_vcsc_s42.engine",
-  "model_sha256": "4eb040768a17e62617850c36eb401b8b74ca8b5dc756ecc85babd828e1bfd111",
+  "model_sha256": "428c040458a25ec3f01c204ec9a7202b70e3788e1dec7810ea07f46deba2196c",
   "data": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/cctsdb2021_test_daylike.yaml",
   "data_sha256": "266c7bc406b3ec86ebeac6d4d3bf6c476dfb0c4ecaae37ad3a34cdfeb4d1cb34",
   "resolved_data": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/local/cctsdb2021_test_daylike_absolute.yaml",
   "resolved_data_sha256": "dca55071e8eafce4e20a211285ea4e0e0f0eeae23e8d3c5e8a9edbfb74371329",
   "metrics": {
-    "map50": 0.7540846200622169,
-    "map50_95": 0.43423447342089777,
-    "precision": 0.8708768986327767,
-    "recall": 0.699249579826923,
+    "map50": 0.7457280988909103,
+    "map50_95": 0.4290047507172384,
+    "precision": 0.8402023110531959,
+    "recall": 0.6962429386273136,
     "per_class_ap50": {
-      "prohibitory": 0.7860848829718495,
-      "mandatory": 0.6229842995040371,
-      "warning": 0.8531846777107641
+      "prohibitory": 0.7732457298491962,
+      "mandatory": 0.6171328750438946,
+      "warning": 0.8468056917796398
     }
   },
   "environment": {

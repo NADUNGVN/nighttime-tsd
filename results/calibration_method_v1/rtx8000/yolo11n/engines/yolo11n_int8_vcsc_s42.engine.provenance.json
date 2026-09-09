@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "created_utc": "2026-09-08T11:08:02.171219+00:00",
+  "created_utc": "2026-09-08T23:52:47.235460+00:00",
   "command": [
     "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/export_tensorrt.py",
     "--weights",
@@ -24,7 +24,7 @@
   "source_weights": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
   "source_weights_sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8",
   "engine": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_vcsc_s42.engine",
-  "engine_sha256": "4eb040768a17e62617850c36eb401b8b74ca8b5dc756ecc85babd828e1bfd111",
+  "engine_sha256": "428c040458a25ec3f01c204ec9a7202b70e3788e1dec7810ea07f46deba2196c",
   "calibration_yaml": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/vcsc_k8_s42_n1024/calibration.yaml",
   "calibration_yaml_sha256": "e0872333e8d3fef2ba2975baee09bd1a971090572a0969b6000857dc5fb03848",
   "calibration_manifest": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/vcsc_k8_s42_n1024/calibration_manifest.json",
@@ -37,6 +37,10 @@
     "half": false,
     "int8": true,
     "data": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/vcsc_k8_s42_n1024/calibration.yaml"
+  },
+  "calibration_cache": {
+    "isolation": "fresh per-engine temporary workspace; never shared across policies or seeds",
+    "sha256": "e3aaec110c43188455d72fef1cf878edd6bb39450c7037e8df7d4023c21223b6"
   },
   "expected_tensorrt_major": 10,
   "environment": {

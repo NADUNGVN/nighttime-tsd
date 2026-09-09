@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "created_utc": "2026-09-08T13:54:37.090309+00:00",
+  "created_utc": "2026-09-08T23:56:00.243538+00:00",
   "command": [
     "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/evaluate_tensorrt_suite.py",
     "--engine",
@@ -19,7 +19,7 @@
   "engines": {
     "yolo11n_int8_uniform_s42": {
       "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_uniform_s42.engine",
-      "sha256": "11f76d924e9cf0755ee63fdcb6ae2935abcb38f9029acffa7ade464da813672a"
+      "sha256": "8c5876bd6afbfb7728ff3162d1cd7b53b164d250240403f8413a81944e5b2fa0"
     }
   },
   "splits": {
@@ -37,49 +37,49 @@
       "label": "yolo11n_int8_uniform_s42",
       "split": "full",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s42/yolo11n_int8_uniform_s42_full.json",
-      "result_sha256": "7d3c919768d7fd8b7437adbf8eee2702cd2e73ac1703ca39c8ef645448225461"
+      "result_sha256": "2c1093f20d6edd9835973a77a43d09104a040de22d476e19f87c148469268b14"
     },
     {
       "label": "yolo11n_int8_uniform_s42",
       "split": "daylike",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s42/yolo11n_int8_uniform_s42_daylike.json",
-      "result_sha256": "e690ebb02542a1ad09e63f3f4a42f5a22e0ce62e875ad358e9ac66c75baf34a5"
+      "result_sha256": "f4d69c2ed32859212488fc4b31d58ed701be382b2f0bdb407c4ae7bc3d8ff403"
     },
     {
       "label": "yolo11n_int8_uniform_s42",
       "split": "sunny",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s42/yolo11n_int8_uniform_s42_sunny.json",
-      "result_sha256": "48ab7802f858d1f6a955bc8249c939a98ff965d12bc00c44630b0a94f9a8e2c5"
+      "result_sha256": "b8acfaacdd2964a78f444cc3129cf222f9088118ebb25f5ced2c9d8028639821"
     },
     {
       "label": "yolo11n_int8_uniform_s42",
       "split": "cloud",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s42/yolo11n_int8_uniform_s42_cloud.json",
-      "result_sha256": "b403e91e9ab4b19e8d4d6494ebcca066f5a21701e45a85c5e163cd89e365d1ca"
+      "result_sha256": "d20851cf35b490330a0c255bd01815475fec4916ec0630ee569425fd11afab95"
     },
     {
       "label": "yolo11n_int8_uniform_s42",
       "split": "night",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s42/yolo11n_int8_uniform_s42_night.json",
-      "result_sha256": "63b65b89a4dc0a08657c2ce444d83517c077a585e1bd0f42f653d0a5c72e4163"
+      "result_sha256": "36d5c2da3065df48e1bdf2975b61f748469f3f9687bf588ac3114891e86c5552"
     },
     {
       "label": "yolo11n_int8_uniform_s42",
       "split": "rain",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s42/yolo11n_int8_uniform_s42_rain.json",
-      "result_sha256": "86a9357935b484e2efbe9755b94448ec56775e1376c92f6e19c7aeada1e8b68b"
+      "result_sha256": "150b1cacb4ad988066322600fdab5ce50610694c2c176211868bd94c114f606c"
     },
     {
       "label": "yolo11n_int8_uniform_s42",
       "split": "snow",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s42/yolo11n_int8_uniform_s42_snow.json",
-      "result_sha256": "2efd8ca2b33b4fdba0be63db82d12a7f3f3a321b752d9bd948cf6c1eb883b3cc"
+      "result_sha256": "8c4878a01a7d533f24806431c124df728a74f6f32b147ef2010468c6753862ea"
     },
     {
       "label": "yolo11n_int8_uniform_s42",
       "split": "foggy",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s42/yolo11n_int8_uniform_s42_foggy.json",
-      "result_sha256": "89992d0c00433ebef8ea4486fe903a4c6ae057cfa0d3fc8d1c5785663e934bdf"
+      "result_sha256": "1df3b748c0aa80f4f4f65e5c240510d30e50c2c890613e5d06dab45f16cefd84"
     }
   ]
 }

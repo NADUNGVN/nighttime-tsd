@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "created_utc": "2026-09-08T15:11:20.034036+00:00",
+  "created_utc": "2026-09-09T02:06:22.641781+00:00",
   "purpose": "Separate fixed-threshold official-negative false-positive stress test; not mixed with positive mAP benchmark and not used for threshold selection",
   "label": "yolo11n_int8_vcsc_s42",
   "model": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_vcsc_s42.engine",
-  "model_sha256": "4eb040768a17e62617850c36eb401b8b74ca8b5dc756ecc85babd828e1bfd111",
+  "model_sha256": "428c040458a25ec3f01c204ec9a7202b70e3788e1dec7810ea07f46deba2196c",
   "negative_source": "/home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/negative samples.zip",
   "negative_source_sha256": "e20054898205aa519243275ec32ce040d04954c078e8ee0d5654e4b9d74b24ca",
   "negative_images": 500,
@@ -24,24 +24,24 @@
   "metrics": {
     "0.25": {
       "threshold": 0.25,
-      "false_positives": 277,
-      "false_positives_per_image": 0.554,
-      "images_with_at_least_one_false_detection": 144,
-      "fraction_images_with_at_least_one_false_detection": 0.288
+      "false_positives": 229,
+      "false_positives_per_image": 0.458,
+      "images_with_at_least_one_false_detection": 128,
+      "fraction_images_with_at_least_one_false_detection": 0.256
     },
     "0.50": {
       "threshold": 0.5,
-      "false_positives": 166,
-      "false_positives_per_image": 0.332,
-      "images_with_at_least_one_false_detection": 92,
-      "fraction_images_with_at_least_one_false_detection": 0.184
+      "false_positives": 157,
+      "false_positives_per_image": 0.314,
+      "images_with_at_least_one_false_detection": 82,
+      "fraction_images_with_at_least_one_false_detection": 0.164
     },
     "0.75": {
       "threshold": 0.75,
-      "false_positives": 80,
-      "false_positives_per_image": 0.16,
-      "images_with_at_least_one_false_detection": 44,
-      "fraction_images_with_at_least_one_false_detection": 0.088
+      "false_positives": 69,
+      "false_positives_per_image": 0.138,
+      "images_with_at_least_one_false_detection": 37,
+      "fraction_images_with_at_least_one_false_detection": 0.074
     }
   },
   "environment": {

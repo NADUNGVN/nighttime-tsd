@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "created_utc": "2026-09-08T13:55:54.582503+00:00",
+  "created_utc": "2026-09-08T23:57:13.629035+00:00",
   "command": [
     "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/evaluate_tensorrt_suite.py",
     "--engine",
@@ -19,7 +19,7 @@
   "engines": {
     "yolo11n_int8_low_luminance_s42": {
       "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_low_luminance_s42.engine",
-      "sha256": "b1b9162fd3d4cb7446b7f8006f32cd5ebfea05942348765061dae771d47a1a18"
+      "sha256": "caaffdaafc75793209190edb70152cc29cbfe653e699bc4dcaedac8cf5ae6b6d"
     }
   },
   "splits": {
@@ -37,49 +37,49 @@
       "label": "yolo11n_int8_low_luminance_s42",
       "split": "full",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_full.json",
-      "result_sha256": "838eeb20c573e7f7b33a34303027c6599cc867ad115cb9bdcec94cb671f7cff1"
+      "result_sha256": "10953afeaded94846e7ab244eb1847ccce14c8385bd8a4795a6f2cec0f92229d"
     },
     {
       "label": "yolo11n_int8_low_luminance_s42",
       "split": "daylike",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_daylike.json",
-      "result_sha256": "3915877e56368e523165c32bb80912616c520d8c8f65b2b1fae42a48e451aa2e"
+      "result_sha256": "1b10eb663d1262a08c82a1c5bc5c5820b61da8d6d90b72a4f2593f2ae708b011"
     },
     {
       "label": "yolo11n_int8_low_luminance_s42",
       "split": "sunny",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_sunny.json",
-      "result_sha256": "b47fb143bbbc88a739e5aee97d804df7e681a9aacd2fe6cf6c5974a2eed49110"
+      "result_sha256": "9eb848fde09ed31539d67fe8a94a2cc1e0d72154e81fbdfc223b38c04fd7bbdf"
     },
     {
       "label": "yolo11n_int8_low_luminance_s42",
       "split": "cloud",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_cloud.json",
-      "result_sha256": "a3b56596f3605e38c35290d983394290be722f23f835e5c59f83b4515fb61784"
+      "result_sha256": "d1a990796014792af2c9e347ed56bc7eb98500c652d60660a206c6b6aa9d4181"
     },
     {
       "label": "yolo11n_int8_low_luminance_s42",
       "split": "night",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_night.json",
-      "result_sha256": "de06e22f9b95bddbfaec1feee4891f2761a739f08cc1699c7f9c25dcf721a8c6"
+      "result_sha256": "f422a146ba52b0c2da92adb362c483fcd6713410e0a2364616c27104d41b8235"
     },
     {
       "label": "yolo11n_int8_low_luminance_s42",
       "split": "rain",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_rain.json",
-      "result_sha256": "435e3aa61624f68032c05b929dfe4b7b3f361c50488557111ee2ae850a4e45ad"
+      "result_sha256": "41cd3e85de70a26776fc74d23819533085030040c1d2232992975eaa545fd5fd"
     },
     {
       "label": "yolo11n_int8_low_luminance_s42",
       "split": "snow",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_snow.json",
-      "result_sha256": "cf1a4049c367c66956a5de0214e22f208c4127db43ab09a3b711416b5bf310cf"
+      "result_sha256": "031da45a8d26ab727a7f293cbf9e5db0f99fd033a60e5d2eccf3f2d1ec7ee05a"
     },
     {
       "label": "yolo11n_int8_low_luminance_s42",
       "split": "foggy",
       "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_low_luminance_s42/yolo11n_int8_low_luminance_s42_foggy.json",
-      "result_sha256": "813a31dd5b6318e035d7bf08c0f0581a05b33d9a6b998e5add95555dcdefcb54"
+      "result_sha256": "aca5505e6ee55029c03df77fb7e5f31891e7f38a88a692e463fe5cc60dc597d7"
     }
   ]
 }
