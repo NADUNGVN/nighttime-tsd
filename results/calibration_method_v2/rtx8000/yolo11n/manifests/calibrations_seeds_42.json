@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-09T10:17:10.365445+00:00",
+  "git_commit": "47e0ba01a9bf70e9edc0d082a42b3998ad81972c",
+  "phase": "calibrations",
+  "config": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/yolo11n_calibration_development_v2.json",
+  "config_sha256": "6e56d41c6ddceb3be8c56209644ce2ac6b512e5fcc8e6e6336ae23f0df588424",
+  "frozen_weights": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+  "frozen_weights_sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8",
+  "seeds": [
+    42
+  ],
+  "policies": {
+    "uniform": {
+      "strategy": "uniform",
+      "name_template": "uniform_v2_s{seed}_n{size}"
+    },
+    "low_luminance": {
+      "strategy": "low_luminance",
+      "name_template": "low_luminance_v2_s{seed}_n{size}"
+    },
+    "vcsc_proportional": {
+      "strategy": "vcsc_proportional",
+      "clusters": 8,
+      "kmeans_restarts": 32,
+      "min_cluster_quota": 1,
+      "name_template": "vcsc_proportional_k8_min1_s{seed}_n{size}"
+    }
+  },
+  "official_test_lock": "The official positive test, weather splits, official size subsets, and official negatives are locked. This configuration must not evaluate, tune, or select on them."
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-09T10:17:10.301297+00:00",
+  "purpose": "VCSC-v2 preflight; development-image identity and train-only calibration policy verification before GPU work",
+  "development_yaml": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/cctsdb2021_dev.yaml",
+  "development_yaml_sha256": "f90c44e0a2cf6a2361b1115701123b77362d7cc9335fa80c48798eba223a8ff1",
+  "development_images": 1636,
+  "development_labels_missing": 0,
+  "development_xml_missing": 0,
+  "official_test_lock": "The official positive test, weather splits, official size subsets, and official negatives are locked. This configuration must not evaluate, tune, or select on them.",
+  "status": "pass"
+}
