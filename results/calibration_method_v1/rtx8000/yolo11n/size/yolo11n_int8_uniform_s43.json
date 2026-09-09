@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-09T08:00:48.538802+00:00",
+  "purpose": "Official CCTSDB size-bin diagnostic from full positive test; no image-level size subset is constructed.",
+  "predictions": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/predictions/yolo11n_int8_uniform_s43_full_predictions.json",
+  "predictions_sha256": "cd6712b09d3f4f4942e9a3114a227593fad0b1e93bf93ec4852513d5768b10ff",
+  "official_xml": "/home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip",
+  "official_xml_sha256": "35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329",
+  "size_rules": {
+    "xs": "area <= 210 px^2",
+    "s": "210 < area <= 400 px^2",
+    "m": "400 < area <= 1000 px^2",
+    "l": "1000 < area <= 2000 px^2",
+    "xl": "area > 2000 px^2"
+  },
+  "matching": "XML member stem is matched to full-test prediction image stem (verified by a 1,500/1,500 alignment audit). AP50 is by class. A prediction matching a same-class ground-truth sign outside the target bin is ignored, rather than counted as a false positive for the target bin.",
+  "metrics": {
+    "xs": {
+      "instances": 813,
+      "map50": 0.36166928798571324,
+      "per_class_ap50": {
+        "prohibitory": 0.3267773484689735,
+        "mandatory": 0.36881039570253477,
+        "warning": 0.38942011978563135
+      },
+      "ignored_predictions_matching_out_of_bin_same_class": 2682
+    },
+    "s": {
+      "instances": 823,
+      "map50": 0.5438609860922212,
+      "per_class_ap50": {
+        "prohibitory": 0.584512568356683,
+        "mandatory": 0.5520950990437512,
+        "warning": 0.4949752908762295
+      },
+      "ignored_predictions_matching_out_of_bin_same_class": 2514
+    },
+    "m": {
+      "instances": 812,
+      "map50": 0.7579877930332867,
+      "per_class_ap50": {
+        "prohibitory": 0.8064736943269233,
+        "mandatory": 0.7537934036523725,
+        "warning": 0.713696281120564
+      },
+      "ignored_predictions_matching_out_of_bin_same_class": 2508
+    },
+    "l": {
+      "instances": 408,
+      "map50": 0.7605243615914673,
+      "per_class_ap50": {
+        "prohibitory": 0.7984272152272123,
+        "mandatory": 0.6980347013905782,
+        "warning": 0.7851111681566113
+      },
+      "ignored_predictions_matching_out_of_bin_same_class": 3024
+    },
+    "xl": {
+      "instances": 372,
+      "map50": 0.5232929677020198,
+      "per_class_ap50": {
+        "prohibitory": 0.7020083833971584,
+        "mandatory": 0.29074336610408263,
+        "warning": 0.5771271536048183
+      },
+      "ignored_predictions_matching_out_of_bin_same_class": 3244
+    }
+  }
+}

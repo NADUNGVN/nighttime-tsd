@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "created_utc": "2026-09-09T08:05:37.978604+00:00",
+  "command": [
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/evaluate_tensorrt_suite.py",
+    "--engine",
+    "yolo11n_int8_uniform_s45=/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_uniform_s45.engine",
+    "--out-dir",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s45",
+    "--device",
+    "0",
+    "--imgsz",
+    "640",
+    "--batch",
+    "1",
+    "--predictions-full-dir",
+    "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/predictions"
+  ],
+  "engines": {
+    "yolo11n_int8_uniform_s45": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_int8_uniform_s45.engine",
+      "sha256": "78b8f113c403fe0a7af6e454bb3c50e21664eff5e0074262189a133ccd14e14a"
+    }
+  },
+  "splits": {
+    "full": "configs/cctsdb2021_test_full.yaml",
+    "daylike": "configs/cctsdb2021_test_daylike.yaml",
+    "sunny": "configs/cctsdb2021_test_sunny.yaml",
+    "cloud": "configs/cctsdb2021_test_cloud.yaml",
+    "night": "configs/cctsdb2021_test_night.yaml",
+    "rain": "configs/cctsdb2021_test_rain.yaml",
+    "snow": "configs/cctsdb2021_test_snow.yaml",
+    "foggy": "configs/cctsdb2021_test_foggy.yaml"
+  },
+  "results": [
+    {
+      "label": "yolo11n_int8_uniform_s45",
+      "split": "full",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s45/yolo11n_int8_uniform_s45_full.json",
+      "result_sha256": "14d8f9584f1c91db8aef89a7c651fda17a3c166c1d3cce6cac631db196ea8433"
+    },
+    {
+      "label": "yolo11n_int8_uniform_s45",
+      "split": "daylike",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s45/yolo11n_int8_uniform_s45_daylike.json",
+      "result_sha256": "0d1788cebfc7e771c4b0f2478c6792d281cd65c428502e4920a2f23305675d47"
+    },
+    {
+      "label": "yolo11n_int8_uniform_s45",
+      "split": "sunny",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s45/yolo11n_int8_uniform_s45_sunny.json",
+      "result_sha256": "53b754e627be6cbe9ec3c6cd8d9b71491b032a0527787e8c38b172872359ed7b"
+    },
+    {
+      "label": "yolo11n_int8_uniform_s45",
+      "split": "cloud",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s45/yolo11n_int8_uniform_s45_cloud.json",
+      "result_sha256": "5442be3b3dfe131b9a409e3ca733a270bff3af590752396d5834456a39b1312d"
+    },
+    {
+      "label": "yolo11n_int8_uniform_s45",
+      "split": "night",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s45/yolo11n_int8_uniform_s45_night.json",
+      "result_sha256": "b7e513f81fbddc41e9898215e864758ab87df4e441ffafceba8ffebf2330e8c9"
+    },
+    {
+      "label": "yolo11n_int8_uniform_s45",
+      "split": "rain",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s45/yolo11n_int8_uniform_s45_rain.json",
+      "result_sha256": "8715668c3b35fcf27c8f6bdc0556e6b32fb037242d00cd71e3bf606032dd5a78"
+    },
+    {
+      "label": "yolo11n_int8_uniform_s45",
+      "split": "snow",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s45/yolo11n_int8_uniform_s45_snow.json",
+      "result_sha256": "eabb6da1305e0f360145e512fbd2af1700f648071c38abca824b3389cbc5606f"
+    },
+    {
+      "label": "yolo11n_int8_uniform_s45",
+      "split": "foggy",
+      "result": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_int8_uniform_s45/yolo11n_int8_uniform_s45_foggy.json",
+      "result_sha256": "ea7ffb77373bf481a5d6ab8f64299257a63ca9d90123fb77337923dc9e5fbeeb"
+    }
+  ]
+}
