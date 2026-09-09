@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -133,6 +134,41 @@ def balanced_cluster_sample(assignments: np.ndarray, size: int, clusters: int, s
     return sorted(chosen), quotas
 
 
+def proportional_cluster_sample(assignments: np.ndarray, size: int, clusters: int, seed: int, minimum_quota: int) -> tuple[list[int], dict[int, int]]:
+    """Sample by train-pool cluster prevalence with a documented floor.
+
+    The floor guarantees that every non-empty visual cluster is represented;
+    the remaining slots use a deterministic largest-remainder allocation over
+    the cluster capacities. This avoids VCSC-v1's fixed equal quota.
+    """
+    counts = {cluster: int(np.count_nonzero(assignments == cluster)) for cluster in range(clusters)}
+    if any(count == 0 for count in counts.values()):
+        raise ValueError(f"VCSC proportional sampling requires non-empty clusters, got {counts}")
+    if size < clusters * minimum_quota:
+        raise ValueError(f"Requested size {size} cannot satisfy {clusters} clusters with minimum quota {minimum_quota}")
+    if any(count < minimum_quota for count in counts.values()):
+        raise ValueError(f"VCSC cluster is below minimum quota {minimum_quota}: {counts}")
+    quotas = {cluster: minimum_quota for cluster in range(clusters)}
+    remaining = size - sum(quotas.values())
+    capacities = {cluster: counts[cluster] - quotas[cluster] for cluster in range(clusters)}
+    capacity_total = sum(capacities.values())
+    if remaining > capacity_total:
+        raise ValueError(f"Requested size {size} exceeds available cluster capacity {sum(counts.values())}")
+    raw = {cluster: remaining * capacities[cluster] / capacity_total for cluster in range(clusters)}
+    for cluster in range(clusters):
+        quotas[cluster] += int(np.floor(raw[cluster]))
+    leftovers = size - sum(quotas.values())
+    for cluster in sorted(range(clusters), key=lambda item: (-(raw[item] - math.floor(raw[item])), item))[:leftovers]:
+        quotas[cluster] += 1
+    if any(quotas[cluster] > counts[cluster] for cluster in range(clusters)):
+        raise ValueError(f"Proportional quota exceeds cluster population: quotas={quotas}, counts={counts}")
+    rng = random.Random(seed)
+    chosen: list[int] = []
+    for cluster in range(clusters):
+        chosen.extend(rng.sample(np.flatnonzero(assignments == cluster).tolist(), quotas[cluster]))
+    return sorted(chosen), quotas
+
+
 def materialize(source: Path, destination: Path) -> str:
     """Hard-link when possible; copy only when the source is on another filesystem."""
     try:
@@ -169,12 +205,13 @@ def write_yaml(destination: Path) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build a CCTSDB INT8 calibration subset from training images only")
     parser.add_argument("--data", type=Path, default=Path("configs/cctsdb2021_train.yaml"))
-    parser.add_argument("--strategy", choices=["uniform", "low_luminance", "vcsc"], required=True)
+    parser.add_argument("--strategy", choices=["uniform", "low_luminance", "vcsc", "vcsc_proportional"], required=True)
     parser.add_argument("--size", type=int, default=512)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--name", required=True, help="Directory name under data_root/calibration")
     parser.add_argument("--clusters", type=int, default=8, help="VCSC K-means cluster count; ignored by other strategies")
     parser.add_argument("--kmeans-restarts", type=int, default=32, help="Deterministic VCSC K-means++ restarts; choose the first clustering that can satisfy all cluster quotas")
+    parser.add_argument("--min-cluster-quota", type=int, default=1, help="Minimum images per non-empty cluster for vcsc_proportional; ignored by other strategies")
     args = parser.parse_args()
 
     if args.size <= 0:
@@ -183,6 +220,8 @@ def main() -> int:
         raise ValueError("--clusters must be at least two")
     if args.kmeans_restarts <= 0:
         raise ValueError("--kmeans-restarts must be positive")
+    if args.min_cluster_quota <= 0:
+        raise ValueError("--min-cluster-quota must be positive")
     if Path(args.name).name != args.name or args.name in {".", ".."}:
         raise ValueError("--name must be a single safe directory name")
     if not args.data.is_file():
@@ -213,7 +252,7 @@ def main() -> int:
             if index % 1000 == 0:
                 print(f"Measured luminance: {index}/{len(candidates)}")
         selected = sorted(candidates, key=lambda path: (luminance[path], path.name))[: args.size]
-    elif args.strategy == "vcsc":
+    elif args.strategy in {"vcsc", "vcsc_proportional"}:
         for index, image_path in enumerate(candidates, start=1):
             descriptors[image_path] = visual_descriptor(image_path)
             if index % 1000 == 0:
@@ -231,7 +270,10 @@ def main() -> int:
             trial_seed = args.seed + restart * 1_000_003
             cluster_ids, cluster_centers = kmeans(normalized, args.clusters, trial_seed)
             try:
-                selected_indices, quotas = balanced_cluster_sample(cluster_ids, args.size, args.clusters, args.seed)
+                if args.strategy == "vcsc":
+                    selected_indices, quotas = balanced_cluster_sample(cluster_ids, args.size, args.clusters, args.seed)
+                else:
+                    selected_indices, quotas = proportional_cluster_sample(cluster_ids, args.size, args.clusters, args.seed, args.min_cluster_quota)
             except ValueError:
                 failures.append({str(cluster): int(np.count_nonzero(cluster_ids == cluster)) for cluster in range(args.clusters)})
                 continue
@@ -288,10 +330,12 @@ def main() -> int:
         "source_data_root": str(data_root),
         "strategy": args.strategy,
         "vcsc": None
-        if args.strategy != "vcsc"
+        if args.strategy not in {"vcsc", "vcsc_proportional"}
         else {
             "clusters": args.clusters,
-            "sampling": "K-means++ initialized deterministic K-means over train-only standardized descriptors; first quota-feasible deterministic restart; equal quota per cluster",
+            "sampling": "K-means++ initialized deterministic K-means over train-only standardized descriptors; first quota-feasible deterministic restart; " + ("equal quota per cluster" if args.strategy == "vcsc" else "population-proportional quota with a minimum per non-empty cluster"),
+            "quota_policy": "equal" if args.strategy == "vcsc" else "population_proportional_largest_remainder",
+            "min_cluster_quota": None if args.strategy == "vcsc" else args.min_cluster_quota,
             "kmeans_restarts": args.kmeans_restarts,
             "selected_restart": selected_restart,
             "kmeans_seed": kmeans_seed,
@@ -320,7 +364,7 @@ def main() -> int:
         "files": selected_records,
         "implementation": {"script": str(Path(__file__).resolve()), "script_sha256": sha256(Path(__file__)), "git_commit": git_commit()},
     }
-    if args.strategy == "vcsc":
+    if args.strategy in {"vcsc", "vcsc_proportional"}:
         candidate_path = destination / "vcsc_candidate_descriptors.json"
         candidate_payload = {
             "schema_version": 1,

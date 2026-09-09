@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "name": "yolo11n_vcsc_proportional_development_v2",
+  "purpose": "Development-only replacement study after VCSC-v1 rejection. Frozen YOLO11n and train-only calibration construction.",
+  "model": {
+    "label": "yolo11n_cctsdb_clean_s42_v2",
+    "weights": "results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt"
+  },
+  "data": {
+    "train_yaml": "configs/cctsdb2021_train.yaml",
+    "development_yaml": "configs/cctsdb2021_dev.yaml",
+    "official_xml": "../nighttime-tsd/data/raw/CCTSDB2021/xml.zip",
+    "official_test_policy": "The official positive test, weather splits, official size subsets, and official negatives are locked. This configuration must not evaluate, tune, or select on them."
+  },
+  "runtime": {"imgsz": 640, "batch": 1, "device": "0", "expected_tensorrt_major": 10},
+  "calibration": {
+    "size": 1024,
+    "initial_seed": 42,
+    "stability_seeds": [42, 43, 44, 45, 46],
+    "policy_stability_seeds": {"uniform": [42, 43, 44, 45, 46], "low_luminance": [42], "vcsc_proportional": [42, 43, 44, 45, 46]},
+    "policies": {
+      "uniform": {"strategy": "uniform", "name_template": "uniform_v2_s{seed}_n{size}"},
+      "low_luminance": {"strategy": "low_luminance", "name_template": "low_luminance_v2_s{seed}_n{size}"},
+      "vcsc_proportional": {"strategy": "vcsc_proportional", "clusters": 8, "kmeans_restarts": 32, "min_cluster_quota": 1, "name_template": "vcsc_proportional_k8_min1_s{seed}_n{size}"}
+    }
+  },
+  "decision_rule": {
+    "freeze_if": "On the development split, VCSC-proportional has mean mAP50 at least 0.005 above Uniform, does not reduce mAP50-95 or XS/S mAP50, and has no higher mAP50 standard deviation than Uniform by more than 0.005.",
+    "otherwise": "Do not evaluate the locked official test or scale to 15 models; revise or abandon the proposed policy."
+  }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate CCTSDB full-test predictions by the official traffic-sign area bins.
+"""Evaluate CCTSDB predictions by the official traffic-sign area bins.
 
 This is an instance-level diagnostic.  It does not create image subsets, because
 an image may contain signs from several size bins.
@@ -130,10 +130,11 @@ def metrics_for_bin(records: dict[str, dict], truth: dict[str, dict[int, list[tu
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Instance-level official CCTSDB XS/S/M/L/XL AP50 from saved full-test predictions")
+    parser = argparse.ArgumentParser(description="Instance-level CCTSDB XS/S/M/L/XL AP50 from saved predictions")
     parser.add_argument("--predictions", type=Path, required=True)
     parser.add_argument("--xml", type=Path, required=True, help="Official CCTSDB xml.zip")
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--split-label", default="official_positive_test", help="Human-readable evaluated split label; does not alter matching")
     args = parser.parse_args()
     if args.out.exists():
         raise FileExistsError(f"Refusing to overwrite size result: {args.out}")
@@ -146,13 +147,14 @@ def main() -> int:
     result = {
         "schema_version": 1,
         "created_utc": datetime.now(timezone.utc).isoformat(),
-        "purpose": "Official CCTSDB size-bin diagnostic from full positive test; no image-level size subset is constructed.",
+        "purpose": f"CCTSDB size-bin diagnostic from {args.split_label}; no image-level size subset is constructed.",
+        "split_label": args.split_label,
         "predictions": str(args.predictions.resolve()),
         "predictions_sha256": sha256(args.predictions),
         "official_xml": str(args.xml.resolve()),
         "official_xml_sha256": sha256(args.xml),
         "size_rules": SIZE_RULES,
-        "matching": "XML member stem is matched to full-test prediction image stem (verified by a 1,500/1,500 alignment audit). AP50 is by class. A prediction matching a same-class ground-truth sign outside the target bin is ignored, rather than counted as a false positive for the target bin.",
+        "matching": "XML member stem is matched to prediction image stem. AP50 is by class. A prediction matching a same-class ground-truth sign outside the target bin is ignored, rather than counted as a false positive for the target bin.",
         "metrics": {bin_name: metrics_for_bin(records, truth, bin_name) for bin_name in SIZE_RULES},
     }
     args.out.parent.mkdir(parents=True, exist_ok=True)

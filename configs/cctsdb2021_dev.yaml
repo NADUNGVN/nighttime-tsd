@@ -1,0 +1,10 @@
+# Development-only evaluation. Never substitute this file for an official test YAML.
+path: ../data/processed/cctsdb2021_clean
+train: dev/images
+val: dev/images
+test: dev/images
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+nc: 3
