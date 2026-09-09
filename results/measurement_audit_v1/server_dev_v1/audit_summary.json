@@ -1,0 +1,57 @@
+{
+  "version": "cctsdb_measurement_audit_v1",
+  "created_utc": "2026-09-09T14:53:55.529850+00:00",
+  "git_commit": "43d02949962582bcd19e0eb69d248c87814b4b72",
+  "script_sha256": "8f417e49d13eb2dbe76b77477589a604f368017cff3c9ca6aad1a7fb21ec587b",
+  "python": "3.11.15",
+  "reports": [
+    {
+      "label": "yolo11n_fp16_reference",
+      "status": "review_required",
+      "review_reasons": [
+        "XML/YOLO geometry, class or dimension mismatch",
+        "YOLO rounding changes size assignment; do not silently mix area conventions",
+        "XML coordinates outside image require convention review",
+        "Saved predict() records do not reproduce val() AP within tolerance"
+      ],
+      "error": null
+    },
+    {
+      "label": "yolo11n_int8_low_luminance_s42",
+      "status": "review_required",
+      "review_reasons": [
+        "Zero-area clipped predictions retained in replay; verify postprocessing convention",
+        "XML/YOLO geometry, class or dimension mismatch",
+        "YOLO rounding changes size assignment; do not silently mix area conventions",
+        "XML coordinates outside image require convention review",
+        "Saved predict() records do not reproduce val() AP within tolerance"
+      ],
+      "error": null
+    },
+    {
+      "label": "yolo11n_int8_uniform_s42",
+      "status": "review_required",
+      "review_reasons": [
+        "Zero-area clipped predictions retained in replay; verify postprocessing convention",
+        "XML/YOLO geometry, class or dimension mismatch",
+        "YOLO rounding changes size assignment; do not silently mix area conventions",
+        "XML coordinates outside image require convention review",
+        "Saved predict() records do not reproduce val() AP within tolerance"
+      ],
+      "error": null
+    },
+    {
+      "label": "yolo11n_int8_vcsc_proportional_s42",
+      "status": "review_required",
+      "review_reasons": [
+        "XML/YOLO geometry, class or dimension mismatch",
+        "YOLO rounding changes size assignment; do not silently mix area conventions",
+        "XML coordinates outside image require convention review",
+        "Saved predict() records do not reproduce val() AP within tolerance"
+      ],
+      "error": null
+    }
+  ],
+  "scope": "Read-only measurement audit, no inference/training/export or policy selection",
+  "status": "review_required"
+}

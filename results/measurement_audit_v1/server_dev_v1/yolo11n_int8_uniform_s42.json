@@ -1,0 +1,894 @@
+{
+  "version": "cctsdb_measurement_audit_v1",
+  "prediction_sha256": "619d46b95bb17019406c4b49b6cc85460eead6784319b720f4c2584992c66aac",
+  "evaluation_sha256": "987b58bf0e6b8716a50b129fb914a2a9135377805bb4e7b20ed229e5a6006643",
+  "prediction_declared_sha256": "619d46b95bb17019406c4b49b6cc85460eead6784319b720f4c2584992c66aac",
+  "prediction_hash_match": "exact_bytes",
+  "model_sha256": "8cfc7eeef9e1c4bd76b701539124cbef2b6cf2500a458a9dab52439dc57f2eba",
+  "data_sha256": "f90c44e0a2cf6a2361b1115701123b77362d7cc9335fa80c48798eba223a8ff1",
+  "images": 1636,
+  "instances": 2706,
+  "labels_inventory_sha256": "259b6a6b41d7167ba93d54b8e202257a5a633a7e5adddab691fcc820377329f6",
+  "images_inventory_sha256": "f78c7d6ae67bffe7c2f8a4577682ca6d4e2cac91d688652802fafa872c55432c",
+  "duplicate_image_content_count": 0,
+  "zero_area_predictions_retained": {
+    "count": 98,
+    "samples": [
+      {
+        "image": "00691.jpg",
+        "box": [
+          1135.385009765625,
+          720.0,
+          1172.9091796875,
+          720.0
+        ],
+        "confidence": 0.0033077597618103027
+      },
+      {
+        "image": "03547.jpg",
+        "box": [
+          868.2047119140625,
+          0.0,
+          918.1842651367188,
+          0.0
+        ],
+        "confidence": 0.0033077597618103027
+      },
+      {
+        "image": "03547.jpg",
+        "box": [
+          882.21875,
+          0.0,
+          924.9544067382812,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "03569.jpg",
+        "box": [
+          841.0579833984375,
+          0.0,
+          891.9490966796875,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "03595.jpg",
+        "box": [
+          852.0968627929688,
+          0.0,
+          905.4545288085938,
+          0.0
+        ],
+        "confidence": 0.0033077597618103027
+      },
+      {
+        "image": "03595.jpg",
+        "box": [
+          865.8969116210938,
+          0.0,
+          919.571044921875,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "03625.jpg",
+        "box": [
+          829.6705322265625,
+          0.0,
+          877.6885986328125,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "04242.jpg",
+        "box": [
+          866.151123046875,
+          0.0,
+          919.6011352539062,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "04652.jpg",
+        "box": [
+          880.9549560546875,
+          0.0,
+          930.5006103515625,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "04679.jpg",
+        "box": [
+          866.7590942382812,
+          0.0,
+          919.809326171875,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "04764.jpg",
+        "box": [
+          868.9682006835938,
+          0.0,
+          919.8145141601562,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "05106.jpg",
+        "box": [
+          821.5320434570312,
+          0.0,
+          878.8799438476562,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "05535.jpg",
+        "box": [
+          863.965576171875,
+          0.0,
+          921.9537963867188,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "05574.jpg",
+        "box": [
+          867.4000854492188,
+          0.0,
+          921.7242431640625,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "05633.jpg",
+        "box": [
+          866.2572631835938,
+          0.0,
+          915.5836181640625,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "05905.jpg",
+        "box": [
+          880.8902587890625,
+          0.0,
+          934.1939697265625,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "05931.jpg",
+        "box": [
+          862.7349853515625,
+          0.0,
+          919.8345336914062,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "06211.jpg",
+        "box": [
+          871.1000366210938,
+          0.0,
+          921.7195434570312,
+          0.0
+        ],
+        "confidence": 0.0033077597618103027
+      },
+      {
+        "image": "06211.jpg",
+        "box": [
+          853.355712890625,
+          0.0,
+          904.7152709960938,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      },
+      {
+        "image": "06250.jpg",
+        "box": [
+          865.8756103515625,
+          0.0,
+          918.6420288085938,
+          0.0
+        ],
+        "confidence": 0.0016232728958129883
+      }
+    ]
+  },
+  "class_instances": {
+    "mandatory": 833,
+    "warning": 472,
+    "prohibitory": 1401
+  },
+  "yolo_continuous_area_counts": {
+    "m": 1028,
+    "l": 498,
+    "xl": 381,
+    "s": 616,
+    "xs": 183
+  },
+  "review_reasons": [
+    "Zero-area clipped predictions retained in replay; verify postprocessing convention",
+    "XML/YOLO geometry, class or dimension mismatch",
+    "YOLO rounding changes size assignment; do not silently mix area conventions",
+    "XML coordinates outside image require convention review",
+    "Saved predict() records do not reproduce val() AP within tolerance"
+  ],
+  "coordinate_tolerance_px": 0.05,
+  "ap_tolerance_absolute": 0.0001,
+  "xml_alignment": {
+    "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip",
+    "sha256": "35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329",
+    "mismatched_images": 1,
+    "mismatches": [
+      {
+        "image": "00751.jpg",
+        "yolo": [
+          [
+            1,
+            [
+              276.00015599999995,
+              438.999561,
+              317.000142,
+              546.999453
+            ]
+          ],
+          [
+            0,
+            [
+              227.999772,
+              433.99956599999996,
+              271.999782,
+              545.999454
+            ]
+          ],
+          [
+            0,
+            [
+              179.50023900000002,
+              430.2997695,
+              223.50024900000003,
+              543.3995565
+            ]
+          ]
+        ],
+        "xml": {
+          "rows": [
+            [
+              1,
+              [
+                276.0,
+                439.0,
+                317.0,
+                547.0
+              ]
+            ],
+            [
+              0,
+              [
+                228.0,
+                434.0,
+                272.0,
+                546.0
+              ]
+            ],
+            [
+              0,
+              [
+                179.0,
+                430.0,
+                223.0,
+                543.0
+              ]
+            ]
+          ],
+          "shape": [
+            999,
+            513
+          ]
+        }
+      }
+    ],
+    "max_matched_coordinate_error_px": 0.0012800000001789158,
+    "xml_area_counts": {
+      "m": 995,
+      "l": 498,
+      "xl": 381,
+      "s": 642,
+      "xs": 190
+    },
+    "yolo_vs_xml_bin_changes": [
+      {
+        "image": "01801.jpg",
+        "xml_box": [
+          564.0,
+          194.0,
+          584.0,
+          214.0
+        ],
+        "yolo_area": 400.0031999999993,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "03585.jpg",
+        "xml_box": [
+          522.0,
+          125.0,
+          542.0,
+          145.0
+        ],
+        "yolo_area": 400.00099999999946,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "03728.jpg",
+        "xml_box": [
+          365.0,
+          133.0,
+          385.0,
+          153.0
+        ],
+        "yolo_area": 400.00099999999975,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "03950.jpg",
+        "xml_box": [
+          454.0,
+          89.0,
+          474.0,
+          109.0
+        ],
+        "yolo_area": 400.0010000000006,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "03950.jpg",
+        "xml_box": [
+          471.0,
+          90.0,
+          491.0,
+          110.0
+        ],
+        "yolo_area": 400.00099999999975,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "04679.jpg",
+        "xml_box": [
+          564.0,
+          151.0,
+          584.0,
+          171.0
+        ],
+        "yolo_area": 400.0010000000003,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "05279.jpg",
+        "xml_box": [
+          586.0,
+          52.0,
+          606.0,
+          72.0
+        ],
+        "yolo_area": 400.00099999999986,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "05556.jpg",
+        "xml_box": [
+          572.0,
+          67.0,
+          592.0,
+          87.0
+        ],
+        "yolo_area": 400.00099999999975,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "05638.jpg",
+        "xml_box": [
+          720.0,
+          57.0,
+          740.0,
+          77.0
+        ],
+        "yolo_area": 400.00100000000003,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "06580.jpg",
+        "xml_box": [
+          646.0,
+          42.0,
+          666.0,
+          62.0
+        ],
+        "yolo_area": 400.00100000000003,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "06744.jpg",
+        "xml_box": [
+          384.0,
+          60.0,
+          404.0,
+          80.0
+        ],
+        "yolo_area": 400.00100000000003,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "06872.jpg",
+        "xml_box": [
+          600.0,
+          63.0,
+          620.0,
+          83.0
+        ],
+        "yolo_area": 400.00100000000003,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "06906.jpg",
+        "xml_box": [
+          661.0,
+          84.0,
+          681.0,
+          104.0
+        ],
+        "yolo_area": 400.00099999999975,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "11944.jpg",
+        "xml_box": [
+          640.0,
+          116.0,
+          660.0,
+          136.0
+        ],
+        "yolo_area": 400.00099999999975,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "12398.jpg",
+        "xml_box": [
+          602.0,
+          109.0,
+          622.0,
+          129.0
+        ],
+        "yolo_area": 400.0010000000006,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "12469.jpg",
+        "xml_box": [
+          606.0,
+          86.0,
+          626.0,
+          106.0
+        ],
+        "yolo_area": 400.00100000000003,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "12469.jpg",
+        "xml_box": [
+          607.0,
+          102.0,
+          627.0,
+          122.0
+        ],
+        "yolo_area": 400.0010000000003,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "13590.jpg",
+        "xml_box": [
+          525.0,
+          100.0,
+          545.0,
+          120.0
+        ],
+        "yolo_area": 400.0010000000003,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "14647.jpg",
+        "xml_box": [
+          577.0,
+          102.0,
+          597.0,
+          122.0
+        ],
+        "yolo_area": 400.0010000000003,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "14675.jpg",
+        "xml_box": [
+          378.0,
+          119.0,
+          398.0,
+          139.0
+        ],
+        "yolo_area": 400.00099999999946,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "14681.jpg",
+        "xml_box": [
+          365.0,
+          88.0,
+          385.0,
+          108.0
+        ],
+        "yolo_area": 400.00099999999946,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "14683.jpg",
+        "xml_box": [
+          361.0,
+          89.0,
+          381.0,
+          109.0
+        ],
+        "yolo_area": 400.00099999999946,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "14851.jpg",
+        "xml_box": [
+          658.0,
+          56.0,
+          678.0,
+          76.0
+        ],
+        "yolo_area": 400.0010000000002,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "15003.jpg",
+        "xml_box": [
+          382.0,
+          113.0,
+          402.0,
+          133.0
+        ],
+        "yolo_area": 400.00099999999946,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "15003.jpg",
+        "xml_box": [
+          400.0,
+          114.0,
+          420.0,
+          134.0
+        ],
+        "yolo_area": 400.0010000000009,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "16086.jpg",
+        "xml_box": [
+          632.0,
+          351.0,
+          646.0,
+          366.0
+        ],
+        "yolo_area": 210.00623984639935,
+        "xml_area": 210.0,
+        "yolo_bin": "s",
+        "xml_bin": "xs"
+      },
+      {
+        "image": "16362.jpg",
+        "xml_box": [
+          478.0,
+          440.0,
+          498.0,
+          460.0
+        ],
+        "yolo_area": 400.003200000001,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "16447.jpg",
+        "xml_box": [
+          797.0,
+          416.0,
+          811.0,
+          431.0
+        ],
+        "yolo_area": 210.00623984639924,
+        "xml_area": 210.0,
+        "yolo_bin": "s",
+        "xml_bin": "xs"
+      },
+      {
+        "image": "16596.jpg",
+        "xml_box": [
+          554.0,
+          227.0,
+          574.0,
+          247.0
+        ],
+        "yolo_area": 400.0031999999999,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "16691.jpg",
+        "xml_box": [
+          553.0,
+          276.0,
+          573.0,
+          296.0
+        ],
+        "yolo_area": 400.00319999999874,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "16719.jpg",
+        "xml_box": [
+          838.0,
+          432.0,
+          858.0,
+          452.0
+        ],
+        "yolo_area": 400.003200000001,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "16942.jpg",
+        "xml_box": [
+          661.0,
+          389.0,
+          675.0,
+          404.0
+        ],
+        "yolo_area": 210.00623984639844,
+        "xml_area": 210.0,
+        "yolo_bin": "s",
+        "xml_bin": "xs"
+      },
+      {
+        "image": "17014.jpg",
+        "xml_box": [
+          717.0,
+          284.0,
+          731.0,
+          299.0
+        ],
+        "yolo_area": 210.00623984639765,
+        "xml_area": 210.0,
+        "yolo_bin": "s",
+        "xml_bin": "xs"
+      },
+      {
+        "image": "17227.jpg",
+        "xml_box": [
+          553.0,
+          276.0,
+          573.0,
+          296.0
+        ],
+        "yolo_area": 400.00319999999874,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "17389.jpg",
+        "xml_box": [
+          521.0,
+          247.0,
+          541.0,
+          267.0
+        ],
+        "yolo_area": 400.0031999999999,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "17549.jpg",
+        "xml_box": [
+          521.0,
+          247.0,
+          541.0,
+          267.0
+        ],
+        "yolo_area": 400.0031999999999,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "17568.jpg",
+        "xml_box": [
+          860.0,
+          420.0,
+          880.0,
+          440.0
+        ],
+        "yolo_area": 400.003200000001,
+        "xml_area": 400.0,
+        "yolo_bin": "m",
+        "xml_bin": "s"
+      },
+      {
+        "image": "17877.jpg",
+        "xml_box": [
+          558.0,
+          288.0,
+          573.0,
+          302.0
+        ],
+        "yolo_area": 210.006208043519,
+        "xml_area": 210.0,
+        "yolo_bin": "s",
+        "xml_bin": "xs"
+      },
+      {
+        "image": "18071.jpg",
+        "xml_box": [
+          590.0,
+          366.0,
+          604.0,
+          381.0
+        ],
+        "yolo_area": 210.00623984640094,
+        "xml_area": 210.0,
+        "yolo_bin": "s",
+        "xml_bin": "xs"
+      },
+      {
+        "image": "18731.jpg",
+        "xml_box": [
+          688.0,
+          504.0,
+          702.0,
+          519.0
+        ],
+        "yolo_area": 210.00623984639924,
+        "xml_area": 210.0,
+        "yolo_bin": "s",
+        "xml_bin": "xs"
+      }
+    ],
+    "out_of_image_xml_boxes": [
+      {
+        "image": "04492.jpg",
+        "box": [
+          951.0,
+          134.0,
+          1001.0,
+          177.0
+        ],
+        "shape": [
+          350,
+          1000
+        ]
+      }
+    ]
+  },
+  "replay": {
+    "metrics": {
+      "map50": 0.9585014386853087,
+      "map50_95": 0.6631840168769547,
+      "per_class_ap50": {
+        "prohibitory": 0.9633990394009249,
+        "mandatory": 0.9560531289637573,
+        "warning": 0.956052147691244
+      },
+      "ultralytics": "8.4.102",
+      "torch": "2.5.1+cu121",
+      "numpy": "2.4.4",
+      "device": "cpu",
+      "matching_source_sha256": "c473ab3020dbdf898a025be5a14836a86e323996010f9e9f7b448a24c6d2791e",
+      "ap_source_sha256": "8aa84632830469aa887ab55b03bced78df7cc903fd8d0ef16407402653b6cbb2"
+    },
+    "stored_val_metrics": {
+      "map50": 0.9603628715832135,
+      "map50_95": 0.6623024675874494,
+      "precision": 0.9503675757820421,
+      "recall": 0.9485544014966226,
+      "per_class_ap50": {
+        "prohibitory": 0.9644461230665551,
+        "mandatory": 0.9600513070485921,
+        "warning": 0.9565911846344936
+      }
+    },
+    "delta_replay_minus_val": {
+      "map50": -0.0018614328979048578,
+      "map50_95": 0.0008815492895053456
+    },
+    "note": "Same installed matching/AP implementation; original-image coordinates. Differences can also involve preprocessing, label scaling, ties or prediction path; this is not causal attribution."
+  },
+  "status": "review_required",
+  "evaluation": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/calibration_method_v2/rtx8000/yolo11n/dev_eval/yolo11n_int8_uniform_s42.json"
+}
