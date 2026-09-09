@@ -102,3 +102,38 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 ```
 
 Sau đó chạy lệnh push riêng ở mục trên. Không stage engine, weights hoặc dữ liệu raw.
+
+## Bước hiện tại: native rematch và diagnostic COCO/XML theo kích thước
+
+Đã nhận capture server tại commit `5eb7ec3`: 1.636 ảnh, 2.706 GT; mAP50 = 0,9777499256550611 và mAP50-95 = 0,7630247217006284. Replay từ TP đã serialize trên server khớp chính xác các metric. `scripts/verify_cctsdb_capture.py` tính lại IoU và assignment từ bbox native, không dùng TP đã lưu làm đầu vào, rồi đối chiếu TP. Thử local trên toàn bộ capture cho 0 quyết định TP khác nhau. Đây là kiểm chứng đường dữ liệu/geometry bằng cùng thuật toán Ultralytics, không phải chứng minh độc lập rằng thiết kế matching của Ultralytics là chuẩn COCO.
+
+Script mới còn tạo diagnostic riêng bằng **pycocotools 2.0.10**: score-greedy matching, one-to-one cho GT không crowd; bỏ qua GT ngoài size-bin và prediction không match nằm ngoài khoảng diện tích theo quy ước COCO. AP dùng 101 recall points và 10 IoU 0,50–0,95. Nó không tương đương chính xác AP nội suy của Ultralytics hoặc evaluator size cũ. Tham chiếu implementation: https://github.com/cocodataset/cocoapi/blob/master/PythonAPI/pycocotools/cocoeval.py.
+
+Các quy tắc được ghi trong JSON:
+
+- XML theo member ID, tọa độ ảnh gốc; diện tích liên tục `(xmax-xmin)*(ymax-ymin)`, không `+1`, không làm tròn/clip GT.
+- Giữ các biên đang có: XS ≤210; S (210,400]; M (400,1000]; L (1000,2000]; XL >2000 pixel². Đây là diagnostic có version, không tự tuyên bố đã khớp toàn bộ thống kê bài gốc.
+- Prediction từ cùng lượt val, scaled/clipped về ảnh gốc; tối đa 300 detection/ảnh, giữ score ties ổn định và box suy biến do clipping.
+- Class không có GT trong bin nhận `null` và không vào trung bình; không tự thay bằng 0.
+- Tính `all` và XS/S/M/L/XL dưới cùng một quy ước COCO/XML. Không so size mới với size cũ như thể chỉ model thay đổi. Không dùng full COCO/XML thay thế âm thầm full Ultralytics.
+- Giữ nguyên XML khác YOLO ở `00751` và box ngoài biên ở `04492`, ghi nhận thay vì sửa dữ liệu huấn luyện. Chưa tính size INT8 hoặc quyết định policy.
+
+Sáu test mới kiểm tra biên diện tích, perfect/empty predictions, missing class, duplicate FP, ignore ngoài bin, score ties, phát hiện TP bị sửa, geometry lỗi và không làm thay đổi input. Tổng 21 test đạt local. Native matching chạy được local; phần dev XML đầy đủ phải chạy server. Không cần GPU, weights, export hay inference mới.
+
+Sau khi pull code, tạo môi trường audit phụ để không thay dependency của conda training. Chỉ bổ sung pycocotools vào venv phụ; không upgrade Torch/Ultralytics/TensorRT:
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python -m venv --system-site-packages local/g0_size_env && local/g0_size_env/bin/python -m pip install --no-deps pycocotools==2.0.10
+```
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/verify_cctsdb_capture.py --capture-dir results/measurement_audit_v1/server_fp16_capture_v1 --xml ../nighttime-tsd/data/raw/CCTSDB2021/xml.zip --out-dir results/measurement_audit_v1/server_native_size_v1
+```
+
+Output: `native_matching.json`, `size_coco_xml.json`, `verification_summary.json`. Không ghi đè output đã tồn tại. `DONE` nghĩa audit hoàn tất; `native_matching_status: pass` chỉ xác nhận matching, còn `global_g0: review_required` được giữ có chủ ý để review quy ước annotation/size và capture INT8. Nếu có khác biệt TP thì trả exit 2 với chi tiết, không tự nới tolerance.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git add -f results/measurement_audit_v1/server_native_size_v1/native_matching.json results/measurement_audit_v1/server_native_size_v1/size_coco_xml.json results/measurement_audit_v1/server_native_size_v1/verification_summary.json && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git commit -m "results: G0 native matching and versioned size diagnostic"
+```
+
+Sau đó push riêng như trên. Không chạy thêm calibration hay scale 15 model trước khi review kết quả.
