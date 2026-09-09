@@ -78,3 +78,27 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 ## Gate tiếp theo
 
 Đối chiếu replay cùng environment server và XML dev. Nếu vẫn lệch, kiểm tra hoặc bổ sung capture prediction ngay trong validator để dùng cùng một lượt inference cho mAP/size/bootstrap; version kết quả mới, không ghi đè số cũ. Sau đó mới kiểm chứng evaluator size với matching/ignore/IoU thresholds chuẩn và chuyển sang phân tích lỗi YOLO11n trên dev. G0 hiện chưa pass, chưa triển khai ba-nano pilot hoặc matrix 15 model.
+
+## Kết quả server và bước capture cùng lượt val
+
+Đã nhận audit tại commit `b4b110a`. Cả bốn report hoàn tất, trạng thái `review_required`, không có `error`. `00751.jpg` có một bbox XML khác YOLO khoảng 0,5 pixel; raw YOLO archive cũng có tọa độ khác XML, nên không quy lỗi này cho training. `04492.jpg` có một bbox vượt chiều rộng ảnh 1 pixel. Có 40 object đổi size-bin khi dùng diện tích YOLO float thay cho XML. Không sửa annotation hoặc đổi ngưỡng để ép pass.
+
+Source code Ultralytics 8.4.102 xác nhận `_process_batch()` tính IoU/matching trong tọa độ ảnh input; `scale_preds()` đưa bbox về ảnh gốc và clip biên. Công cụ mới `scripts/capture_cctsdb_validator.py` intercept chính `_process_batch()` trong một lượt validator và trả nguyên kết quả cho parent. Nó lưu prediction cả hai hệ tọa độ, target bbox thực tế, TP cho 10 IoU, thứ tự và dtype thống kê. Không gọi `model.predict()` hoặc chạy inference lần hai.
+
+Sau khi ghi JSON, script đọc lại TP/confidence/class/target và tính lại AP/P/R bằng cùng `ap_per_class`. Dtype được giữ vì confidence INT8 có nhiều ties. Chênh lệch từng metric và per-class AP phải không quá `1e-12`. Đây là kiểm chứng serialization/aggregation trong cùng run; không phải xác minh độc lập thuật toán matching hoặc giải quyết hết G0. Capture vẫn lưu native bbox để kiểm chứng geometry/matching độc lập ở bước sau.
+
+Script khóa vào engine FP16 YOLO11n cũ (kiểm tra hash), dev 1.636 ảnh, batch 1, imgsz 640, cùng GPU phase lock. Không có tùy chọn test hoặc policy. Kết quả vào thư mục mới. Bộ test so sánh parent validator với capture validator, bao gồm confidence ties, ảnh không detection, ảnh không GT, clipping và replay từ JSON; tổng 15 test đạt local. Chưa chạy TensorRT thật ở local.
+
+Sau khi pull code mới, chạy trực tiếp:
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/capture_cctsdb_validator.py --out-dir results/measurement_audit_v1/server_fp16_capture_v1 --device 0
+```
+
+Khi thấy `DONE` và `status: pass`, chỉ phần same-run replay đã đạt. Nếu `review_required` hoặc lỗi, không train/export lại. Thư mục chứa `capture_report.json`, `validator_predictions.json` và `dev_absolute.yaml`.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git add -f results/measurement_audit_v1/server_fp16_capture_v1/capture_report.json results/measurement_audit_v1/server_fp16_capture_v1/validator_predictions.json results/measurement_audit_v1/server_fp16_capture_v1/dev_absolute.yaml && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git commit -m "results: G0 single-pass FP16 dev validation capture"
+```
+
+Sau đó chạy lệnh push riêng ở mục trên. Không stage engine, weights hoặc dữ liệu raw.
