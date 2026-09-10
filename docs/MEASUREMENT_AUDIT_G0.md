@@ -137,3 +137,27 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 ```
 
 Sau đó push riêng như trên. Không chạy thêm calibration hay scale 15 model trước khi review kết quả.
+
+## INT8 capture trên dev sau native FP16 pass
+
+Commit kết quả server `2f3d496` xác nhận 63.530 quyết định TP trên 1.636 ảnh FP16 không khác CPU rematch. Các hash capture/code/engine khớp. Diagnostic COCO/XML có 2.706 GT; XS/S/M/L/XL = 190/642/995/498/381. Full AP50/AP50-95 COCO/XML = 0,9728170266748176 / 0,756546108865103. Đây không thay thế full Ultralytics 0,9777499256550611 / 0,7630247217006284.
+
+`scripts/run_g0_int8_capture.py` chạy đúng ba engine INT8 v2 seed42 hiện có: Uniform, Low-Luminance, VCSC proportional. Trình tự cho từng engine: same-pass dev capture → native rematch → COCO/XML size → đối chiếu với FP16. Không retrain/export, không calibration mới, không test, không chọn seed/policy. Môi trường và engine hash được kiểm tra trước inference; output luôn mới, không auto-skip kết quả dở dang. Nếu thất bại giữa chừng, giữ output và đọc lỗi trước khi chọn tên phiên bản mới để chạy lại.
+
+Capture mặc định vẫn là FP16, nhưng nhận `--representation` từ allowlist cố định. Hash engine phải khớp evaluation và provenance; source hash phải là frozen YOLO11n; INT8 phải có bằng chứng cache isolation. Runner kiểm tra Torch/NumPy/Ultralytics/TensorRT cùng phiên bản FP16, dùng GPU phase lock ở mỗi capture, chạy tuần tự, và đối chiếu từng image ID, kích thước, ratio_pad, native GT/class với FP16. Mỗi capture lưu same-run replay; matching có sai khác thì dừng để review.
+
+Bảng cuối lưu riêng hai quy ước: `ultralytics_full` và `coco_xml` (all + 5 bins). Delta tính theo điểm phần trăm (INT8 − FP16), không trộn giữa evaluator. Gate G0 vẫn `review_required`; một seed chưa đủ kết luận superiority hoặc ổn định sampling. Evaluator cũ, annotation và engine không bị sửa. 24 test local đạt, gồm kiểm tra hash/cache/allowlist, sai lệch target và metric convention. Chưa chạy TensorRT thực trên local.
+
+Sau khi pull code, dùng venv audit phụ đã tạo, chạy foreground:
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_g0_int8_capture.py --out-dir results/measurement_audit_v1/server_int8_capture_v1 --device 0
+```
+
+Chờ `DONE: .../comparison_summary.json`. Trong mỗi thư mục policy có `capture/` (report, predictions, YAML), `verification/` (native, COCO/XML, summary) và `comparison.json`. Capture sử dụng GPU; không chạy train/export/benchmark đồng thời. Các bước verification dùng CPU.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git add -f -- ':(glob)results/measurement_audit_v1/server_int8_capture_v1/**/*.json' ':(glob)results/measurement_audit_v1/server_int8_capture_v1/**/*.yaml' && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git commit -m "results: G0 same-pass INT8 dev capture and size comparison"
+```
+
+Sau đó push riêng theo lệnh ở trên. Chỉ push artifact audit; không thêm engine/weights/raw data.

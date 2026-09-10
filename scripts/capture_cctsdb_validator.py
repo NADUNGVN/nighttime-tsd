@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""G0 single-pass FP16/dev validation capture. No training, export or policy selection."""
+"""G0 single-pass frozen YOLO11n/dev capture. No training, export or policy selection."""
 from __future__ import annotations
 
 import argparse
@@ -21,6 +21,38 @@ from audit_cctsdb_measurement import NAMES, SUFFIXES, sha256
 from run_architecture_matrix import GpuPhaseLock
 
 PINNED_VERSION = "8.4.102"
+REPRESENTATIONS = ("fp16", "uniform", "low_luminance", "vcsc_proportional")
+FROZEN_WEIGHTS_SHA256 = "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
+
+
+def capture_inputs(repo, representation):
+    """Allow only the existing reference and initial v2 INT8 engines."""
+    if representation not in REPRESENTATIONS:
+        raise ValueError("Unsupported representation")
+    base = repo / "results/calibration_method_v2/rtx8000/yolo11n"
+    label = "yolo11n_fp16_reference" if representation == "fp16" else f"yolo11n_int8_{representation}_s42"
+    engine = (repo / "results/calibration_method_v1/rtx8000/yolo11n/engines" if representation == "fp16" else base / "engines") / f"{label}.engine"
+    provenance = Path(str(engine) + ".provenance.json")
+    previous = base / "dev_eval" / f"{label}.json"
+    for p in (engine, provenance, previous):
+        if not p.is_file():
+            raise FileNotFoundError(f"Missing: {p}")
+    old = json.loads(previous.read_text(encoding="utf-8"))
+    prov = json.loads(provenance.read_text(encoding="utf-8"))
+    digest = sha256(engine)
+    if digest != old["model_sha256"] or digest != prov["engine_sha256"]:
+        raise ValueError("Engine hash differs from existing evaluation/provenance")
+    if prov["source_weights_sha256"] != FROZEN_WEIGHTS_SHA256:
+        raise ValueError("Source weights are not the frozen YOLO11n weights")
+    if Path(old["data"]).name != "cctsdb2021_dev.yaml":
+        raise ValueError("Historical reference is not dev")
+    if prov["precision"] != ("fp16" if representation == "fp16" else "int8"):
+        raise ValueError("Precision mismatch")
+    if representation != "fp16":
+        cache = prov.get("calibration_cache", {})
+        if cache.get("isolation") != "fresh per-engine temporary workspace; never shared across policies or seeds" or not cache.get("sha256"):
+            raise ValueError("INT8 calibration cache isolation evidence missing")
+    return engine, provenance, previous, old, prov, digest
 
 
 def serial(value):
@@ -99,30 +131,27 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--device", default="0")
+    parser.add_argument("--representation", choices=REPRESENTATIONS, default="fp16")
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     if ultralytics.__version__ != PINNED_VERSION:
         parser.error(f"Activate nighttime-tsd: requires ultralytics {PINNED_VERSION}; do not upgrade")
     import tensorrt as trt
     if not torch.cuda.is_available():
-        parser.error("CUDA is unavailable; this capture requires the existing FP16 TensorRT engine")
-    engine = repo / "results/calibration_method_v1/rtx8000/yolo11n/engines/yolo11n_fp16_reference.engine"
-    provenance = Path(str(engine) + ".provenance.json")
-    previous = repo / "results/calibration_method_v2/rtx8000/yolo11n/dev_eval/yolo11n_fp16_reference.json"
+        parser.error("CUDA is unavailable; this capture requires an existing TensorRT engine")
+    engine, provenance, previous, old, prov, engine_hash = capture_inputs(repo, args.representation)
+    if trt.__version__ != prov["environment"]["tensorrt_python"]:
+        parser.error("TensorRT version differs from engine export; do not rebuild automatically")
     split = repo / "data/processed/cctsdb2021_clean/dev"
     if args.out_dir.exists():
         parser.error("Output exists; use a new version, never overwrite")
     for p in (engine, provenance, previous, split / "images", split / "labels"):
         if not p.exists():
             parser.error(f"Missing: {p}")
-    old = json.loads(previous.read_text(encoding="utf-8"))
-    engine_hash = sha256(engine)
-    if engine_hash != old["model_sha256"]:
-        parser.error("FP16 engine hash differs from frozen reference")
     expected = {p.name for p in (split / "images").iterdir() if p.suffix.lower() in SUFFIXES}
     if len(expected) != 1636 or {Path(n).stem for n in expected} != {p.stem for p in (split / "labels").glob("*.txt")}:
         parser.error("Expected exactly 1636 dev images with matching labels")
-    with GpuPhaseLock(repo / "results/architecture_matrix_v1/.gpu_phase.lock", "g0_fp16_dev_capture"):
+    with GpuPhaseLock(repo / "results/architecture_matrix_v1/.gpu_phase.lock", f"g0_{args.representation}_dev_capture"):
         args.out_dir.mkdir(parents=True)
         data = args.out_dir / "dev_absolute.yaml"
         data.write_text(f"path: {split.as_posix()}\ntrain: images\nval: images\nnames:\n  0: prohibitory\n  1: mandatory\n  2: warning\nnc: 3\n", encoding="utf-8")
@@ -148,6 +177,7 @@ def main():
         passed = all(abs(v) <= 1e-12 for v in [*differences.values(), *class_differences.values()])
         commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
         result = {"schema_version": 1, "created_utc": datetime.now(timezone.utc).isoformat(), "git_commit": commit,
+            "representation": args.representation, "source_weights_sha256": prov["source_weights_sha256"],
             "script_sha256": sha256(Path(__file__)), "model_sha256": engine_hash, "engine_provenance_sha256": sha256(provenance),
             "dataset_split": "CCTSDB2021/dev", "runtime_arguments": runtime, "resolved_arguments": {k: str(v) if isinstance(v, Path) else v for k,v in vars(validator.args).items()},
             "environment": {"python": platform.python_version(), "ultralytics": ultralytics.__version__, "torch": torch.__version__, "cuda": torch.version.cuda, "numpy": np.__version__, "tensorrt": trt.__version__, "gpu": torch.cuda.get_device_name(validator.device)},
