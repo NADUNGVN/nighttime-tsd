@@ -1,0 +1,8 @@
+path: /home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/dev
+train: images
+val: images
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+nc: 3
