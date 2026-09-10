@@ -60,7 +60,7 @@ def size_ranges():
     return [list(b) for b in bounds]
 
 
-def coco_size(records, xml):
+def coco_size(records, xml, *, return_evaluator=False):
     from pycocotools.coco import COCO
     from pycocotools.cocoeval import COCOeval
 
@@ -117,7 +117,7 @@ def coco_size(records, xml):
         valid = values[values >= 0]
         metrics[label] = {"instances": sum(label == "all" or size_bin(ann["area"]) == label for ann in annotations),
             "map50": float(p50.mean()) if len(p50) else None, "map50_95": float(valid.mean()) if len(valid) else None, "per_class": per_class}
-    return {"metrics": metrics, "images": len(images), "predictions": len(detections), "out_of_image_xml_boxes_preserved": outside,
+    report = {"metrics": metrics, "images": len(images), "predictions": len(detections), "out_of_image_xml_boxes_preserved": outside,
         "metric_id": "COCO_bbox_AP_custom_CCTSDB_area_XML_original_coordinates_v1",
         "rules": {"ground_truth": "XML bbox and continuous area (xmax-xmin)*(ymax-ymin), unrounded and unclipped; no +1. XML mismatches are not silently replaced by YOLO labels.",
             "predictions": "Same-val captured original-image scaled/clipped bbox; no separate predict call.",
@@ -128,6 +128,7 @@ def coco_size(records, xml):
         "pycocotools": importlib.metadata.version("pycocotools"),
         "evaluator_source_sha256": hashlib.sha256(inspect.getsource(COCOeval).encode()).hexdigest(),
         "interpretation": "Versioned diagnostic, not official CCTSDB evaluator or Ultralytics mAP. All and size AP share this COCO/XML convention. Never compare its size AP to historical custom-size AP as if only model changed."}
+    return (report, evaluator) if return_evaluator else report
 
 
 def validate_capture(payload):

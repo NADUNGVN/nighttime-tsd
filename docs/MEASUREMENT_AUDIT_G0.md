@@ -161,3 +161,36 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 ```
 
 Sau đó push riêng theo lệnh ở trên. Chỉ push artifact audit; không thêm engine/weights/raw data.
+
+## Phân tích dev từ capture đã kiểm chứng: localization và paired bootstrap
+
+Đã nhận `b40c6db`: cả ba INT8 seed42 đều capture pass; CPU rematch local và server không có quyết định TP khác nhau. Replay AP/P/R và historical validation khớp chính xác. Scope giữ nguyên frozen YOLO11n/dev, không official test hoặc calibration mới.
+
+Quy ước phép đo được cố định cho bước phân tích này: full Ultralytics vẫn giữ nguyên làm metric validation; all + size COCO/XML là hệ diagnostic riêng. CI ở bước này **chỉ áp dụng COCO/XML**, không ghép vào điểm AP Ultralytics. XML nguyên bản, area liên tục không +1/round/clip GT, boundary XS/S/M/L/XL và matching/ignore giữ như bước trước. Các khác biệt annotation đã audit vẫn được ghi nhận; bước này không tuyên bố size evaluator là evaluator chính thức của tác giả dataset hay đóng toàn bộ G0.
+
+`scripts/analyze_dev_quantization.py` chỉ đọc capture và XML dev rồi:
+
+1. Kiểm tra liên kết hash, cùng GT/preprocessing, cùng evaluator/config; tính lại COCO point estimate và bắt buộc khớp size report trước ở tolerance 1e-12.
+2. Phân tích GT-centric bằng ALL-area same-class COCO matching tại IoU 0,50/0,75/0,90. Báo recall theo size, số GT mất/được match so với FP16; median IoU và sai số tâm chuẩn hóa của cặp đã match ở IoU50. Median có selection bias do chỉ gồm cặp đã match, không phải causal decomposition. Confidence là ngưỡng lưu prediction 0,001, không phải ngưỡng deployment.
+3. Paired image bootstrap mặc định 1.000 mẫu, PCG64 seed 20260910; mỗi mẫu N ảnh lấy có hoàn lại, cùng indices cho FP16 và cả ba INT8. Giữ cả các lần xuất hiện lặp, sắp theo source filename để tie-breaking ổn định. Tái sử dụng matching trong từng ảnh và chạy lại official COCO accumulation trên mẫu; không trung bình AP từng ảnh.
+4. Lưu mAP50 và mAP50-95 cho all/XS/S/M/L/XL từng draw; percentile 95% CI của chênh lệch INT8−FP16 và Low-Luminance/VCSC−Uniform, đơn vị điểm phần trăm. Nếu một class có GT ở endpoint gốc biến mất trong bootstrap draw, endpoint nhận null; báo số draw hợp lệ/không xác định, không tự đổi macro class set.
+
+Đây là exploratory dev inference, CI không hiệu chỉnh multiple comparisons, không phải bằng chứng superiority xác nhận. CI điều kiện trên bốn engine seed42 cố định; không đo calibration-seed variance. IID image bootstrap có thể đánh giá thấp uncertainty nếu có scene/camera/sequence dependence. Không chọn policy hoặc scale từ CI này tự động.
+
+29 test local đạt, gồm so cached-bootstrap với fresh COCO evaluation khi nhân bản image occurrences, trường hợp không prediction/thiếu GT class/ties, zero paired delta khi engine giống nhau, percentile/missing endpoints và localization transitions. Toàn bộ dev XML chỉ có server, nên chưa chạy full-data bootstrap ở local. Trước bootstrap script luôn kiểm chứng lại point estimates trên server, rồi mới ghi output mới. Bản evaluator cũ không bị thay kết quả: thay đổi helper chỉ thêm tùy chọn trả về đối tượng COCO để tái sử dụng matching.
+
+Sau khi pull code, chạy foreground bằng venv audit đã có (CPU, không inference, không GPU):
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/analyze_dev_quantization.py --out-dir results/measurement_audit_v1/server_dev_error_bootstrap_v1 --resamples 1000 --seed 20260910
+```
+
+Đầu tiên chờ bốn dòng `VERIFIED`, sau đó `BOOTSTRAP .../1000`, và cuối cùng `DONE: .../analysis_summary.json`. Script in thời gian đã chạy và ETA; không cần nohup. Không ghi đè thư mục có sẵn. Chạy thử nhanh có thể dùng `--resamples 10` với một output khác; kết quả đó ghi `smoke_only`, không dùng làm CI cuối.
+
+Artifact: `bootstrap_samples.json` (image names + indices), `bootstrap_draws.json`, `localization_per_gt.json`, `localization_summary.json`, `analysis_summary.json` (CIs, provenance và limitations). G0 vẫn `review_required` chờ xem report, chưa thêm train/export/INT8 matrix.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git add -f results/measurement_audit_v1/server_dev_error_bootstrap_v1/*.json && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git commit -m "results: dev localization diagnostics and paired image bootstrap"
+```
+
+Push riêng theo quy trình phía trên; chỉ audit JSON, không weights/engine/raw data.
