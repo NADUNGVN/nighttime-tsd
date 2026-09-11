@@ -132,6 +132,8 @@ def main():
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--device", default="0")
     parser.add_argument("--representation", choices=REPRESENTATIONS, default="fp16")
+    parser.add_argument("--repeat-study", type=Path, help="Scoped Step-A Uniform build study; no arbitrary engine")
+    parser.add_argument("--repeat-index", type=int, choices=(1,2,3))
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
     if ultralytics.__version__ != PINNED_VERSION:
@@ -139,7 +141,16 @@ def main():
     import tensorrt as trt
     if not torch.cuda.is_available():
         parser.error("CUDA is unavailable; this capture requires an existing TensorRT engine")
-    engine, provenance, previous, old, prov, engine_hash = capture_inputs(repo, args.representation)
+    if args.repeat_study is not None:
+        if args.repeat_index is None or args.representation != 'fp16':
+            parser.error('Repeat capture requires --repeat-index and no --representation override')
+        from uniform_build_repeat import repeat_capture_inputs
+        engine, provenance, previous, old, prov, engine_hash = repeat_capture_inputs(repo,args.repeat_study,args.repeat_index)
+        args.representation = f'uniform_build_repeat_{args.repeat_index}'
+    else:
+        if args.repeat_index is not None:
+            parser.error('--repeat-index requires --repeat-study')
+        engine, provenance, previous, old, prov, engine_hash = capture_inputs(repo, args.representation)
     if trt.__version__ != prov["environment"]["tensorrt_python"]:
         parser.error("TensorRT version differs from engine export; do not rebuild automatically")
     split = repo / "data/processed/cctsdb2021_clean/dev"

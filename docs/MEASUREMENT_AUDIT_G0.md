@@ -224,3 +224,38 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 ```
 
 Sau đó push riêng như các mục trên. Chưa có ablation layer/precision mới được chạy hoặc policy mới được chọn.
+
+## Bước A đã được duyệt: kiểm tra biến thiên build Uniform, không bảo vệ head
+
+Inspector server commit `d789016` cung cấp detailed cho ba INT8, FP16 chỉ names-only. Conv weights Int8/Float là 64/21 (Uniform), 74/11 (Low-Luminance), 78/7 (VCSC proportional); không được suy thành precision mọi phép tính/accumulator. Sự khác biệt này chưa chứng minh do calibration sampling vì TensorRT có thể chọn tactic/precision khác giữa các lần build. Theo [NVIDIA precision control](https://docs.nvidia.com/deeplearning/tensorrt/10.x.x/inference-library/precision-control.html), timing noise có thể thay đổi lựa chọn implementation; vì vậy đo build variability trước khi ablation head.
+
+`scripts/uniform_build_repeat.py` chỉ thực hiện Step A:
+
+- Giữ `best.pt` hash 3e5fc7..., Uniform v2 seed42 n1024; kiểm tra manifest khớp historical và ảnh khớp source train, không trùng IDs dev/test.
+- Stage bản sao weights và export **ONNX một lần**: opset17, simplify, static [1,3,640,640], không Q/DQ, không retrain. Ghi hash ONNX và phiên bản exporter dependencies.
+- Dùng calibration loader của Ultralytics 8.4.102, batch1, rect=False, fraction1, workers0; lưu thứ tự 1.024 IDs và uint8 tensor file (~1,26 GB), hash nguồn ảnh/tensor/float32 stream. Nguồn inference calibration sau đó là tensor đã đóng băng, không decode lại giữa các build. Đây là calibration từ train, không đưa dev vào scales.
+- Custom controlled TensorRT10.16.1 builder giữ INT8 flag, không FP16 flag, TF32 tắt (RTX8000 không có TF32), OBEY cho Sigmoid FP32 như exporter hiện tại. **Không đặt constraint bbox/classification mới.** Workspace cố định 4 GiB, optimization level3, timing iterations1, detailed inspector. Đây là baseline kiểm soát mới, không phải tuyên bố recreate bitwise historical engine dùng default workspace.
+- Build 1 tạo calibration cache trong study riêng. Build 2 và 3 bắt buộc đọc cùng cache đó, không được gọi get_batch/recalibrate; xác nhận hash giống nhau. Đây là reuse có chủ đích trong cùng ONNX/calibration contract, không phải cache chung giữa policy như lỗi lịch sử. Hash cache historical được đối chiếu và báo true/false, không tự ép khớp.
+- **Timing cache khởi tạo rỗng ở từng repeat**, không warm từ repeat trước, để quan sát tactic retiming. Lưu mỗi timing cache và verbose log riêng, không nhầm với calibration cache. Mỗi build là process mới và có GPU phase lock. Kiểm tra process CUDA khác trước build, không tự kill hoặc khóa clock; ghi UUID/driver/clock/power/temperature trước/sau. Snapshot không chứng minh loại bỏ hoàn toàn thermal/noise.
+- Capture từng engine mới trên dev bằng cùng validator, replay/matching/COCO-size verification, cùng target/preprocessing với FP16. Không test/domain-negative evaluation, không bootstrap mới, không train. Capture CLI chỉ nhận study trong `results/measurement_audit_v1` và repeat 1..3 có provenance phù hợp, không arbitrary engine.
+- Báo inspector signature (name/type/I/O/weights/tactic name), weight-type counts và mean/sample SD/min/max/range pp của size/full COCO AP50/AP50-95. Lưu riêng Ultralytics AP. Engine hash khác chưa đủ kết luận output khác; xem metric và inspector. Ba repeat chưa đủ bảo đảm tính xác định hoặc ước lượng tổng thể variance chính xác.
+
+Kết thúc là `step_A_completed_review_required`; **không tự chạy B/C**. Nếu biến thiên build đủ lớn để ảnh hưởng chênh lệch cần kiểm tra thì phải kiểm soát tactic trước. Chưa đặt threshold tùy tiện để tuyên bố thành công.
+
+39 test local đạt (contract/settings/hash, chống ghi đè, train-only/duplicate IDs, process guard, inspector signature và các test đo trước đó). Compile/CLI đã kiểm tra; không có TensorRT GPU ở local để xác nhận end-to-end build. Server dùng venv `local/g0_size_env` kế thừa nighttime-tsd; không upgrade packages. Cần khoảng vài GB trống cho staged tensors, ONNX, engines và verbose logs. Script giữ mọi artifact trên server, không tự xóa. Không auto-resume partial output.
+
+Sau khi pull, chạy foreground. Dự kiến nhiều phút cho 3 build; mỗi build có log riêng, không coi khoảng không có output terminal là treo:
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/uniform_build_repeat.py --out-dir results/measurement_audit_v1/server_uniform_build_repeat_v1
+```
+
+Theo dõi `FROZEN CALIBRATION`, `START BUILD 1/3` → `FINISHED BUILD 1/3` tới 3/3, sau đó val/verifications, cuối cùng `DONE: .../repeat_summary.json`. Có thể xem `build_1.log`, `build_2.log`, `build_3.log` ở terminal khác. Các file `.log.gz` được tạo sau mỗi build để push nhỏ hơn; giữ bản .log gốc. Lỗi dừng ngay, đọc log, không lặp `all` lên output cũ. Các phase prepare/build/evaluate riêng chỉ phục vụ xử lý có review; không tự chọn lại build tốt nhất.
+
+Push JSON (bao gồm predictions/inspector), cache và log nén; **không stage source.pt, source.onnx, calibration_uint8.npy hoặc engine** trong lệnh này. Những file đó vẫn giữ server và có hash:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git add -f -- ':(glob)results/measurement_audit_v1/server_uniform_build_repeat_v1/**/*.json' ':(glob)results/measurement_audit_v1/server_uniform_build_repeat_v1/**/*.cache' ':(glob)results/measurement_audit_v1/server_uniform_build_repeat_v1/*.log.gz' && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git commit -m "results: Uniform controlled three-build repeatability audit"
+```
+
+Sau đó push riêng. Review kết quả A trước khi cân nhắc B: FP32 bbox branch hoặc C: FP32 classification control, không triển khai hai bước đó qua runner này.
