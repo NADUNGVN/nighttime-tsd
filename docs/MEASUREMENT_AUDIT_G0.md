@@ -259,3 +259,7 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 ```
 
 Sau đó push riêng. Review kết quả A trước khi cân nhắc B: FP32 bbox branch hoặc C: FP32 classification control, không triển khai hai bước đó qua runner này.
+
+### Preflight ONNX Runtime distribution fix
+
+Server dừng trước tạo study output vì kiểm tra metadata chỉ tìm `onnxruntime`. Đây không chứng minh module thiếu: `onnxruntime-gpu` và `onnxruntime-qnn` cũng cung cấp module `onnxruntime`, và exporter Ultralytics chấp nhận các biến thể này. Preflight sửa để kiểm tra các distribution hợp lệ, import module thật và query available providers; ghi phiên bản/path/providers vào manifest. Nếu thực sự thiếu hoặc import lỗi, dừng có thông báo rõ, không tự cài/nâng cấp. 41 test local đạt, gồm ba variant và missing/broken runtime; local không có đầy đủ ONNX/TensorRT để chạy build thật. Lần server thất bại này chưa tạo thư mục output nên chưa có kết quả để commit; có thể dùng lại tên study sau pull bản sửa, nếu thư mục vẫn chưa tồn tại.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import gzip
 import hashlib
+import importlib
 import importlib.metadata
 import inspect
 import json
@@ -39,6 +40,31 @@ def digest_bytes(data):
 def write_bytes(path,data):
     with path.open('xb') as f:
         f.write(data)
+
+
+def onnx_dependencies():
+    """Distribution names differ from the shared onnxruntime import module."""
+    try:
+        packages={p:importlib.metadata.version(p) for p in ('onnx','onnxslim')}
+    except importlib.metadata.PackageNotFoundError as error:
+        raise RuntimeError(f'Missing ONNX export dependency: {error}. Inspect the environment first; no automatic installation.') from error
+    variants={}
+    for name in ('onnxruntime','onnxruntime-gpu','onnxruntime-qnn'):
+        try:
+            variants[name]=importlib.metadata.version(name)
+        except importlib.metadata.PackageNotFoundError:
+            continue
+    if not variants:
+        raise RuntimeError('No ONNX Runtime distribution found. Stop before export; inspect g0_size_env with python -m pip show onnxruntime onnxruntime-gpu onnxruntime-qnn. Do not auto-install or upgrade.')
+    try:
+        ort=importlib.import_module('onnxruntime')
+        providers=list(ort.get_available_providers())
+    except Exception as error:
+        raise RuntimeError(f'ONNX Runtime is installed ({variants}) but cannot import/query providers; do not rebuild or auto-upgrade: {error}') from error
+    packages.update(variants)
+    return {'distributions':packages,'runtime_import_version':ort.__version__,
+            'runtime_import_path':ort.__file__,'available_providers':providers,
+            'multiple_runtime_distributions':len(variants)>1}
 
 
 def environment():
@@ -104,8 +130,7 @@ def prepare(repo,root):
     check_reference(repo/'results/measurement_audit_v1/server_fp16_capture_v1',
                     repo/'results/measurement_audit_v1/server_native_size_v1',
                     (repo/'../nighttime-tsd/data/raw/CCTSDB2021/xml.zip').resolve())
-    for package in ('onnx','onnxslim','onnxruntime'):
-        importlib.metadata.version(package)
+    onnx_packages=onnx_dependencies()
     if root.exists():
         raise FileExistsError('Study directory exists: preserve it; do not auto-skip/rebuild')
     source=repo/'results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt'
@@ -162,7 +187,7 @@ def prepare(repo,root):
         contract={'study':STUDY,'environment':env,'settings':SETTINGS,'source_weights_sha256':sha256(source),'engine_metadata':metadata,
             'historical_uniform_calibration_cache_sha256':historical['calibration_cache']['sha256'],
             'onnx_export':{'opset':17,'simplify':True,'dynamic':False,'half':False,'imgsz':640,'batch':1},
-            'onnx_packages':{p:importlib.metadata.version(p) for p in ('onnx','onnxslim','onnxruntime')},
+            'onnx_packages':onnx_packages,
             'onnx_sha256':sha256(onnx),'calibration_tensor_file_sha256':sha256(root/'calibration_uint8.npy'),
             'calibration_float32_stream_sha256':stream.hexdigest(),'calibration_manifest_sha256':sha256(cal/'calibration_manifest.json'),
             'calibration_order':order,'calibration_source_image_sha256':{name:sha256(cal/'images'/name) for name in names},

@@ -4,15 +4,42 @@ import os
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
+from importlib.metadata import PackageNotFoundError
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
-from uniform_build_repeat import SETTINGS,STUDY,load_contract,ensure_idle,inspector_signature,write_bytes,validate_selection
+from uniform_build_repeat import SETTINGS,STUDY,load_contract,ensure_idle,inspector_signature,write_bytes,validate_selection,onnx_dependencies
 from capture_cctsdb_validator import FROZEN_WEIGHTS_SHA256
 from audit_cctsdb_measurement import sha256
 
 
 class BuildRepeatTests(unittest.TestCase):
+    def test_onnxruntime_distribution_variants(self):
+        for variant in ('onnxruntime','onnxruntime-gpu','onnxruntime-qnn'):
+            def version(name):
+                if name in ('onnx','onnxslim',variant):
+                    return '1.0'
+                raise PackageNotFoundError(name)
+            module=SimpleNamespace(__version__='1.0',__file__='/env/onnxruntime/__init__.py',get_available_providers=lambda:['CPUExecutionProvider'])
+            with patch('uniform_build_repeat.importlib.metadata.version',side_effect=version),patch('uniform_build_repeat.importlib.import_module',return_value=module):
+                result=onnx_dependencies()
+                self.assertIn(variant,result['distributions'])
+                self.assertFalse(result['multiple_runtime_distributions'])
+
+    def test_missing_or_broken_runtime_fails_before_export(self):
+        def version(name):
+            if name in ('onnx','onnxslim'):
+                return '1.0'
+            raise PackageNotFoundError(name)
+        with patch('uniform_build_repeat.importlib.metadata.version',side_effect=version):
+            with self.assertRaisesRegex(RuntimeError,'No ONNX Runtime'):
+                onnx_dependencies()
+        with patch('uniform_build_repeat.importlib.metadata.version',return_value='1.0'),patch('uniform_build_repeat.importlib.import_module',side_effect=ImportError('ABI')):
+            with self.assertRaisesRegex(RuntimeError,'cannot import'):
+                onnx_dependencies()
+
     def test_contract_guards_files_and_settings(self):
         with tempfile.TemporaryDirectory() as d:
             p=Path(d);write_bytes(p/'source.onnx',b'onnx');write_bytes(p/'calibration_uint8.npy',b'tensor')
