@@ -194,3 +194,33 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 ```
 
 Push riêng theo quy trình phía trên; chỉ audit JSON, không weights/engine/raw data.
+
+## Chẩn đoán candidate và kiểm tra engine, không sửa policy
+
+Sau bootstrap commit `332e2b0`, tiếp tục hướng chẩn đoán trên dev, không scale VCSC. `scripts/diagnose_dev_pairs.py` so sánh best-IoU same-class candidate với từng GT trong tọa độ validator native. Đây là phép đo many-to-one phục vụ chẩn đoán, không phải AP hoặc matching one-to-one COCO; không được gọi số GT có nhiều candidate là số duplicate false positive.
+
+Đã chạy local đủ 2.706 GT cho ba INT8 từ verified capture. Số GT có ≥2 same-class candidate IoU≥0,5 là FP16=186, Uniform=607, Low-Luminance=589, VCSC proportional=628 (capture conf≥0,001). Median chênh lệch best candidate IoU lần lượt −0,0220 / −0,0302 / −0,0269. Có cả hình học và thay đổi confidence, chưa tách causal attribution giữa quantization, NMS, ranking hoặc layer.
+
+Artifact local: `results/measurement_audit_v1/local_candidate_diagnostic_v1/`. JSON có toàn bộ row và deterministic selected cases. PNG tạo local, không đưa ảnh dataset lên Git trong bước này. Mỗi policy chọn tối đa hai ảnh khác nhau trong mỗi nhóm: mất candidate IoU75, giảm maximum confidence của candidate IoU50 khi vẫn còn candidate IoU75, và nhóm đối chứng được candidate IoU75. Ranking theo mức thay đổi rồi filename/GT index. Đây là extreme-case illustration có chủ đích, không phải mẫu ngẫu nhiên đại diện. 18 PNG đã tạo; kiểm tra trực quan ca Uniform mất IoU và giảm confidence. GT bbox chỉ inverse-scale/clip để hiển thị, không dùng để thay area/GT của evaluator size.
+
+Local chạy với `--allow-lf-normalization` vì Git Windows đổi newline; hash và chế độ đối chiếu được ghi lại. Muốn tái tạo trên server: `python scripts/diagnose_dev_pairs.py --out-dir results/measurement_audit_v1/server_candidate_diagnostic_v1`. Không cần XML hoặc inference; cần images dev để vẽ. Nếu không có ảnh, JSON vẫn đủ và overlay ghi null. Không ghi đè thư mục cũ.
+
+`scripts/inspect_frozen_trt_engines.py` kiểm tra engine hiện có: source/engine hash và TRT version phải khớp provenance. Deserialize tuần tự FP16 + ba INT8 v2, không create builder/calibrate/enqueue inference; dùng GPU phase lock. Lưu raw inspector output, build profiling verbosity, I/O dtype/shape, field precision/format mà inspector thực sự tiết lộ và export args/cache provenance. Không suy precision từ tên layer, không đếm tensor format thành tỷ lệ layer chạy INT8, không suy precision tính toán/accumulator từ dtype I/O.
+
+Theo [NVIDIA TensorRT Engine Inspector](https://docs.nvidia.com/deeplearning/tensorrt/10.x.x/inference-library/engine-tools.html), thông tin inspector phụ thuộc profiling verbosity lúc build. Engine chỉ lưu tên layer có thể không đủ thông tin. Nếu vậy kết luận là thiếu bằng chứng precision nội bộ, không tự rebuild để lấy detailed metadata. Đây là bước thu thập, không chứng nhận toàn bộ layer INT8.
+
+34 test đạt local: metadata-prefixed/plain plans, không đoán dtype theo tên, candidate sai class/empty/tie selection, gain control và các test G0 trước đó. TensorRT không có local; inspector thực phải chạy trên server, version 10.16.1.11 hiện có.
+
+Sau khi pull code, chạy foreground (cần CUDA để deserialize nhưng không chạy inference):
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && python scripts/inspect_frozen_trt_engines.py --out-dir results/measurement_audit_v1/server_engine_inspection_v1 --device 0
+```
+
+Chờ bốn dòng `INSPECTED` rồi `DONE`. Status `inspection_completed_not_precision_certified` cố ý tránh kết luận quá mức. Nếu deserialize/version/hash lỗi thì dừng, không install/upgrade/re-export.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git add -f results/measurement_audit_v1/server_engine_inspection_v1/*.json && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git commit -m "results: frozen TensorRT engine inspector evidence"
+```
+
+Sau đó push riêng như các mục trên. Chưa có ablation layer/precision mới được chạy hoặc policy mới được chọn.
