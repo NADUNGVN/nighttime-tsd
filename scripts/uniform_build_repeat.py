@@ -10,6 +10,7 @@ import importlib.metadata
 import inspect
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,11 @@ STUDY = 'uniform_build_repeat_v1'
 SETTINGS = {'imgsz':640,'batch':1,'workspace_bytes':4 << 30,'builder_optimization_level':3,
             'avg_timing_iterations':1,'timing_cache':'fresh_empty_for_each_repeat','int8':True,'fp16':False,
             'tf32':False,'sigmoid':'FP32 precision+output with OBEY; no bbox/classification override'}
+GPU_PROCESS_GUARD_VERSION = 'verified-executable-v1'
+SNAP_DESKTOP_ALLOWLIST = '/snap/snapd-desktop-integration/<numeric-revision>/usr/bin/snapd-desktop-integration'
+_SNAP_DESKTOP_EXECUTABLE = re.compile(
+    r'^/snap/snapd-desktop-integration/[1-9][0-9]*/usr/bin/snapd-desktop-integration$'
+)
 
 
 def read(p):
@@ -82,6 +88,92 @@ def environment():
     return versions
 
 
+def resolve_process_executable(pid, proc_root=Path('/proc')):
+    """Resolve and verify a Linux process executable, failing closed on races."""
+    proc_executable = proc_root / str(pid) / 'exe'
+    try:
+        raw = os.readlink(proc_executable)
+    except FileNotFoundError as error:
+        raise RuntimeError(f'PID {pid} disappeared before executable verification') from error
+    except PermissionError as error:
+        raise RuntimeError(f'cannot read executable for PID {pid}: permission denied') from error
+    except OSError as error:
+        raise RuntimeError(f'cannot read executable for PID {pid}: {error}') from error
+    if not raw.startswith('/') or raw.endswith(' (deleted)'):
+        raise RuntimeError(f'PID {pid} has an unusable executable link: {raw!r}')
+    try:
+        resolved = Path(raw).resolve(strict=True)
+        if not resolved.is_file():
+            raise RuntimeError(f'PID {pid} executable is not a regular file: {resolved}')
+    except FileNotFoundError as error:
+        raise RuntimeError(f'PID {pid} executable disappeared during verification: {raw}') from error
+    except PermissionError as error:
+        raise RuntimeError(f'cannot stat executable for PID {pid}: permission denied') from error
+    except OSError as error:
+        raise RuntimeError(f'cannot stat executable for PID {pid}: {error}') from error
+    return str(resolved)
+
+
+def is_allowed_snap_desktop_executable(path):
+    """Return whether a verified path matches the narrow desktop Snap allowlist."""
+    return isinstance(path, str) and _SNAP_DESKTOP_EXECUTABLE.fullmatch(path) is not None
+
+
+def _unverifiable_process(raw, reason):
+    return {'pid': None, 'process_name': None, 'used_gpu_memory': None, 'raw': raw,
+            'resolved_executable': None, 'classification': 'blocked_unverifiable',
+            'allowed': False, 'allowlist_exception': None, 'reason': reason}
+
+
+def classify_cuda_processes(raw, current_pid=None, executable_resolver=None):
+    """Classify nvidia-smi rows using verified executable paths, never heuristics."""
+    if current_pid is None:
+        current_pid = os.getpid()
+    if executable_resolver is None:
+        executable_resolver = resolve_process_executable
+    if raw is None:
+        return [_unverifiable_process('', 'nvidia-smi returned no process text')]
+    if not isinstance(raw, str):
+        return [_unverifiable_process(repr(raw), 'nvidia-smi process output is not text')]
+    if raw.strip() in ('', 'No running processes found'):
+        return []
+    details = []
+    for row in raw.splitlines():
+        if not row.strip():
+            continue
+        fields = [field.strip() for field in row.split(',', 2)]
+        if len(fields) != 3 or not fields[0].isdigit():
+            details.append(_unverifiable_process(row, f'cannot parse nvidia-smi process row: {row!r}'))
+            continue
+        pid = int(fields[0])
+        process_name, used_gpu_memory = fields[1:]
+        detail = {'pid': pid, 'process_name': process_name, 'used_gpu_memory': used_gpu_memory,
+                  'raw': row, 'resolved_executable': None, 'classification': None,
+                  'allowed': False, 'allowlist_exception': None, 'reason': None}
+        if pid == current_pid:
+            detail.update(classification='current_runner_process', allowed=True,
+                          reason='current process owned by this runner')
+            details.append(detail)
+            continue
+        try:
+            executable = executable_resolver(pid)
+        except Exception as error:
+            detail.update(classification='blocked_unverifiable',
+                          reason=f'cannot verify executable: {type(error).__name__}: {error}')
+            details.append(detail)
+            continue
+        detail['resolved_executable'] = executable
+        if is_allowed_snap_desktop_executable(executable):
+            detail.update(classification='allowed_snap_desktop', allowed=True,
+                          allowlist_exception='snapd-desktop-integration',
+                          reason=f'verified executable matches allowlist {SNAP_DESKTOP_ALLOWLIST}')
+        else:
+            detail.update(classification='blocked_non_allowlisted_process',
+                          reason='verified executable is not in the Snap desktop allowlist')
+        details.append(detail)
+    return details
+
+
 def snapshot():
     commands={
         'device':['nvidia-smi','--query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used','--format=csv,noheader'],
@@ -90,17 +182,30 @@ def snapshot():
     for key,command in commands.items():
         done=subprocess.run(command,capture_output=True,text=True,timeout=15,check=True)
         out[key]=done.stdout.strip()
+    out['process_guard']={'version':GPU_PROCESS_GUARD_VERSION,
+                          'allowlist':SNAP_DESKTOP_ALLOWLIST,
+                          'disclaimer':'Allowed desktop processes remain visible; this is not proof of zero GPU interference.'}
+    out['process_details']=classify_cuda_processes(out['processes'])
     return out
 
 
 def ensure_idle(state):
-    foreign=[]
-    for row in state['processes'].splitlines():
-        pid=row.split(',')[0].strip()
-        if pid.isdigit() and int(pid)!=os.getpid():
-            foreign.append(row)
-    if foreign:
-        raise RuntimeError(f'Other CUDA processes active; do not kill automatically: {foreign}')
+    details=state.get('process_details')
+    if details is None:
+        details=classify_cuda_processes(state.get('processes'), current_pid=os.getpid())
+    if not isinstance(details,list):
+        raise RuntimeError('Other CUDA processes active or unverifiable; process classification is invalid')
+    def allowed(detail):
+        if not isinstance(detail,dict) or detail.get('allowed') is not True:
+            return False
+        if detail.get('classification')=='current_runner_process':
+            return detail.get('pid')==os.getpid()
+        return (detail.get('classification')=='allowed_snap_desktop' and
+                detail.get('allowlist_exception')=='snapd-desktop-integration' and
+                is_allowed_snap_desktop_executable(detail.get('resolved_executable')))
+    blocked=[detail for detail in details if not allowed(detail)]
+    if blocked:
+        raise RuntimeError(f'Other CUDA processes active or unverifiable; do not kill automatically: {blocked}')
 
 
 def validate_selection(repo,manifest):

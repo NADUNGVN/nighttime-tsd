@@ -263,3 +263,9 @@ Sau đó push riêng. Review kết quả A trước khi cân nhắc B: FP32 bbox
 ### Preflight ONNX Runtime distribution fix
 
 Server dừng trước tạo study output vì kiểm tra metadata chỉ tìm `onnxruntime`. Đây không chứng minh module thiếu: `onnxruntime-gpu` và `onnxruntime-qnn` cũng cung cấp module `onnxruntime`, và exporter Ultralytics chấp nhận các biến thể này. Preflight sửa để kiểm tra các distribution hợp lệ, import module thật và query available providers; ghi phiên bản/path/providers vào manifest. Nếu thực sự thiếu hoặc import lỗi, dừng có thông báo rõ, không tự cài/nâng cấp. 41 test local đạt, gồm ba variant và missing/broken runtime; local không có đầy đủ ONNX/TensorRT để chạy build thật. Lần server thất bại này chưa tạo thư mục output nên chưa có kết quả để commit; có thể dùng lại tên study sau pull bản sửa, nếu thư mục vẫn chưa tồn tại.
+
+### Preflight GPU process verification (Step A)
+
+Preflight hiện phân loại từng CUDA process từ `nvidia-smi` bằng executable đã resolve và kiểm tra qua `/proc/<pid>/exe`. Ngoại lệ duy nhất là executable file khớp allowlist hẹp `/snap/snapd-desktop-integration/<numeric-revision>/usr/bin/snapd-desktop-integration`; revision được thay đổi nhưng package và cấu trúc đường dẫn không được mở rộng. Tên process, UID, VRAM thấp hoặc PID lịch sử không cấp quyền ngoại lệ. Python/training, executable khác tên desktop, process race, permission error và dòng output không parse được đều fail closed.
+
+Mỗi GPU snapshot ghi raw process output, resolved executable, classification, lý do và `process_guard` disclaimer. Process desktop được allow vẫn xuất hiện trong snapshot; điều đó không chứng minh GPU không có nhiễu. `ensure_idle()` giữ nguyên GPU phase lock, không kill/pause process và xác thực lại rằng mọi ngoại lệ có path/classification hợp lệ trước build. Các test offline mô phỏng desktop hợp lệ, training VRAM thấp, tên giả, executable không đọc được và PID race; không test nào coi đó là TensorRT end-to-end.
