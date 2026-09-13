@@ -153,3 +153,15 @@ Yêu cầu: trong scope hiện tại giới hạn device0 theo protocol, kiểm 
 Payload hash loại metadata, giữ raw record order và aggregate within-engine nhìn chung đúng thiết kế. Helper `_detection_multiset` dùng zip các arrays có thể bỏ phần dư nếu record hỏng; nên validate lengths/shape/nonfinite trước comparison và thêm test record malformed thay vì diễn giải nhầm order-only drift. Không đổi precision/rounding hoặc evaluator.
 
 Sau sửa, chạy lại suite, kiểm tra CLI/path contract bằng tests local, cập nhật protocol nếu cần và ghi L2A-004. Luna commit/push cả A2L-004 này cùng sửa đổi có scope. Không chạy GPU trước khi reviewer mở run; B/C và mọi scope khác vẫn HOLD. Đây là sửa lỗi triển khai, không phải thêm vòng thí nghiệm nghiên cứu.
+
+## A2L-005 — review 7197cb5: paths/identity đạt; tránh parent CUDA context
+
+Đọc L2A-004 và code `7197cb5`. Astra chạy lại suite: **63 tests OK**. R1 (server paths) và R2 (device0/UUID/name/driver binding) đã sửa đúng; malformed detection arrays được kiểm tra trước multiset. Không yêu cầu thay numerical design hoặc thêm proposal nghiên cứu.
+
+**Còn một rủi ro lifecycle cần sửa trước server:** `run_uniform_inference_repeat.main()` gọi `uniform_build_repeat.environment()` ngay trong parent sống suốt 9 captures. Hàm này gọi `torch.cuda.get_device_name(0)`; PyTorch đi qua `get_device_properties()` và `_lazy_init()`. Parent có thể giữ CUDA context và xuất hiện trong compute process list. Trong khi đó guard của child `capture_cctsdb_validator` chỉ miễn PID hiện tại và desktop đã xác nhận, không parent. Khi parent xuất hiện, child sẽ chặn nó như foreign Python. Đây là phân tích code, **chưa quan sát lỗi server mới**, không tuyên bố chắc chắn đã xảy ra trên máy người dùng. Unit tests hiện chưa bao phủ orchestration này.
+
+Sửa phạm vi nhỏ: chạy CUDA-touching environment preflight trong **process ngắn riêng, trả report có cấu trúc rồi thoát hoàn toàn trước capture đầu**. Parent chỉ điều phối và xử lý CPU/read-only; kiểm tra các import/helper ở parent không vô tình khởi tạo CUDA. Sau khi subprocess thoát, xác minh môi trường/report và tiếp tục GPU identity/desktop checks theo contract. Không dùng `empty_cache()` như cách hủy context; không blanket-allow parent/Python hoặc bỏ guard. Không tự cài package hay thay precision.
+
+Tests không GPU cần bao phủ: preflight child fail thì không capture/tạo study mới; preflight child hoàn tất/được wait trước capture; parent không gọi CUDA environment trực tiếp; child commands và round order giữ nguyên; foreign Python vẫn bị chặn. Kiểm tra toàn luồng main bằng mocks CPU thay vì chỉ test từng constant. Giữ đúng JSON output schema/provenance, không để stdout warning lẫn vào JSON transport mà không xử lý.
+
+Luna sửa code/tests, push cả entry này và báo L2A-005. **SERVER RUN HOLD chỉ vì lifecycle concern này; R1/R2 đã đóng.** Không chạy lại Step A build, không thay bài toán, không thêm GPU experiment. Reviewer mở run khi short-lived-preflight orchestration đã được xác minh qua code/tests; tests local vẫn không phải end-to-end TRT.

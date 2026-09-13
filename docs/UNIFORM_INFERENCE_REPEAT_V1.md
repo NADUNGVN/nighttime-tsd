@@ -49,6 +49,14 @@ Mỗi capture dùng GPU phase lock và snapshot `nvidia-smi` trước/sau. Runne
 
 Telemetry sampled không chứng minh GPU isolation hoặc loại workload xuất hiện giữa hai snapshot. Process mới không được phân loại hoặc workload cạnh tranh phải được ghi vào review flags; không blanket-ignore. SERVER-01/RTX8000 là mặc định vì engine compatibility/reference đã được kiểm tra ở Step A; server khác cần review riêng trước khi dùng.
 
+## Parent/child lifecycle
+
+Parent runner chỉ làm orchestration CPU/read-only. Kiểm tra `environment()` có CUDA touch được chạy bởi `scripts/probe_inference_environment.py` trong một child process ngắn; child trả đúng một JSON report trên stdout, stderr được giữ trong `study_manifest.json`, và parent phải wait/parse report thành công trước khi tạo study output hoặc bắt đầu capture. Exit khác 0, report sai schema hoặc stdout lẫn warning/text đều dừng trước capture.
+
+Sau preflight, mỗi capture vẫn chạy trong process mới và phải kết thúc (`wait`) trước khi verification process được khởi động. Parent không gọi trực tiếp CUDA environment helper, không giữ CUDA context có chủ ý và không miễn trừ parent/Python khỏi process guard. Guard foreign Python, process chưa phân loại và workload cạnh tranh vẫn bị chặn; desktop chỉ được miễn theo đúng PID/path hiện tại do operator xác nhận. Không kill/pause process, không đổi permissions/clock/power limit và không dùng `empty_cache()` để che lifecycle.
+
+Nếu preflight hoặc bất kỳ child nào fail, runner dừng foreground; không overwrite, auto-resume hoặc tiếp tục từ output partial. `environment_preflight` và child stdout hash/provenance được lưu để phân biệt report preflight với telemetry workload của study. Đây là contract lifecycle đã được kiểm tra bằng CPU mocks/unit tests local, không phải xác minh TensorRT end-to-end.
+
 ## Output contract
 
 Output cố định và không overwrite:

@@ -365,6 +365,53 @@ def verification_command(repo, capture_dir, out_dir, xml_path):
             "--out-dir", str(out_dir)]
 
 
+def environment_probe_command(repo):
+    return [sys.executable, str(Path(repo) / "scripts/probe_inference_environment.py")]
+
+
+def parse_environment_probe(stdout, stderr, return_code):
+    """Parse one JSON child response; reject warnings or text mixed into stdout."""
+    if return_code:
+        try:
+            failure = json.loads(stdout)
+        except (TypeError, json.JSONDecodeError):
+            failure = None
+        detail = failure.get("error") if isinstance(failure, dict) else None
+        detail = detail or stderr.strip() or "no structured error"
+        raise RuntimeError(f"Environment preflight child failed with exit {return_code}: {detail}")
+    try:
+        report = json.loads(stdout)
+    except (TypeError, json.JSONDecodeError) as error:
+        raise RuntimeError("Environment preflight child did not return pure JSON") from error
+    if (not isinstance(report, dict) or report.get("schema_version") != 1 or
+            report.get("status") != "ok" or not isinstance(report.get("environment"), dict)):
+        raise RuntimeError(f"Environment preflight child returned an invalid report: {report!r}")
+    return {"status": "ok", "environment": report["environment"],
+            "child": {"return_code": return_code,
+                      "stdout_sha256": hashlib.sha256(stdout.encode("utf-8")).hexdigest(),
+                      "stderr": stderr}}
+
+
+def run_environment_preflight(repo, runner=None):
+    """Run CUDA-touching environment() in a short-lived child and wait for it."""
+    runner = subprocess.run if runner is None else runner
+    completed = runner(environment_probe_command(repo), cwd=repo, capture_output=True,
+                       text=True, check=False)
+    return parse_environment_probe(completed.stdout, completed.stderr, completed.returncode)
+
+
+def run_capture_pair(repo, source_root, engine_id, run_dir, device, confirmations,
+                     xml_path, run_child=None):
+    """Run capture, wait, then run verification in a separate child process."""
+    run_child = _run_child if run_child is None else run_child
+    capture_dir, verification_dir = run_dir / "capture", run_dir / "verification"
+    capture_cmd = capture_command(repo, source_root, engine_id, run_dir, device, confirmations)
+    capture_pid = run_child(capture_cmd, repo)
+    verify_cmd = verification_command(repo, capture_dir, verification_dir, xml_path)
+    verify_pid = run_child(verify_cmd, repo)
+    return capture_pid, verify_pid, capture_cmd, verify_cmd
+
+
 def size_convention(size, reference):
     for key in ("metric_id", "rules", "evaluator_source_sha256", "xml_sha256"):
         if size.get(key) != reference.get(key):
@@ -383,14 +430,14 @@ def _run_child(command, repo):
     return process.pid
 
 
-def main(argv=None):
+def main(argv=None, *, repo_override=None, helpers=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--device", default="0")
     parser.add_argument("--confirm-desktop-process", action="append", default=[], metavar="PID=PATH",
                         help="Explicitly confirm a current nvidia-smi desktop row; no /proc access is used")
     args = parser.parse_args(argv)
-    repo = Path(__file__).resolve().parents[1]
+    repo = Path(repo_override if repo_override is not None else Path(__file__).resolve().parents[1]).resolve()
     output = args.out_dir.resolve()
     try:
         source_root, expected_output = validate_output_target(repo, output)
@@ -399,18 +446,52 @@ def main(argv=None):
         parser.error(str(error))
     ensure_output_absent(output)
 
-    # Heavy/runtime imports stay in main so all local unit tests remain TensorRT-free.
-    from capture_cctsdb_validator import write_json
-    from run_g0_int8_capture import check_reference, check_same_targets
-    from uniform_build_repeat import (ensure_idle, environment, parse_desktop_confirmations,
-                                      repeat_capture_inputs, snapshot)
-    from audit_cctsdb_measurement import load_records, load_xml
+    # CUDA-touching environment() runs only in the short-lived child. The parent
+    # receives a parsed report before importing orchestration helpers.
+    helpers = dict(helpers or {})
+    preflight = helpers.get("environment_preflight", run_environment_preflight)(repo)
+    if (not isinstance(preflight, dict) or preflight.get("status") != "ok" or
+            not isinstance(preflight.get("environment"), dict)):
+        raise RuntimeError("Environment preflight did not return a usable report")
+
+    # Heavy/runtime imports stay after the child preflight so the parent never
+    # calls the CUDA-touching environment helper itself.
+    if "write_json" not in helpers:
+        from capture_cctsdb_validator import write_json
+        helpers["write_json"] = write_json
+    if "check_reference" not in helpers or "check_same_targets" not in helpers:
+        from run_g0_int8_capture import check_reference, check_same_targets
+        helpers.setdefault("check_reference", check_reference)
+        helpers.setdefault("check_same_targets", check_same_targets)
+    if any(key not in helpers for key in ("ensure_idle", "parse_desktop_confirmations",
+                                          "repeat_capture_inputs", "snapshot")):
+        from uniform_build_repeat import (ensure_idle, parse_desktop_confirmations,
+                                          repeat_capture_inputs, snapshot)
+        helpers.setdefault("ensure_idle", ensure_idle)
+        helpers.setdefault("parse_desktop_confirmations", parse_desktop_confirmations)
+        helpers.setdefault("repeat_capture_inputs", repeat_capture_inputs)
+        helpers.setdefault("snapshot", snapshot)
+    if "load_records" not in helpers or "load_xml" not in helpers:
+        from audit_cctsdb_measurement import load_records, load_xml
+        helpers.setdefault("load_records", load_records)
+        helpers.setdefault("load_xml", load_xml)
+
+    write_json = helpers["write_json"]
+    check_reference = helpers["check_reference"]
+    check_same_targets = helpers["check_same_targets"]
+    ensure_idle = helpers["ensure_idle"]
+    parse_desktop_confirmations = helpers["parse_desktop_confirmations"]
+    repeat_capture_inputs = helpers["repeat_capture_inputs"]
+    snapshot = helpers["snapshot"]
+    load_records = helpers["load_records"]
+    load_xml = helpers["load_xml"]
+    run_child = helpers.get("run_child", _run_child)
 
     confirmations = parse_desktop_confirmations(args.confirm_desktop_process)
     source_manifest = read(source_root / "study_manifest.json")
     if source_manifest.get("study") != SOURCE_STUDY:
         parser.error("Source is not the approved Uniform build-repeat study")
-    current_environment = environment()
+    current_environment = preflight["environment"]
     if current_environment != source_manifest.get("environment"):
         parser.error("Runtime environment/GPU differs from the Step A engine study; stop for review")
     current_gpu_before = snapshot(confirmations)
@@ -462,6 +543,7 @@ def main(argv=None):
         "reference_capture_sha256": sha256(reference_capture / "capture_report.json"),
         "reference_size_sha256": sha256(reference_verification / "size_coco_xml.json"),
         "environment": current_environment,
+        "environment_preflight": preflight,
         "source_step_a_gpu_before": source_manifest.get("gpu_before"),
         "source_step_a_gpu_after": source_manifest.get("gpu_after"),
         "gpu_before": current_gpu_before,
@@ -479,10 +561,8 @@ def main(argv=None):
         round_id, engine_id, run_dir = item["round"], item["engine_repeat"], item["run_dir"]
         run_dir.mkdir(parents=True)
         capture_dir, verification_dir = run_dir / "capture", run_dir / "verification"
-        capture_cmd = capture_command(repo, source_root, engine_id, run_dir, args.device, confirmations)
-        capture_pid = _run_child(capture_cmd, repo)
-        verify_cmd = verification_command(repo, capture_dir, verification_dir, xml)
-        verify_pid = _run_child(verify_cmd, repo)
+        capture_pid, verify_pid, capture_cmd, verify_cmd = run_capture_pair(
+            repo, source_root, engine_id, run_dir, args.device, confirmations, xml, run_child)
 
         capture = read(capture_dir / "capture_report.json")
         predictions = read(capture_dir / "validator_predictions.json")
@@ -531,7 +611,8 @@ def main(argv=None):
                "prediction_file_sha256": capture["predictions_sha256"],
                "prediction_payload_exact_vs_round_1": payload_comparison["exact"],
                "prediction_difference_vs_round_1": payload_comparison["differences"],
-               "metrics_exact_vs_round_1": metrics_exact, "metrics_delta_vs_round_1": metrics_delta,
+               "metrics_exact": metrics_exact, "metrics_exact_vs_round_1": metrics_exact,
+               "metrics_delta_vs_round_1": metrics_delta,
                "capture_report": capture, "size_report": size,
                "verification": {"native_matching_status": verification["native_matching_status"],
                                 "size_diagnostic": verification["size_diagnostic"],

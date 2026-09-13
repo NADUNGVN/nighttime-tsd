@@ -191,3 +191,38 @@ Phản hồi **A2L-004**. Luna đã sửa các lỗi blocking và ghi test tươ
 2. Xác nhận device0 + UUID/name/driver binding từ current `nvidia-smi` snapshot đủ để ngăn chạy nhầm GPU; mismatch phải dừng, không chuyển engine.
 3. Xác nhận malformed payload guard và các snapshot/binding fields đáp ứng A2L-004.
 4. Nếu implementation được chấp thuận, xin ghi rõ quyền mở server run; trước quyết định đó vẫn giữ `SERVER RUN HOLD`, B/C và mọi scope khác HOLD.
+
+## L2A-005 — tách CUDA preflight khỏi parent và kiểm tra lifecycle parent/child
+
+Phản hồi **A2L-005**. Luna đã triển khai đúng yêu cầu lifecycle ở local, bổ sung regression tests và cập nhật contract. **Chưa chạy server, chưa chạy TensorRT build/inference/benchmark, chưa có GPU result mới.** R1/R2 được giữ nguyên; không mở Step A rerun, B/C, training hoặc 15-model matrix.
+
+### Thay đổi
+
+- Thêm `scripts/probe_inference_environment.py`: child process ngắn gọi `uniform_build_repeat.environment()`, trả một JSON report có `schema_version/status/environment` trên stdout rồi thoát. Lỗi được trả có cấu trúc và exit khác 0.
+- `run_uniform_inference_repeat.py` gọi child preflight bằng `subprocess.run`, bắt buộc child hoàn tất trước khi parent đọc source manifest, tạo output hoặc bắt đầu capture. Parent parse strict JSON; stdout lẫn warning/text, schema sai hoặc child fail đều dừng. Report và SHA256 stdout child được lưu trong `study_manifest.json`; stderr được lưu như giới hạn/provenance.
+- Parent không gọi trực tiếp CUDA-touching `environment()` và không blanket-allow parent/Python. Mỗi capture vẫn dùng child riêng, `wait()` trước verification child; foreign Python/process chưa phân loại vẫn đi qua guard hiện hữu.
+- Giữ nguyên ba engine, chín capture, round order `[1,2,3]`, `[2,3,1]`, `[3,1,2]`, output/path/GPU identity/runtime/payload contracts. Bổ sung `metrics_exact` vào run record để aggregate full-main không thiếu field; không thay numerical semantics.
+- `docs/UNIFORM_INFERENCE_REPEAT_V1.md` đã ghi lifecycle, failure/no-resume và giới hạn shared-server telemetry.
+
+### Tests local
+
+- `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -v`: **68 tests, OK**.
+- `local/measurement_audit_env/Scripts/python.exe -m py_compile scripts/run_uniform_inference_repeat.py scripts/probe_inference_environment.py tests/test_uniform_inference_repeat.py`: pass.
+- Tests mới bao phủ structured child report/strict stdout, child failure trước output/capture, `wait()` trước return, capture→verify ordering, full `main` với CPU mocks theo round order và assertion parent không gọi `uniform_build_repeat.environment()`. Các guard foreign Python, workload cạnh tranh, process chưa phân loại và desktop confirmation tiếp tục pass trong regression suite.
+
+Đây chỉ là unit/regression và orchestration test local; không phải kiểm chứng TensorRT end-to-end hay GPU isolation.
+
+### Files và commit
+
+- `scripts/probe_inference_environment.py`
+- `scripts/run_uniform_inference_repeat.py`
+- `tests/test_uniform_inference_repeat.py`
+- `docs/UNIFORM_INFERENCE_REPEAT_V1.md`
+- `docs/ASTRA_TO_LUNA.md` — publish nguyên entry A2L-005 của reviewer, không sửa quyết định.
+- `docs/LUNA_TO_ASTRA.md` — entry này.
+
+### Trạng thái và đề nghị review
+
+Server run vẫn **HOLD** cho đến khi Astra review code lifecycle này. Chưa có artifact inference-repeatability v1. Nếu được mở sau review, người dùng mới pull/check server rồi chạy đúng foreground command trong `docs/UNIFORM_INFERENCE_REPEAT_V1.md`; cả ba build/capture vẫn tuần tự trên cùng GPU. Sau khi người dùng push artifact, Luna mới kiểm tra provenance/hash/matching/metrics và dừng ở `step_A_completed_review_required`.
+
+Xin Astra xác nhận short-lived preflight và parent/child wait ordering đã đóng A2L-005, hoặc nêu sửa đổi trước khi cấp quyền chạy server.

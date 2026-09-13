@@ -1,11 +1,15 @@
 import copy
+import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
+from audit_cctsdb_measurement import sha256
 from run_uniform_inference_repeat import (
     DATASET_SPLIT,
     EXPECTED_RUNTIME,
@@ -14,10 +18,15 @@ from run_uniform_inference_repeat import (
     aggregate_within_engine,
     capture_command,
     ensure_output_absent,
+    environment_probe_command,
+    main,
     parse_gpu_identity,
+    parse_environment_probe,
     prediction_difference,
     prediction_payload_hash,
     resolve_protocol_paths,
+    run_capture_pair,
+    run_environment_preflight,
     round_plan,
     validate_device_argument,
     validate_capture_contract,
@@ -195,6 +204,215 @@ class UniformInferenceRepeatTests(unittest.TestCase):
         self.assertNotIn("--representation", command)
         self.assertIn("445=/usr/bin/Xorg", command)
         self.assertEqual(PREDICTION_PAYLOAD_VERSION, "uniform_inference_repeat_prediction_payload_v1")
+
+    def test_environment_preflight_requires_one_structured_json_child_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            stdout = json.dumps({"schema_version": 1, "status": "ok",
+                                 "environment": {"gpu": "Quadro RTX 8000"}})
+            calls = []
+
+            def runner(command, **kwargs):
+                calls.append((command, kwargs))
+                return SimpleNamespace(stdout=stdout, stderr="runtime warning", returncode=0)
+
+            report = run_environment_preflight(repo, runner)
+
+        self.assertEqual(report["status"], "ok")
+        self.assertEqual(report["environment"]["gpu"], "Quadro RTX 8000")
+        self.assertEqual(report["child"]["stderr"], "runtime warning")
+        self.assertEqual(calls[0][0], environment_probe_command(repo))
+        self.assertEqual(calls[0][1], {"cwd": repo, "capture_output": True, "text": True, "check": False})
+        with self.assertRaisesRegex(RuntimeError, "pure JSON"):
+            parse_environment_probe("warning\n" + stdout, "", 0)
+        with self.assertRaisesRegex(RuntimeError, "CUDA unavailable"):
+            parse_environment_probe(json.dumps({"status": "error", "error": "CUDA unavailable"}), "", 2)
+
+    def test_run_child_waits_before_returning(self):
+        events = []
+
+        class Process:
+            pid = 987
+
+            def wait(self):
+                events.append("wait")
+                return 0
+
+        with patch("run_uniform_inference_repeat.subprocess.Popen", return_value=Process()):
+            from run_uniform_inference_repeat import _run_child
+            self.assertEqual(_run_child(["child"], Path("/repo")), 987)
+        self.assertEqual(events, ["wait"])
+
+    def test_capture_pair_keeps_capture_then_verify_child_order(self):
+        events = []
+
+        def run_child(command, repo):
+            events.append((Path(command[1]).name, command))
+            return len(events)
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            run_dir = repo / "results/round_1/engine_2"
+            result = run_capture_pair(repo, repo / "source", 2, run_dir, "0", {},
+                                      repo / "xml.zip", run_child)
+
+        self.assertEqual(result[:2], (1, 2))
+        self.assertEqual([item[0] for item in events],
+                         ["capture_cctsdb_validator.py", "verify_cctsdb_capture.py"])
+        self.assertEqual(events[0][1][events[0][1].index("--repeat-index") + 1], "2")
+        self.assertIn("--capture-dir", events[1][1])
+
+    def test_main_preflight_failure_creates_no_output_and_starts_no_capture(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            _source, output = resolve_protocol_paths(repo)
+            events = []
+
+            def fail_preflight(_repo):
+                events.append("preflight")
+                raise RuntimeError("probe child failed")
+
+            def unexpected_child(_command, _repo):
+                events.append("capture")
+                raise AssertionError("capture must not start after failed preflight")
+
+            with self.assertRaisesRegex(RuntimeError, "probe child failed"):
+                main(["--out-dir", str(output)], repo_override=repo,
+                     helpers={"environment_preflight": fail_preflight,
+                              "run_child": unexpected_child})
+
+        self.assertEqual(events, ["preflight"])
+        self.assertFalse(output.exists())
+
+    def test_main_cpu_mock_runs_preflight_before_all_capture_children_in_fixed_round_order(self):
+        device = "GPU-test, Quadro RTX 8000, 595.71.05, P8, 35, 9 W, 300 MHz, 405 MHz, 32 MiB"
+        environment = {"torch": "test", "ultralytics": "test", "tensorrt": "test", "numpy": "test",
+                       "python": "test", "cuda": "12.1", "gpu": "Quadro RTX 8000", "pycocotools": "test"}
+        gpu_snapshot = {
+            "device": device,
+            "process_guard": {"telemetry_status": "complete", "external_workload_detected": False,
+                               "blocked_processes": [], "unmatched_confirmations": []},
+        }
+        size_report = {
+            "metric_id": "coco_xml_size_v1", "rules": {"xs": 210},
+            "evaluator_source_sha256": "evaluator", "xml_sha256": "xml",
+            "metrics": {label: metric_size(0.5, 0.4) for label in ("all", "xs", "s", "m", "l", "xl")},
+        }
+        prediction = prediction_fixture()
+        child_events = []
+        helper_events = []
+
+        def write_json(path, value):
+            path = Path(path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("x", encoding="utf-8", newline="\n") as handle:
+                json.dump(value, handle, allow_nan=False)
+                handle.write("\n")
+
+        def preflight(_repo):
+            helper_events.append("preflight")
+            return {"status": "ok", "environment": environment,
+                    "child": {"return_code": 0, "stdout_sha256": "probe", "stderr": ""}}
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            source_root, output = resolve_protocol_paths(repo)
+            source_root.mkdir(parents=True)
+            write_json(source_root / "study_manifest.json", {
+                "study": "uniform_build_repeat_v1", "source_weights_sha256": "weights",
+                "onnx_sha256": "onnx", "settings": {"batch": 1}, "environment": environment,
+                "gpu_before": gpu_snapshot, "gpu_after": gpu_snapshot,
+            })
+            engine_hashes = {}
+            for engine_id in (1, 2, 3):
+                engine_path = source_root / f"repeat_{engine_id}/model.engine"
+                engine_path.parent.mkdir(parents=True, exist_ok=True)
+                engine_path.write_bytes(f"engine-{engine_id}".encode("ascii"))
+                engine_hashes[engine_id] = sha256(engine_path)
+                write_json(source_root / f"repeat_{engine_id}/build_manifest.json", {
+                    "study": "uniform_build_repeat_v1", "repeat": engine_id,
+                    "source_weights_sha256": "weights", "onnx_sha256": "onnx", "settings": {"batch": 1},
+                    "engine_sha256": engine_hashes[engine_id], "calibration_cache_sha256": "cache",
+                    "cache_matches_historical_uniform": True,
+                })
+
+            reference_capture = repo / "results/measurement_audit_v1/server_fp16_capture_v1"
+            reference_verification = repo / "results/measurement_audit_v1/server_native_size_v1"
+            write_json(reference_capture / "capture_report.json", {})
+            write_json(reference_capture / "validator_predictions.json", prediction)
+            write_json(reference_verification / "size_coco_xml.json", size_report)
+
+            def repeat_capture_inputs(_repo, _root, engine_id):
+                return (source_root / f"repeat_{engine_id}/model.engine", None, None, None, None,
+                        engine_hashes[engine_id])
+
+            def run_child(command, _repo):
+                command_text = " ".join(command)
+                if "capture_cctsdb_validator.py" in command_text:
+                    engine_id = int(command[command.index("--repeat-index") + 1])
+                    out_dir = Path(command[command.index("--out-dir") + 1])
+                    capture_dir = out_dir
+                    capture_dir.mkdir(parents=True, exist_ok=True)
+                    predictions_path = capture_dir / "validator_predictions.json"
+                    write_json(predictions_path, prediction)
+                    report = {
+                        "dataset_split": DATASET_SPLIT, "images": 1636, "instances": 2706, "status": "pass",
+                        "runtime_arguments": dict(EXPECTED_RUNTIME), "model_sha256": engine_hashes[engine_id],
+                        "predictions_sha256": sha256(predictions_path), "metrics": metric_capture(0.5, 0.4),
+                        "gpu_before": gpu_snapshot, "gpu_after": gpu_snapshot,
+                        "external_gpu_workload_detected": False,
+                    }
+                    write_json(capture_dir / "capture_report.json", report)
+                    child_events.append(("capture", engine_id))
+                else:
+                    capture_dir = Path(command[command.index("--capture-dir") + 1])
+                    verification_dir = Path(command[command.index("--out-dir") + 1])
+                    verification_dir.mkdir(parents=True, exist_ok=True)
+                    capture_report_path = capture_dir / "capture_report.json"
+                    pred_hash = sha256(capture_dir / "validator_predictions.json")
+                    capture_report = json.loads(capture_report_path.read_text(encoding="utf-8"))
+                    write_json(verification_dir / "verification_summary.json", {
+                        "dataset_split": DATASET_SPLIT, "native_matching_status": "pass",
+                        "size_diagnostic": "completed", "model_sha256": capture_report["model_sha256"],
+                        "capture_hash_match": "exact_bytes", "capture_prediction_sha256": pred_hash,
+                        "capture_report_sha256": sha256(capture_report_path), "global_g0": "review_required",
+                    })
+                    write_json(verification_dir / "size_coco_xml.json", size_report)
+                    child_events.append(("verify", None))
+                return len(child_events)
+
+            helpers = {
+                "environment_preflight": preflight,
+                "write_json": write_json,
+                "check_reference": lambda *_args: ({}, size_report),
+                "check_same_targets": lambda *_args: None,
+                "ensure_idle": lambda _state: None,
+                "parse_desktop_confirmations": lambda _values: {},
+                "repeat_capture_inputs": repeat_capture_inputs,
+                "snapshot": lambda _confirmations: gpu_snapshot,
+                "load_records": lambda _payload: {},
+                "load_xml": lambda *_args: None,
+                "run_child": run_child,
+            }
+
+            with patch("uniform_build_repeat.environment",
+                       side_effect=AssertionError("parent called CUDA environment")), \
+                 patch("run_uniform_inference_repeat.subprocess.run",
+                       return_value=SimpleNamespace(stdout="test-head\n")):
+                result = main(["--out-dir", str(output)], repo_override=repo, helpers=helpers)
+
+            self.assertEqual(result, 0)
+            self.assertEqual(helper_events, ["preflight"])
+            self.assertEqual(child_events,
+                             [("capture", 1), ("verify", None), ("capture", 2), ("verify", None),
+                              ("capture", 3), ("verify", None), ("capture", 2), ("verify", None),
+                              ("capture", 3), ("verify", None), ("capture", 1), ("verify", None),
+                              ("capture", 3), ("verify", None), ("capture", 1), ("verify", None),
+                              ("capture", 2), ("verify", None)])
+            summary = json.loads((output / "repeat_summary.json").read_text(encoding="utf-8"))
+            self.assertEqual(summary["status"], "inference_repeatability_completed_review_required")
+            manifest = json.loads((output / "study_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["environment_preflight"]["status"], "ok")
 
 
 if __name__ == "__main__":
