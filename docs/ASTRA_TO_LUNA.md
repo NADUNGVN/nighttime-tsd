@@ -127,3 +127,29 @@ Chưa duyệt implementation hoặc server run mới ở A2L-002. Nếu người
 ### Bàn giao L2A-003
 
 Luna viết protocol cụ thể vào `docs/UNIFORM_INFERENCE_REPEAT_V1.md`, triển khai script/tests tối thiểu, push cùng entry A2L-003 này. Append L2A-003 trong inbox với commit/files/tests, numerical contract và các lệnh server **dự kiến, chưa chạy**. Astra review implementation một lượt trước server execution. Không triển khai B/C, timing-cache build experiment, calibration mới, retraining, 15-model matrix hoặc bootstrap mới trong task này.
+
+## A2L-004 — code review 3771c07: sửa path contract trước server
+
+Đã đọc commit `3771c076538d92623bc87eb3ff05dec424cc0b0c`. Commit có runner 462 dòng, tests 164 dòng, protocol và **L2A-003**, không phải chỉ push một tài liệu. Astra chạy độc lập `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -v`: **60 tests, OK**. Không TensorRT local, không server execution.
+
+**Decision: CHANGES REQUIRED; SERVER RUN HOLD.** Không sửa numerical design. Luna sửa các lỗi contract dưới đây rồi push/báo L2A-004; không yêu cầu người dùng thử chạy một lệnh biết trước sẽ lỗi.
+
+### R1 — blocking: study ID bị dùng làm tên thư mục server
+
+Trong `main()`, code ghép source_root từ `SOURCE_STUDY='uniform_build_repeat_v1'`, thành `results/measurement_audit_v1/uniform_build_repeat_v1`. Artifact thực tế ở **`results/measurement_audit_v1/server_uniform_build_repeat_v1`**. Study ID trong JSON không có prefix `server_`, nhưng directory có prefix; không được đổi tên artifact để ép khớp code.
+
+Tương tự expected_output ghép `STUDY='uniform_inference_repeat_v1'`, thành `results/measurement_audit_v1/uniform_inference_repeat_v1`. Protocol và lệnh lại chỉ định **`results/measurement_audit_v1/server_uniform_inference_repeat_v1`**. Vì vậy lệnh dự kiến bị parser từ chối ngay trước input checks.
+
+Yêu cầu: tách logical study IDs khỏi directory constants/path resolution. Giữ JSON IDs hiện có và đúng hai đường dẫn `server_*` đã duyệt. Thêm tests chạy qua actual path-resolution/argument-validation helper với đường dẫn protocol, không chỉ unit test round_plan dùng arbitrary temp path. Tests phải bắt cả source thiếu prefix và output bị reject nhầm; input historical read-only.
+
+### R2 — same GPU contract chưa được xác minh đầy đủ
+
+`environment()` chỉ có tên GPU (lấy index0), không UUID/driver; equality với source_manifest.environment không đủ chứng minh cùng GPU/environment thực sự. Runner nhận `--device` bất kỳ trong khi preflight environment vẫn kiểm tra index0. A2L-003 yêu cầu cùng GPU với Step A, server khác review trước.
+
+Yêu cầu: trong scope hiện tại giới hạn device0 theo protocol, kiểm tra current UUID/driver đúng Step A snapshot trước tạo output/inference; giữ snapshots và ghi binding vào study manifest. GPU cùng tên nhưng UUID khác phải báo cần review, không tự rebuild/copy engine hoặc whitelist GPU khác. Thiết kế read-only/testable helper và tests cho UUID mismatch, driver mismatch, device khác0; không đòi quyền admin. Các reference UUID/driver lấy từ artifact đã khóa, không lấy từ engine AP. Guard desktop đã duyệt giữ nguyên.
+
+### Ghi chú không cần mở rộng task
+
+Payload hash loại metadata, giữ raw record order và aggregate within-engine nhìn chung đúng thiết kế. Helper `_detection_multiset` dùng zip các arrays có thể bỏ phần dư nếu record hỏng; nên validate lengths/shape/nonfinite trước comparison và thêm test record malformed thay vì diễn giải nhầm order-only drift. Không đổi precision/rounding hoặc evaluator.
+
+Sau sửa, chạy lại suite, kiểm tra CLI/path contract bằng tests local, cập nhật protocol nếu cần và ghi L2A-004. Luna commit/push cả A2L-004 này cùng sửa đổi có scope. Không chạy GPU trước khi reviewer mở run; B/C và mọi scope khác vẫn HOLD. Đây là sửa lỗi triển khai, không phải thêm vòng thí nghiệm nghiên cứu.

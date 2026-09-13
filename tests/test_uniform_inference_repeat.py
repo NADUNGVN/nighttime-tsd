@@ -14,11 +14,15 @@ from run_uniform_inference_repeat import (
     aggregate_within_engine,
     capture_command,
     ensure_output_absent,
+    parse_gpu_identity,
     prediction_difference,
     prediction_payload_hash,
+    resolve_protocol_paths,
     round_plan,
+    validate_device_argument,
     validate_capture_contract,
     validate_engine_manifest,
+    validate_gpu_identity,
 )
 
 
@@ -118,6 +122,39 @@ class UniformInferenceRepeatTests(unittest.TestCase):
         self.assertEqual(validate_engine_manifest(manifest, 2, study, "expected"), "expected")
         with self.assertRaisesRegex(ValueError, "engine hash"):
             validate_engine_manifest(manifest, 2, study, "other")
+
+    def test_protocol_paths_keep_logical_ids_separate_from_server_directories(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            source, output = resolve_protocol_paths(repo)
+            self.assertEqual(source, repo.resolve() / "results/measurement_audit_v1/server_uniform_build_repeat_v1")
+            self.assertEqual(output, repo.resolve() / "results/measurement_audit_v1/server_uniform_inference_repeat_v1")
+            self.assertEqual((source, output), resolve_protocol_paths(repo))
+            with self.assertRaisesRegex(ValueError, "server_uniform_inference_repeat_v1"):
+                from run_uniform_inference_repeat import validate_output_target
+                validate_output_target(repo, repo / "results/measurement_audit_v1/uniform_inference_repeat_v1")
+
+    def test_gpu_uuid_driver_and_device_binding_are_strict(self):
+        device = "GPU-test, Quadro RTX 8000, 595.71.05, P8, 35, 9 W, 300 MHz, 405 MHz, 32 MiB"
+        study = {"gpu_before": {"device": device}}
+        current = {"device": device}
+        self.assertEqual(parse_gpu_identity(current), {"uuid": "GPU-test", "name": "Quadro RTX 8000", "driver_version": "595.71.05"})
+        self.assertTrue(validate_gpu_identity(current, study)["matched"])
+        for changed in (device.replace("GPU-test", "GPU-other"), device.replace("595.71.05", "580.178.04")):
+            with self.assertRaisesRegex(ValueError, "GPU identity"):
+                validate_gpu_identity({"device": changed}, study)
+        with self.assertRaisesRegex(ValueError, "--device 0"):
+            validate_device_argument("1")
+
+    def test_malformed_detection_arrays_are_rejected_before_order_comparison(self):
+        malformed = prediction_fixture()
+        malformed["records"][0]["confidence"].pop()
+        with self.assertRaisesRegex(ValueError, "different lengths"):
+            prediction_payload_hash(malformed)
+        malformed = prediction_fixture()
+        malformed["records"][0]["xyxy"][0][0] = float("nan")
+        with self.assertRaisesRegex(ValueError, "malformed bbox"):
+            prediction_payload_hash(malformed)
 
     def test_output_protection_and_round_order(self):
         with tempfile.TemporaryDirectory() as directory:

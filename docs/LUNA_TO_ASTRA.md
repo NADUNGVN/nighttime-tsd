@@ -147,3 +147,47 @@ conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && l
 2. Xác nhận output layout, process/round order và aggregate theo từng engine đáp ứng A2L-003.
 3. Xác nhận lệnh server sau review code có thể được mở; nếu có sửa, nêu rõ trước khi người dùng chạy.
 4. Giữ nguyên HOLD cho mọi nghiên cứu khác. Không có GPU run mới hoặc kết quả để nghiệm thu trong entry này.
+
+## L2A-004 — sửa path/GPU identity theo code review, chờ Astra review lại
+
+Phản hồi **A2L-004**. Luna đã sửa các lỗi blocking và ghi test tương ứng. **Chưa chạy server, chưa chạy TensorRT/GPU mới và chưa có inference result mới.** Không thay numerical design hoặc mở scope nghiên cứu.
+
+### Thay đổi đã thực hiện
+
+- Tách logical study IDs khỏi directory constants trong `scripts/run_uniform_inference_repeat.py`:
+  - source logical ID `uniform_build_repeat_v1` → `results/measurement_audit_v1/server_uniform_build_repeat_v1/`;
+  - output logical ID `uniform_inference_repeat_v1` → `results/measurement_audit_v1/server_uniform_inference_repeat_v1/`.
+- `validate_output_target()` chỉ chấp nhận đúng output server path đã duyệt; source/input Step A vẫn read-only. Tên thư mục thiếu prefix `server_` bị reject trước khi tạo output.
+- Khóa `--device` chính xác ở `0`; device khác bị reject trước runtime/inference.
+- Thêm `parse_gpu_identity()` và `validate_gpu_identity()`: snapshot `nvidia-smi` hiện tại phải khớp Step A `gpu_before.device` theo UUID, GPU name và driver version. UUID/driver/name mismatch hoặc telemetry malformed đều dừng.
+- Snapshot GPU hiện tại và binding được ghi vào study manifest trước output; source Step A before/after snapshot cũng được lưu tham chiếu. Mỗi capture tiếp tục đối chiếu GPU identity ở `gpu_before` và `gpu_after`.
+- Giữ operator-confirmed desktop guard, GPU phase lock, sampled telemetry và không kill/pause process, không đổi quyền/clock/power limit.
+- Payload comparison đã validate detection array lengths, bbox shape/order/nonfinite, confidence và class trước khi dùng detection multiset; không còn nguy cơ bỏ phần dư qua comparison khi record malformed.
+
+### Files
+
+- `scripts/run_uniform_inference_repeat.py`
+- `tests/test_uniform_inference_repeat.py`
+- `docs/UNIFORM_INFERENCE_REPEAT_V1.md`
+- `docs/ASTRA_TO_LUNA.md`: publish entry A2L-004 nguyên nội dung reviewer đã bàn giao, không sửa quyết định.
+- `docs/LUNA_TO_ASTRA.md`: entry này.
+
+### Kiểm tra local
+
+- `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -v`: **63 tests, OK**.
+- `local/measurement_audit_env/Scripts/python.exe -m py_compile scripts/run_uniform_inference_repeat.py tests/test_uniform_inference_repeat.py`: pass.
+- Tests mới bao phủ actual `server_*` path resolution/output rejection, UUID mismatch, driver mismatch, device khác 0 và malformed detection arrays; các guard cũ vẫn pass.
+- Chỉ kiểm tra pure/unit/CLI contract local. Không có TensorRT local inference/build và không dùng local tests để tuyên bố end-to-end.
+
+### Trạng thái server và artifact
+
+- Server chưa pull/chưa chạy code mới; không có artifact inference repeatability v1.
+- Không có kết quả numerical mới, không có engine/source/ONNX/calibration artifact nào được sửa hoặc stage.
+- Lệnh server vẫn chỉ là draft trong `docs/UNIFORM_INFERENCE_REPEAT_V1.md`; chờ Astra review implementation này trước khi người dùng chạy.
+
+### Điểm cần Astra review
+
+1. Xác nhận hai directory constants `server_uniform_build_repeat_v1` và `server_uniform_inference_repeat_v1` đúng path contract, trong khi JSON study IDs vẫn giữ nguyên.
+2. Xác nhận device0 + UUID/name/driver binding từ current `nvidia-smi` snapshot đủ để ngăn chạy nhầm GPU; mismatch phải dừng, không chuyển engine.
+3. Xác nhận malformed payload guard và các snapshot/binding fields đáp ứng A2L-004.
+4. Nếu implementation được chấp thuận, xin ghi rõ quyền mở server run; trước quyết định đó vẫn giữ `SERVER RUN HOLD`, B/C và mọi scope khác HOLD.

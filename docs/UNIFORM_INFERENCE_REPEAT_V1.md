@@ -1,6 +1,6 @@
 # Uniform inference repeatability v1
 
-Đây là protocol được Astra duyệt tại **A2L-003** để kiểm tra repeatability của inference trên **ba serialized engine Step A hiện có**. Tài liệu này là contract triển khai, không phải báo cáo kết quả. Code/tests local phải được review trước khi người dùng chạy server.
+Đây là protocol được Astra duyệt tại **A2L-003** để kiểm tra repeatability của inference trên **ba serialized engine Step A hiện có**. Tài liệu này là contract triển khai, không phải báo cáo kết quả. Code/tests local phải được review trước khi người dùng chạy server. A2L-004 yêu cầu giữ tách biệt study ID logic với tên thư mục server và khóa GPU identity trước khi tạo output.
 
 ## Câu hỏi và phạm vi
 
@@ -10,10 +10,12 @@ Runner chỉ inference/verify trên `CCTSDB2021/dev`. Không build TensorRT, exp
 
 ## Input identity
 
-- Source study read-only: `results/measurement_audit_v1/server_uniform_build_repeat_v1/`.
+- Logical source study ID là `uniform_build_repeat_v1`; thư mục source server cố định: `results/measurement_audit_v1/server_uniform_build_repeat_v1/`.
+- Logical output study ID là `uniform_inference_repeat_v1`; thư mục output server cố định: `results/measurement_audit_v1/server_uniform_inference_repeat_v1/`. Không dùng tên thư mục thiếu prefix `server_`.
 - Engine `engine_1`, `engine_2`, `engine_3` lần lượt là `repeat_1/model.engine`, `repeat_2/model.engine`, `repeat_3/model.engine`.
 - Runner đọc `engine_sha256` từ từng build manifest và hash lại engine trên server trước capture. Mismatch dừng, không export/rebuild và không chuyển engine sang GPU khác.
 - `source_weights_sha256`, ONNX hash, settings, environment/GPU và common calibration-cache hash phải nhất quán với study manifest. `repeat_capture_inputs()` tiếp tục kiểm tra frozen ONNX/tensor contract của Step A.
+- Chỉ chấp nhận `--device 0`. Trước khi tạo output hoặc bắt đầu inference, runner lấy snapshot `nvidia-smi` và yêu cầu UUID, GPU name và driver version khớp `gpu_before.device` của Step A. UUID hoặc driver khác phải dừng để review; không chuyển/copy engine và không tự rebuild.
 - Engine binaries không được commit vào Git; engine hash và inspector/provenance được lưu trong output JSON.
 
 ## Numerical/runtime contract cố định
@@ -43,7 +45,7 @@ Nếu payload hoặc metric khác, lưu chênh lệch và giữ `review_required
 
 ## Telemetry và shared server
 
-Mỗi capture dùng GPU phase lock và snapshot `nvidia-smi` trước/sau. Giữ nguyên operator-confirmed desktop exception của Step A: người vận hành phải lấy PID/path hiện tại từ snapshot rồi truyền đúng `--confirm-desktop-process PID=PATH`; không dùng PID lịch sử, không đọc `/proc`, không kill/pause process, không đổi quyền/clock/power limit.
+Mỗi capture dùng GPU phase lock và snapshot `nvidia-smi` trước/sau. Runner cũng kiểm tra UUID/name/driver ở cả hai snapshot của từng capture so với Step A binding. Giữ nguyên operator-confirmed desktop exception của Step A: người vận hành phải lấy PID/path hiện tại từ snapshot rồi truyền đúng `--confirm-desktop-process PID=PATH`; không dùng PID lịch sử, không đọc `/proc`, không kill/pause process, không đổi quyền/clock/power limit.
 
 Telemetry sampled không chứng minh GPU isolation hoặc loại workload xuất hiện giữa hai snapshot. Process mới không được phân loại hoặc workload cạnh tranh phải được ghi vào review flags; không blanket-ignore. SERVER-01/RTX8000 là mặc định vì engine compatibility/reference đã được kiểm tra ở Step A; server khác cần review riêng trước khi dùng.
 
@@ -66,7 +68,7 @@ results/measurement_audit_v1/server_uniform_inference_repeat_v1/
   repeat_summary.json
 ```
 
-Mỗi `capture/` phải có `validator_predictions.json` và `capture_report.json`; mỗi `verification/` phải có `native_matching.json`, `size_coco_xml.json`, `verification_summary.json`. `study_manifest.json` lưu round order, engine hashes, environment, reference hashes, payload schema và operator confirmations. `repeat_summary.json` lưu chín record, aggregate theo engine, review flags và limitations.
+Mỗi `capture/` phải có `validator_predictions.json` và `capture_report.json`; mỗi `verification/` phải có `native_matching.json`, `size_coco_xml.json`, `verification_summary.json`. `study_manifest.json` lưu round order, engine hashes, environment, Step A/current GPU snapshots và UUID/name/driver binding, reference hashes, payload schema và operator confirmations. `repeat_summary.json` lưu chín record, aggregate theo engine, review flags và limitations.
 
 ## Lệnh server dự kiến — chưa được chạy trước code review
 

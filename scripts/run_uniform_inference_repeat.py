@@ -17,6 +17,8 @@ from audit_cctsdb_measurement import sha256
 
 SOURCE_STUDY = "uniform_build_repeat_v1"
 STUDY = "uniform_inference_repeat_v1"
+SOURCE_STUDY_DIR = "server_uniform_build_repeat_v1"
+STUDY_DIR = "server_uniform_inference_repeat_v1"
 PREDICTION_PAYLOAD_VERSION = "uniform_inference_repeat_prediction_payload_v1"
 DATASET_SPLIT = "CCTSDB2021/dev"
 ENGINE_REPEATS = (1, 2, 3)
@@ -52,6 +54,51 @@ def canonical_json(value):
                       sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
+def _validate_finite_json(value, path="payload"):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            _validate_finite_json(item, f"{path}.{key}")
+    elif isinstance(value, list):
+        for index, item in enumerate(value):
+            _validate_finite_json(item, f"{path}[{index}]")
+    elif isinstance(value, float) and not math.isfinite(value):
+        raise ValueError(f"Non-finite numeric value in {path}")
+
+
+def _validate_prediction_records(records):
+    for index, record in enumerate(records):
+        if not isinstance(record, dict):
+            raise ValueError(f"Prediction record {index} is not an object")
+        image = record.get("image")
+        if not isinstance(image, str) or "/" in image or "\\" in image:
+            raise ValueError(f"Prediction record {index} has invalid image ID")
+        shape = record.get("orig_shape")
+        if (not isinstance(shape, list) or len(shape) != 2 or
+                any(type(value) is not int or value <= 0 for value in shape)):
+            raise ValueError(f"Prediction record {index} has invalid orig_shape")
+        arrays = [record.get(key) for key in ("xyxy", "confidence", "class_id")]
+        if any(not isinstance(value, list) for value in arrays):
+            raise ValueError(f"Prediction record {index} has malformed detection arrays")
+        if len({len(value) for value in arrays}) != 1:
+            raise ValueError(f"Prediction record {index} detection arrays have different lengths")
+        for box in record["xyxy"]:
+            if (not isinstance(box, list) or len(box) != 4 or
+                    any(not isinstance(value, (int, float)) or isinstance(value, bool) or not math.isfinite(value) for value in box) or
+                    box[2] < box[0] or box[3] < box[1]):
+                raise ValueError(f"Prediction record {index} has malformed bbox")
+        for score in record["confidence"]:
+            if (not isinstance(score, (int, float)) or isinstance(score, bool) or
+                    not math.isfinite(score) or not 0 <= score <= 1):
+                raise ValueError(f"Prediction record {index} has malformed confidence")
+        for class_id in record["class_id"]:
+            if type(class_id) is not int or class_id not in (0, 1, 2):
+                raise ValueError(f"Prediction record {index} has malformed class")
+        for key in ("validator_input", "validator_statistics"):
+            if not isinstance(record.get(key), dict):
+                raise ValueError(f"Prediction record {index} is missing {key}")
+    _validate_finite_json(records, "records")
+
+
 def prediction_payload(capture):
     """Return the versioned output payload; timestamps, paths and engine identity are excluded."""
     required = ("schema_version", "capture_mode", "iou_thresholds", "records", "coordinate_contract")
@@ -60,6 +107,7 @@ def prediction_payload(capture):
         raise ValueError(f"Prediction payload missing fields: {missing}")
     if not isinstance(capture["records"], list) or not capture["records"]:
         raise ValueError("Prediction payload has no records")
+    _validate_prediction_records(capture["records"])
     return {
         "payload_version": PREDICTION_PAYLOAD_VERSION,
         "source_schema_version": capture["schema_version"],
@@ -219,6 +267,59 @@ def validate_engine_manifest(manifest, repeat_id, study_manifest, engine_sha256=
     return manifest["engine_sha256"]
 
 
+def resolve_protocol_paths(repo):
+    """Resolve the logical study IDs to the exact approved server directories."""
+    audit_root = Path(repo).resolve() / "results/measurement_audit_v1"
+    return audit_root / SOURCE_STUDY_DIR, audit_root / STUDY_DIR
+
+
+def validate_output_target(repo, output):
+    source_root, expected_output = resolve_protocol_paths(repo)
+    if Path(output).resolve() != expected_output:
+        raise ValueError(f"Output must be exactly {expected_output}")
+    return source_root, expected_output
+
+
+def parse_gpu_identity(snapshot_or_device):
+    """Extract the stable UUID/name/driver fields from an nvidia-smi device snapshot."""
+    if isinstance(snapshot_or_device, dict):
+        raw = snapshot_or_device.get("device")
+    else:
+        raw = snapshot_or_device
+    if not isinstance(raw, str):
+        raise ValueError("GPU device telemetry is missing")
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    if len(lines) != 1:
+        raise ValueError("GPU device telemetry must contain exactly one device row")
+    fields = [field.strip() for field in lines[0].split(",")]
+    if len(fields) < 3 or not fields[0] or not fields[1] or not fields[2]:
+        raise ValueError(f"GPU device telemetry is malformed: {raw!r}")
+    return {"uuid": fields[0], "name": fields[1], "driver_version": fields[2]}
+
+
+def validate_gpu_identity(current_snapshot, study_manifest):
+    expected = parse_gpu_identity(study_manifest.get("gpu_before"))
+    actual = parse_gpu_identity(current_snapshot)
+    mismatches = {key: {"expected": expected[key], "actual": actual[key]}
+                  for key in ("uuid", "name", "driver_version") if expected[key] != actual[key]}
+    if mismatches:
+        raise ValueError(f"GPU identity differs from Step A snapshot: {mismatches}")
+    return {"expected_step_a": expected, "current": actual, "matched": True}
+
+
+def validate_device_argument(device):
+    if str(device) != "0":
+        raise ValueError("Inference repeatability protocol is locked to --device 0")
+
+
+def validate_run_gpu_snapshots(capture, study_manifest):
+    binding = {}
+    for phase in ("gpu_before", "gpu_after"):
+        snapshot = capture.get(phase)
+        binding[phase] = validate_gpu_identity(snapshot, study_manifest)
+    return binding
+
+
 def validate_capture_contract(capture, verification):
     if capture.get("dataset_split") != DATASET_SPLIT or verification.get("dataset_split") != DATASET_SPLIT:
         raise ValueError("Capture is not CCTSDB2021/dev")
@@ -291,17 +392,18 @@ def main(argv=None):
     args = parser.parse_args(argv)
     repo = Path(__file__).resolve().parents[1]
     output = args.out_dir.resolve()
-    source_root = (repo / "results/measurement_audit_v1" / SOURCE_STUDY).resolve()
-    expected_output = (repo / "results/measurement_audit_v1" / STUDY).resolve()
-    if output != expected_output:
-        parser.error(f"Output must be exactly {expected_output}")
+    try:
+        source_root, expected_output = validate_output_target(repo, output)
+        validate_device_argument(args.device)
+    except ValueError as error:
+        parser.error(str(error))
     ensure_output_absent(output)
 
     # Heavy/runtime imports stay in main so all local unit tests remain TensorRT-free.
     from capture_cctsdb_validator import write_json
     from run_g0_int8_capture import check_reference, check_same_targets
-    from uniform_build_repeat import (environment, parse_desktop_confirmations,
-                                      repeat_capture_inputs)
+    from uniform_build_repeat import (ensure_idle, environment, parse_desktop_confirmations,
+                                      repeat_capture_inputs, snapshot)
     from audit_cctsdb_measurement import load_records, load_xml
 
     confirmations = parse_desktop_confirmations(args.confirm_desktop_process)
@@ -311,6 +413,12 @@ def main(argv=None):
     current_environment = environment()
     if current_environment != source_manifest.get("environment"):
         parser.error("Runtime environment/GPU differs from the Step A engine study; stop for review")
+    current_gpu_before = snapshot(confirmations)
+    ensure_idle(current_gpu_before)
+    try:
+        gpu_binding = validate_gpu_identity(current_gpu_before, source_manifest)
+    except ValueError as error:
+        parser.error(str(error))
 
     engines = {}
     common_cache = None
@@ -354,6 +462,10 @@ def main(argv=None):
         "reference_capture_sha256": sha256(reference_capture / "capture_report.json"),
         "reference_size_sha256": sha256(reference_verification / "size_coco_xml.json"),
         "environment": current_environment,
+        "source_step_a_gpu_before": source_manifest.get("gpu_before"),
+        "source_step_a_gpu_after": source_manifest.get("gpu_after"),
+        "gpu_before": current_gpu_before,
+        "gpu_identity_binding": {"device_argument": args.device, **gpu_binding},
         "operator_confirmations": [{"pid": pid, "reported_path": path}
                                     for pid, path in sorted(confirmations.items())],
         "process_policy": "one fresh capture subprocess per round/engine; verification is a separate subprocess",
@@ -377,6 +489,10 @@ def main(argv=None):
         verification = read(verification_dir / "verification_summary.json")
         size = read(verification_dir / "size_coco_xml.json")
         validate_capture_contract(capture, verification)
+        try:
+            capture_gpu_binding = validate_run_gpu_snapshots(capture, source_manifest)
+        except ValueError as error:
+            raise RuntimeError(f"Round {round_id} engine {engine_id} GPU identity check failed: {error}") from error
         expected_engine = engines[engine_id]["engine_sha256"]
         if capture.get("model_sha256") != expected_engine or verification.get("model_sha256") != expected_engine:
             raise ValueError(f"Round {round_id} engine {engine_id} model identity mismatch")
@@ -411,6 +527,7 @@ def main(argv=None):
                "capture_command": capture_cmd, "verification_command": verify_cmd,
                "prediction_payload_version": PREDICTION_PAYLOAD_VERSION,
                "prediction_payload_sha256": payload_hash,
+               "gpu_identity_binding": capture_gpu_binding,
                "prediction_file_sha256": capture["predictions_sha256"],
                "prediction_payload_exact_vs_round_1": payload_comparison["exact"],
                "prediction_difference_vs_round_1": payload_comparison["differences"],
