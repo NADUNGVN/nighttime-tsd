@@ -12,7 +12,9 @@ from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'scripts'))
 from uniform_build_repeat import (SETTINGS,STUDY,load_contract,ensure_idle,inspector_signature,write_bytes,
                                   validate_selection,onnx_dependencies,classify_cuda_processes,
-                                  is_allowed_snap_desktop_executable,SNAP_DESKTOP_ALLOWLIST,snapshot)
+                                  is_allowed_snap_desktop_executable,is_allowed_desktop_executable,
+                                  desktop_allowlist_id,DESKTOP_ALLOWLIST,
+                                  parse_desktop_confirmations,snapshot)
 from capture_cctsdb_validator import FROZEN_WEIGHTS_SHA256
 from audit_cctsdb_measurement import sha256
 
@@ -67,70 +69,107 @@ class BuildRepeatTests(unittest.TestCase):
             ensure_idle({'processes':f'{os.getpid()+1}, another training, 12000 MiB',
                          'process_details':classify_cuda_processes(
                              f'{os.getpid()+1}, another training, 12000 MiB',
-                             current_pid=os.getpid(), executable_resolver=lambda _: '/opt/train/python')})
+                             current_pid=os.getpid())})
 
     def test_verified_snap_desktop_is_logged_and_allowed(self):
+        path='/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration'
         details=classify_cuda_processes(
-            '445, snapd-desktop-integration, 5 MiB', current_pid=999,
-            executable_resolver=lambda _: '/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration')
-        state={'processes':'445, snapd-desktop-integration, 5 MiB', 'process_details':details,
-               'process_guard':{'allowlist':SNAP_DESKTOP_ALLOWLIST}}
+            f'445, {path}, 5 MiB', current_pid=999, confirmed_desktop={445:path})
+        state={'processes':f'445, {path}, 5 MiB', 'process_details':details,
+               'process_guard':{'allowlist':DESKTOP_ALLOWLIST}}
         ensure_idle(state)
         self.assertTrue(is_allowed_snap_desktop_executable(details[0]['resolved_executable']))
-        self.assertEqual(details[0]['classification'],'allowed_snap_desktop')
+        self.assertEqual(details[0]['classification'],'allowed_desktop_operator_confirmed')
         self.assertEqual(details[0]['allowlist_exception'],'snapd-desktop-integration')
-        self.assertIn('verified executable matches allowlist',details[0]['reason'])
+        self.assertIn('explicitly confirmed by operator',details[0]['reason'])
         self.assertFalse(is_allowed_snap_desktop_executable('/snap/other-package/391/usr/bin/snapd-desktop-integration'))
         self.assertFalse(is_allowed_snap_desktop_executable('/snap/snapd-desktop-integration/latest/usr/bin/snapd-desktop-integration'))
 
     def test_snapshot_records_desktop_exception_and_disclaimer(self):
+        path='/snap/snapd-desktop-integration/392/usr/bin/snapd-desktop-integration'
         with patch('uniform_build_repeat.subprocess.run', side_effect=[
             SimpleNamespace(stdout='GPU snapshot'),
-            SimpleNamespace(stdout='445, snapd-desktop-integration, 5 MiB'),
-        ]), patch('uniform_build_repeat.resolve_process_executable',
-                   return_value='/snap/snapd-desktop-integration/392/usr/bin/snapd-desktop-integration'):
-            state=snapshot()
+            SimpleNamespace(stdout=f'445, {path}, 5 MiB'),
+        ]):
+            state=snapshot({445:path})
         ensure_idle(state)
-        self.assertEqual(state['process_guard']['allowlist'],SNAP_DESKTOP_ALLOWLIST)
+        self.assertEqual(state['process_guard']['allowlist'],DESKTOP_ALLOWLIST)
         self.assertIn('not proof of zero GPU interference',state['process_guard']['disclaimer'])
-        self.assertEqual(state['process_details'][0]['resolved_executable'],
-                         '/snap/snapd-desktop-integration/392/usr/bin/snapd-desktop-integration')
-        self.assertEqual(state['process_details'][0]['classification'],'allowed_snap_desktop')
+        self.assertIn('/proc/<pid>/exe was not read',state['process_guard']['verification_method'])
+        self.assertEqual(state['process_details'][0]['resolved_executable'],path)
+        self.assertEqual(state['process_details'][0]['classification'],'allowed_desktop_operator_confirmed')
+
+    def test_confirmed_xorg_and_gnome_desktop_paths_are_narrow(self):
+        for allowlist_id,path in (
+            ('xorg','/usr/lib/xorg/Xorg'),
+            ('gnome-shell','/usr/bin/gnome-shell'),
+            ('gnome-session','/usr/libexec/gnome-session-binary'),
+        ):
+            self.assertEqual(desktop_allowlist_id(path),allowlist_id)
+            self.assertTrue(is_allowed_desktop_executable(path))
+            details=classify_cuda_processes(f'445, {path}, 5 MiB', current_pid=999, confirmed_desktop={445:path})
+            self.assertEqual(details[0]['classification'],'allowed_desktop_operator_confirmed')
+            self.assertEqual(details[0]['desktop_allowlist_id'],allowlist_id)
+
+    def test_desktop_without_operator_confirmation_is_blocked(self):
+        path='/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration'
+        details=classify_cuda_processes(f'445, {path}, 5 MiB', current_pid=999)
+        self.assertEqual(details[0]['classification'],'blocked_desktop_unconfirmed')
+        with self.assertRaisesRegex(RuntimeError,'Other CUDA'):
+            ensure_idle({'processes':f'445, {path}, 5 MiB', 'process_details':details})
+
+    def test_confirmation_must_match_current_pid_and_path(self):
+        path='/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration'
+        with self.assertRaisesRegex(ValueError,'outside the allowlist'):
+            parse_desktop_confirmations(['445=/snap/other/391/usr/bin/other'])
+        details=classify_cuda_processes(f'445, {path}, 5 MiB', current_pid=999, confirmed_desktop={446:path})
+        self.assertEqual(details[0]['classification'],'blocked_desktop_unconfirmed')
+
+    def test_missing_process_information_is_blocked(self):
+        details=classify_cuda_processes('806157, [Not Found], 218 MiB', current_pid=999)
+        self.assertEqual(details[0]['classification'],'blocked_unverifiable_process')
+        with self.assertRaisesRegex(RuntimeError,'Other CUDA'):
+            ensure_idle({'processes':'806157, [Not Found], 218 MiB', 'process_details':details})
+
+    def test_stale_operator_confirmation_is_blocked(self):
+        path='/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration'
+        with patch('uniform_build_repeat.subprocess.run', side_effect=[
+            SimpleNamespace(stdout='GPU snapshot'), SimpleNamespace(stdout='')]):
+            state=snapshot({445:path})
+        self.assertEqual(state['process_guard']['unmatched_confirmations'],[{'pid':445,'reported_path':path}])
+        with self.assertRaisesRegex(RuntimeError,'Other CUDA'):
+            ensure_idle(state)
+
+    def test_competing_workload_is_recorded_as_external_violation(self):
+        with patch('uniform_build_repeat.subprocess.run', side_effect=[
+            SimpleNamespace(stdout='GPU snapshot'), SimpleNamespace(stdout='446, python, 460 MiB')]):
+            state=snapshot()
+        self.assertTrue(state['process_guard']['external_workload_detected'])
+        self.assertEqual(state['process_guard']['blocked_processes'][0]['classification'],
+                         'blocked_non_allowlisted_process')
+
+    def test_missing_telemetry_is_recorded_as_limited(self):
+        with patch('uniform_build_repeat.subprocess.run', side_effect=[
+            SimpleNamespace(stdout=None), SimpleNamespace(stdout=None)]):
+            state=snapshot()
+        self.assertEqual(state['process_guard']['telemetry_status'],'limited')
+        self.assertTrue(state['process_guard']['external_workload_detected'])
+        self.assertEqual(state['process_details'][0]['classification'],'blocked_unverifiable')
 
     def test_low_memory_training_is_still_blocked(self):
         details=classify_cuda_processes(
-            '445, python, 64 MiB', current_pid=999,
-            executable_resolver=lambda _: '/home/ubuntu/project/.venv/bin/python')
+            '445, python, 64 MiB', current_pid=999)
         with self.assertRaisesRegex(RuntimeError,'Other CUDA'):
             ensure_idle({'processes':'445, python, 64 MiB', 'process_details':details})
         self.assertEqual(details[0]['classification'],'blocked_non_allowlisted_process')
 
     def test_desktop_name_with_different_executable_is_blocked(self):
         details=classify_cuda_processes(
-            '445, snapd-desktop-integration, 5 MiB', current_pid=999,
-            executable_resolver=lambda _: '/usr/local/bin/snapd-desktop-integration')
+            '445, /usr/local/bin/snapd-desktop-integration, 5 MiB', current_pid=999)
         self.assertFalse(details[0]['allowed'])
         self.assertEqual(details[0]['classification'],'blocked_non_allowlisted_process')
         with self.assertRaisesRegex(RuntimeError,'Other CUDA'):
-            ensure_idle({'processes':'445, snapd-desktop-integration, 5 MiB', 'process_details':details})
-
-    def test_unreadable_executable_fails_closed(self):
-        def unreadable(_):
-            raise PermissionError('permission denied')
-        details=classify_cuda_processes('445, desktop, 5 MiB', current_pid=999, executable_resolver=unreadable)
-        self.assertEqual(details[0]['classification'],'blocked_unverifiable')
-        self.assertIn('PermissionError',details[0]['reason'])
-        with self.assertRaisesRegex(RuntimeError,'unverifiable'):
-            ensure_idle({'processes':'445, desktop, 5 MiB', 'process_details':details})
-
-    def test_process_race_fails_closed(self):
-        def disappeared(_):
-            raise FileNotFoundError('no such process')
-        details=classify_cuda_processes('445, desktop, 5 MiB', current_pid=999, executable_resolver=disappeared)
-        self.assertEqual(details[0]['classification'],'blocked_unverifiable')
-        self.assertIn('FileNotFoundError',details[0]['reason'])
-        with self.assertRaisesRegex(RuntimeError,'unverifiable'):
-            ensure_idle({'processes':'445, desktop, 5 MiB', 'process_details':details})
+            ensure_idle({'processes':'445, /usr/local/bin/snapd-desktop-integration, 5 MiB', 'process_details':details})
 
     def test_layer_signature_detects_tactics_and_formats(self):
         a={'Layers':[{'Name':'conv','LayerType':'CaskConvolution','ParameterType':'Convolution','Weights':{'Type':'Int8'},'TacticName':'A'}]}

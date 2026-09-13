@@ -134,8 +134,12 @@ def main():
     parser.add_argument("--representation", choices=REPRESENTATIONS, default="fp16")
     parser.add_argument("--repeat-study", type=Path, help="Scoped Step-A Uniform build study; no arbitrary engine")
     parser.add_argument("--repeat-index", type=int, choices=(1,2,3))
+    parser.add_argument("--confirm-desktop-process", action="append", default=[], metavar="PID=PATH",
+                        help="Explicitly confirm a current nvidia-smi desktop row; no /proc access is used")
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
+    from uniform_build_repeat import ensure_idle, parse_desktop_confirmations, snapshot
+    confirmed_desktop = parse_desktop_confirmations(args.confirm_desktop_process)
     if ultralytics.__version__ != PINNED_VERSION:
         parser.error(f"Activate nighttime-tsd: requires ultralytics {PINNED_VERSION}; do not upgrade")
     import tensorrt as trt
@@ -163,6 +167,8 @@ def main():
     if len(expected) != 1636 or {Path(n).stem for n in expected} != {p.stem for p in (split / "labels").glob("*.txt")}:
         parser.error("Expected exactly 1636 dev images with matching labels")
     with GpuPhaseLock(repo / "results/architecture_matrix_v1/.gpu_phase.lock", f"g0_{args.representation}_dev_capture"):
+        gpu_before = snapshot(confirmed_desktop)
+        ensure_idle(gpu_before)
         args.out_dir.mkdir(parents=True)
         data = args.out_dir / "dev_absolute.yaml"
         data.write_text(f"path: {split.as_posix()}\ntrain: images\nval: images\nnames:\n  0: prohibitory\n  1: mandatory\n  2: warning\nnc: 3\n", encoding="utf-8")
@@ -186,6 +192,8 @@ def main():
         differences = {k: replay[k] - measured[k] for k in ("map50", "map50_95", "precision", "recall")}
         class_differences = {k: replay["per_class_ap50"][k]-v for k, v in measured["per_class_ap50"].items()}
         passed = all(abs(v) <= 1e-12 for v in [*differences.values(), *class_differences.values()])
+        gpu_after = snapshot(confirmed_desktop)
+        external_gpu_workload_detected = bool(gpu_after["process_guard"]["external_workload_detected"])
         commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
         result = {"schema_version": 1, "created_utc": datetime.now(timezone.utc).isoformat(), "git_commit": commit,
             "representation": args.representation, "source_weights_sha256": prov["source_weights_sha256"],
@@ -198,7 +206,9 @@ def main():
             "metrics": measured, "statistics_replay": replay, "delta_replay_minus_val": differences,
             "delta_per_class_ap50": class_differences, "replay_tolerance": 1e-12,
             "previous_evaluation_sha256": sha256(previous), "delta_current_minus_historical_val": {k: measured[k]-old["metrics"][k] for k in differences},
-            "predictions_sha256": sha256(predictions), "status": "pass" if passed else "review_required",
+            "predictions_sha256": sha256(predictions), "gpu_before": gpu_before, "gpu_after": gpu_after,
+            "external_gpu_workload_detected": external_gpu_workload_detected,
+            "status": "pass" if passed else "review_required",
             "scope": "Pass certifies same-run statistics replay only; XML/size convention and global G0 are not resolved."}
         write_json(args.out_dir / "capture_report.json", result)
         print(json.dumps({k: result[k] for k in ("status", "images", "instances", "metrics", "delta_replay_minus_val", "scope")}, indent=2))

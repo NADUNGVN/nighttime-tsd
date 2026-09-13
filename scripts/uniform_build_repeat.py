@@ -28,10 +28,18 @@ STUDY = 'uniform_build_repeat_v1'
 SETTINGS = {'imgsz':640,'batch':1,'workspace_bytes':4 << 30,'builder_optimization_level':3,
             'avg_timing_iterations':1,'timing_cache':'fresh_empty_for_each_repeat','int8':True,'fp16':False,
             'tf32':False,'sigmoid':'FP32 precision+output with OBEY; no bbox/classification override'}
-GPU_PROCESS_GUARD_VERSION = 'verified-executable-v1'
-SNAP_DESKTOP_ALLOWLIST = '/snap/snapd-desktop-integration/<numeric-revision>/usr/bin/snapd-desktop-integration'
-_SNAP_DESKTOP_EXECUTABLE = re.compile(
-    r'^/snap/snapd-desktop-integration/[1-9][0-9]*/usr/bin/snapd-desktop-integration$'
+GPU_PROCESS_GUARD_VERSION = 'operator-confirmed-nvidia-smi-path-v1'
+DESKTOP_ALLOWLIST = {
+    'snapd-desktop-integration': '/snap/snapd-desktop-integration/<numeric-revision>/usr/bin/snapd-desktop-integration',
+    'xorg': '/usr/lib/xorg/Xorg or /usr/bin/Xorg',
+    'gnome-shell': '/usr/bin/gnome-shell or /usr/libexec/gnome-shell',
+    'gnome-session': '/usr/bin/gnome-session-binary or /usr/libexec/gnome-session-binary',
+}
+_DESKTOP_EXECUTABLES = (
+    ('snapd-desktop-integration', re.compile(r'^/snap/snapd-desktop-integration/[1-9][0-9]*/usr/bin/snapd-desktop-integration$')),
+    ('xorg', re.compile(r'^/(?:usr/lib/xorg/Xorg|usr/bin/Xorg)$')),
+    ('gnome-shell', re.compile(r'^/(?:usr/bin|usr/libexec)/gnome-shell$')),
+    ('gnome-session', re.compile(r'^/(?:usr/bin|usr/libexec)/gnome-session-binary$')),
 )
 
 
@@ -88,35 +96,41 @@ def environment():
     return versions
 
 
-def resolve_process_executable(pid, proc_root=Path('/proc')):
-    """Resolve and verify a Linux process executable, failing closed on races."""
-    proc_executable = proc_root / str(pid) / 'exe'
-    try:
-        raw = os.readlink(proc_executable)
-    except FileNotFoundError as error:
-        raise RuntimeError(f'PID {pid} disappeared before executable verification') from error
-    except PermissionError as error:
-        raise RuntimeError(f'cannot read executable for PID {pid}: permission denied') from error
-    except OSError as error:
-        raise RuntimeError(f'cannot read executable for PID {pid}: {error}') from error
-    if not raw.startswith('/') or raw.endswith(' (deleted)'):
-        raise RuntimeError(f'PID {pid} has an unusable executable link: {raw!r}')
-    try:
-        resolved = Path(raw).resolve(strict=True)
-        if not resolved.is_file():
-            raise RuntimeError(f'PID {pid} executable is not a regular file: {resolved}')
-    except FileNotFoundError as error:
-        raise RuntimeError(f'PID {pid} executable disappeared during verification: {raw}') from error
-    except PermissionError as error:
-        raise RuntimeError(f'cannot stat executable for PID {pid}: permission denied') from error
-    except OSError as error:
-        raise RuntimeError(f'cannot stat executable for PID {pid}: {error}') from error
-    return str(resolved)
+def desktop_allowlist_id(path):
+    """Return the narrow desktop allowlist entry matching a reported path."""
+    if not isinstance(path, str):
+        return None
+    for allowlist_id, pattern in _DESKTOP_EXECUTABLES:
+        if pattern.fullmatch(path) is not None:
+            return allowlist_id
+    return None
+
+
+def is_allowed_desktop_executable(path):
+    return desktop_allowlist_id(path) is not None
 
 
 def is_allowed_snap_desktop_executable(path):
-    """Return whether a verified path matches the narrow desktop Snap allowlist."""
-    return isinstance(path, str) and _SNAP_DESKTOP_EXECUTABLE.fullmatch(path) is not None
+    """Backward-compatible check for the original Snap exception."""
+    return desktop_allowlist_id(path) == 'snapd-desktop-integration'
+
+
+def parse_desktop_confirmations(values):
+    """Parse explicit current-server operator confirmations as PID=reported-path."""
+    confirmations = {}
+    for value in values or ():
+        if not isinstance(value, str):
+            raise ValueError('Desktop confirmation must be PID=PATH')
+        pid_text, separator, path = value.partition('=')
+        if not separator or not pid_text.isdigit() or not path:
+            raise ValueError(f'Invalid desktop confirmation {value!r}; expected PID=PATH')
+        pid = int(pid_text)
+        if pid <= 0 or pid in confirmations:
+            raise ValueError(f'Duplicate or invalid desktop confirmation PID: {pid_text!r}')
+        if not is_allowed_desktop_executable(path):
+            raise ValueError(f'Desktop confirmation path is outside the allowlist: {path!r}')
+        confirmations[pid] = path
+    return confirmations
 
 
 def _unverifiable_process(raw, reason):
@@ -125,12 +139,11 @@ def _unverifiable_process(raw, reason):
             'allowed': False, 'allowlist_exception': None, 'reason': reason}
 
 
-def classify_cuda_processes(raw, current_pid=None, executable_resolver=None):
-    """Classify nvidia-smi rows using verified executable paths, never heuristics."""
+def classify_cuda_processes(raw, current_pid=None, confirmed_desktop=None):
+    """Classify nvidia-smi rows using exact current rows and operator confirmation."""
     if current_pid is None:
         current_pid = os.getpid()
-    if executable_resolver is None:
-        executable_resolver = resolve_process_executable
+    confirmed_desktop = confirmed_desktop or {}
     if raw is None:
         return [_unverifiable_process('', 'nvidia-smi returned no process text')]
     if not isinstance(raw, str):
@@ -155,37 +168,50 @@ def classify_cuda_processes(raw, current_pid=None, executable_resolver=None):
                           reason='current process owned by this runner')
             details.append(detail)
             continue
-        try:
-            executable = executable_resolver(pid)
-        except Exception as error:
-            detail.update(classification='blocked_unverifiable',
-                          reason=f'cannot verify executable: {type(error).__name__}: {error}')
-            details.append(detail)
-            continue
-        detail['resolved_executable'] = executable
-        if is_allowed_snap_desktop_executable(executable):
-            detail.update(classification='allowed_snap_desktop', allowed=True,
-                          allowlist_exception='snapd-desktop-integration',
-                          reason=f'verified executable matches allowlist {SNAP_DESKTOP_ALLOWLIST}')
+        detail['resolved_executable'] = process_name if process_name.startswith('/') else None
+        allowlist_id = desktop_allowlist_id(process_name)
+        if allowlist_id is not None and confirmed_desktop.get(pid) == process_name:
+            detail.update(classification='allowed_desktop_operator_confirmed', allowed=True,
+                          allowlist_exception=allowlist_id, desktop_allowlist_id=allowlist_id,
+                          operator_confirmed=True,
+                          reason='exact current nvidia-smi PID/path row was explicitly confirmed by operator; /proc was not read')
+        elif allowlist_id is not None:
+            detail.update(classification='blocked_desktop_unconfirmed',
+                          desktop_allowlist_id=allowlist_id,
+                          reason='desktop path matches allowlist but current PID/path lacks explicit operator confirmation')
+        elif process_name in ('', '[Not Found]'):
+            detail.update(classification='blocked_unverifiable_process',
+                          reason='nvidia-smi did not provide a usable process path')
         else:
             detail.update(classification='blocked_non_allowlisted_process',
-                          reason='verified executable is not in the Snap desktop allowlist')
+                          reason='reported nvidia-smi process path is not in the Snap desktop allowlist')
         details.append(detail)
     return details
 
 
-def snapshot():
+def snapshot(confirmed_desktop=None):
     commands={
         'device':['nvidia-smi','--query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used','--format=csv,noheader'],
         'processes':['nvidia-smi','--query-compute-apps=pid,process_name,used_gpu_memory','--format=csv,noheader']}
     out={}
     for key,command in commands.items():
         done=subprocess.run(command,capture_output=True,text=True,timeout=15,check=True)
-        out[key]=done.stdout.strip()
+        out[key]=done.stdout.strip() if isinstance(done.stdout,str) else done.stdout
+    confirmed_desktop = confirmed_desktop or {}
+    out['process_details']=classify_cuda_processes(out['processes'], confirmed_desktop=confirmed_desktop)
+    observed_pids={detail['pid'] for detail in out['process_details'] if isinstance(detail,dict) and isinstance(detail.get('pid'),int)}
+    unmatched=[{'pid':pid,'reported_path':path} for pid,path in sorted(confirmed_desktop.items()) if pid not in observed_pids]
+    blocked=[detail for detail in out['process_details'] if not detail.get('allowed',False)]
     out['process_guard']={'version':GPU_PROCESS_GUARD_VERSION,
-                          'allowlist':SNAP_DESKTOP_ALLOWLIST,
+                          'allowlist':DESKTOP_ALLOWLIST,
+                          'verification_method':'exact PID/path comparison against this snapshot nvidia-smi output plus explicit operator CLI confirmation; /proc/<pid>/exe was not read',
+                          'operator_confirmation':{'method':'--confirm-desktop-process PID=PATH','confirmed_processes':[{'pid':pid,'reported_path':path} for pid,path in sorted(confirmed_desktop.items())]},
+                          'unmatched_confirmations':unmatched,
+                          'blocked_processes':blocked,
+                          'telemetry_status':'complete' if all(isinstance(out.get(key),str) for key in ('device','processes')) else 'limited',
+                          'telemetry_limitation':'nvidia-smi output is the available workload telemetry; it cannot prove zero interference between snapshots',
+                          'external_workload_detected':bool(blocked or unmatched),
                           'disclaimer':'Allowed desktop processes remain visible; this is not proof of zero GPU interference.'}
-    out['process_details']=classify_cuda_processes(out['processes'])
     return out
 
 
@@ -200,12 +226,21 @@ def ensure_idle(state):
             return False
         if detail.get('classification')=='current_runner_process':
             return detail.get('pid')==os.getpid()
-        return (detail.get('classification')=='allowed_snap_desktop' and
-                detail.get('allowlist_exception')=='snapd-desktop-integration' and
-                is_allowed_snap_desktop_executable(detail.get('resolved_executable')))
+        return (detail.get('classification')=='allowed_desktop_operator_confirmed' and
+                detail.get('desktop_allowlist_id')==detail.get('allowlist_exception') and
+                detail.get('operator_confirmed') is True and
+                is_allowed_desktop_executable(detail.get('resolved_executable')))
     blocked=[detail for detail in details if not allowed(detail)]
+    guard=state.get('process_guard',{})
+    unmatched=guard.get('unmatched_confirmations',[])
+    if unmatched:
+        blocked.extend(unmatched)
     if blocked:
         raise RuntimeError(f'Other CUDA processes active or unverifiable; do not kill automatically: {blocked}')
+
+
+def confirmation_cli_args(confirmations):
+    return [item for pid,path in sorted(confirmations.items()) for item in ('--confirm-desktop-process',f'{pid}={path}')]
 
 
 def validate_selection(repo,manifest):
@@ -225,7 +260,7 @@ def validate_selection(repo,manifest):
     return sorted(names)
 
 
-def prepare(repo,root):
+def prepare(repo,root,confirmed_desktop):
     import torch
     from ultralytics import YOLO
     from ultralytics.engine.exporter import Exporter
@@ -254,7 +289,7 @@ def prepare(repo,root):
         if sha256(cal/'images'/name)!=sha256(repo/'data/processed/cctsdb2021_clean/train/images'/name):
             raise ValueError(f'Calibration image differs from train: {name}')
     with GpuPhaseLock(repo/'results/architecture_matrix_v1/.gpu_phase.lock',STUDY+'_prepare'):
-        before=snapshot();ensure_idle(before)
+        before=snapshot(confirmed_desktop);ensure_idle(before)
         root.mkdir(parents=True)
         shutil.copy2(source,root/'source.pt')
         # Exactly one ONNX export, no INT8/engine exporter. Keep all source artifacts.
@@ -289,6 +324,7 @@ def prepare(repo,root):
         pool.flush();del pool
         if sorted(order)!=names:
             raise ValueError('Actual dataloader image IDs differ from manifest')
+        after=snapshot(confirmed_desktop)
         contract={'study':STUDY,'environment':env,'settings':SETTINGS,'source_weights_sha256':sha256(source),'engine_metadata':metadata,
             'historical_uniform_calibration_cache_sha256':historical['calibration_cache']['sha256'],
             'onnx_export':{'opset':17,'simplify':True,'dynamic':False,'half':False,'imgsz':640,'batch':1},
@@ -297,7 +333,7 @@ def prepare(repo,root):
             'calibration_float32_stream_sha256':stream.hexdigest(),'calibration_manifest_sha256':sha256(cal/'calibration_manifest.json'),
             'calibration_order':order,'calibration_source_image_sha256':{name:sha256(cal/'images'/name) for name in names},
             'calibration_loader_source_sha256':digest_bytes(inspect.getsource(Exporter.get_int8_calibration_dataloader).encode()),
-            'gpu_before':before,'gpu_after':snapshot(),'git_commit':subprocess.run(['git','rev-parse','HEAD'],cwd=repo,capture_output=True,text=True).stdout.strip(),
+            'gpu_before':before,'gpu_after':after,'git_commit':subprocess.run(['git','rev-parse','HEAD'],cwd=repo,capture_output=True,text=True).stdout.strip(),
             'created_utc':datetime.now(timezone.utc).isoformat(),
             'scope':'Step A new controlled baseline, not a byte-identical recreation of historical auto-workspace build. No changed calibration IDs, no bbox/classification protection, no test, no retraining. Repeat 1 generates one private cache; repeats 2/3 use that exact table. Timing cache starts empty in every build to measure tactic-selection variability.'}
         write_json(root/'study_manifest.json',contract)
@@ -327,7 +363,7 @@ def inspector_signature(info):
             'plan_signature_sha256':digest_bytes(json.dumps(signature,sort_keys=True).encode())}
 
 
-def build(repo,root,index):
+def build(repo,root,index,confirmed_desktop):
     import torch
     import tensorrt as trt
     env=environment();contract=load_contract(root)
@@ -372,7 +408,7 @@ def build(repo,root,index):
             self.stream.update(a.tobytes());self.tensor=torch.from_numpy(a).to('cuda:0');self.position+=1
             return [self.tensor.data_ptr()]
     with GpuPhaseLock(repo/'results/architecture_matrix_v1/.gpu_phase.lock',STUDY+f'_build_{index}'):
-        before=snapshot();ensure_idle(before);dest.mkdir()
+        before=snapshot(confirmed_desktop);ensure_idle(before);dest.mkdir()
         logger=trt.Logger(trt.Logger.VERBOSE);builder=trt.Builder(logger);network=builder.create_network(0)
         parser=trt.OnnxParser(network,logger)
         if not parser.parse_from_file(str(root/'source.onnx')):
@@ -420,13 +456,14 @@ def build(repo,root,index):
             info=json.loads(inspector.get_engine_information(trt.LayerInformationFormat.JSON))
             write_json(dest/'inspector.json',info)
             del inspector,engine
+        after=snapshot(confirmed_desktop)
         manifest={'study':STUDY,'repeat':index,'engine_sha256':sha256(dest/'model.engine'),'source_weights_sha256':FROZEN_WEIGHTS_SHA256,
             'onnx_sha256':contract['onnx_sha256'],'study_manifest_sha256':sha256(root/'study_manifest.json'),
             'calibration_cache_sha256':sha256(dest/'calibration.cache'),'calibration_mode':'generated_from_frozen_tensor_stream' if index==1 else 'same_study_cache_only',
             'cache_matches_historical_uniform':sha256(dest/'calibration.cache')==contract['historical_uniform_calibration_cache_sha256'],
             'calibration_batches_consumed':cal.position,'calibration_cache_read':cal.cache_read,'timing_cache_sha256':sha256(dest/'timing.cache'),
             'settings':SETTINGS,'builder_flags':int(config.flags),'sigmoid_fp32_constraints':protected,'environment':env,
-            'gpu_before':before,'gpu_after':snapshot(),'created_utc':datetime.now(timezone.utc).isoformat(),
+            'gpu_before':before,'gpu_after':after,'created_utc':datetime.now(timezone.utc).isoformat(),
             'inspector_sha256':sha256(dest/'inspector.json'),'script_sha256':sha256(Path(__file__))}
         write_json(dest/'build_manifest.json',manifest)
     print(f'DONE BUILD {index}: {dest}',flush=True)
@@ -448,7 +485,7 @@ def repeat_capture_inputs(repo,root,index):
 
 def summarize(repo,root):
     from run_g0_int8_capture import check_same_targets
-    records=[];reference=read(repo/'results/measurement_audit_v1/server_fp16_capture_v1/validator_predictions.json')
+    records=[];review_flags=[];reference=read(repo/'results/measurement_audit_v1/server_fp16_capture_v1/validator_predictions.json')
     for i in (1,2,3):
         p=root/f'repeat_{i}';b=read(p/'build_manifest.json');c=read(p/'capture/capture_report.json');v=read(p/'verification/verification_summary.json')
         if c['status']!='pass' or v['native_matching_status']!='pass' or c['model_sha256']!=b['engine_sha256']:
@@ -459,6 +496,11 @@ def summarize(repo,root):
             raise ValueError('Capture/verification prediction identity mismatch')
         if sha256(p/'inspector.json')!=b['inspector_sha256']:
             raise ValueError('Inspector changed')
+        for label,state in (('build_before',b.get('gpu_before')),('build_after',b.get('gpu_after')),('capture_before',c.get('gpu_before')),('capture_after',c.get('gpu_after'))):
+            if state is None:
+                review_flags.append(f'repeat_{i}_{label}_telemetry_missing')
+            elif state.get('process_guard',{}).get('external_workload_detected'):
+                review_flags.append(f'repeat_{i}_{label}_external_gpu_workload_or_unverified_process')
         records.append({'repeat':i,'engine_sha256':b['engine_sha256'],'calibration_cache_sha256':b['calibration_cache_sha256'],
             'inspector':inspector_signature(read(p/'inspector.json')),
             'ultralytics':c['metrics'],'coco_xml':sizes['metrics'],'gpu_before':b['gpu_before'],'gpu_after':b['gpu_after']})
@@ -471,8 +513,10 @@ def summarize(repo,root):
             a=np.array([r['coco_xml'][size][metric] for r in records])
             stats[size][metric]={'mean':float(a.mean()),'sample_std':float(a.std(ddof=1)),'min':float(a.min()),'max':float(a.max()),'range_pp':float(100*np.ptp(a))}
     write_json(root/'repeat_summary.json',{'study':STUDY,'repeats':records,'build_variability_coco_xml':stats,
+        'gpu_protocol_status':'review_required_external_workload_or_limited_telemetry' if review_flags else 'operator_confirmed_shared_lab_telemetry_recorded',
+        'review_flags':sorted(set(review_flags)),
         'status':'step_A_completed_review_required','next_action':'STOP for review; no bbox/classification override or scaling authorized by this runner.',
-        'limitations':'Three observed builds do not guarantee determinism. Same calibration table isolates build variation, not calibration-sampling variance. Fresh timing caches intentionally permit tactic retiming. GPU snapshots do not eliminate thermal/clock noise. New explicit workspace baseline is not a perfect replica of historical defaults.'})
+        'limitations':'Shared lab server may retain operator-confirmed desktop GPU processes. Process confirmation matches exact current nvidia-smi PID/path rows and does not read /proc; it is not proof of GPU isolation. Telemetry is sampled before/after phases and cannot rule out workload between snapshots. Three observed builds do not guarantee determinism. Same calibration table isolates build variation, not calibration-sampling variance. Fresh timing caches intentionally permit tactic retiming. New explicit workspace baseline is not a perfect replica of historical defaults.'})
     print(json.dumps(stats,indent=2));print(f'DONE: {root / "repeat_summary.json"}')
 
 
@@ -481,32 +525,35 @@ def main():
     parser.add_argument('--out-dir',type=Path,required=True)
     parser.add_argument('--phase',choices=('all','prepare','build','evaluate'),default='all')
     parser.add_argument('--repeat',type=int,choices=(1,2,3))
+    parser.add_argument('--confirm-desktop-process',action='append',default=[],metavar='PID=PATH',
+                        help='Explicitly confirm a current nvidia-smi desktop row; no /proc access is used')
     args=parser.parse_args();repo=Path(__file__).resolve().parents[1];root=args.out_dir.resolve()
+    confirmed_desktop=parse_desktop_confirmations(args.confirm_desktop_process)
     if not root.is_relative_to((repo/'results/measurement_audit_v1').resolve()):
         parser.error('Output must be inside results/measurement_audit_v1')
     if args.phase=='build':
         if args.repeat is None:
             parser.error('--repeat required for build phase')
-        build(repo,root,args.repeat);return
+        build(repo,root,args.repeat,confirmed_desktop);return
     if args.phase=='prepare':
-        prepare(repo,root);return
+        prepare(repo,root,confirmed_desktop);return
     if args.phase=='all':
         if root.exists():
             parser.error('Output exists; do not auto-resume; inspect partial results first')
-        subprocess.run([sys.executable,__file__,'--phase','prepare','--out-dir',str(root)],cwd=repo,check=True)
+        subprocess.run([sys.executable,__file__,'--phase','prepare','--out-dir',str(root),*confirmation_cli_args(confirmed_desktop)],cwd=repo,check=True)
         for i in (1,2,3):
             # Each repeat gets a fresh OS process and an exclusive log, outside repeat dir.
             log=root/f'build_{i}.log'
             print(f'START BUILD {i}/3; verbose log: {log}',flush=True)
             with log.open('x',encoding='utf-8') as f:
-                proc=subprocess.run([sys.executable,__file__,'--phase','build','--repeat',str(i),'--out-dir',str(root)],cwd=repo,stdout=f,stderr=subprocess.STDOUT)
+                proc=subprocess.run([sys.executable,__file__,'--phase','build','--repeat',str(i),'--out-dir',str(root),*confirmation_cli_args(confirmed_desktop)],cwd=repo,stdout=f,stderr=subprocess.STDOUT)
             with log.open('rb') as source,gzip.open(root/f'build_{i}.log.gz','xb') as compressed:
                 shutil.copyfileobj(source,compressed)
             if proc.returncode:
                 raise RuntimeError(f'Build {i} failed; inspect {log}; outputs preserved')
             print(f'FINISHED BUILD {i}/3',flush=True)
     for i in (1,2,3):
-        commands=[['capture_cctsdb_validator.py','--repeat-study',str(root),'--repeat-index',str(i),'--out-dir',str(root/f'repeat_{i}/capture')],
+        commands=[['capture_cctsdb_validator.py','--repeat-study',str(root),'--repeat-index',str(i),'--out-dir',str(root/f'repeat_{i}/capture'),*confirmation_cli_args(confirmed_desktop)],
             ['verify_cctsdb_capture.py','--capture-dir',str(root/f'repeat_{i}/capture'),'--xml',str((repo/'../nighttime-tsd/data/raw/CCTSDB2021/xml.zip').resolve()),'--out-dir',str(root/f'repeat_{i}/verification')]]
         for script,*options in commands:
             subprocess.run([sys.executable,str(repo/'scripts'/script),*options],cwd=repo,check=True)
