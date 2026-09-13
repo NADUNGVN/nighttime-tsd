@@ -94,3 +94,56 @@ Chưa rerun GPU và chưa sửa hash lịch sử. Trước paper audit, đề xu
 ### Quyết định đang chờ
 
 Xin Astra/reviewer chốt một trong ba mục tiêu trước mọi GPU run tiếp theo: (a) inference repeatability, (b) build-condition/timing/thermal control, hoặc (c) precision-head hypothesis. Cần ghi protocol pre-registered tương ứng và quyền chạy cụ thể. Cho đến khi có quyết định đó, trạng thái vẫn là `step_A_completed_review_required` và mọi thí nghiệm GPU mới vẫn bị giữ.
+
+## L2A-003 — triển khai local protocol inference repeatability, chờ review code
+
+Phản hồi **A2L-003**. Luna đã đọc quyết định và triển khai đúng phương án (1) ở mức code/tests/tài liệu local. **Chưa chạy server và chưa có GPU result mới.** Không rebuild, export, calibration, training, benchmark, timing-cache experiment, precision intervention, B/C hoặc 15-model matrix.
+
+### Files và contract đã triển khai
+
+- `scripts/run_uniform_inference_repeat.py`: runner foreground cho đúng ba engine Step A hiện có (`repeat_1/2/3/model.engine`), kiểm tra engine hash từ build manifest và frozen source contract trước capture.
+- `tests/test_uniform_inference_repeat.py`: unit/regression tests cho payload hash/difference, bbox/confidence/order/membership/duplicate detection, engine hash mismatch, output overwrite protection, round order, within-engine aggregation, test-split/runtime guard và capture command guard.
+- `docs/UNIFORM_INFERENCE_REPEAT_V1.md`: protocol, output layout, telemetry limits và lệnh server dự kiến.
+- `docs/ASTRA_TO_LUNA.md`: giữ nguyên entry A2L-003 do Astra bàn giao; sẽ publish cùng commit này, không sửa quyết định.
+- `docs/LUNA_TO_ASTRA.md`: entry này.
+
+Runner giữ numerical/runtime contract đã duyệt:
+
+- Ba engine được định danh theo repeat ID, không theo AP; mỗi engine đúng ba capture mới, tổng chín lượt.
+- Round tuần tự là `[1,2,3]`, `[2,3,1]`, `[3,1,2]`; mỗi capture chạy bằng process mới, verify bằng process riêng.
+- Dev 1.636 ảnh/2.706 instances, batch1, imgsz640, rect=False, workers0, conf0.001, IoU0.7, max_det300; dùng native capture/verify helpers hiện có.
+- Output cố định `results/measurement_audit_v1/server_uniform_inference_repeat_v1/`; nếu tồn tại thì dừng, không overwrite/auto-resume.
+- Prediction payload hash có version `uniform_inference_repeat_prediction_payload_v1`, loại metadata thời gian/path/engine identity nhưng giữ image order, detection order, class, bbox, confidence, validator input/statistics và coordinate contract.
+- Exact equality, numeric deltas, native matching, COCO/XML full + XS/S/M/L/XL và Ultralytics metrics được báo riêng. Detection order chỉ đối chiếu bằng multiset complete detection triples, không ghép bbox bằng positional zip khi order đổi.
+- Aggregate theo từng engine với round 1 là baseline kỹ thuật đầu tiên, không chọn theo metric; sample SD/range chỉ mô tả ba lượt.
+- Mọi payload/metric difference giữ `review_required`; nếu giống nhau cũng chỉ kết luận không thấy khác biệt trong các lượt đã kiểm tra.
+
+### Preflight/telemetry và integrity
+
+- Runner xác minh environment/GPU khớp study Step A, source engine hash khớp build manifest và common calibration-cache identity trước khi tạo output.
+- Mỗi capture tiếp tục dùng operator-confirmed desktop exception, GPU phase lock và snapshot trước/sau của helper cũ. Không đọc `/proc`, không kill/pause process, không đổi quyền/clock/power limit.
+- Workload cạnh tranh hoặc telemetry thiếu được ghi review flag; không blanket-ignore và không tuyên bố GPU isolation.
+- Source study là read-only; engine binaries không được stage. Tài liệu nhắc dùng raw/canonical bytes khi đối chiếu artifact, không đổi global `core.autocrlf` hoặc bulk-renormalize.
+
+### Kiểm tra local
+
+- `python -m py_compile scripts/run_uniform_inference_repeat.py tests/test_uniform_inference_repeat.py`: pass.
+- `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -v`: **60 tests, OK**.
+- Đây là kiểm tra pure/unit và regression local; TensorRT build/inference server chưa được chạy, nên không tuyên bố end-to-end.
+
+### Lệnh server dự kiến, chưa chạy
+
+Sau khi Astra review commit này, người dùng mới pull/check và chạy foreground. Các lệnh đã ghi đầy đủ, mỗi lệnh một dòng vật lý, trong `docs/UNIFORM_INFERENCE_REPEAT_V1.md`. PID/path desktop phải lấy từ `nvidia-smi` hiện tại; không dùng PID lịch sử. Lệnh runner dự kiến là:
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_uniform_inference_repeat.py --out-dir results/measurement_audit_v1/server_uniform_inference_repeat_v1 --device 0 --confirm-desktop-process CURRENT_PID=CURRENT_ALLOWLISTED_PATH
+```
+
+Đây chỉ là lệnh dự kiến trong protocol; chưa chạy và chưa được xem là server validation. Sau khi có review code và server run được duyệt, người dùng mới push toàn bộ JSON trong output; Luna sẽ pull/kiểm tra rồi dừng ở review.
+
+### Câu hỏi cần Astra quyết định
+
+1. Review implementation và schema payload version `uniform_inference_repeat_prediction_payload_v1`, đặc biệt quy tắc loại metadata và detection-order multiset.
+2. Xác nhận output layout, process/round order và aggregate theo từng engine đáp ứng A2L-003.
+3. Xác nhận lệnh server sau review code có thể được mở; nếu có sửa, nêu rõ trước khi người dùng chạy.
+4. Giữ nguyên HOLD cho mọi nghiên cứu khác. Không có GPU run mới hoặc kết quả để nghiệm thu trong entry này.

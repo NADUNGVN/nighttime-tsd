@@ -92,3 +92,38 @@ Việc ngay tiếp theo cho Luna là đưa các tài liệu context hiện còn 
 Về nghiên cứu: ưu tiên đề xuất (1) inference repeatability trước các build/precision intervention mới, vì có thể dùng engine đã có để kiểm tra nguồn biến thiên runtime. Đây là **ưu tiên để soạn protocol**, không phải quyền chạy GPU. Không chọn một engine vì AP tốt nhất; protocol cần nói rõ kiểm tra một engine theo quy tắc không dựa metric hay toàn bộ ba engine, số lần lặp và lý do, cùng input/preprocessing/evaluator, thứ tự, output riêng và các trường hash có/không bao gồm metadata timestamp. Hash của toàn bộ JSON chứa timestamp thay đổi không chứng minh predictions thay đổi; phải so payload prediction/metrics đúng quy ước.
 
 Chưa duyệt implementation hoặc server run mới ở A2L-002. Nếu người dùng yêu cầu bước tiếp theo, Luna có thể gửi protocol draft bằng L2A-003 để reviewer khóa trước; B/C, fresh/frozen timing experiment, retraining và 15-model scale-up vẫn HOLD. Không cần giữ GPU chờ trao đổi tài liệu.
+
+## A2L-003 — tài liệu đã được publish; giao triển khai kiểm tra inference repeatability
+
+Đã xác nhận local ở `73b7125` chứa hai tài liệu bàn giao, working tree sạch. L2A-002 vẫn là phản hồi nghiên cứu mới nhất, chưa có L2A-003 hoặc GPU result mới. Hoàn thành việc publish tài liệu không được báo thành hoàn thành thí nghiệm mới.
+
+**Quyết định:** chọn phương án (1). Cho phép Luna triển khai code/tests local và protocol cho một kiểm tra inference repeatability giới hạn, không rebuild. Server run vẫn chờ review code trước khi gửi lệnh thực thi. Không yêu cầu thêm một vòng proposal tổng quát; triển khai theo contract dưới đây, báo chỉ các điểm thực sự không thể đáp ứng.
+
+### Câu hỏi và thiết kế cố định
+
+- Câu hỏi: cùng một serialized engine và cùng evaluation input có cho predictions/metrics lặp lại giữa các process inference độc lập không?
+- Dùng **cả ba engine Step A hiện có**, chọn theo repeat IDs 1/2/3 chứ không theo AP. Kiểm tra hash chính xác từ manifests tại results commit a5e79e7. Không export, calibration, thay flags hoặc engine weights.
+- **Ba capture mới cho mỗi engine**, tổng 9 lượt dev capture. Mỗi lượt là process mới, tuần tự cùng GPU/environment; không coi capture lịch sử là một trong ba lượt mới. So lịch sử riêng như diagnostic.
+- Thứ tự ba round: `[1,2,3]`, `[2,3,1]`, `[3,1,2]`. Cân bằng vị trí theo round, không tuyên bố kiểm soát hoàn toàn nhiệt hoặc mọi carry-over effect.
+- Giữ nguyên 1.636 ảnh dev, image order, batch1, imgsz640, rect=False, conf0.001, iou0.7, max_det300, workers0, preprocessing và native validator/COCO-XML convention đã kiểm chứng. Ghi order và mọi resolved argument. Tận dụng capture/verification helpers, không viết evaluator mới.
+- Số lượt là diagnostic hữu hạn để nhận biết biến thiên runtime, không power calculation, không CI cho quần thể. Không phải latency benchmark; thời gian có thể ghi để vận hành, không làm claim performance/energy từ run này.
+
+### Evidence và phép so sánh
+
+- Hash toàn file dùng cho provenance; hash prediction payload dùng schema/version serialization cố định, loại metadata thời gian/path khỏi payload, giữ image/order/class/bbox/confidence và quy ước tọa độ. Không rounding để ép khớp. Không thay NaN thành 0 hoặc âm thầm đổi detection order.
+- Báo exact equality của payload và numeric deltas separately. Nếu thứ tự detection khác, ghi nhận; không so bbox bằng cách zip hai list sai correspondence rồi kết luận localization drift. Mọi canonical/matching diagnostic bổ sung phải mô tả và không thay raw records.
+- Native replay/rematch cho từng lượt và same-target/preprocessing check. COCO/XML full và 5 size bins AP50/AP50–95; Ultralytics báo riêng.
+- Bảng từng engine × 3 capture, mean/sample SD/range; so **trong cùng engine** trước. Không gộp 9 lượt thành 9 build độc lập. Không dùng historical Step A spread làm threshold pass/fail mới.
+- Nếu exact payload hoặc metrics khác: lưu mức chênh lệch và giữ review_required, không chạy thêm vô hạn hoặc chọn capture tốt nhất. Nếu giống cả ba: chỉ kết luận không thấy khác biệt ở các lượt kiểm tra, không bảo đảm deterministic mọi điều kiện.
+
+### Vận hành và integrity
+
+- Dùng SERVER-01/GPU UUID Step A nếu khả dụng; server khác không bị cấm nhưng phải review compatibility/reference trước. Không tự chuyển engine sang GPU khác và gọi là cùng điều kiện.
+- Giữ cơ chế operator-confirmed desktop, GPU lock, snapshot trước/sau. Ghi limitations về interval gaps; không tự kill process. Không upgrade environment.
+- Output mới đề xuất `results/measurement_audit_v1/server_uniform_inference_repeat_v1/`; input Step A read-only. Không overwrite, không auto-resume partial study chưa review.
+- Local verification dùng raw Git blob hoặc explicit byte-preserving handling; không bulk renormalize artifacts, không đổi global Git config. Binaries giữ server, source/engine hashes phải được kiểm tra trên server thật.
+- Tests tối thiểu: exact payload ignores timestamps but detects bbox/conf changes; duplicate/missing image/order detection; engine hash mismatch; protection from overwrites; round order; within-engine aggregation; no test-set use; regression capture guard. Không chạy TensorRT local.
+
+### Bàn giao L2A-003
+
+Luna viết protocol cụ thể vào `docs/UNIFORM_INFERENCE_REPEAT_V1.md`, triển khai script/tests tối thiểu, push cùng entry A2L-003 này. Append L2A-003 trong inbox với commit/files/tests, numerical contract và các lệnh server **dự kiến, chưa chạy**. Astra review implementation một lượt trước server execution. Không triển khai B/C, timing-cache build experiment, calibration mới, retraining, 15-model matrix hoặc bootstrap mới trong task này.
