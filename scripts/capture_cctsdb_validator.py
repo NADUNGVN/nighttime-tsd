@@ -24,6 +24,7 @@ PINNED_VERSION = "8.4.102"
 REPRESENTATIONS = ("fp16", "uniform", "low_luminance", "vcsc_proportional")
 FROZEN_WEIGHTS_SHA256 = "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
 CONCURRENT_STUDY_DIR = "server_uniform_inference_repeat_concurrent_v1"
+TIMING_CACHE_STUDY_DIR = "server_uniform_timing_cache_replay_v1"
 
 
 def capture_inputs(repo, representation):
@@ -134,6 +135,8 @@ def main():
     parser.add_argument("--device", default="0")
     parser.add_argument("--representation", choices=REPRESENTATIONS, default="fp16")
     parser.add_argument("--repeat-study", type=Path, help="Scoped Step-A Uniform build study; no arbitrary engine")
+    parser.add_argument("--timing-cache-study", type=Path,
+                        help="Scoped ordinary timing-cache replay study; no arbitrary engine")
     parser.add_argument("--repeat-index", type=int, choices=(1,2,3))
     parser.add_argument("--confirm-desktop-process", action="append", default=[], metavar="PID=PATH",
                         help="Explicitly confirm a current nvidia-smi desktop row; no /proc access is used")
@@ -147,6 +150,8 @@ def main():
                                       parse_desktop_confirmations, snapshot)
     confirmed_desktop = parse_desktop_confirmations(args.confirm_desktop_process)
     confirmed_background = parse_background_confirmations(args.confirm_background_process)
+    if args.repeat_study is not None and args.timing_cache_study is not None:
+        parser.error("Choose one scoped study input: --repeat-study or --timing-cache-study")
     concurrent_root = (repo / "results/measurement_audit_v1" / CONCURRENT_STUDY_DIR).resolve()
     concurrent_output = args.out_dir.resolve().is_relative_to(concurrent_root)
     if args.allow_confirmed_background_workload != concurrent_output:
@@ -162,7 +167,17 @@ def main():
     import tensorrt as trt
     if not torch.cuda.is_available():
         parser.error("CUDA is unavailable; this capture requires an existing TensorRT engine")
-    if args.repeat_study is not None:
+    if args.timing_cache_study is not None:
+        if args.repeat_index is None or args.representation != 'fp16':
+            parser.error('Timing-cache replay capture requires --repeat-index and no --representation override')
+        timing_root = (repo / "results/measurement_audit_v1" / TIMING_CACHE_STUDY_DIR).resolve()
+        if args.timing_cache_study.resolve() != timing_root:
+            parser.error(f'Timing-cache replay study must use exactly {timing_root}')
+        from run_uniform_timing_cache_replay import replay_capture_inputs
+        engine, provenance, previous, old, prov, engine_hash = replay_capture_inputs(
+            repo, args.timing_cache_study, args.repeat_index)
+        args.representation = f"uniform_timing_cache_replay_{args.repeat_index}"
+    elif args.repeat_study is not None:
         if args.repeat_index is None or args.representation != 'fp16':
             parser.error('Repeat capture requires --repeat-index and no --representation override')
         from uniform_build_repeat import repeat_capture_inputs
@@ -170,7 +185,7 @@ def main():
         args.representation = f'uniform_build_repeat_{args.repeat_index}'
     else:
         if args.repeat_index is not None:
-            parser.error('--repeat-index requires --repeat-study')
+            parser.error('--repeat-index requires --repeat-study or --timing-cache-study')
         engine, provenance, previous, old, prov, engine_hash = capture_inputs(repo, args.representation)
     if trt.__version__ != prov["environment"]["tensorrt_python"]:
         parser.error("TensorRT version differs from engine export; do not rebuild automatically")

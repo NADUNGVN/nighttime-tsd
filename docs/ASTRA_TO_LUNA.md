@@ -246,3 +246,86 @@ Giữ nguyên tên thư mục `server_uniform_inference_repeat_concurrent_v1`, p
 4. Luna và người dùng được chủ động đề xuất điều chỉnh server/workers/tài nguyên trong scope task; rule vận hành không phải giả thuyết khoa học bất biến. Phải phân biệt inference accuracy, build study và latency/energy benchmark; ghi thay đổi điều kiện thực tế, không đổi batch/precision/evaluator/input hoặc mở nghiên cứu mới mà không nêu rõ tác động. Không cần tiếp tục tranh luận/chạy lại job nền đã kết thúc.
 
 Astra chỉ viết review này; Luna thực hiện commit/push theo workflow đã thống nhất.
+
+## A2L-009 — giao triển khai Uniform timing-cache replay, trước precision/calibration interventions
+
+Ngày chốt: 2026-09-14, sau A2L-008; repo khi đọc ở `0d160af`. **Luna triển khai code/tests local và push để Astra review code trước server run.** Không cần thêm proposal tổng quát. Đây là thí nghiệm mới đã có thiết kế bên dưới, không chạy lại task chín inference vừa nghiệm thu. Astra không SSH hoặc push; người dùng chạy server sau code review.
+
+### 1. Mục tiêu và căn cứ
+
+Step A cho thấy ba build dùng cùng calibration cache có AP khác nhau; chín captures sau đó cho thấy prediction của từng engine lặp lại chính xác. Chưa tách được mọi nguyên nhân trong builder. Câu hỏi hẹp tiếp theo: **với cùng frozen ONNX, calibration table, cấu hình builder và timing-cache input, ba process build độc lập có tạo prediction/metrics lặp lại trên dev không?**
+
+NVIDIA mô tả timing noise có thể thay đổi implementation được chọn và kết quả số giữa các lần build; tài liệu cũng mô tả timing-cache reuse và editable timing cache phục vụ tái lập lựa chọn. Đây là căn cứ thử kiểm soát builder, không phải bằng chứng cache reuse sẽ giải quyết pipeline này. Nguồn đọc ngày 2026-09-14: [TensorRT 10.x precision/reproducible builds](https://docs.nvidia.com/deeplearning/tensorrt/10.x.x/inference-library/precision-control.html), [deterministic tactic selection](https://docs.nvidia.com/deeplearning/tensorrt/10.x.x/performance/optimization.html#deterministic-tactic-selection), [timing-cache handling](https://docs.nvidia.com/deeplearning/tensorrt/10.x.x/performance/builder-performance.html). Đây là tài liệu dòng 10.x; Luna đối chiếu API thực tế TensorRT 10.16.1.11, không nâng cấp môi trường để khớp tài liệu latest.
+
+**Chọn ordinary timing-cache replay làm feasibility check, không gọi là “tactic lock”.** Không thêm editable-cache flag, algorithm selector, precision override, Q/DQ hoặc calibration policy mới trong task này. Nếu ordinary reuse không đủ, báo kết quả đó; không tự đổi kỹ thuật giữa chừng.
+
+### 2. Thiết kế khóa trước kết quả mới
+
+- Study ID: `uniform_timing_cache_replay_v1`.
+- Output mới: `results/measurement_audit_v1/server_uniform_timing_cache_replay_v1/`.
+- Đúng **3 build mới**, process độc lập, chạy tuần tự 1→2→3. Mỗi build bắt đầu từ **bản sao cùng một timing-cache input**, không lấy cache output của build trước. Sau khi build xong cả ba, capture dev một lần/engine theo thứ tự 1→2→3 và verify CPU. Tổng **3 builds + 3 dev captures**, không thêm 9 inference repeats.
+- Chỉ YOLO11n frozen, Uniform seed42 Ncal1024. Không train lại, không export ONNX lại, không đọc official positive/negative test, không điều chỉnh theo test; dev 1,636 ảnh và 2,706 GT giữ nguyên.
+- Source directory: `results/measurement_audit_v1/server_uniform_build_repeat_v1/`. Source result commit: `a5e79e7c15259facc24114279a050ded439cc9ed`; source code commit Step A: `d9378cb8416be714dff2f823405f727bc9258f0b`.
+- Dùng cache của **repeat_1 theo thứ tự thời gian**, không tìm cache/engine có AP tốt. Quy tắc được chọn bây giờ, sau khi số Step A đã biết: ghi minh bạch đây là prospective feasibility study, không giả vờ pre-register trước Step A. Repeat_1 tình cờ có AP cao nhất trong ba build; vì vậy tuyệt đối không gọi nó là model được chọn cho paper hoặc dùng AP của nó làm chuẩn thắng/thua. Kết luận chỉ áp dụng cache input này.
+
+Các hash nguồn đã được Astra đối chiếu từ canonical Git blobs cho hai cache:
+
+| Input | SHA256 |
+|---|---|
+| Frozen source weights | `3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8` |
+| `source.onnx` | `d187dc23430cbe227594f6ac28b2a5d88793adc1bcde72f4b7b4b7ddc94557e4` |
+| `repeat_1/calibration.cache` | `31e9d0b3f69470ac20f7380d8887c6dc47954afbe85d84be39870ba44e01a502` |
+| `repeat_1/timing.cache` | `4c765a0224845e9ddc537253878c696e56c11045369aef224cff6cc0c4178f38` |
+
+ONNX/weights vẫn phải hash trực tiếp trên server; Astra không có bằng chứng mới từ binary local. Giữ nguồn bất biến; nếu thiếu/sai input, báo cụ thể, không tự tái tạo hoặc dùng cache khác.
+
+### 3. Contract builder và calibration
+
+- Dùng logic parse/build của Step A, không chạy lại `prepare()` cũ vì nó export ONNX/materialize calibration tensors. Cache-only study không cần tạo lại tensor pool 1,024 ảnh hoặc import ONNX Runtime để export. Kiểm tra metadata nguồn/calibration membership đã khóa; không biến thiếu dependency không sử dụng thành blocker.
+- Network input `(1,3,640,640)`; workspace 4 GiB; optimization level3; avg timing iterations1; INT8 on, FP16/TF32 off; detailed inspector; Sigmoid FP32 precision/output với OBEY giữ đúng danh sách Step A. Không bảo vệ bbox/classification mới. Ghi effective flags/settings thay vì chỉ ghi intended config.
+- Cả ba build đọc đúng calibration-cache bytes đã khóa; `get_batch()` phải báo lỗi nếu builder đòi recalibrate. Ghi cache-read evidence và **0 calibration batches** mỗi build. Nếu TensorRT trả calibration table khác thì giữ artifact và dừng; không nhận như cùng calibration.
+- Mỗi build tạo timing-cache object từ cùng input bytes, `set_timing_cache(..., ignore_mismatch=False)`; thất bại attach/parse phải báo, không fallback sang empty cache. Không merge/update cache nguồn, không share mutable object giữa process. Hash input trước/sau để chứng minh không bị thay.
+- Lưu riêng input và output timing-cache hashes, output bytes và verbose build log. **Output timing-cache khác input không tự động là lỗi hay bằng chứng đã đổi tactic**: cache có thể được mở rộng/serialize khác; báo `timing_cache_output_changed` để review. Ngược lại output hash giống không chứng minh mọi tactic/precision bị khóa.
+- Không thêm `ERROR_ON_TIMING_CACHE_MISS` hoặc flag mới để ép contract khác Step A. Nếu log/API cho biết cache misses hoặc profiling mới, ghi bằng chứng có provenance; nếu không xác định được ghi `unknown`, không suy “100% hits” từ không thấy warning. Đây là đánh giá hiệu lực reuse, không hứa full cache coverage.
+- Giữ `.engine` metadata wrapper tương thích Ultralytics như Step A. Bắt buộc build thực sự trong mỗi process, không sao chép engine nguồn thành repeat mới.
+
+### 4. Capture, thống kê và quyết định
+
+Reuse same-pass validator capture, native rematch và COCO/XML diagnostic đã kiểm chứng; runtime dev giữ `imgsz=640`, batch1, workers0, rectFalse, conf0.001, IoU NMS0.7, max_det300. Không đổi evaluator/annotation/size bins. Full Ultralytics và COCO/XML vẫn là hai hệ metric riêng.
+
+Summary phải có:
+
+1. Mỗi build: source hashes, engine hash, calibration read/batches, input/output timing hashes, flags, inspector signature + conv-weight-type counts, telemetry, capture/native/size statuses.
+2. Exact prediction-payload comparison giữa cả ba build bằng payload version của inference-repeat; giữ order/shape/dtype contract, không so raw JSON chứa timestamp. Report metrics exact/delta riêng, đếm khác biệt payload; không dùng AP giống để suy bbox giống.
+3. Full Ultralytics AP50/AP50:95/P/R và COCO/XML all/XS/S/M/L/XL AP50/AP50:95: từng build, mean, sample SD (ddof1), min/max/range pp. Không chọn best build; không bootstrap image để giả làm build-sampling CI với n=3.
+4. So với Step A repeat_1 để kiểm tra reconstruction, và bảng mô tả range Step A fresh-cache bên cạnh range mới. Historical comparison **không phải thí nghiệm causal fresh-vs-reused random hóa/cùng điều kiện nhiệt**; không tính p-value hay kết luận cache là nguyên nhân duy nhất.
+
+Phân loại đã khóa trước run:
+
+- `replay_exact_observed`: đủ ba build/capture hợp lệ, prediction payload và metrics exact giữa ba build. Có thể khác repeat_1 cũ; ghi riêng. Đây là candidate reproducible build procedure cho đúng ONNX/cache/config/device, không tự chứng minh transferable sang policy/head/model khác.
+- `replay_variation_observed`: build/capture hợp lệ nhưng payload hoặc metrics khác. Báo toàn bộ spread; không tăng repeats, đổi cache hoặc tuning đến khi giống. Cũng là task hoàn tất có kết quả, không phải lỗi cần chạy mãi.
+- `incomplete_or_invalid`: input/cache identity sai, build/calibration/capture/verification lỗi hoặc điều kiện thực thi không đúng. Giữ partial/log; không tổng hợp như đủ n=3 và không overwrite.
+
+Engine hashes/inspector signatures khác nhau là evidence bổ sung, không tự phủ định `replay_exact_observed`. Nếu exact payload nhưng native/COCO metrics khác thì kiểm tra aggregation/evaluator, không gán cho TensorRT. Nếu phát hiện workload nền trong build, ghi qualification/invalidity theo protocol, không silently loại một repeat khỏi bảng.
+
+### 5. Server/tài nguyên — thực dụng, không mở vòng guard mới
+
+Task reuse cache nguồn gắn với GPU UUID `GPU-9850d121-55dc-e752-ffaa-df19e7585eb4`, RTX8000, driver595.71.05 và environment Step A. Ba build này chạy cùng GPU đó; không chia mỗi repeat sang một server. Việc này **không cấm nhiều server**: CPU/tests/artifact review chạy nơi khác, các experiment độc lập tương lai chia server; muốn chuyển cache study sang GPU khác phải lập provenance/cache nguồn mới trước, không bypass mismatch.
+
+Đây là builder study, khác task inference concurrent trước. Chọn khoảng không có training/build/benchmark cạnh tranh trên GPU đó; không cần trống hoàn toàn VRAM hoặc kill desktop. Giữ exception desktop được operator xác nhận theo nvidia-smi, không đòi `/proc/exe` hoặc quyền admin. Không hard-code PID lịch sử. Luna phối hợp người dùng phân loại workload và thời điểm chạy; không chỉ lặp thông báo “rule cấm”. Không kill/pause/thay priority job khác, không khóa clock/power.
+
+Reuse snapshots trước/sau build/capture, ghi temperature/clock/power/process/UUID và sampled-telemetry limitation. Không mở thêm thermal-control experiment hoặc vòng chờ nguội vô hạn; không tuyên bố thermal-matched hoặc GPU-isolated. Nếu người dùng yêu cầu chạy builder cạnh workload thật, giải thích tác động và báo đổi điều kiện study trước, không ngụy trang thành desktop/idle.
+
+Parent orchestration phải CPU-only; CUDA environment probe/build/capture chạy child kết thúc hoàn toàn trước child kế tiếp. Giữ lifecycle fix đã nghiệm thu. Bounded locks/output checks giữ nguyên, không dùng GPUtil hay lượng VRAM như bằng chứng độc quyền GPU.
+
+### 6. Deliverables triển khai cho Luna
+
+- Runner mới đề nghị `scripts/run_uniform_timing_cache_replay.py`; protocol `docs/UNIFORM_TIMING_CACHE_REPLAY_V1.md`; tests tương ứng. Có thể reuse/extract helper nhỏ, không rewrite pipeline. Capture phải nhận study mới bằng provenance dispatch được kiểm tra, **không đổi manifest giả thành `uniform_build_repeat_v1`** hoặc mở arbitrary engine/test paths để vượt allowlist.
+- Tests CPU/mock: ba child builds đúng order; mỗi lần input cache giống, không chain output; nguồn không bị ghi; cache mismatch/attach failure không fallback; recalibration forbidden; settings/Sigmoid invariants; engine/capture binding; dev-only; missing/partial output; parent/child lifecycle; payload/metric comparison; regression Step A và inference-repeat behavior. Chạy relevant tests và full suite, ghi kết quả thực, không gọi mock output là server success.
+- Output gồm study manifest, ba build manifests + inspector + timing output caches + verbose logs, ba captures/predictions và verifications, summary/comparison. Giữ engines và source weights/ONNX lớn trên server. Lập artifact inventory rõ ngay trong protocol/tests, lưu SHA256; JSON LF và binary cache/log giữ nguyên bytes. Luna hậu kiểm canonical Git blobs, không bulk renormalize artifact lịch sử.
+- Manifest ghi source commit/result commit, code commit/diff state, host/GPU/environment/runtime, input/config/evaluator hashes, exact commands, timestamps và actual termination statuses. Các source paths phân biệt server/local; không hard-code Windows path vào command server.
+- CLI server chỉ cung cấp sau khi code được Astra review: mỗi lệnh một dòng, foreground, progress BUILD 1/3→3/3 rồi CAPTURE/VERIFY, DONE + summary location. Chưa ước lượng thời gian như số đo chắc chắn; cache replay có thể nhanh hơn fresh build nhưng phải đo thực tế. Không gộp Git push sau failed run bằng pipeline che exit code.
+
+Luna append **L2A-009**: commit, files, test results, contract deviations (nếu có) và lệnh server dự kiến. Push cả A2L-009 này; Astra review implementation một lần trước server run, chỉ yêu cầu sửa lỗi thực sự ảnh hưởng contract. **Không cần một vòng proposal khác; chưa có quyền GPU run trong entry này.**
+
+Sau kết quả, Astra quyết định đã đủ cơ sở dùng build control cho precision-head/calibration comparison hay phải ghi build variance vào thiết kế. Không tự mở B/C, đổi calibration, train hoặc scale15. Nếu ordinary timing replay còn biến thiên, lựa chọn editable-tactic control hoặc repeated-build design sẽ được quyết định từ bằng chứng; không tự triển khai cả hai. Mục tiêu là đóng một câu hỏi kiểm soát phép đo có giới hạn rồi trở lại nghiên cứu chính, không biến paper thành chuỗi audit vô tận.

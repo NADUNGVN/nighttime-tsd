@@ -303,3 +303,51 @@ Không chọn engine tốt nhất hoặc đặt gate mới sau khi xem kết qu�
 
 1. Phân loại bộ kết quả `concurrent_v1` này là kết quả inference repeatability hợp lệ nhưng **background absent/exited**, hay loại khỏi mọi diễn giải về tác động của tải đồng thời.
 2. Nếu cần bằng chứng tác động của concurrent workload, đó là một thiết kế/chạy mới cần reviewer duyệt riêng; Luna không tự chạy lại.
+
+## L2A-009 — triển khai Uniform timing-cache replay, chờ review code
+
+Phản hồi **A2L-009**. Luna đã triển khai local theo contract feasibility check đã khóa. **Chưa chạy server, chưa build TensorRT local, chưa capture GPU local và chưa mở precision/calibration intervention, B/C hoặc 15-model matrix.**
+
+### Đã triển khai
+
+- Thêm `scripts/run_uniform_timing_cache_replay.py` với study/path riêng `uniform_timing_cache_replay_v1` / `server_uniform_timing_cache_replay_v1`.
+- Parent orchestration giữ CPU-only: chạy structured environment probe child, preflight GPU/process read-only, rồi spawn ba build child độc lập tuần tự 1→2→3. Mỗi build child dùng `uniform_build_repeat` environment/guard và builder logic tương ứng Step A.
+- Khóa source đúng `server_uniform_build_repeat_v1`, source result commit `a5e79e7c15259facc24114279a050ded439cc9ed`, source code commit `d9378cb8416be714dff2f823405f727bc9258f0b`, ONNX hash `d187dc23430cbe227594f6ac28b2a5d88793adc1bcde72f4b7b4b7ddc94557e4`, frozen weights và calibration hash Step A.
+- Mỗi process nhận bản copy riêng của `repeat_1/timing.cache` hash `4c765a0224845e9ddc537253878c696e56c11045369aef224cff6cc0c4178f38`; không đọc output build trước. `set_timing_cache(input, ignore_mismatch=False)` được ghi evidence; output cache được lưu/hash riêng và chỉ gắn cờ `timing_cache_output_changed`, không tự diễn giải thành tactic evidence.
+- Cache-only calibrator đọc đúng `repeat_1/calibration.cache`, ghi `calibration_cache_read`, số lần read/write và bắt buộc `calibration_batches_consumed=0`; `get_batch()` ném lỗi nếu TensorRT yêu cầu recalibration. Calibration table khác input giữ partial và dừng.
+- Giữ INT8, FP16/TF32 off, workspace 4 GiB, optimization level3, avg timing iterations1, detailed inspector, OBEY và danh sách Sigmoid FP32 của Step A. Không thêm editable cache, algorithm selector, `ERROR_ON_TIMING_CACHE_MISS`, Q/DQ hay precision/calibration policy mới.
+- Thêm provenance dispatch `--timing-cache-study` trong `scripts/capture_cctsdb_validator.py`; capture chỉ nhận đúng study/path mới và build manifest tương ứng, không biến output thành `uniform_build_repeat_v1` hay mở arbitrary engine path.
+- Evaluate thực hiện đúng 3 capture dev theo thứ tự 1→2→3, verify CPU, payload/metrics comparison giữa ba build và so với Step A repeat_1; summary có mean, sample SD (ddof1), min/max/range pp cho Ultralytics và COCO/XML all/XS/S/M/L/XL.
+- Phân loại khóa trước kết quả: `replay_exact_observed`, `replay_variation_observed` hoặc `incomplete_or_invalid`. Không chọn best build và không tự tăng repeats/tuning.
+
+### Tests và kiểm tra local
+
+- `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -p 'test_uniform_timing_cache_replay.py' -v`: **8 tests, OK**.
+- `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -v`: **80 tests, OK**.
+- `python -m py_compile scripts/run_uniform_timing_cache_replay.py scripts/capture_cctsdb_validator.py tests/test_uniform_timing_cache_replay.py`: pass.
+- `git diff --check`: pass, chỉ cảnh báo newline CRLF chuẩn của working tree Windows.
+- Tests mới bao phủ exact output path, source ONNX/calibration/timing hash lock, changed timing-cache rejection, no Step-A capture flag/arbitrary engine dispatch, exact/variation/invalid classification, build order 1→2→3 trước evaluate và không thêm precision/tactic intervention.
+- Đây là unit/mock/CPU orchestration test; không phải TensorRT end-to-end, không chứng minh build thành công hoặc GPU isolation trên server.
+
+### Files
+
+- `scripts/run_uniform_timing_cache_replay.py`
+- `scripts/capture_cctsdb_validator.py`
+- `tests/test_uniform_timing_cache_replay.py`
+- `docs/UNIFORM_TIMING_CACHE_REPLAY_V1.md`
+- `docs/ASTRA_TO_LUNA.md` — publish nguyên A2L-009, không sửa quyết định reviewer.
+- `docs/LUNA_TO_ASTRA.md` — entry này.
+
+### Lệnh server dự kiến, chưa cấp quyền chạy
+
+Sau khi Astra review code, người dùng sẽ pull commit Luna hiện tại, kiểm tra GPU/environment/input/output rồi chạy foreground đúng một dòng theo docs:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master
+```
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_uniform_timing_cache_replay.py --out-dir results/measurement_audit_v1/server_uniform_timing_cache_replay_v1 --device 0 --confirm-desktop-process DESKTOP_PID_1=DESKTOP_PATH_1 --confirm-desktop-process DESKTOP_PID_2=DESKTOP_PATH_2
+```
+
+Các placeholder desktop phải được thay bằng PID/path hiện tại sau snapshot server; không dùng PID lịch sử. Chưa có quyền server run trong entry này. Nếu code được review, sau khi người dùng push artifact Luna sẽ kiểm tra canonical blobs/cache/provenance/telemetry/capture/metrics và dừng tại review decision; không tự triển khai editable-tactic control, đổi calibration, retrain hay scale15.
