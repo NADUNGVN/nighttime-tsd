@@ -186,3 +186,27 @@ Chỉ chạy cùng GPU UUID/driver/environment Step A mà guard đã khóa. Có 
 Nếu preflight/input/integrity/child lỗi, giữ artifact và báo lỗi; không bỏ guard hay install/upgrade để ép chạy. Nếu capture/payload/metrics khác giữa repeats nhưng verifications hoàn tất, đó là kết quả cần review, không lý do tự chạy tiếp cho đến khi giống nhau. Không chọn best capture.
 
 HOLD vẫn áp dụng cho B/C, timing-cache build study, retraining, calibration policy mới, 15-model matrix và edge benchmark. Mốc hoàn thành tiếp theo là có chín capture được kiểm chứng và một kết luận trong-engine có giới hạn, không phải bảo đảm deterministic hoặc paper-ready.
+
+## A2L-007 — operator cho phép concurrent workload trong inference diagnostic
+
+**Chỉ đạo mới trực tiếp của người dùng:** đã kiểm tra `ps` trên SERVER-01: PID **3619779**, user **ubuntu**, command **`python opcm_full_bgfg.py`**, elapsed 28 phút ở snapshot được gửi. Đây là job khác; người dùng yêu cầu chạy song song. Không suy task/model cụ thể của script đó ngoài thông tin đã có.
+
+**Decision: cho phép concurrent inference diagnostic với workload được xác nhận này.** Thay điều kiện không-workload-cạnh-tranh của A2L-006 **chỉ cho inference-repeat study này**. Không áp dụng cho build-repeat, benchmark latency/energy hoặc các study khác. Không kill/pause/change priority của job khác. Không cần yêu cầu người dùng xác nhận lại chính quyết định đã đưa.
+
+### Luna thực hiện thay đổi nhỏ và triển khai qua Git
+
+1. Thêm cơ chế explicit operator-confirmed background compute workload, tách biệt desktop exception. CLI/config truyền PID và expected command được kiểm tra read-only; không hard-code PID3619779 trong source. Kiểm tra PID/command tại thời điểm chạy bằng `ps` hoặc nguồn tương đương không cần `/proc/exe` quyền cao. Ghi nguồn/mức xác minh; cùng PID nhưng command khác phải chặn. Không miễn mọi Python process hoặc mọi job của ubuntu.
+2. Truyền authorization xuống preflight/capture child đúng scope; default guard cho Step A build và các caller khác giữ nguyên. Không cho shared helper vô tình miễn workload cho mọi experiment.
+3. Workload hiện diện phải được báo **external workload observed + operator authorized**, không ghi `external_workload_detected=false` để ép pass. Có thể tiếp tục với warning/qualification có cấu trúc; process ngoài danh sách cho phép vẫn chặn. Nếu job đã kết thúc, ghi absent/exited và tiếp tục sau kiểm tra process hiện tại, không bắt user đợi hoặc dùng PID cũ thay thế một job khác.
+4. Ghi background workload identity/state, nvidia-smi snapshots và limitation sampled telemetry. Không suy utilization từ VRAM, không gán tải tổng GPU cho riêng job nào nếu chưa có số đo. Nếu job kết thúc giữa run, đó là thay đổi điều kiện tải phải ghi, không tự xóa kết quả hoặc chạy lại.
+5. Numerical contract giữ nguyên: ba engine frozen, 9 capture tuần tự batch1 trên dev, round order và evaluator/payload không đổi. Concurrent nghĩa study chạy cạnh job nền, **không** chạy 9 captures đồng thời. Không tính latency/FPS/energy làm endpoint paper từ run này.
+6. Phân biệt artifact bằng output mới **`results/measurement_audit_v1/server_uniform_inference_repeat_concurrent_v1/`**, ghi protocol variant `operator_confirmed_background_compute_v1`. Đổi path validation/docs/tests theo variant này; logical base inference-study và source Step A không đổi. Giữ mọi output cũ nếu có, không overwrite hoặc rename kết quả cũ thành concurrent. Không triển khai general-purpose multi-study scheduler.
+7. Tests tối thiểu: đúng PID/command được explicit cho phép trong concurrent variant; PID/command sai/không biết bị chặn; job kết thúc không gây vòng chặn vô hạn; child nhận authorization; default build guard vẫn chặn workload; output variant đúng; telemetry báo tải nền thật; regression parent không CUDA và 9 round order giữ nguyên.
+
+### Quyền chạy và điều kiện dừng
+
+**Không cần một vòng proposal nghiên cứu mới.** Sau khi Luna sửa đúng phạm vi trên, chạy tests local thành công và ghi L2A-007 (commit, diff, tests và giới hạn), Luna được push code/cung cấp lệnh cho người dùng pull rồi chạy foreground concurrent variant. Nếu muốn thay numerical contract, bỏ foreign-workload guard hoàn toàn hoặc không thể kiểm chứng PID/command, dừng báo thay vì tự mở rộng quyền.
+
+Trước chạy kiểm tra hash/environment/GPU/input và output chưa tồn tại như cũ. Còn VRAM không bảo đảm không OOM; nếu có lỗi tài nguyên, giữ partial/log, không đổi batch/imgsz hoặc tác động job khác để ép hoàn tất. Push JSON đúng concurrent output khi đủ kết quả; không binaries. Sau run Luna ghi báo cáo kết quả vào inbox để Astra review, không tự mở thí nghiệm khác.
+
+Kết luận được phép sau khi có số liệu: repeatability quan sát **trên GPU dùng chung có workload nền được ghi nhận**. Payload giống chỉ chứng minh không thấy biến thiên trong lượt đã kiểm tra; payload khác chưa tách runtime/backend và tác động điều kiện tải. Không so range của concurrent inference với Step A rồi tự quy nguyên nhân cho nhiệt/tactic hoặc chọn best engine. Nghiệm thu vẫn review_required; mọi B/C, rebuild, training và scale-up HOLD.

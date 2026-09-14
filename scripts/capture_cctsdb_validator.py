@@ -23,6 +23,7 @@ from run_architecture_matrix import GpuPhaseLock
 PINNED_VERSION = "8.4.102"
 REPRESENTATIONS = ("fp16", "uniform", "low_luminance", "vcsc_proportional")
 FROZEN_WEIGHTS_SHA256 = "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
+CONCURRENT_STUDY_DIR = "server_uniform_inference_repeat_concurrent_v1"
 
 
 def capture_inputs(repo, representation):
@@ -136,10 +137,26 @@ def main():
     parser.add_argument("--repeat-index", type=int, choices=(1,2,3))
     parser.add_argument("--confirm-desktop-process", action="append", default=[], metavar="PID=PATH",
                         help="Explicitly confirm a current nvidia-smi desktop row; no /proc access is used")
+    parser.add_argument("--allow-confirmed-background-workload", action="store_true",
+                        help="Only for the scoped concurrent inference-repeat output")
+    parser.add_argument("--confirm-background-process", action="append", default=[], metavar="PID=COMMAND",
+                        help="Explicitly confirm one current background command for the scoped concurrent variant")
     args = parser.parse_args()
     repo = Path(__file__).resolve().parents[1]
-    from uniform_build_repeat import ensure_idle, parse_desktop_confirmations, snapshot
+    from uniform_build_repeat import (ensure_idle, parse_background_confirmations,
+                                      parse_desktop_confirmations, snapshot)
     confirmed_desktop = parse_desktop_confirmations(args.confirm_desktop_process)
+    confirmed_background = parse_background_confirmations(args.confirm_background_process)
+    concurrent_root = (repo / "results/measurement_audit_v1" / CONCURRENT_STUDY_DIR).resolve()
+    concurrent_output = args.out_dir.resolve().is_relative_to(concurrent_root)
+    if args.allow_confirmed_background_workload != concurrent_output:
+        parser.error("Background workload authorization is only valid for the concurrent inference-repeat output")
+    if args.allow_confirmed_background_workload and not confirmed_background:
+        parser.error("Concurrent inference-repeat capture requires --confirm-background-process PID=COMMAND")
+    if args.allow_confirmed_background_workload and args.repeat_study is None:
+        parser.error("Background workload authorization requires a frozen --repeat-study engine")
+    if confirmed_background and not args.allow_confirmed_background_workload:
+        parser.error("--confirm-background-process requires the concurrent inference-repeat authorization")
     if ultralytics.__version__ != PINNED_VERSION:
         parser.error(f"Activate nighttime-tsd: requires ultralytics {PINNED_VERSION}; do not upgrade")
     import tensorrt as trt
@@ -167,8 +184,8 @@ def main():
     if len(expected) != 1636 or {Path(n).stem for n in expected} != {p.stem for p in (split / "labels").glob("*.txt")}:
         parser.error("Expected exactly 1636 dev images with matching labels")
     with GpuPhaseLock(repo / "results/architecture_matrix_v1/.gpu_phase.lock", f"g0_{args.representation}_dev_capture"):
-        gpu_before = snapshot(confirmed_desktop)
-        ensure_idle(gpu_before)
+        gpu_before = snapshot(confirmed_desktop, confirmed_background)
+        ensure_idle(gpu_before, confirmed_background)
         args.out_dir.mkdir(parents=True)
         data = args.out_dir / "dev_absolute.yaml"
         data.write_text(f"path: {split.as_posix()}\ntrain: images\nval: images\nnames:\n  0: prohibitory\n  1: mandatory\n  2: warning\nnc: 3\n", encoding="utf-8")
@@ -192,7 +209,7 @@ def main():
         differences = {k: replay[k] - measured[k] for k in ("map50", "map50_95", "precision", "recall")}
         class_differences = {k: replay["per_class_ap50"][k]-v for k, v in measured["per_class_ap50"].items()}
         passed = all(abs(v) <= 1e-12 for v in [*differences.values(), *class_differences.values()])
-        gpu_after = snapshot(confirmed_desktop)
+        gpu_after = snapshot(confirmed_desktop, confirmed_background)
         external_gpu_workload_detected = bool(gpu_after["process_guard"]["external_workload_detected"])
         commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
         result = {"schema_version": 1, "created_utc": datetime.now(timezone.utc).isoformat(), "git_commit": commit,
@@ -208,6 +225,7 @@ def main():
             "previous_evaluation_sha256": sha256(previous), "delta_current_minus_historical_val": {k: measured[k]-old["metrics"][k] for k in differences},
             "predictions_sha256": sha256(predictions), "gpu_before": gpu_before, "gpu_after": gpu_after,
             "external_gpu_workload_detected": external_gpu_workload_detected,
+            "background_workload_variant": "operator_confirmed_background_compute_v1" if concurrent_output else None,
             "status": "pass" if passed else "review_required",
             "scope": "Pass certifies same-run statistics replay only; XML/size convention and global G0 are not resolved."}
         write_json(args.out_dir / "capture_report.json", result)

@@ -14,7 +14,7 @@ from uniform_build_repeat import (SETTINGS,STUDY,load_contract,ensure_idle,inspe
                                   validate_selection,onnx_dependencies,classify_cuda_processes,
                                   is_allowed_snap_desktop_executable,is_allowed_desktop_executable,
                                   desktop_allowlist_id,DESKTOP_ALLOWLIST,
-                                  parse_desktop_confirmations,snapshot)
+                                  parse_background_confirmations,parse_desktop_confirmations,snapshot)
 from capture_cctsdb_validator import FROZEN_WEIGHTS_SHA256
 from audit_cctsdb_measurement import sha256
 
@@ -170,6 +170,67 @@ class BuildRepeatTests(unittest.TestCase):
         self.assertEqual(details[0]['classification'],'blocked_non_allowlisted_process')
         with self.assertRaisesRegex(RuntimeError,'Other CUDA'):
             ensure_idle({'processes':'445, /usr/local/bin/snapd-desktop-integration, 5 MiB', 'process_details':details})
+
+    def test_background_confirmation_is_exact_and_is_recorded_as_authorized_external_workload(self):
+        desktop='/snap/snapd-desktop-integration/392/usr/bin/snapd-desktop-integration'
+        expected='python opcm_full_bgfg.py'
+        calls=[]
+
+        def run(command, **kwargs):
+            calls.append(command)
+            if command[0] == 'ps':
+                return SimpleNamespace(stdout=expected+'\n', returncode=0)
+            if command[1] == '--query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used':
+                return SimpleNamespace(stdout='GPU-test, Quadro RTX 8000, 595.71.05, P8, 35, 9 W, 300 MHz, 405 MHz, 32 MiB')
+            return SimpleNamespace(stdout=f'445, {desktop}, 5 MiB\n446, python, 20624 MiB')
+
+        with patch('uniform_build_repeat.subprocess.run', side_effect=run):
+            state=snapshot({445:desktop},{446:expected})
+        ensure_idle(state,{446:expected})
+        background=next(item for item in state['process_guard']['background_workload'] if item['pid']==446)
+        detail=next(item for item in state['process_details'] if item['pid']==446)
+        self.assertEqual(background['status'],'running')
+        self.assertTrue(background['authorized'])
+        self.assertTrue(state['process_guard']['external_workload_detected'])
+        self.assertTrue(state['process_guard']['external_workload_authorized'])
+        self.assertEqual(detail['classification'],'allowed_background_operator_confirmed')
+        self.assertEqual(calls[-1][:3],['ps','-o','args='])
+
+    def test_background_pid_command_mismatch_is_blocked(self):
+        expected='python opcm_full_bgfg.py'
+        with patch('uniform_build_repeat.subprocess.run', side_effect=[
+            SimpleNamespace(stdout='GPU-test, Quadro RTX 8000, 595.71.05, P8, 35, 9 W, 300 MHz, 405 MHz, 32 MiB'),
+            SimpleNamespace(stdout='446, python, 20624 MiB'),
+            SimpleNamespace(stdout='python another_job.py', returncode=0),
+        ]):
+            state=snapshot({}, {446:expected})
+        workload=state['process_guard']['background_workload'][0]
+        self.assertEqual(workload['status'],'command_mismatch')
+        self.assertFalse(workload['authorized'])
+        with self.assertRaisesRegex(RuntimeError,'Other CUDA'):
+            ensure_idle(state,{446:expected})
+
+    def test_background_job_exit_is_recorded_without_waiting_or_blocking(self):
+        expected='python opcm_full_bgfg.py'
+        with patch('uniform_build_repeat.subprocess.run', side_effect=[
+            SimpleNamespace(stdout='GPU-test, Quadro RTX 8000, 595.71.05, P8, 35, 9 W, 300 MHz, 405 MHz, 32 MiB'),
+            SimpleNamespace(stdout=''),
+            SimpleNamespace(stdout='', returncode=1),
+        ]):
+            state=snapshot({}, {446:expected})
+        ensure_idle(state,{446:expected})
+        workload=state['process_guard']['background_workload'][0]
+        self.assertEqual(workload['status'],'exited')
+        self.assertFalse(workload['observed_on_gpu'])
+        self.assertFalse(state['process_guard']['external_workload_detected'])
+
+    def test_background_confirmation_parser_rejects_patterns_and_duplicates(self):
+        self.assertEqual(parse_background_confirmations(['446=python opcm_full_bgfg.py']),
+                         {446:'python opcm_full_bgfg.py'})
+        with self.assertRaisesRegex(ValueError,'exact command'):
+            parse_background_confirmations(['446=python *.py'])
+        with self.assertRaisesRegex(ValueError,'Duplicate'):
+            parse_background_confirmations(['446=python a.py','446=python b.py'])
 
     def test_layer_signature_detects_tactics_and_formats(self):
         a={'Layers':[{'Name':'conv','LayerType':'CaskConvolution','ParameterType':'Convolution','Weights':{'Type':'Int8'},'TacticName':'A'}]}

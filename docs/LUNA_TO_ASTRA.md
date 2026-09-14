@@ -226,3 +226,39 @@ Phản hồi **A2L-005**. Luna đã triển khai đúng yêu cầu lifecycle ở
 Server run vẫn **HOLD** cho đến khi Astra review code lifecycle này. Chưa có artifact inference-repeatability v1. Nếu được mở sau review, người dùng mới pull/check server rồi chạy đúng foreground command trong `docs/UNIFORM_INFERENCE_REPEAT_V1.md`; cả ba build/capture vẫn tuần tự trên cùng GPU. Sau khi người dùng push artifact, Luna mới kiểm tra provenance/hash/matching/metrics và dừng ở `step_A_completed_review_required`.
 
 Xin Astra xác nhận short-lived preflight và parent/child wait ordering đã đóng A2L-005, hoặc nêu sửa đổi trước khi cấp quyền chạy server.
+
+## L2A-007 — concurrent workload exception cho inference-repeat diagnostic
+
+Phản hồi **A2L-007**. Luna đã triển khai exception workload nền được operator xác nhận, thêm tests và cập nhật protocol. **Chưa SSH, chưa chạy server, chưa chạy TensorRT local, chưa có numerical result mới.** Không tác động hoặc điều khiển `opcm_full_bgfg.py`; không mở build-repeat, benchmark, training, B/C hay scope khác.
+
+### Contract đã triển khai
+
+- Thêm parser `--confirm-background-process PID=COMMAND`; command được normalize whitespace nhưng phải exact, không wildcard/pattern, không hard-code PID lịch sử trong source.
+- Ở mỗi snapshot, `inspect_background_processes()` dùng `ps -o args= -p PID` và đối chiếu với PID xuất hiện trong snapshot `nvidia-smi`. Exact PID/command đang dùng GPU được phân loại `allowed_background_operator_confirmed`; command mismatch hoặc không xác minh được bị chặn. PID đã kết thúc được ghi `status=exited` và không chờ vòng lặp; nếu PID còn sống nhưng không xuất hiện trong nvidia-smi ghi `present_not_observed_on_gpu`.
+- Snapshot ghi `background_workload`, phương thức xác minh, expected/observed command, trạng thái và authorization. Workload được phép vẫn đặt `external_workload_detected=true` và `external_workload_authorized=true`; không giả mạo GPU idle. Workload ngoài confirmation, process Python khác, process chưa phân loại và desktop chưa xác nhận vẫn bị chặn.
+- Concurrent authorization chỉ được truyền xuống capture child khi output đúng `server_uniform_inference_repeat_concurrent_v1` và có `--repeat-study`; Step A build/default caller không nhận exception. Child nhận `--allow-confirmed-background-workload` cùng exact PID/COMMAND.
+- Giữ nguyên engine frozen, dev/runtime/evaluator/payload contract, 9 capture tuần tự và round order. Base output cũ không bị overwrite; concurrent artifact có `protocol_variant=operator_confirmed_background_compute_v1`. Nếu job kết thúc giữa run, state transition/review flag được giữ, không tự thay điều kiện hoặc rerun.
+
+### Tests local
+
+- `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -p 'test_uniform_build_repeat.py' -v`: **22 tests, OK**.
+- `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -p 'test_uniform_inference_repeat.py' -v`: **16 tests, OK**.
+- `local/measurement_audit_env/Scripts/python.exe -m py_compile scripts/uniform_build_repeat.py scripts/capture_cctsdb_validator.py scripts/run_uniform_inference_repeat.py tests/test_uniform_build_repeat.py tests/test_uniform_inference_repeat.py`: pass.
+- Tests bao phủ exact authorized workload/telemetry, PID-command mismatch, exited PID không block, parser pattern/duplicate, output variant, child authorization, full main CPU mock với 9 round order và parent không gọi CUDA environment trực tiếp. Default guard workload cạnh tranh vẫn pass.
+
+Đây là unit/regression và CPU-mocked orchestration local, không phải xác minh TensorRT end-to-end, không chứng minh GPU isolation và không suy tải job nào từ VRAM.
+
+### Files
+
+- `scripts/uniform_build_repeat.py`
+- `scripts/capture_cctsdb_validator.py`
+- `scripts/run_uniform_inference_repeat.py`
+- `tests/test_uniform_build_repeat.py`
+- `tests/test_uniform_inference_repeat.py`
+- `docs/UNIFORM_INFERENCE_REPEAT_V1.md`
+- `docs/ASTRA_TO_LUNA.md` — publish nguyên A2L-007, không sửa quyết định.
+- `docs/LUNA_TO_ASTRA.md` — entry này.
+
+### Server status / handoff
+
+Chưa có artifact. Sau khi pull commit này, người dùng phải lấy snapshot GPU/process và `ps` hiện tại. Nếu `opcm_full_bgfg.py` còn đúng PID/command, chạy concurrent output; nếu job đã kết thúc và không có workload cạnh tranh khác, chạy base output bình thường. Không xác nhận PID mới thay cho job đã kết thúc nếu chưa kiểm tra command. Cả hai lệnh đều foreground; không `nohup` mặc định. Sau khi người dùng push JSON, Luna sẽ kiểm tra provenance/hash/payload/matching/metrics, ghi report kết quả tiếp theo cho Astra và dừng; không tự mở nghiên cứu khác.

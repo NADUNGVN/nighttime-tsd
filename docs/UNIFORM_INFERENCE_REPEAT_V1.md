@@ -57,6 +57,14 @@ Sau preflight, mỗi capture vẫn chạy trong process mới và phải kết t
 
 Nếu preflight hoặc bất kỳ child nào fail, runner dừng foreground; không overwrite, auto-resume hoặc tiếp tục từ output partial. `environment_preflight` và child stdout hash/provenance được lưu để phân biệt report preflight với telemetry workload của study. Đây là contract lifecycle đã được kiểm tra bằng CPU mocks/unit tests local, không phải xác minh TensorRT end-to-end.
 
+## Concurrent workload variant — A2L-007
+
+A2L-007 mở một biến thể vận hành hẹp cho trường hợp job nền đã được operator xác nhận: output riêng `results/measurement_audit_v1/server_uniform_inference_repeat_concurrent_v1/`, logical study vẫn là `uniform_inference_repeat_v1`, và `protocol_variant` là `operator_confirmed_background_compute_v1`. Biến thể này giữ nguyên ba frozen engine, chín capture dev tuần tự, round order, batch/runtime, evaluator và payload contract; không chạy chín capture đồng thời và không đo latency/energy.
+
+Runner nhận mỗi workload bằng `--confirm-background-process PID=COMMAND`. Ở từng GPU snapshot, helper chạy `ps -o args= -p PID` và đối chiếu exact command với PID xuất hiện trong `nvidia-smi`; command pattern, PID khác, command đổi hoặc không xác minh được đều bị chặn. Workload được xác nhận được ghi là `external_workload_detected=true` và `external_workload_authorized=true` trong snapshot; không ghi đè thành GPU idle. PID đã kết thúc được ghi `status=exited` mà không chờ vô hạn; nếu PID bị tái sử dụng cho command khác thì dừng. Process ngoài confirmation vẫn bị guard chặn. Authorization chỉ được truyền từ runner concurrent variant xuống capture child; Step A build và caller khác không được miễn.
+
+Nếu job nền còn chạy, dùng concurrent output và command exact lấy từ snapshot `ps` mới. Nếu job đã kết thúc và snapshot hiện tại không có workload cạnh tranh, dùng output base `server_uniform_inference_repeat_v1` với chỉ desktop confirmations; không dùng PID cũ để xác nhận một process khác. Nếu job kết thúc giữa các capture, report vẫn giữ state transition và review flag; không tự chạy lại hay thay batch/imgsz.
+
 ## Output contract
 
 Output cố định và không overwrite:
@@ -78,9 +86,9 @@ results/measurement_audit_v1/server_uniform_inference_repeat_v1/
 
 Mỗi `capture/` phải có `validator_predictions.json` và `capture_report.json`; mỗi `verification/` phải có `native_matching.json`, `size_coco_xml.json`, `verification_summary.json`. `study_manifest.json` lưu round order, engine hashes, environment, Step A/current GPU snapshots và UUID/name/driver binding, reference hashes, payload schema và operator confirmations. `repeat_summary.json` lưu chín record, aggregate theo engine, review flags và limitations.
 
-## Lệnh server — được mở theo A2L-006, chưa chạy
+## Lệnh server — A2L-006 base hoặc A2L-007 concurrent, chưa chạy
 
-Astra đã chấp thuận code review tại A2L-006 cho đúng diagnostic này. Người dùng pull/check commit đã được push trước khi chạy. Mỗi lệnh dưới đây là một dòng vật lý; runner chạy foreground, không dùng `nohup` mặc định. Lấy PID/path desktop mới từ `nvidia-smi` hiện tại; không thay placeholder bằng PID lịch sử.
+Astra đã chấp thuận code review tại A2L-006; A2L-007 thêm biến thể concurrent cho workload nền được xác nhận. Người dùng pull/check commit đã được push trước khi chạy. Mỗi lệnh dưới đây là một dòng vật lý; runner chạy foreground, không dùng `nohup` mặc định. Lấy PID/path desktop và background command mới từ snapshot hiện tại; không thay placeholder bằng PID lịch sử.
 
 ```bash
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && hostname && nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader
@@ -90,7 +98,13 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_uniform_inference_repeat.py --out-dir results/measurement_audit_v1/server_uniform_inference_repeat_v1 --device 0 --confirm-desktop-process CURRENT_PID=CURRENT_ALLOWLISTED_PATH
 ```
 
-Nếu có nhiều desktop process đã được đối chiếu, thêm mỗi cặp `--confirm-desktop-process PID=PATH` trên cùng một dòng. Không truyền confirmation cho process không đúng allowlist. Nếu preflight gặp training/inference/build hoặc process chưa phân loại, dừng và gửi log; không kill process và không chạy lại trên output partial.
+Nếu có nhiều desktop process đã được đối chiếu, thêm mỗi cặp `--confirm-desktop-process PID=PATH` trên cùng một dòng. Không truyền confirmation cho process không đúng allowlist. Nếu job `opcm_full_bgfg.py` còn chạy và exact `ps` command đã được kiểm tra, dùng concurrent variant dưới đây; thay cả ba placeholder bằng giá trị hiện tại, không chạy nguyên placeholder:
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_uniform_inference_repeat.py --out-dir results/measurement_audit_v1/server_uniform_inference_repeat_concurrent_v1 --device 0 --confirm-desktop-process CURRENT_DESKTOP_PID=CURRENT_ALLOWLISTED_PATH --confirm-background-process 'CURRENT_BG_PID=CURRENT_EXACT_COMMAND'
+```
+
+Concurrent variant chỉ được dùng cho PID/command được kiểm tra ngay trước run. Nếu process đã kết thúc, dùng base command ở trên khi không còn workload cạnh tranh; không truyền PID cũ để biến thành workload mới. Nếu preflight gặp training/inference/build khác, process chưa phân loại hoặc command mismatch, dừng và gửi log; không kill/pause process và không chạy lại trên output partial.
 
 Sau khi runner in `DONE`, kiểm tra danh sách JSON rồi push riêng artifact; không stage engine/source/ONNX/calibration tensor:
 

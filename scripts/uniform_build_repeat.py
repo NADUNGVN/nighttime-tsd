@@ -133,17 +133,63 @@ def parse_desktop_confirmations(values):
     return confirmations
 
 
+def parse_background_confirmations(values):
+    """Parse explicit PID=COMMAND confirmations for the bounded concurrent variant."""
+    confirmations = {}
+    for value in values or ():
+        if not isinstance(value, str):
+            raise ValueError('Background workload confirmation must be PID=COMMAND')
+        pid_text, separator, command = value.partition('=')
+        command = ' '.join(command.split())
+        if not separator or not pid_text.isdigit() or not command:
+            raise ValueError(f'Invalid background confirmation {value!r}; expected PID=COMMAND')
+        pid = int(pid_text)
+        if pid <= 0 or pid in confirmations:
+            raise ValueError(f'Duplicate or invalid background confirmation PID: {pid_text!r}')
+        if any(token in command for token in ('*', '?', '[', ']')):
+            raise ValueError('Background workload command must be an exact command, not a pattern')
+        confirmations[pid] = command
+    return confirmations
+
+
+def inspect_background_processes(confirmations):
+    """Check confirmed commands with ps; do not read /proc or wait for a PID."""
+    checks = {}
+    for pid, expected_command in sorted((confirmations or {}).items()):
+        try:
+            done = subprocess.run(['ps', '-o', 'args=', '-p', str(pid)], capture_output=True,
+                                  text=True, timeout=15, check=False)
+        except OSError as error:
+            checks[pid] = {'status': 'unverifiable', 'expected_command': expected_command,
+                           'observed_command': None, 'error': str(error)}
+            continue
+        observed_command = ' '.join((done.stdout or '').split())
+        if not observed_command and done.returncode in (0, 1):
+            checks[pid] = {'status': 'exited', 'expected_command': expected_command,
+                           'observed_command': None}
+        elif observed_command == expected_command:
+            checks[pid] = {'status': 'running', 'expected_command': expected_command,
+                           'observed_command': observed_command}
+        else:
+            checks[pid] = {'status': 'command_mismatch', 'expected_command': expected_command,
+                           'observed_command': observed_command or None}
+    return checks
+
+
 def _unverifiable_process(raw, reason):
     return {'pid': None, 'process_name': None, 'used_gpu_memory': None, 'raw': raw,
             'resolved_executable': None, 'classification': 'blocked_unverifiable',
             'allowed': False, 'allowlist_exception': None, 'reason': reason}
 
 
-def classify_cuda_processes(raw, current_pid=None, confirmed_desktop=None):
+def classify_cuda_processes(raw, current_pid=None, confirmed_desktop=None,
+                            confirmed_background=None, background_checks=None):
     """Classify nvidia-smi rows using exact current rows and operator confirmation."""
     if current_pid is None:
         current_pid = os.getpid()
     confirmed_desktop = confirmed_desktop or {}
+    confirmed_background = confirmed_background or {}
+    background_checks = background_checks or {}
     if raw is None:
         return [_unverifiable_process('', 'nvidia-smi returned no process text')]
     if not isinstance(raw, str):
@@ -170,7 +216,18 @@ def classify_cuda_processes(raw, current_pid=None, confirmed_desktop=None):
             continue
         detail['resolved_executable'] = process_name if process_name.startswith('/') else None
         allowlist_id = desktop_allowlist_id(process_name)
-        if allowlist_id is not None and confirmed_desktop.get(pid) == process_name:
+        if pid in confirmed_background:
+            check = background_checks.get(pid, {})
+            detail.update(expected_command=confirmed_background[pid],
+                          observed_command=check.get('observed_command'))
+            if check.get('status') == 'running':
+                detail.update(classification='allowed_background_operator_confirmed', allowed=True,
+                              operator_confirmed=True,
+                              reason='exact current ps PID/command and nvidia-smi PID row were explicitly confirmed by operator')
+            else:
+                detail.update(classification='blocked_background_command_unverified',
+                              reason='confirmed background PID/command is no longer an exact current process match')
+        elif allowlist_id is not None and confirmed_desktop.get(pid) == process_name:
             detail.update(classification='allowed_desktop_operator_confirmed', allowed=True,
                           allowlist_exception=allowlist_id, desktop_allowlist_id=allowlist_id,
                           operator_confirmed=True,
@@ -189,7 +246,7 @@ def classify_cuda_processes(raw, current_pid=None, confirmed_desktop=None):
     return details
 
 
-def snapshot(confirmed_desktop=None):
+def snapshot(confirmed_desktop=None, confirmed_background=None):
     commands={
         'device':['nvidia-smi','--query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used','--format=csv,noheader'],
         'processes':['nvidia-smi','--query-compute-apps=pid,process_name,used_gpu_memory','--format=csv,noheader']}
@@ -198,24 +255,56 @@ def snapshot(confirmed_desktop=None):
         done=subprocess.run(command,capture_output=True,text=True,timeout=15,check=True)
         out[key]=done.stdout.strip() if isinstance(done.stdout,str) else done.stdout
     confirmed_desktop = confirmed_desktop or {}
-    out['process_details']=classify_cuda_processes(out['processes'], confirmed_desktop=confirmed_desktop)
+    confirmed_background = confirmed_background or {}
+    background_checks = inspect_background_processes(confirmed_background)
+    out['process_details']=classify_cuda_processes(
+        out['processes'], confirmed_desktop=confirmed_desktop,
+        confirmed_background=confirmed_background, background_checks=background_checks)
     observed_pids={detail['pid'] for detail in out['process_details'] if isinstance(detail,dict) and isinstance(detail.get('pid'),int)}
     unmatched=[{'pid':pid,'reported_path':path} for pid,path in sorted(confirmed_desktop.items()) if pid not in observed_pids]
     blocked=[detail for detail in out['process_details'] if not detail.get('allowed',False)]
+    background_workload=[]
+    for pid, check in sorted(background_checks.items()):
+        observed_on_gpu=pid in observed_pids
+        status=check['status']
+        if status == 'running' and not observed_on_gpu:
+            status='present_not_observed_on_gpu'
+        blocking=status in ('command_mismatch', 'unverifiable')
+        if blocking and not observed_on_gpu:
+            blocked.append({'pid':pid, 'process_name':None, 'used_gpu_memory':None,
+                            'raw':None, 'resolved_executable':None,
+                            'classification':'blocked_background_command_unverified',
+                            'allowed':False, 'expected_command':check['expected_command'],
+                            'observed_command':check.get('observed_command'),
+                            'reason':'confirmed background PID/command is not an exact current process match'})
+        background_workload.append({
+            'pid':pid, 'expected_command':check['expected_command'],
+            'observed_command':check.get('observed_command'), 'status':status,
+            'observed_on_gpu':observed_on_gpu,
+            'authorized':status == 'running' and observed_on_gpu,
+            'verification_method':'ps -o args= PID plus exact PID presence in this nvidia-smi snapshot; /proc/<pid>/exe was not read',
+            'operator_confirmed':status == 'running' and observed_on_gpu,
+            'blocking':blocking,
+        })
+    authorized_background=any(item['authorized'] for item in background_workload)
     out['process_guard']={'version':GPU_PROCESS_GUARD_VERSION,
                           'allowlist':DESKTOP_ALLOWLIST,
                           'verification_method':'exact PID/path comparison against this snapshot nvidia-smi output plus explicit operator CLI confirmation; /proc/<pid>/exe was not read',
                           'operator_confirmation':{'method':'--confirm-desktop-process PID=PATH','confirmed_processes':[{'pid':pid,'reported_path':path} for pid,path in sorted(confirmed_desktop.items())]},
+                          'background_operator_confirmation':{'method':'--confirm-background-process PID=COMMAND',
+                              'confirmed_processes':[{'pid':pid,'expected_command':command} for pid,command in sorted(confirmed_background.items())]},
+                          'background_workload':background_workload,
                           'unmatched_confirmations':unmatched,
                           'blocked_processes':blocked,
                           'telemetry_status':'complete' if all(isinstance(out.get(key),str) for key in ('device','processes')) else 'limited',
                           'telemetry_limitation':'nvidia-smi output is the available workload telemetry; it cannot prove zero interference between snapshots',
-                          'external_workload_detected':bool(blocked or unmatched),
+                          'external_workload_detected':bool(blocked or unmatched or authorized_background),
+                          'external_workload_authorized':authorized_background and not bool(blocked or unmatched),
                           'disclaimer':'Allowed desktop processes remain visible; this is not proof of zero GPU interference.'}
     return out
 
 
-def ensure_idle(state):
+def ensure_idle(state, confirmed_background=None):
     details=state.get('process_details')
     if details is None:
         details=classify_cuda_processes(state.get('processes'), current_pid=os.getpid())
@@ -226,15 +315,19 @@ def ensure_idle(state):
             return False
         if detail.get('classification')=='current_runner_process':
             return detail.get('pid')==os.getpid()
-        return (detail.get('classification')=='allowed_desktop_operator_confirmed' and
-                detail.get('desktop_allowlist_id')==detail.get('allowlist_exception') and
-                detail.get('operator_confirmed') is True and
-                is_allowed_desktop_executable(detail.get('resolved_executable')))
+        if detail.get('classification')=='allowed_desktop_operator_confirmed':
+            return (detail.get('desktop_allowlist_id')==detail.get('allowlist_exception') and
+                    detail.get('operator_confirmed') is True and
+                    is_allowed_desktop_executable(detail.get('resolved_executable')))
+        if detail.get('classification')=='allowed_background_operator_confirmed':
+            return detail.get('operator_confirmed') is True
+        return False
     blocked=[detail for detail in details if not allowed(detail)]
     guard=state.get('process_guard',{})
     unmatched=guard.get('unmatched_confirmations',[])
     if unmatched:
         blocked.extend(unmatched)
+    blocked.extend(item for item in guard.get('background_workload', []) if item.get('blocking'))
     if blocked:
         raise RuntimeError(f'Other CUDA processes active or unverifiable; do not kill automatically: {blocked}')
 

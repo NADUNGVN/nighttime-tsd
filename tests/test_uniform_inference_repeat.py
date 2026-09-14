@@ -16,6 +16,7 @@ from run_uniform_inference_repeat import (
     PREDICTION_PAYLOAD_VERSION,
     ROUND_ORDER,
     aggregate_within_engine,
+    BACKGROUND_WORKLOAD_VARIANT,
     capture_command,
     ensure_output_absent,
     environment_probe_command,
@@ -142,6 +143,11 @@ class UniformInferenceRepeatTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "server_uniform_inference_repeat_v1"):
                 from run_uniform_inference_repeat import validate_output_target
                 validate_output_target(repo, repo / "results/measurement_audit_v1/uniform_inference_repeat_v1")
+            concurrent_source, concurrent_output = resolve_protocol_paths(repo, concurrent=True)
+            self.assertEqual(concurrent_source, source)
+            self.assertEqual(concurrent_output.name, "server_uniform_inference_repeat_concurrent_v1")
+            self.assertEqual(validate_output_target(repo, concurrent_output, concurrent=True),
+                             (source, concurrent_output))
 
     def test_gpu_uuid_driver_and_device_binding_are_strict(self):
         device = "GPU-test, Quadro RTX 8000, 595.71.05, P8, 35, 9 W, 300 MHz, 405 MHz, 32 MiB"
@@ -203,6 +209,12 @@ class UniformInferenceRepeatTests(unittest.TestCase):
         self.assertIn("--repeat-index", command)
         self.assertNotIn("--representation", command)
         self.assertIn("445=/usr/bin/Xorg", command)
+        concurrent = capture_command(Path("/repo"), Path("/repo/results/measurement_audit_v1/server_uniform_build_repeat_v1"),
+                                     2, Path("/repo/results/measurement_audit_v1/server_uniform_inference_repeat_concurrent_v1/round_1/engine_2"),
+                                     "0", {}, {446: "python opcm_full_bgfg.py"}, True)
+        self.assertIn("--allow-confirmed-background-workload", concurrent)
+        self.assertIn("446=python opcm_full_bgfg.py", concurrent)
+        self.assertEqual(BACKGROUND_WORKLOAD_VARIANT, "operator_confirmed_background_compute_v1")
         self.assertEqual(PREDICTION_PAYLOAD_VERSION, "uniform_inference_repeat_prediction_payload_v1")
 
     def test_environment_preflight_requires_one_structured_json_child_report(self):
@@ -290,8 +302,13 @@ class UniformInferenceRepeatTests(unittest.TestCase):
                        "python": "test", "cuda": "12.1", "gpu": "Quadro RTX 8000", "pycocotools": "test"}
         gpu_snapshot = {
             "device": device,
-            "process_guard": {"telemetry_status": "complete", "external_workload_detected": False,
-                               "blocked_processes": [], "unmatched_confirmations": []},
+            "process_guard": {"telemetry_status": "complete", "external_workload_detected": True,
+                               "external_workload_authorized": True, "blocked_processes": [],
+                               "unmatched_confirmations": [], "background_workload": [{
+                                   "pid": 446, "expected_command": "python opcm_full_bgfg.py",
+                                   "observed_command": "python opcm_full_bgfg.py", "status": "running",
+                                   "observed_on_gpu": True, "authorized": True, "blocking": False,
+                               }]},
         }
         size_report = {
             "metric_id": "coco_xml_size_v1", "rules": {"xs": 210},
@@ -316,7 +333,7 @@ class UniformInferenceRepeatTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
-            source_root, output = resolve_protocol_paths(repo)
+            source_root, output = resolve_protocol_paths(repo, concurrent=True)
             source_root.mkdir(parents=True)
             write_json(source_root / "study_manifest.json", {
                 "study": "uniform_build_repeat_v1", "source_weights_sha256": "weights",
@@ -349,6 +366,8 @@ class UniformInferenceRepeatTests(unittest.TestCase):
             def run_child(command, _repo):
                 command_text = " ".join(command)
                 if "capture_cctsdb_validator.py" in command_text:
+                    self.assertIn("--allow-confirmed-background-workload", command)
+                    self.assertIn("446=python opcm_full_bgfg.py", command)
                     engine_id = int(command[command.index("--repeat-index") + 1])
                     out_dir = Path(command[command.index("--out-dir") + 1])
                     capture_dir = out_dir
@@ -360,7 +379,7 @@ class UniformInferenceRepeatTests(unittest.TestCase):
                         "runtime_arguments": dict(EXPECTED_RUNTIME), "model_sha256": engine_hashes[engine_id],
                         "predictions_sha256": sha256(predictions_path), "metrics": metric_capture(0.5, 0.4),
                         "gpu_before": gpu_snapshot, "gpu_after": gpu_snapshot,
-                        "external_gpu_workload_detected": False,
+                        "external_gpu_workload_detected": True,
                     }
                     write_json(capture_dir / "capture_report.json", report)
                     child_events.append(("capture", engine_id))
@@ -386,10 +405,11 @@ class UniformInferenceRepeatTests(unittest.TestCase):
                 "write_json": write_json,
                 "check_reference": lambda *_args: ({}, size_report),
                 "check_same_targets": lambda *_args: None,
-                "ensure_idle": lambda _state: None,
+                "ensure_idle": lambda _state, _background=None: None,
                 "parse_desktop_confirmations": lambda _values: {},
+                "parse_background_confirmations": lambda _values: {446: "python opcm_full_bgfg.py"},
                 "repeat_capture_inputs": repeat_capture_inputs,
-                "snapshot": lambda _confirmations: gpu_snapshot,
+                "snapshot": lambda _confirmations, _background=None: gpu_snapshot,
                 "load_records": lambda _payload: {},
                 "load_xml": lambda *_args: None,
                 "run_child": run_child,
@@ -399,7 +419,9 @@ class UniformInferenceRepeatTests(unittest.TestCase):
                        side_effect=AssertionError("parent called CUDA environment")), \
                  patch("run_uniform_inference_repeat.subprocess.run",
                        return_value=SimpleNamespace(stdout="test-head\n")):
-                result = main(["--out-dir", str(output)], repo_override=repo, helpers=helpers)
+                result = main(["--out-dir", str(output),
+                               "--confirm-background-process", "446=python opcm_full_bgfg.py"],
+                              repo_override=repo, helpers=helpers)
 
             self.assertEqual(result, 0)
             self.assertEqual(helper_events, ["preflight"])
@@ -413,6 +435,10 @@ class UniformInferenceRepeatTests(unittest.TestCase):
             self.assertEqual(summary["status"], "inference_repeatability_completed_review_required")
             manifest = json.loads((output / "study_manifest.json").read_text(encoding="utf-8"))
             self.assertEqual(manifest["environment_preflight"]["status"], "ok")
+            self.assertEqual(manifest["protocol_variant"], BACKGROUND_WORKLOAD_VARIANT)
+            self.assertEqual(manifest["background_workload_authorization"]["confirmed_processes"],
+                             [{"pid": 446, "expected_command": "python opcm_full_bgfg.py"}])
+            self.assertTrue(any("external_workload" in flag for flag in summary["review_flags"]))
 
 
 if __name__ == "__main__":

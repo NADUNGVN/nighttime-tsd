@@ -19,6 +19,8 @@ SOURCE_STUDY = "uniform_build_repeat_v1"
 STUDY = "uniform_inference_repeat_v1"
 SOURCE_STUDY_DIR = "server_uniform_build_repeat_v1"
 STUDY_DIR = "server_uniform_inference_repeat_v1"
+CONCURRENT_STUDY_DIR = "server_uniform_inference_repeat_concurrent_v1"
+BACKGROUND_WORKLOAD_VARIANT = "operator_confirmed_background_compute_v1"
 PREDICTION_PAYLOAD_VERSION = "uniform_inference_repeat_prediction_payload_v1"
 DATASET_SPLIT = "CCTSDB2021/dev"
 ENGINE_REPEATS = (1, 2, 3)
@@ -267,14 +269,15 @@ def validate_engine_manifest(manifest, repeat_id, study_manifest, engine_sha256=
     return manifest["engine_sha256"]
 
 
-def resolve_protocol_paths(repo):
+def resolve_protocol_paths(repo, concurrent=False):
     """Resolve the logical study IDs to the exact approved server directories."""
     audit_root = Path(repo).resolve() / "results/measurement_audit_v1"
-    return audit_root / SOURCE_STUDY_DIR, audit_root / STUDY_DIR
+    output_dir = CONCURRENT_STUDY_DIR if concurrent else STUDY_DIR
+    return audit_root / SOURCE_STUDY_DIR, audit_root / output_dir
 
 
-def validate_output_target(repo, output):
-    source_root, expected_output = resolve_protocol_paths(repo)
+def validate_output_target(repo, output, concurrent=False):
+    source_root, expected_output = resolve_protocol_paths(repo, concurrent=concurrent)
     if Path(output).resolve() != expected_output:
         raise ValueError(f"Output must be exactly {expected_output}")
     return source_root, expected_output
@@ -352,11 +355,21 @@ def confirmation_args(confirmations):
             for item in ("--confirm-desktop-process", f"{pid}={path}")]
 
 
-def capture_command(repo, source_root, engine_id, run_dir, device, confirmations):
-    return [sys.executable, str(repo / "scripts/capture_cctsdb_validator.py"),
+def background_confirmation_args(confirmations):
+    return [item for pid, command in sorted((confirmations or {}).items())
+            for item in ("--confirm-background-process", f"{pid}={command}")]
+
+
+def capture_command(repo, source_root, engine_id, run_dir, device, confirmations,
+                    background_confirmations=None, allow_background=False):
+    command = [sys.executable, str(repo / "scripts/capture_cctsdb_validator.py"),
             "--repeat-study", str(source_root), "--repeat-index", str(engine_id),
             "--out-dir", str(run_dir / "capture"), "--device", device,
             *confirmation_args(confirmations)]
+    if allow_background:
+        command.extend(["--allow-confirmed-background-workload",
+                        *background_confirmation_args(background_confirmations)])
+    return command
 
 
 def verification_command(repo, capture_dir, out_dir, xml_path):
@@ -401,11 +414,13 @@ def run_environment_preflight(repo, runner=None):
 
 
 def run_capture_pair(repo, source_root, engine_id, run_dir, device, confirmations,
-                     xml_path, run_child=None):
+                     xml_path, run_child=None, background_confirmations=None,
+                     allow_background=False):
     """Run capture, wait, then run verification in a separate child process."""
     run_child = _run_child if run_child is None else run_child
     capture_dir, verification_dir = run_dir / "capture", run_dir / "verification"
-    capture_cmd = capture_command(repo, source_root, engine_id, run_dir, device, confirmations)
+    capture_cmd = capture_command(repo, source_root, engine_id, run_dir, device, confirmations,
+                                  background_confirmations, allow_background)
     capture_pid = run_child(capture_cmd, repo)
     verify_cmd = verification_command(repo, capture_dir, verification_dir, xml_path)
     verify_pid = run_child(verify_cmd, repo)
@@ -436,19 +451,35 @@ def main(argv=None, *, repo_override=None, helpers=None):
     parser.add_argument("--device", default="0")
     parser.add_argument("--confirm-desktop-process", action="append", default=[], metavar="PID=PATH",
                         help="Explicitly confirm a current nvidia-smi desktop row; no /proc access is used")
+    parser.add_argument("--confirm-background-process", action="append", default=[], metavar="PID=COMMAND",
+                        help="Concurrent variant only: explicitly confirm a current background command")
     args = parser.parse_args(argv)
     repo = Path(repo_override if repo_override is not None else Path(__file__).resolve().parents[1]).resolve()
     output = args.out_dir.resolve()
     try:
-        source_root, expected_output = validate_output_target(repo, output)
+        base_source, base_output = resolve_protocol_paths(repo)
+        concurrent_source, concurrent_output = resolve_protocol_paths(repo, concurrent=True)
+        if output == base_output:
+            concurrent = False
+            source_root, expected_output = validate_output_target(repo, output)
+        elif output == concurrent_output:
+            concurrent = True
+            source_root, expected_output = validate_output_target(repo, output, concurrent=True)
+        else:
+            source_root, expected_output = validate_output_target(repo, output)
         validate_device_argument(args.device)
     except ValueError as error:
         parser.error(str(error))
+    helpers = dict(helpers or {})
+    if concurrent:
+        if not args.confirm_background_process:
+            parser.error("Concurrent output requires --confirm-background-process PID=COMMAND")
+    elif args.confirm_background_process:
+        parser.error("--confirm-background-process requires the concurrent output variant")
     ensure_output_absent(output)
 
     # CUDA-touching environment() runs only in the short-lived child. The parent
     # receives a parsed report before importing orchestration helpers.
-    helpers = dict(helpers or {})
     preflight = helpers.get("environment_preflight", run_environment_preflight)(repo)
     if (not isinstance(preflight, dict) or preflight.get("status") != "ok" or
             not isinstance(preflight.get("environment"), dict)):
@@ -464,10 +495,11 @@ def main(argv=None, *, repo_override=None, helpers=None):
         helpers.setdefault("check_reference", check_reference)
         helpers.setdefault("check_same_targets", check_same_targets)
     if any(key not in helpers for key in ("ensure_idle", "parse_desktop_confirmations",
-                                          "repeat_capture_inputs", "snapshot")):
-        from uniform_build_repeat import (ensure_idle, parse_desktop_confirmations,
-                                          repeat_capture_inputs, snapshot)
+                                          "parse_background_confirmations", "repeat_capture_inputs", "snapshot")):
+        from uniform_build_repeat import (ensure_idle, parse_background_confirmations,
+                                          parse_desktop_confirmations, repeat_capture_inputs, snapshot)
         helpers.setdefault("ensure_idle", ensure_idle)
+        helpers.setdefault("parse_background_confirmations", parse_background_confirmations)
         helpers.setdefault("parse_desktop_confirmations", parse_desktop_confirmations)
         helpers.setdefault("repeat_capture_inputs", repeat_capture_inputs)
         helpers.setdefault("snapshot", snapshot)
@@ -480,6 +512,7 @@ def main(argv=None, *, repo_override=None, helpers=None):
     check_reference = helpers["check_reference"]
     check_same_targets = helpers["check_same_targets"]
     ensure_idle = helpers["ensure_idle"]
+    parse_background_confirmations = helpers["parse_background_confirmations"]
     parse_desktop_confirmations = helpers["parse_desktop_confirmations"]
     repeat_capture_inputs = helpers["repeat_capture_inputs"]
     snapshot = helpers["snapshot"]
@@ -488,14 +521,15 @@ def main(argv=None, *, repo_override=None, helpers=None):
     run_child = helpers.get("run_child", _run_child)
 
     confirmations = parse_desktop_confirmations(args.confirm_desktop_process)
+    background_confirmations = parse_background_confirmations(args.confirm_background_process)
     source_manifest = read(source_root / "study_manifest.json")
     if source_manifest.get("study") != SOURCE_STUDY:
         parser.error("Source is not the approved Uniform build-repeat study")
     current_environment = preflight["environment"]
     if current_environment != source_manifest.get("environment"):
         parser.error("Runtime environment/GPU differs from the Step A engine study; stop for review")
-    current_gpu_before = snapshot(confirmations)
-    ensure_idle(current_gpu_before)
+    current_gpu_before = snapshot(confirmations, background_confirmations)
+    ensure_idle(current_gpu_before, background_confirmations)
     try:
         gpu_binding = validate_gpu_identity(current_gpu_before, source_manifest)
     except ValueError as error:
@@ -544,6 +578,13 @@ def main(argv=None, *, repo_override=None, helpers=None):
         "reference_size_sha256": sha256(reference_verification / "size_coco_xml.json"),
         "environment": current_environment,
         "environment_preflight": preflight,
+        "protocol_variant": BACKGROUND_WORKLOAD_VARIANT if concurrent else None,
+        "background_workload_authorization": {
+            "enabled": concurrent,
+            "method": "--confirm-background-process PID=COMMAND" if concurrent else None,
+            "confirmed_processes": [{"pid": pid, "expected_command": command}
+                                    for pid, command in sorted(background_confirmations.items())],
+        },
         "source_step_a_gpu_before": source_manifest.get("gpu_before"),
         "source_step_a_gpu_after": source_manifest.get("gpu_after"),
         "gpu_before": current_gpu_before,
@@ -562,7 +603,8 @@ def main(argv=None, *, repo_override=None, helpers=None):
         run_dir.mkdir(parents=True)
         capture_dir, verification_dir = run_dir / "capture", run_dir / "verification"
         capture_pid, verify_pid, capture_cmd, verify_cmd = run_capture_pair(
-            repo, source_root, engine_id, run_dir, args.device, confirmations, xml, run_child)
+            repo, source_root, engine_id, run_dir, args.device, confirmations, xml, run_child,
+            background_confirmations, concurrent)
 
         capture = read(capture_dir / "capture_report.json")
         predictions = read(capture_dir / "validator_predictions.json")
@@ -643,8 +685,19 @@ def main(argv=None, *, repo_override=None, helpers=None):
                 review_flags.append(f"engine_{row['engine_repeat']}_round_{row['round']}_{phase}_telemetry_limited")
             if guard.get("external_workload_detected") or row["capture_report"].get("external_gpu_workload_detected"):
                 review_flags.append(f"engine_{row['engine_repeat']}_round_{row['round']}_external_workload_or_unverified_process")
+            for workload in guard.get("background_workload", []):
+                if workload.get("status") == "exited":
+                    review_flags.append(f"engine_{row['engine_repeat']}_round_{row['round']}_background_workload_exited")
+                elif workload.get("status") == "present_not_observed_on_gpu":
+                    review_flags.append(f"engine_{row['engine_repeat']}_round_{row['round']}_background_workload_not_observed_on_gpu")
     write_json(output / "repeat_summary.json", {
         "schema_version": 1, "study": STUDY, "source_study": SOURCE_STUDY,
+        "protocol_variant": BACKGROUND_WORKLOAD_VARIANT if concurrent else None,
+        "background_workload_authorization": {
+            "enabled": concurrent,
+            "confirmed_processes": [{"pid": pid, "expected_command": command}
+                                    for pid, command in sorted(background_confirmations.items())],
+        },
         "status": "inference_repeatability_completed_review_required", "global_g0": "review_required",
         "round_order": [list(order) for order in ROUND_ORDER], "records": records,
         "within_engine": aggregates, "review_flags": sorted(set(review_flags)),
