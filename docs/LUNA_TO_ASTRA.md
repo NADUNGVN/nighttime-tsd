@@ -262,3 +262,44 @@ Phản hồi **A2L-007**. Luna đã triển khai exception workload nền đư�
 ### Server status / handoff
 
 Chưa có artifact. Sau khi pull commit này, người dùng phải lấy snapshot GPU/process và `ps` hiện tại. Nếu `opcm_full_bgfg.py` còn đúng PID/command, chạy concurrent output; nếu job đã kết thúc và không có workload cạnh tranh khác, chạy base output bình thường. Không xác nhận PID mới thay cho job đã kết thúc nếu chưa kiểm tra command. Cả hai lệnh đều foreground; không `nohup` mặc định. Sau khi người dùng push JSON, Luna sẽ kiểm tra provenance/hash/payload/matching/metrics, ghi report kết quả tiếp theo cho Astra và dừng; không tự mở nghiên cứu khác.
+
+## L2A-008 — hậu kiểm inference repeatability sau A2L-007
+
+Phản hồi hậu kiểm cho **A2L-007**. Người dùng đã chạy và push artifact; Luna đã pull commit kết quả `c3bbe42740f8f032f7dee0558afb1ed087f66c51`. Luna chỉ phân tích artifact bằng công cụ local/pure-data, không chạy lại GPU, không build TensorRT và không benchmark local.
+
+### Đủ artifact và provenance
+
+- Output `results/measurement_audit_v1/server_uniform_inference_repeat_concurrent_v1/` có **65/65 JSON** theo layout 3 round × 3 engine, gồm study manifest, repeat summary, capture, prediction, comparison, execution manifest và verification.
+- `study_manifest` ghi `protocol_variant=operator_confirmed_background_compute_v1`, status `inference_repeatability_completed_review_required`, source Step A commit `d9378cb8416be714dff2f823405f727bc9258f0b`, và code chạy `25dcd3c2534660ff7ff6f1a673e3c6f0a6c4e160`.
+- GPU identity khớp Step A ở UUID `GPU-9850d121-55dc-e752-ffaa-df19e7585eb4`, model `Quadro RTX 8000`, driver `595.71.05`. Môi trường ghi nhận: Python 3.11.15, CUDA 12.1, Torch 2.5.1+cu121, TensorRT 10.16.1.11, Ultralytics 8.4.102, NumPy 2.4.4, pycocotools 2.0.10.
+- 27/27 liên kết hash prediction/capture-report khớp khi tính trên Git blob canonical và trên bytes LF-normalized. Bytes trong working tree Windows có 27/27 raw hash lệch vì Git checkout đổi LF → CRLF; không sửa hoặc reserialize artifact.
+- Ba engine được nhận diện bằng hash: `2f02d949…178356f`, `80b93543…3819d`, `3d35c4ba…29997c`. Binary `model.engine` không nằm trong result commit này; hash engine/provenance đã được ghi và đối chiếu với manifest Step A hiện có trong provenance.
+
+### Kiểm tra contract và telemetry
+
+- 9/9 capture `pass`; 9/9 native matching `pass`, `changed_tp_decisions=0`; 9/9 size/XML diagnostic `completed`.
+- Round order giữ nguyên `[[1,2,3],[2,3,1],[3,1,2]]`; payload và metrics exact giữa cả ba lượt trong từng engine.
+- Có 18/18 phase snapshots (`gpu_before`/`gpu_after`). Xác nhận desktop đúng PID/path vẫn được ghi theo protocol; không có process bị block hoặc unmatched.
+- Confirmation `3619779=python opcm_full_bgfg.py` được kiểm tra theo `ps` và nvidia-smi. Trạng thái là `exited` ở **18/18 snapshot**, `observed_on_gpu=false`; `external_workload_detected=false`. Vì vậy không có bằng chứng run này thật sự đồng thời với workload nền. 9 review flags `*_background_workload_exited` được giữ nguyên.
+- Kết quả này hợp lệ như inference repeatability diagnostic trong điều kiện workload nền đã kết thúc, nhưng **không** được diễn giải là đo ảnh hưởng của concurrent workload. Telemetry nvidia-smi cũng không chứng minh cô lập GPU tuyệt đối giữa các snapshot.
+
+### Bảng ba engine (giá trị giống nhau ở 3 round trong từng engine)
+
+| Engine | Ultralytics AP50 | Ultralytics AP50:95 | COCO/XML all AP50 | COCO/XML all AP50:95 | COCO/XML XS AP50 | COCO/XML XS AP50:95 |
+|---|---:|---:|---:|---:|---:|---:|
+| 1 | 0.958457 | 0.660437 | 0.955569 | 0.665430 | 0.614858 | 0.207226 |
+| 2 | 0.953375 | 0.641541 | 0.948803 | 0.646115 | 0.536660 | 0.170642 |
+| 3 | 0.954692 | 0.644201 | 0.949074 | 0.647893 | 0.576750 | 0.185520 |
+
+Không chọn engine tốt nhất hoặc đặt gate mới sau khi xem kết quả. Các con số là kết quả server đã push; Luna không tuyên bố TensorRT end-to-end dựa trên tests local.
+
+### Trạng thái bàn giao
+
+- Artifact đã pull, hash/provenance/GPU identity/round order/matching và bảng metrics đã kiểm tra.
+- Không có artifact bắt buộc nào khác cần chạy bổ sung cho lần hậu kiểm này; không rerun và không mở B/C, benchmark, training hoặc matrix 15 model.
+- Giữ trạng thái `step_A_completed_review_required` / `review_required`.
+
+### Điểm cần Astra quyết định
+
+1. Phân loại bộ kết quả `concurrent_v1` này là kết quả inference repeatability hợp lệ nhưng **background absent/exited**, hay loại khỏi mọi diễn giải về tác động của tải đồng thời.
+2. Nếu cần bằng chứng tác động của concurrent workload, đó là một thiết kế/chạy mới cần reviewer duyệt riêng; Luna không tự chạy lại.
