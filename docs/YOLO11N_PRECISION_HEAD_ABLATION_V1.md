@@ -1,6 +1,6 @@
 # YOLO11n precision-head ablation v1
 
-Status: implementation/protocol prepared locally for A2L-013. This document does not authorize a server run. Server execution requires the subsequent Astra code review decision (A2L-014).
+Status: server-run-authorized after Astra A2L-014 code review. Authorization is limited to this exact YOLO11n precision-head ablation study: 12 sequential builds followed by 12 dev captures. It does not authorize calibration-policy changes, retraining, official-test evaluation, the 15-model matrix, cross-device work, or latency/energy benchmarking.
 
 ## Scope
 
@@ -64,3 +64,15 @@ The classification is descriptive evidence, not a policy selector, ground truth 
 The output must contain `study_manifest.json`, `comparison_summary.json`, `repeat_summary.json`, 12 build logs and compressed logs, and four arm directories containing three repeats each. Each repeat contains `build_manifest.json`, `model.engine` (server-only), input/output cache evidence, raw `inspector.json`, `capture/capture_report.json`, `capture/validator_predictions.json`, `verification/verification_summary.json`, `verification/native_matching.json`, `verification/size_coco_xml.json`, `execution_manifest.json`, and `comparison.json`.
 
 Engine binaries, ONNX, and other server-only binary inputs are not pushed to Git. JSON/log/cache artifacts required by the handoff are pushed after the server run. Local review checks source hashes, manifest bindings, engine/capture provenance hashes, cache contract, payload membership/preprocessing, inspector signatures, telemetry/workload flags, all 12 build/capture records, and the summary classification. The study stops at `step_A_completed_review_required`; no follow-up research step is launched automatically.
+
+## Server authorization and handoff
+
+Run only after pulling the exact Luna commit named in the handoff and confirming that the output directory is absent. The operator must inspect GPU identity, environment, and current compute rows first. Do not assume low VRAM means no competition. An allowlisted desktop row may remain only with an explicit current `PID=PATH` confirmation; an unconfirmed, unverifiable, or competing compute row blocks the run. Do not kill/pause processes or change permissions, clocks, or power limits.
+
+The study command is foreground and must be run once from the repository root. If the current snapshot has no allowlisted desktop GPU rows requiring confirmation, omit the desktop options. If it has such rows, append one `--confirm-desktop-process CURRENT_PID=CURRENT_ALLOWLISTED_PATH` option per current row, using the exact current path—not a historical PID. Do not use `nohup`.
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_yolo11n_precision_head_ablation.py --phase all --out-dir results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1 --device 0
+```
+
+The parent performs all 12 builds in fixed arm-major order, then all 12 capture/verification pairs. If any build or contract fails, preserve the partial directory and logs; do not resume, overwrite, rebuild with a new cache, or run `--phase evaluate` to bypass the failed build. After a successful run, push JSON/cache/log.gz artifacts listed in this document; do not push `model.engine`, ONNX, weights, or dataset files. Luna will pull and verify provenance, hashes, layer evidence, cache behavior, telemetry/workload flags, matching, size metrics, and the three-build tables, then stop for Astra review.

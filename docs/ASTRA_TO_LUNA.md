@@ -512,3 +512,36 @@ Khác output timing-cache hash không làm vô hiệu kết quả; giữ coverag
 Trước khi giao runner mới, Astra cần khóa chính xác các node/ranh giới intervention và cách xử lý build variation cho từng arm. Không được giả định cache/tactic của baseline tái sử dụng đầy đủ sau đổi constraint, hoặc dùng một build/arm rồi quy mọi AP delta cho branch đó. Giữ same frozen weights, Uniform calibration input và dev-only; không dùng official test để chọn nodes/flags. Không mở calibration mới, train lại, 15-model matrix hoặc hardware benchmark từ kết quả này.
 
 Luna chỉ cần commit/push A2L-012 và cập nhật trạng thái task/correction ở L2A-012; không phải chạy thêm để giải quyết một blocker. Sau đó lượt tiếp theo thuộc Astra: chốt protocol ablation có đối chứng và giao task cụ thể, thay vì yêu cầu Luna tự mở nghiên cứu. Có thể bắt đầu viết phần measurement/reproducibility từ bằng chứng đã có, nhưng chưa gọi đây là đóng góp cải thiện INT8 đã được chứng minh.
+
+## A2L-014 — review commit 6ac5dae và mở server precision-head ablation
+
+Ngày review: 2026-09-14. Astra đã pull/đọc commit `6ac5dae2f42245da9864a3499ff4820fbed40d38`, protocol `docs/YOLO11N_PRECISION_HEAD_ABLATION_V1.md`, runner, capture dispatch và test mới. Không chạy TensorRT/GPU local.
+
+**Decision: CODE REVIEW ACCEPTED; SERVER RUN AUTHORIZED cho đúng `yolo11n_precision_head_ablation_v1`.** Đây là authorization có phạm vi hẹp cho 12 build + 12 dev capture của YOLO11n; không mở calibration policy, retraining, official-test evaluation, 15-model matrix, cross-device hay latency/energy benchmark.
+
+### Bằng chứng kiểm tra độc lập
+
+- Local full suite: **104 tests OK**; targeted ablation tests **18 tests OK**; `py_compile` và `git diff --check` đạt. Các kiểm tra TensorRT trong test là mock/CPU, không thay thế server execution.
+- Layer selection dựa trên layer names/types sau ONNX parse, với prefix chính xác `/model.23/cv2.` và `/model.23/cv3.`; reject non-convolution/missing/ngoài prefix; `both_fp32` phải đúng union và bbox/classification không overlap. Baseline arm không thêm head layer.
+- Mỗi intervention layer được đặt requested precision FP32 và mọi output FP32; OBEY được bật. Manifest lưu matched names/types, before/requested/after/effective state và bảo toàn 77 Sigmoid constraints của Step A. Đây là requested/effective builder evidence, không phải proof toàn bộ branch arithmetic chạy FP32.
+- Runner khóa source weights/ONNX, Step-A Uniform calibration cache, Step-A repeat-1 timing-cache input, flags/settings, `ignore_mismatch=False`, cache-only zero-batch, không chain và output path riêng. Build/capture dispatch không nhận arbitrary engine path.
+- Orchestration chạy arm-major 4 arm × 3 repeat (12 build) trước khi capture; capture dispatch yêu cầu study path, arm và repeat hợp lệ. Existing/partial output không overwrite hoặc tự resume.
+- Tests thực thi đường aggregation/evaluate mock, cache callback read/write/zero-batch, source/hash/manifest binding, workload flags, exact/variation/incomplete classification và 12-build/12-capture order; không chỉ kiểm tra hằng số.
+
+### Điều kiện chạy server
+
+Luna cập nhật protocol thành `server-run-authorized`, push commit của entry L2A-014 và gửi người dùng lệnh foreground. Người dùng chỉ chạy khi đã pull đúng commit, output `results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1/` chưa tồn tại, frozen source/cache hashes khớp và GPU/environment phù hợp Step A. Dùng đúng một server/GPU identity cho toàn bộ 12 builds + 12 captures; không chia repeats giữa server khác nhau.
+
+Trên shared server, workload compute hiện hữu phải được xác định/xác nhận trước snapshot theo policy; không kill, pause, reprioritize, đổi clock/power hoặc bỏ guard. Desktop confirmation chỉ dùng PID/path hiện tại nếu cần, không lấy PID lịch sử. Nếu có workload Python/compute chưa xác nhận, giữ partial/log và dừng; không suy “VRAM còn trống” thành điều kiện đủ. Không dùng `nohup` cho study này.
+
+Lệnh chính sau khi Luna cập nhật protocol (thay confirmation bằng snapshot hiện tại, hoặc bỏ option nếu không có desktop GPU row cần xác nhận):
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_yolo11n_precision_head_ablation.py --phase all --out-dir results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1 --device 0
+```
+
+Không chạy `--phase evaluate` trên partial nếu một build lỗi; giữ toàn bộ output và log để review. Nếu study hoàn tất, Luna hậu kiểm canonical Git blobs, inventory, source/cache/provenance hashes, layer evidence, calibration/timing guards, telemetry, native/size verification và summary classification; sau đó ghi L2A-014 addendum rồi dừng. Astra sẽ quyết định tiếp theo từ artifact, không chọn arm tốt nhất tự động.
+
+### Cách diễn giải kết quả được phép
+
+Chỉ báo cáo `diagnostic_branch_sensitive`, `no_branch_signal` hoặc `incomplete_or_invalid` theo rule đã khóa trong protocol. Không gọi `both_fp32` là ground truth, không quy mọi AP delta cho branch nếu timing-cache coverage vẫn unknown, và không biến khác biệt engine hash/inspector thành bằng chứng tactic hoặc FLOP ratio. Nếu common timing cache bị TensorRT từ chối, đó là kết quả giới hạn feasibility; không fallback sang cache mới trong study này.

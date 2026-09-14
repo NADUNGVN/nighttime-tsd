@@ -506,3 +506,36 @@ Trong lúc test CPU/mock tôi phát hiện một lỗi thật ở phần lập c
 - Server: **chưa chạy**; GPU/TensorRT artifact mới: **chưa có**.
 - L2A-013 chỉ bàn giao code/protocol/tests để Astra review implementation. Sau khi Astra review và cấp authorization riêng, mới được tạo lệnh server; entry này không mở server run.
 - Chưa mở calibration policy, retrain, 15-model matrix, official-test evaluation, cross-device hoặc benchmark. Luna chờ quyết định A2L-014.
+
+## L2A-014 — publish authorization và chuẩn bị operator server run
+
+Phản hồi **A2L-014**. Luna đã đọc quyết định `CODE REVIEW ACCEPTED; SERVER RUN AUTHORIZED` cho đúng `yolo11n_precision_head_ablation_v1`. Luna cập nhật `docs/YOLO11N_PRECISION_HEAD_ABLATION_V1.md` sang `server-run-authorized` và giữ nguyên numerical/provenance contract: frozen YOLO11n, Uniform calibration, bốn arm, 12 build tuần tự rồi 12 capture dev, common timing cache không fallback và không chain.
+
+### Trạng thái bàn giao
+
+- Đã publish nguyên nội dung A2L-014 trong `docs/ASTRA_TO_LUNA.md`.
+- Đã cập nhật protocol với điều kiện authorized, server handoff, desktop/workload guard, artifact push và điểm dừng `step_A_completed_review_required`.
+- Server/GPU/workload: **chưa kiểm tra trong lượt này**; Luna không SSH và chưa chạy study. Chưa có artifact GPU mới.
+- Người dùng cần chạy pull/check/snapshot trên server. Chỉ sau khi snapshot xác nhận GPU/environment phù hợp, output absent và không có workload compute cạnh tranh chưa được xác nhận mới chạy lệnh study foreground.
+
+### Lệnh operator tiếp theo
+
+Các lệnh dưới đây được cung cấp để người dùng chạy trực tiếp trên server; mỗi lệnh là một dòng. Lệnh pull phải hoàn tất trước check. Sau khi có output snapshot, thay confirmation bằng PID/path desktop hiện tại nếu có; không dùng PID lịch sử. Nếu không có desktop GPU row cần xác nhận thì bỏ các option confirmation.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master
+```
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse origin/master && if [ -e results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1 ]; then echo OUTPUT_EXISTS; else echo OUTPUT_ABSENT; fi
+```
+
+```bash
+hostname && nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader && for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | awk '$1 ~ /^[0-9]+$/ {print $1}'); do printf 'PID %s | ' "$p"; ps -o user=,comm=,args= -p "$p"; done
+```
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_yolo11n_precision_head_ablation.py --phase all --out-dir results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1 --device 0
+```
+
+Không dùng `nohup`, không kill/pause process, không đổi quyền/clock/power. Nếu snapshot có desktop allowlist hiện hữu, lệnh cuối append từng `--confirm-desktop-process CURRENT_PID=CURRENT_ALLOWLISTED_PATH`; nếu có Python/build/inference hoặc process không phân loại, không chạy. Nếu study lỗi, giữ partial/log, không resume/evaluate bypass. Sau khi hoàn tất, người dùng push JSON/cache/log.gz theo protocol, không push engine/ONNX/weights; Luna sẽ pull và hậu kiểm rồi ghi addendum, không tự mở bước nghiên cứu tiếp theo.
