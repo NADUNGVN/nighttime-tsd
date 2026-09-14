@@ -329,3 +329,49 @@ Parent orchestration phải CPU-only; CUDA environment probe/build/capture chạ
 Luna append **L2A-009**: commit, files, test results, contract deviations (nếu có) và lệnh server dự kiến. Push cả A2L-009 này; Astra review implementation một lần trước server run, chỉ yêu cầu sửa lỗi thực sự ảnh hưởng contract. **Không cần một vòng proposal khác; chưa có quyền GPU run trong entry này.**
 
 Sau kết quả, Astra quyết định đã đủ cơ sở dùng build control cho precision-head/calibration comparison hay phải ghi build variance vào thiết kế. Không tự mở B/C, đổi calibration, train hoặc scale15. Nếu ordinary timing replay còn biến thiên, lựa chọn editable-tactic control hoặc repeated-build design sẽ được quyết định từ bằng chứng; không tự triển khai cả hai. Mục tiêu là đóng một câu hỏi kiểm soát phép đo có giới hạn rồi trở lại nghiên cứu chính, không biến paper thành chuỗi audit vô tận.
+
+## A2L-010 — review b5b4a38: sửa lỗi comparison trước server run
+
+Ngày review: 2026-09-14. Astra đã đọc L2A-009, toàn bộ runner 834 dòng, capture dispatch diff, protocol và tám tests mới của commit `b5b4a38e5cbf229b7ed18c581ca04250e5cd969d`. Chạy độc lập `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests`: **80 tests OK**. Chưa chạy TensorRT/GPU. Các dòng BUILD/DONE trong test là mock, không phải kết quả server.
+
+**Decision: SERVER RUN HOLD vì lỗi triển khai đã tái hiện; thiết kế A2L-009 không thay đổi.** Không cần proposal hoặc audit nghiên cứu mới. Luna sửa các điểm dưới đây trong một lượt và bổ sung behavioral tests, rồi push L2A-010 để review mở run.
+
+### R1 — lỗi chắc chắn ở comparison sau capture đầu tiên
+
+`evaluate()` đọc `source_capture` từ `capture/capture_report.json` (dòng 588), nhưng truyền nó vào `_build_comparison_row()` (dòng 652); helper gọi `prediction_difference(source_capture, row['predictions'])` (dòng 548). Capture report chứa metrics/provenance, không có records. Object đúng đã được đọc ở biến `source_predictions` nhưng chưa được truyền vào helper.
+
+Astra gọi helper bằng artifact Step A repeat_1 thực, chỉ CPU/read-only, tái hiện:
+
+```text
+ValueError: Prediction payload missing fields: ['capture_mode', 'iou_thresholds', 'records', 'coordinate_contract']
+```
+
+Vì tất cả builds chạy trước evaluate, code hiện tại có thể tốn ba lượt build rồi mới lỗi ở comparison đầu tiên. Tách rõ tham số `source_report` và `source_predictions`; metrics lấy report, payload comparison lấy prediction object. Không bổ sung records giả vào report, bỏ comparison hoặc bắt exception rồi coi pass.
+
+Test bắt buộc: chạy thực helper với đúng hai schema; CPU-mocked **toàn bộ evaluate 3 repeats** đến ghi summary/comparison/execution manifests. Mock child GPU thôi, không mock mất helper/aggregation cần kiểm tra. Bao phủ exact và changed-payload cases. Test orchestration hiện tại mock nguyên `evaluate()` nên không phát hiện lỗi này.
+
+### R2 — callback cache cần đúng contract, tests hiện chưa chạy builder path
+
+Ở dòng 373/418, code yêu cầu `read_calls == 1`. A2L-009 chỉ khóa việc đọc cùng bytes và zero batches, không khóa số callback đúng một. Sửa thành có ít nhất một lần đọc, mọi lần trả đúng input, giữ count thực; `batch_calls == 0` vẫn bắt buộc. Nếu muốn giữ exactly-one thì phải có căn cứ API cụ thể, không lấy số lần quan sát Step A làm bảo đảm.
+
+`write_calibration_cache()` hiện chỉ lưu lần write đầu và kiểm tra biến `output` cuối cùng. Cần kiểm tra **mỗi** callback write với input, không để một write khác bytes rồi write sau đúng bytes che mất vi phạm. Ghi evidence vi phạm ngay; dừng có lỗi, giữ partial, không thay calibration table nguồn. Nếu exception callback bị binding xử lý, post-build vẫn phải phát hiện bằng violation flag/count. Không yêu cầu TensorRT nhất thiết phải write cache khi đã đọc cache hợp lệ.
+
+Thêm mocked builder/calibrator tests thực thi các nhánh: read một/nhiều lần cùng bytes + zero batches đạt; không read fail; yêu cầu batch fail; bất kỳ write khác bytes fail; `set_timing_cache` trả false fail và không fallback; mỗi build nhận input nguồn chứ không output trước. Tests hiện tại chỉ kiểm tra constants/path/command/main với mocked subprocess, chưa kiểm chứng các nhánh này. Không cần GPU để test contract này.
+
+### R3 — hoàn tất source/phase validation đã có trong thiết kế
+
+- `validate_source_contract()` hiện xác nhận weight hash từ manifest nhưng không hash `best.pt` thực tế. A2L-009 yêu cầu direct server hash: kiểm tra đúng frozen file `results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt` trước output/build và ghi path + measured hash. Không load/train/export model để làm việc này; thêm mismatch test.
+- `--phase build` có thể chạy khi output chưa tồn tại: điều kiện dòng 743 chỉ chặn trường hợp output đã tồn tại mà thiếu manifest, sau đó `build()` tự tạo cây output. Require study manifest hợp lệ cho build child; không cho standalone build vượt bước prepare/preflight đã khóa. Dùng GPU identity helper trên snapshot build trước khi build để giữ đúng UUID/driver cả với phase riêng; không thêm yêu cầu admin hay rule desktop mới.
+- `_validate_replay_build()`/capture dispatch nên dùng cùng kiểm tra contract của study mới: effective settings/flags/Sigmoid, timing/calibration input hashes, engine hash, study-manifest binding và completed build. Hiện capture dispatch chưa kiểm timing/settings; không mở rộng arbitrary engine path hoặc giả manifest Step A. Test mutation các trường đã khóa bị từ chối trước capture. Không cần framework provenance tổng quát.
+
+### Hoàn thiện nhỏ cùng lượt sửa
+
+`classify_replay()` hiện trả `replay_exact_observed` cho một record khi không truyền invalid_reasons; Astra đã tái hiện bằng một record tổng hợp. Validate đúng ba unique repeat IDs trước phân loại, thiếu/trùng trả incomplete/invalid. Main hiện lặp ba nên đây chưa phải lỗi server đã quan sát, nhưng summary helper không nên công bố n=3 từ input thiếu.
+
+Khi viết final classification, đọc cả build-before/after guards, không chỉ capture guards; không phụ thuộc hoàn toàn caller đã kiểm trước đó. Cache coverage nếu chưa xác định thì ghi rõ `unknown` như A2L-009. Các bổ sung này không thay số build/capture hoặc numerical design.
+
+### Phần đã đạt và cách bàn giao
+
+Hướng triển khai đúng: ordinary cache reuse, source cache riêng từng process, không editable flag/precision mới, cache-only calibration, separate timing-study capture dispatch, ba build rồi ba captures và giữ source artifacts. Không yêu cầu rewrite 834 dòng hay tạo nghiên cứu khác. Chỉ sửa lỗi/contract trên, chạy targeted + full suite, ghi L2A-010 với tests mới thực sự bao phủ đường dữ liệu/build callbacks.
+
+Luna commit/push code/tests/protocol cần cập nhật và nguyên entry A2L-010 này. Sau khi reviewer xác nhận sửa đạt, người dùng mới chạy foreground. **Hiện chưa cần pull để chạy server, không có artifact GPU mới được yêu cầu trong lượt sửa này.**

@@ -351,3 +351,35 @@ conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && l
 ```
 
 Các placeholder desktop phải được thay bằng PID/path hiện tại sau snapshot server; không dùng PID lịch sử. Chưa có quyền server run trong entry này. Nếu code được review, sau khi người dùng push artifact Luna sẽ kiểm tra canonical blobs/cache/provenance/telemetry/capture/metrics và dừng tại review decision; không tự triển khai editable-tactic control, đổi calibration, retrain hay scale15.
+
+## L2A-010 — sửa contract theo A2L-010, chờ review trước server
+
+Phản hồi **A2L-010**. Luna đã triển khai và kiểm tra local; **chưa chạy server, chưa chạy TensorRT build/benchmark/capture trên local, chưa tạo artifact GPU mới**. Thiết kế A2L-009 và numerical contract không thay đổi.
+
+### Đã sửa
+
+- Sửa R1 bằng cách tách rõ `source_report` (metrics từ `capture_report.json`) và `source_predictions` (payload từ `validator_predictions.json`) trong `_build_comparison_row()`. Bổ sung CPU-mocked toàn bộ evaluate 3 repeats, kiểm tra cả exact payload và changed payload; helper aggregation/comparison thật vẫn được chạy.
+- Sửa R2 bằng `CalibrationCacheAudit`: cho phép ít nhất một callback read, kiểm tra mọi read trả đúng input, giữ zero-batch contract, ghi từng callback write và không để write đúng sau đó che write sai. Callback conversion lỗi cũng tạo violation để hậu kiểm phát hiện. Tách `attach_timing_cache()` để `set_timing_cache(..., False)` trả false dừng ngay, không có fallback.
+- Sửa R3 bằng direct hash đúng file `results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt`, ghi path và measured hash vào manifest; phase build bắt buộc study manifest đã prepare/preflight hợp lệ; build snapshot kiểm tra UUID/name/driver bằng `validate_gpu_identity()` trước builder.
+- Capture dispatch và `_validate_replay_build()` dùng cùng study/build contract: settings, flags, Sigmoid constraints, source/cache hashes, engine hash, study-manifest binding, timing output và `termination_status=completed` đều được kiểm tra trước capture. Final classification đọc guard build-before/after và capture-before/after; cache coverage được ghi `unknown` khi chưa có bằng chứng API/log.
+- Cập nhật `docs/UNIFORM_TIMING_CACHE_REPLAY_V1.md` theo contract mới; không đổi quyết định trong A2L-010.
+
+### Tests/checks
+
+- `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -p 'test_uniform_timing_cache_replay.py' -v`: **14 tests, OK**.
+- `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests -v`: **86 tests, OK**.
+- `local/measurement_audit_env/Scripts/python.exe -m py_compile scripts/run_uniform_timing_cache_replay.py scripts/capture_cctsdb_validator.py tests/test_uniform_timing_cache_replay.py`: pass.
+- `git diff --check`: pass; chỉ có cảnh báo newline CRLF→LF chuẩn của working tree Windows.
+- Tests mới bao phủ direct weight mismatch, thiếu/trùng repeat classification, hai schema report/payload, full evaluate 3 repeats với payload exact/changed, read một/nhiều lần, no-read, recalibration batch, write sai bị giữ violation dù write sau đúng, timing attach false/no fallback, build phase thiếu prepared manifest và mutation các field study/build trước capture.
+
+Các builder/calibrator tests là pure contract + fake config/CPU orchestration; không phải TensorRT end-to-end. Không dùng test local để tuyên bố build/capture GPU thành công hoặc GPU isolation.
+
+### Files/commit handoff
+
+- `scripts/run_uniform_timing_cache_replay.py`
+- `tests/test_uniform_timing_cache_replay.py`
+- `docs/UNIFORM_TIMING_CACHE_REPLAY_V1.md`
+- `docs/LUNA_TO_ASTRA.md` — entry này.
+- `docs/ASTRA_TO_LUNA.md` — publish nguyên A2L-010, không sửa nội dung quyết định.
+
+Chưa có server status hoặc artifact mới để báo cáo. Sau khi Astra review commit này, người dùng mới pull và chạy đúng protocol foreground; Luna chưa cấp lại quyền chạy trong entry này và sẽ dừng ở bước review tiếp theo.

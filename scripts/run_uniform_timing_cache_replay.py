@@ -33,6 +33,7 @@ SOURCE_STUDY = "uniform_build_repeat_v1"
 STUDY = "uniform_timing_cache_replay_v1"
 SOURCE_STUDY_DIR = "server_uniform_build_repeat_v1"
 STUDY_DIR = "server_uniform_timing_cache_replay_v1"
+FROZEN_WEIGHTS_PATH = Path("results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt")
 SOURCE_RESULT_COMMIT = "a5e79e7c15259facc24114279a050ded439cc9ed"
 SOURCE_CODE_COMMIT = "d9378cb8416be714dff2f823405f727bc9258f0b"
 FROZEN_WEIGHTS_SHA256 = "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
@@ -59,6 +60,7 @@ SOURCE_SETTINGS = {
 }
 REPLAY_SETTINGS = {**SOURCE_SETTINGS, "timing_cache": "source_repeat_1_replay_per_process"}
 REPLAY_VARIANT = "ordinary_timing_cache_replay_v1"
+CACHE_COVERAGE_UNKNOWN = "unknown"
 SIZE_LABELS = ("all", "xs", "s", "m", "l", "xl")
 SIZE_METRICS = ("map50", "map50_95")
 FULL_METRICS = ("map50", "map50_95", "precision", "recall")
@@ -158,21 +160,25 @@ def validate_source_contract(repo: Path):
     if manifest.get("settings") != SOURCE_SETTINGS:
         raise ValueError("Step-A builder settings differ from the locked contract")
 
+    frozen_weights = Path(repo).resolve() / FROZEN_WEIGHTS_PATH
     source_onnx = source_root / "source.onnx"
     calibration = source_root / f"repeat_{TIMING_CACHE_SOURCE_REPEAT}" / "calibration.cache"
     timing = source_root / f"repeat_{TIMING_CACHE_SOURCE_REPEAT}" / "timing.cache"
     source_summary = source_root / "repeat_summary.json"
-    for path, label in ((source_onnx, "frozen source.onnx"),
+    for path, label in ((frozen_weights, "frozen YOLO11n weights"),
+                        (source_onnx, "frozen source.onnx"),
                         (calibration, "repeat_1 calibration cache"),
                         (timing, "repeat_1 timing cache input"),
                         (source_summary, "Step-A repeat summary")):
         _require_file(path, label)
     actual_hashes = {
+        "weights_sha256": sha256(frozen_weights),
         "onnx_sha256": sha256(source_onnx),
         "calibration_cache_sha256": sha256(calibration),
         "timing_cache_sha256": sha256(timing),
     }
     expected_hashes = {
+        "weights_sha256": FROZEN_WEIGHTS_SHA256,
         "onnx_sha256": SOURCE_ONNX_SHA256,
         "calibration_cache_sha256": SOURCE_CALIBRATION_CACHE_SHA256,
         "timing_cache_sha256": SOURCE_TIMING_CACHE_SHA256,
@@ -206,6 +212,7 @@ def validate_source_contract(repo: Path):
         "manifest": manifest,
         "manifest_path": manifest_path,
         "source_onnx": source_onnx,
+        "frozen_weights": frozen_weights,
         "calibration_cache": calibration,
         "timing_cache": timing,
         "source_summary": source_summary,
@@ -215,6 +222,102 @@ def validate_source_contract(repo: Path):
         "source_result_commit_available": result_commit_available,
         "input_hashes": expected_hashes,
     }
+
+
+def validate_replay_study_manifest(manifest, source: dict) -> None:
+    """Validate the child/capture boundary before touching an engine."""
+    required = {
+        "study": STUDY,
+        "source_study": SOURCE_STUDY,
+        "source_result_commit": source["source_result_commit"],
+        "source_study_code_commit": source["manifest"].get("git_commit"),
+        "source_study_manifest_sha256": sha256(source["manifest_path"]),
+        "source_weights_sha256": FROZEN_WEIGHTS_SHA256,
+        "frozen_weights_path": FROZEN_WEIGHTS_PATH.as_posix(),
+        "frozen_weights_measured_sha256": source["input_hashes"]["weights_sha256"],
+        "onnx_sha256": SOURCE_ONNX_SHA256,
+        "settings": REPLAY_SETTINGS,
+        "protocol_variant": REPLAY_VARIANT,
+        "builder_flags": source["build_manifests"][1].get("builder_flags"),
+        "sigmoid_fp32_constraints": source["build_manifests"][1].get("sigmoid_fp32_constraints"),
+    }
+    for key, expected in required.items():
+        if manifest.get(key) != expected:
+            raise ValueError(f"Timing-cache replay study contract differs for {key}")
+    expected_calibration = {
+        "source_repeat": TIMING_CACHE_SOURCE_REPEAT,
+        "sha256": SOURCE_CALIBRATION_CACHE_SHA256,
+        "copy_per_build": True,
+    }
+    if manifest.get("calibration_cache_input") != expected_calibration:
+        raise ValueError("Timing-cache replay calibration input contract differs")
+    expected_timing = {
+        "source_repeat": TIMING_CACHE_SOURCE_REPEAT,
+        "sha256": SOURCE_TIMING_CACHE_SHA256,
+        "copy_per_build": True,
+        "ignore_mismatch": False,
+    }
+    if manifest.get("timing_cache_input") != expected_timing:
+        raise ValueError("Timing-cache replay timing input contract differs")
+
+
+class CalibrationCacheAudit:
+    """Pure audit state shared by the TensorRT callback and CPU tests."""
+
+    def __init__(self, input_bytes: bytes):
+        self.input_bytes = bytes(input_bytes)
+        self.read_calls = 0
+        self.read_violations = []
+        self.batch_calls = 0
+        self.write_calls = 0
+        self.write_violations = []
+        self.outputs = []
+
+    def read(self, returned=None) -> bytes:
+        self.read_calls += 1
+        try:
+            value = self.input_bytes if returned is None else bytes(returned)
+        except Exception as error:
+            self.read_violations.append({"call": self.read_calls, "error": str(error)})
+            return b""
+        if value != self.input_bytes:
+            self.read_violations.append({"call": self.read_calls, "sha256": hashlib.sha256(value).hexdigest()})
+        return value
+
+    def record_batch(self):
+        self.batch_calls += 1
+        raise RuntimeError("Cache-only replay attempted recalibration")
+
+    def write(self, data) -> bytes:
+        self.write_calls += 1
+        try:
+            value = bytes(data)
+        except Exception as error:
+            self.write_violations.append({"call": self.write_calls, "error": str(error)})
+            value = b""
+        self.outputs.append(value)
+        if value != self.input_bytes:
+            self.write_violations.append({"call": self.write_calls, "sha256": hashlib.sha256(value).hexdigest()})
+        return value
+
+    def validate(self):
+        if self.read_calls < 1:
+            raise RuntimeError("Calibration cache was not read")
+        if self.read_violations:
+            raise RuntimeError(f"Calibration cache read bytes differed from locked input: {self.read_violations}")
+        if self.batch_calls != 0:
+            raise RuntimeError(f"Calibration cache replay consumed {self.batch_calls} calibration batches")
+        if self.write_violations:
+            raise RuntimeError(f"Calibration cache write bytes differed from locked input: {self.write_violations}")
+
+
+def attach_timing_cache(config, timing_bytes: bytes):
+    """Attach only the locked input; there is intentionally no fallback path."""
+    timing_cache = config.create_timing_cache(bytes(timing_bytes))
+    result = config.set_timing_cache(timing_cache, False)
+    if not result:
+        raise RuntimeError("Cannot attach locked timing-cache input with ignore_mismatch=False")
+    return {"called": True, "ignore_mismatch": False, "return_value": bool(result)}
 
 
 def confirmation_args(confirmations):
@@ -280,11 +383,18 @@ def _run_child(command, repo: Path):
 
 def build(repo: Path, output: Path, repeat: int, confirmations):
     """Build one replay engine; this function is only called in a child process."""
+    source = validate_source_contract(repo)
+    _, expected_output = resolve_protocol_paths(repo)
+    if Path(output).resolve() != expected_output:
+        raise ValueError(f"Timing-cache replay build must use exactly {expected_output}")
+    study_manifest_path = Path(output) / "study_manifest.json"
+    _require_file(study_manifest_path, "timing-cache replay study manifest")
+    validate_replay_study_manifest(read(study_manifest_path), source)
+
     import torch
     import tensorrt as trt
     from uniform_build_repeat import environment, ensure_idle, inspector_signature, snapshot
 
-    source = validate_source_contract(repo)
     env = environment()
     if env != source["manifest"].get("environment"):
         raise ValueError("Build environment changed from Step A")
@@ -304,6 +414,7 @@ def build(repo: Path, output: Path, repeat: int, confirmations):
                       f"{STUDY}_build_{repeat}"):
         before = snapshot(confirmations)
         ensure_idle(before)
+        validate_gpu_identity(before, {"gpu_before": source["manifest"].get("gpu_before")})
         logger = trt.Logger(trt.Logger.VERBOSE)
         builder = trt.Builder(logger)
         network = builder.create_network(0)
@@ -319,17 +430,12 @@ def build(repo: Path, output: Path, repeat: int, confirmations):
         config.clear_flag(trt.BuilderFlag.TF32)
         config.profiling_verbosity = trt.ProfilingVerbosity.DETAILED
         config.set_flag(trt.BuilderFlag.OBEY_PRECISION_CONSTRAINTS)
-        timing_cache = config.create_timing_cache(timing_bytes)
-        if not config.set_timing_cache(timing_cache, False):
-            raise RuntimeError("Cannot attach locked timing-cache input with ignore_mismatch=False")
+        timing_attach = attach_timing_cache(config, timing_bytes)
 
         class CacheOnlyCalibrator(trt.IInt8Calibrator):
             def __init__(self):
                 super().__init__()
-                self.read_calls = 0
-                self.batch_calls = 0
-                self.write_calls = 0
-                self.output = None
+                self.audit = CalibrationCacheAudit(calibration_bytes)
 
             def get_algorithm(self):
                 return trt.CalibrationAlgoType.MINMAX_CALIBRATION
@@ -338,19 +444,17 @@ def build(repo: Path, output: Path, repeat: int, confirmations):
                 return 1
 
             def read_calibration_cache(self):
-                self.read_calls += 1
-                return calibration_bytes
+                return self.audit.read()
 
             def write_calibration_cache(self, data):
-                self.write_calls += 1
-                self.output = bytes(data)
-                output_path = dest / "calibration_cache_output.cache"
-                if not output_path.exists():
-                    write_bytes(output_path, self.output)
+                output = self.audit.write(data)
+                output_index = self.audit.write_calls
+                output_path = dest / ("calibration_cache_output.cache" if output_index == 1
+                                      else f"calibration_cache_output_{output_index}.cache")
+                write_bytes(output_path, output)
 
             def get_batch(self, names):
-                self.batch_calls += 1
-                raise RuntimeError("Cache-only replay attempted recalibration")
+                return self.audit.record_batch()
 
         calibrator = CacheOnlyCalibrator()
         config.int8_calibrator = calibrator
@@ -370,10 +474,7 @@ def build(repo: Path, output: Path, repeat: int, confirmations):
         plan = builder.build_serialized_network(network, config)
         if plan is None:
             raise RuntimeError("TensorRT build failed; inspect build log")
-        if calibrator.read_calls != 1 or calibrator.batch_calls != 0:
-            raise RuntimeError("Calibration cache read/batch contract was not satisfied")
-        if calibrator.output is not None and calibrator.output != calibration_bytes:
-            raise RuntimeError("TensorRT returned a calibration table different from locked input")
+        calibrator.audit.validate()
 
         timing_output = bytes(config.get_timing_cache().serialize())
         write_bytes(dest / "timing_cache_output.cache", timing_output)
@@ -391,14 +492,15 @@ def build(repo: Path, output: Path, repeat: int, confirmations):
         ensure_idle(after)
 
     calibration_output = dest / "calibration_cache_output.cache"
-    if calibrator.output is None:
+    if not calibrator.audit.outputs:
         calibration_output_status = "not_returned"
         calibration_output_hash = None
         calibration_output_changed = None
     else:
-        calibration_output_status = "same" if calibrator.output == calibration_bytes else "changed"
+        calibration_output_status = "same" if all(output == calibration_bytes
+                                                   for output in calibrator.audit.outputs) else "changed"
         calibration_output_hash = sha256(calibration_output)
-        calibration_output_changed = calibrator.output != calibration_bytes
+        calibration_output_changed = any(output != calibration_bytes for output in calibrator.audit.outputs)
     inspector_info = read(dest / "inspector.json")
     manifest = {
         "schema_version": 1,
@@ -412,22 +514,32 @@ def build(repo: Path, output: Path, repeat: int, confirmations):
         "source_summary_sha256": sha256(source["source_summary"]),
         "source_build_manifest_sha256": sha256(source["root"] / "repeat_1/build_manifest.json"),
         "source_weights_sha256": FROZEN_WEIGHTS_SHA256,
+        "frozen_weights_path": FROZEN_WEIGHTS_PATH.as_posix(),
+        "frozen_weights_measured_sha256": source["input_hashes"]["weights_sha256"],
         "onnx_sha256": SOURCE_ONNX_SHA256,
         "calibration_cache_source_repeat": TIMING_CACHE_SOURCE_REPEAT,
         "calibration_cache_input_sha256": sha256(dest / "calibration_cache_input.cache"),
-        "calibration_cache_read": calibrator.read_calls == 1,
-        "calibration_cache_read_calls": calibrator.read_calls,
-        "calibration_batches_consumed": calibrator.batch_calls,
-        "calibration_cache_write_calls": calibrator.write_calls,
+        "calibration_cache_read": calibrator.audit.read_calls >= 1 and not calibrator.audit.read_violations,
+        "calibration_cache_read_calls": calibrator.audit.read_calls,
+        "calibration_cache_read_violations": calibrator.audit.read_violations,
+        "calibration_batches_consumed": calibrator.audit.batch_calls,
+        "calibration_cache_write_calls": calibrator.audit.write_calls,
+        "calibration_cache_write_violations": calibrator.audit.write_violations,
+        "calibration_cache_output_files": [
+            ("calibration_cache_output.cache" if index == 1
+             else f"calibration_cache_output_{index}.cache")
+            for index in range(1, calibrator.audit.write_calls + 1)
+        ],
         "calibration_cache_output_sha256": calibration_output_hash,
         "calibration_cache_output_status": calibration_output_status,
         "calibration_cache_output_changed": calibration_output_changed,
         "timing_cache_input_source": f"source.repeat_{TIMING_CACHE_SOURCE_REPEAT}/timing.cache",
         "timing_cache_input_sha256": sha256(dest / "timing_cache_input.cache"),
         "timing_cache_source_sha256": SOURCE_TIMING_CACHE_SHA256,
-        "timing_cache_attach": {"called": True, "ignore_mismatch": False, "return_value": True},
+        "timing_cache_attach": timing_attach,
         "timing_cache_output_sha256": sha256(dest / "timing_cache_output.cache"),
         "timing_cache_output_changed": timing_output != timing_bytes,
+        "timing_cache_coverage": CACHE_COVERAGE_UNKNOWN,
         "settings": REPLAY_SETTINGS,
         "builder_flags": int(config.flags),
         "sigmoid_fp32_constraints": protected,
@@ -441,6 +553,7 @@ def build(repo: Path, output: Path, repeat: int, confirmations):
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "script_sha256": sha256(Path(__file__)),
         "termination_status": "completed",
+        "study_manifest_sha256": sha256(study_manifest_path),
         "scope": "Ordinary timing-cache replay feasibility check before precision/calibration interventions; no editable cache, algorithm selector, Q/DQ or policy change.",
     }
     write_json(dest / "build_manifest.json", manifest)
@@ -456,24 +569,9 @@ def replay_capture_inputs(repo: Path, root: Path, index: int):
     if index not in ENGINE_REPEATS:
         raise ValueError("Timing-cache replay repeat must be 1, 2 or 3")
     contract = validate_source_contract(repo)
-    if not (root / "study_manifest.json").is_file():
-        raise ValueError("Timing-cache replay study manifest is missing")
-    study_manifest = read(root / "study_manifest.json")
-    if study_manifest.get("study") != STUDY:
-        raise ValueError("Capture study manifest is not timing-cache replay")
+    build_manifest = _validate_replay_build(root, contract, index)
     build_manifest_path = root / f"repeat_{index}/build_manifest.json"
     engine = root / f"repeat_{index}/model.engine"
-    for path, label in ((build_manifest_path, "replay build manifest"), (engine, "replay engine")):
-        _require_file(path, label)
-    build_manifest = read(build_manifest_path)
-    if build_manifest.get("study") != STUDY or build_manifest.get("repeat") != index:
-        raise ValueError("Replay build provenance identity mismatch")
-    if build_manifest.get("onnx_sha256") != contract["input_hashes"]["onnx_sha256"]:
-        raise ValueError("Replay build ONNX identity mismatch")
-    if build_manifest.get("calibration_cache_input_sha256") != SOURCE_CALIBRATION_CACHE_SHA256:
-        raise ValueError("Replay build calibration cache identity mismatch")
-    if sha256(engine) != build_manifest.get("engine_sha256"):
-        raise ValueError("Replay engine bytes/hash mismatch")
     previous = contract["root"] / "repeat_1/capture/capture_report.json"
     _require_file(previous, "Step-A repeat_1 capture report")
     previous_report = read(previous)
@@ -485,6 +583,9 @@ def replay_capture_inputs(repo: Path, root: Path, index: int):
 
 
 def _validate_replay_build(output: Path, source: dict, repeat: int):
+    study_manifest_path = Path(output) / "study_manifest.json"
+    _require_file(study_manifest_path, "timing-cache replay study manifest")
+    validate_replay_study_manifest(read(study_manifest_path), source)
     dest = output / f"repeat_{repeat}"
     manifest_path = dest / "build_manifest.json"
     engine = dest / "model.engine"
@@ -496,18 +597,42 @@ def _validate_replay_build(output: Path, source: dict, repeat: int):
         "study": STUDY,
         "repeat": repeat,
         "source_study": SOURCE_STUDY,
+        "source_result_commit": source["source_result_commit"],
+        "source_study_code_commit": source["manifest"].get("git_commit"),
+        "source_study_manifest_sha256": sha256(source["manifest_path"]),
+        "source_weights_sha256": FROZEN_WEIGHTS_SHA256,
+        "frozen_weights_path": FROZEN_WEIGHTS_PATH.as_posix(),
+        "frozen_weights_measured_sha256": source["input_hashes"]["weights_sha256"],
         "onnx_sha256": SOURCE_ONNX_SHA256,
         "calibration_cache_input_sha256": SOURCE_CALIBRATION_CACHE_SHA256,
         "timing_cache_input_sha256": SOURCE_TIMING_CACHE_SHA256,
         "calibration_cache_read": True,
         "calibration_batches_consumed": 0,
         "timing_cache_attach": {"called": True, "ignore_mismatch": False, "return_value": True},
+        "settings": REPLAY_SETTINGS,
+        "builder_flags": source["build_manifests"][1].get("builder_flags"),
+        "sigmoid_fp32_constraints": source["build_manifests"][1].get("sigmoid_fp32_constraints"),
+        "timing_cache_coverage": CACHE_COVERAGE_UNKNOWN,
+        "termination_status": "completed",
     }
     for key, expected in required.items():
         if manifest.get(key) != expected:
             raise ValueError(f"Replay repeat_{repeat} build contract differs for {key}")
     if sha256(engine) != manifest.get("engine_sha256"):
         raise ValueError(f"Replay repeat_{repeat} engine hash mismatch")
+    if manifest.get("study_manifest_sha256") != sha256(study_manifest_path):
+        raise ValueError(f"Replay repeat_{repeat} study manifest binding mismatch")
+    if manifest.get("timing_cache_output_sha256") is None:
+        raise ValueError(f"Replay repeat_{repeat} timing cache output hash is missing")
+    if manifest.get("calibration_cache_write_violations"):
+        raise ValueError(f"Replay repeat_{repeat} calibration write violations are present")
+    if (not isinstance(manifest.get("calibration_cache_read_calls"), int) or
+            manifest["calibration_cache_read_calls"] < 1):
+        raise ValueError(f"Replay repeat_{repeat} calibration read count is incomplete")
+    if manifest.get("calibration_cache_read_violations"):
+        raise ValueError(f"Replay repeat_{repeat} calibration read violations are present")
+    if manifest.get("calibration_cache_output_changed") is True:
+        raise ValueError(f"Replay repeat_{repeat} calibration output changed")
     for name, expected in (("calibration_cache_input.cache", SOURCE_CALIBRATION_CACHE_SHA256),
                            ("timing_cache_input.cache", SOURCE_TIMING_CACHE_SHA256),
                            ("timing_cache_output.cache", manifest.get("timing_cache_output_sha256"))):
@@ -537,6 +662,9 @@ def _aggregate_build_metrics(records):
 def classify_replay(records, invalid_reasons=()):
     if invalid_reasons:
         return "incomplete_or_invalid"
+    repeat_ids = [row.get("repeat") for row in records]
+    if len(records) != len(ENGINE_REPEATS) or set(repeat_ids) != set(ENGINE_REPEATS):
+        return "incomplete_or_invalid"
     payloads = {row["prediction_payload_sha256"] for row in records}
     metric_payloads = {json.dumps({"ultralytics": row["capture"]["metrics"],
                                    "coco_xml": row["size"]["metrics"]},
@@ -544,13 +672,14 @@ def classify_replay(records, invalid_reasons=()):
     return "replay_exact_observed" if len(payloads) == 1 and len(metric_payloads) == 1 else "replay_variation_observed"
 
 
-def _build_comparison_row(row, baseline, source_capture, source_size):
-    prediction_vs_source = prediction_difference(source_capture, row["predictions"])
+def _build_comparison_row(row, baseline, source_report, source_predictions, source_size):
+    """Compare metrics from capture reports and payloads from prediction artifacts."""
+    prediction_vs_source = prediction_difference(source_predictions, row["predictions"])
     metrics_vs_source = {
-        "ultralytics": numeric_deltas(source_capture["metrics"], row["capture"]["metrics"]),
+        "ultralytics": numeric_deltas(source_report["metrics"], row["capture"]["metrics"]),
         "coco_xml": numeric_deltas(source_size["metrics"], row["size"]["metrics"]),
     }
-    metrics_exact_vs_source = (source_capture["metrics"] == row["capture"]["metrics"] and
+    metrics_exact_vs_source = (source_report["metrics"] == row["capture"]["metrics"] and
                                source_size["metrics"] == row["size"]["metrics"])
     if baseline is None:
         prediction_vs_replay_baseline = {"exact": True, "differences": {}}
@@ -642,6 +771,11 @@ def evaluate(repo: Path, output: Path, args, source: dict, helpers):
             "source_inspector_signature": build_manifest["source_inspector_signature"],
             "gpu_before": build_manifest["gpu_before"],
             "gpu_after": build_manifest["gpu_after"],
+            "build": {"gpu_before": build_manifest["gpu_before"],
+                       "gpu_after": build_manifest["gpu_after"],
+                       "calibration_cache_read_calls": build_manifest.get("calibration_cache_read_calls", 0),
+                       "calibration_cache_read_violations": build_manifest.get("calibration_cache_read_violations", []),
+                       "calibration_cache_write_violations": build_manifest.get("calibration_cache_write_violations", [])},
             "capture": capture,
             "predictions": predictions,
             "size": size,
@@ -649,7 +783,7 @@ def evaluate(repo: Path, output: Path, args, source: dict, helpers):
             "prediction_payload_version": PREDICTION_PAYLOAD_VERSION,
             "prediction_payload_sha256": payload_hash,
         }
-        row.update(_build_comparison_row(row, baseline, source_capture, source_size))
+        row.update(_build_comparison_row(row, baseline, source_capture, source_predictions, source_size))
         if baseline is None:
             baseline = row
         public_row = dict(row)
@@ -671,12 +805,18 @@ def evaluate(repo: Path, output: Path, args, source: dict, helpers):
         if row["verification"].get("native_matching_status") != "pass": invalid_reasons.append(f"repeat_{row['repeat']}_native")
         if row["verification"].get("size_diagnostic") != "completed": invalid_reasons.append(f"repeat_{row['repeat']}_size")
         for phase in ("gpu_before", "gpu_after"):
-            guard = row["capture"].get(phase, {}).get("process_guard", {})
-            if guard.get("telemetry_status") != "complete":
-                invalid_reasons.append(f"repeat_{row['repeat']}_{phase}_telemetry")
-            if guard.get("external_workload_detected") or guard.get("blocked_processes") or guard.get("unmatched_confirmations"):
-                invalid_reasons.append(f"repeat_{row['repeat']}_{phase}_external_workload")
-        if row["calibration_batches_consumed"] != 0 or not row["calibration_cache_read"]:
+            for source_name in ("build", "capture"):
+                guard = row[source_name].get(phase, {}).get("process_guard", {})
+                if guard.get("telemetry_status") != "complete":
+                    invalid_reasons.append(f"repeat_{row['repeat']}_{source_name}_{phase}_telemetry")
+                if (guard.get("external_workload_detected") or guard.get("blocked_processes") or
+                        guard.get("unmatched_confirmations")):
+                    invalid_reasons.append(f"repeat_{row['repeat']}_{source_name}_{phase}_external_workload")
+        build_manifest = row["build"]
+        if (row["calibration_batches_consumed"] != 0 or not row["calibration_cache_read"] or
+                build_manifest.get("calibration_cache_read_calls", 0) < 1 or
+                build_manifest.get("calibration_cache_read_violations") or
+                build_manifest.get("calibration_cache_write_violations")):
             invalid_reasons.append(f"repeat_{row['repeat']}_calibration_contract")
     status = classify_replay(records, invalid_reasons)
     review_flags = sorted(set(invalid_reasons))
@@ -701,6 +841,7 @@ def evaluate(repo: Path, output: Path, args, source: dict, helpers):
         "calibration_cache_source": {"repeat": TIMING_CACHE_SOURCE_REPEAT,
                                       "path": "source.repeat_1/calibration.cache",
                                       "sha256": SOURCE_CALIBRATION_CACHE_SHA256},
+        "timing_cache_coverage": CACHE_COVERAGE_UNKNOWN,
         "prediction_payload_version": PREDICTION_PAYLOAD_VERSION,
         "dataset_split": DATASET_SPLIT,
         "round_order": [1, 2, 3],
@@ -747,8 +888,11 @@ def main(argv=None, *, repo_override=None, helpers=None):
         parser.error("--repeat is required for build phase")
     if args.phase != "build" and args.repeat is not None:
         parser.error("--repeat is only valid for build phase")
-    if args.phase == "build" and output.exists() and not (output / "study_manifest.json").exists():
-        parser.error("Replay output exists without a study manifest; preserve and inspect it")
+    if args.phase == "build":
+        if not output.exists():
+            parser.error("Build phase requires an existing prepared study manifest; do not run standalone")
+        if not (output / "study_manifest.json").is_file():
+            parser.error("Replay output exists without a study manifest; preserve and inspect it")
     parse_desktop = helpers.get("parse_desktop_confirmations", parse_desktop_confirmations)
     try:
         args.confirmed_desktop = parse_desktop(args.confirm_desktop_process)
@@ -768,16 +912,22 @@ def main(argv=None, *, repo_override=None, helpers=None):
             "schema_version": 1, "study": STUDY, "source_study": SOURCE_STUDY,
             "source_study_root": str(source_root), "source_result_commit": SOURCE_RESULT_COMMIT,
             "source_study_code_commit": source["manifest"].get("git_commit"),
+            "source_study_manifest_sha256": sha256(source["manifest_path"]),
             "git_commit": git_value(repo, "rev-parse", "HEAD"),
             "git_status": git_value(repo, "status", "--short"),
             "dataset_split": DATASET_SPLIT, "engine_repeats": list(ENGINE_REPEATS),
             "build_order": [1, 2, 3], "capture_order": [1, 2, 3],
             "settings": REPLAY_SETTINGS, "source_step_a_settings": SOURCE_SETTINGS,
             "source_weights_sha256": FROZEN_WEIGHTS_SHA256,
+            "frozen_weights_path": FROZEN_WEIGHTS_PATH.as_posix(),
+            "frozen_weights_measured_sha256": source["input_hashes"]["weights_sha256"],
             "onnx_sha256": SOURCE_ONNX_SHA256,
-            "calibration_cache_input": {"source_repeat": 1, "sha256": SOURCE_CALIBRATION_CACHE_SHA256},
+            "calibration_cache_input": {"source_repeat": 1, "sha256": SOURCE_CALIBRATION_CACHE_SHA256,
+                                         "copy_per_build": True},
             "timing_cache_input": {"source_repeat": 1, "sha256": SOURCE_TIMING_CACHE_SHA256,
                                     "copy_per_build": True, "ignore_mismatch": False},
+            "builder_flags": source["build_manifests"][1].get("builder_flags"),
+            "sigmoid_fp32_constraints": source["build_manifests"][1].get("sigmoid_fp32_constraints"),
             "environment": probe["environment"], "environment_preflight": probe,
             "gpu_before": gpu_before, "gpu_identity_binding": {"device_argument": args.device, **gpu_binding},
             "operator_confirmations": [{"pid": pid, "reported_path": path}
@@ -816,8 +966,15 @@ def main(argv=None, *, repo_override=None, helpers=None):
             "source_result_commit": SOURCE_RESULT_COMMIT, "source_study_code_commit": source["manifest"].get("git_commit"),
             "git_commit": git_value(repo, "rev-parse", "HEAD"), "settings": REPLAY_SETTINGS,
             "source_weights_sha256": FROZEN_WEIGHTS_SHA256, "onnx_sha256": SOURCE_ONNX_SHA256,
-            "calibration_cache_input": {"source_repeat": 1, "sha256": SOURCE_CALIBRATION_CACHE_SHA256},
-            "timing_cache_input": {"source_repeat": 1, "sha256": SOURCE_TIMING_CACHE_SHA256, "ignore_mismatch": False},
+            "frozen_weights_path": FROZEN_WEIGHTS_PATH.as_posix(),
+            "frozen_weights_measured_sha256": source["input_hashes"]["weights_sha256"],
+            "source_study_manifest_sha256": sha256(source["manifest_path"]),
+            "calibration_cache_input": {"source_repeat": 1, "sha256": SOURCE_CALIBRATION_CACHE_SHA256,
+                                         "copy_per_build": True},
+            "timing_cache_input": {"source_repeat": 1, "sha256": SOURCE_TIMING_CACHE_SHA256,
+                                    "copy_per_build": True, "ignore_mismatch": False},
+            "builder_flags": source["build_manifests"][1].get("builder_flags"),
+            "sigmoid_fp32_constraints": source["build_manifests"][1].get("sigmoid_fp32_constraints"),
             "environment": probe["environment"], "environment_preflight": probe, "gpu_before": gpu_before,
             "gpu_identity_binding": {"device_argument": args.device, **gpu_binding}, "protocol_variant": REPLAY_VARIANT,
             "created_utc": datetime.now(timezone.utc).isoformat(),
