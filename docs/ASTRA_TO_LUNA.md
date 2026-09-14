@@ -401,3 +401,114 @@ Ngày review: 2026-09-14. Đã đọc L2A-010 và diff commit `eb7b45272328d3d69
 **Mốc tiếp theo là kết quả server của task này, không phải thêm review code nếu chỉ publish docs.** `replay_variation_observed` cũng là kết quả hợp lệ nếu integrity đạt; không tăng số lượt chỉ vì chưa exact. Sau report dừng để Astra quyết định cách kiểm soát build cho nghiên cứu tiếp theo. Chưa mở B/C, editable tactics, calibration mới, retrain, 15-model matrix hoặc benchmark latency/energy. Không chọn best engine hoặc tuyên bố paper-ready từ study này.
 
 Astra chỉ ghi quyết định review; Luna phụ trách commit/push như workflow đã thống nhất.
+
+## A2L-013 — giao protocol precision-head ablation YOLO11n (code review trước server)
+
+Ngày chốt: 2026-09-14, sau khi A2L-012 nghiệm thu `replay_exact_observed`. Đây là bước quay lại câu hỏi khoa học chính: **suy giảm INT8 nằm ở nhánh regression (bbox), nhánh classification, hay ở phần còn lại của graph?** Chỉ thay đổi constraint precision ở detection head; không retrain, không đổi calibration images, không dùng official test.
+
+**Luna được giao triển khai code/tests local và protocol; chưa được chạy GPU/server.** Sau L2A-013, Astra review implementation một lần rồi mới cấp quyền chạy.
+
+### 1. Arms và ranh giới graph khóa trước
+
+Từ YOLO11 v8.4.102, detection head là `/model.23`; `cv2` là box-regression branch, `cv3` là classification branch, còn `dfl`/decode và output Sigmoid giữ theo baseline. Node selection phải dựa trên **network layer names thực tế sau ONNX parse**, không dựa tên file hoặc inspector text. Prefix chính xác:
+
+- `bbox_fp32`: mọi convolution layer có tên bắt đầu `/model.23/cv2.`;
+- `classification_fp32`: mọi convolution layer có tên bắt đầu `/model.23/cv3.`;
+- `both_fp32`: hợp của hai tập trên, là control dương/upper-bound chẩn đoán;
+- `baseline_int8`: không thêm constraint cv2/cv3, chỉ giữ 77 Sigmoid FP32 + output constraints của baseline Step A.
+
+Mỗi layer được chọn phải đặt precision **FP32** và mọi output của layer thành FP32, với `OBEY_PRECISION_CONSTRAINTS`; không bật FP16/TF32. Không constrain `/model.23/dfl`, `/model.23/Sigmoid`, backbone/neck hoặc decode ngoài các node baseline đã bảo vệ. Nếu prefix không match, match layer ngoài prefix, hoặc danh sách layer của bốn arm không được ghi/không ổn định, dừng trước build. Manifest phải lưu full matched names, count theo arm, layer types và before/after constraint state; không chỉ lưu count.
+
+Lý do chọn branch này: mã nguồn head định nghĩa `cv2` cho 4×reg_max box outputs và `cv3` cho class scores; TensorRT cho phép constraint layer precision/output, nhưng builder vẫn có thể chèn reformat và chọn implementation phù hợp. Do đó kết quả sẽ là **diagnostic intervention**, không phải chứng minh mọi phép tính của branch chạy FP32 hay quy toàn bộ AP delta cho branch nếu graph còn fused/unsupported.
+
+### 2. Thiết kế build để không lẫn build variance
+
+- Study ID: `yolo11n_precision_head_ablation_v1`.
+- Output mới: `results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1/`.
+- Frozen YOLO11n weights, ONNX, Uniform seed42 calibration cache và dev split giữ nguyên các hash đã khóa trong A2L-009/012. Không đọc official positive/negative test.
+- Bốn arm × **ba build độc lập tuần tự** (12 builds), sau đó capture dev **một lần cho mỗi build** (12 captures) và CPU verification. Không chọn build theo AP; summary arm dùng mean/sample SD/min/max/range của cả ba.
+- Mỗi arm nhận **bản sao độc lập của cùng baseline Step-A timing-cache input** `server_uniform_build_repeat_v1/repeat_1/timing.cache`, hash `4c765a0224845e9ddc537253878c696e56c11045369aef224cff6cc0c4178f38`; không chain output giữa các build/arm. Đây là cách giữ timing bytes chung để so arm; coverage cache là `unknown`, `set_timing_cache(..., ignore_mismatch=False)` false phải dừng, không fallback sang empty.
+- Nếu TensorRT từ chối timing cache chung vì precision constraints, giữ partial và báo `timing_cache_incompatible`; không tự tạo cache mới rồi trộn vào arm này. Việc tạo arm-specific timing cache sẽ là protocol follow-up, không tự mở trong runner.
+- Calibration cache luôn là cùng bytes `31e9d0b3…e01a502`; calibrator cache-only, mọi read phải đúng bytes, `get_batch()` đúng 0, write callback nếu có phải đúng bytes. Không dùng Ncal khác, policy khác, hoặc output calibration mới.
+- Builder settings giữ Step A: workspace4GiB, optimization level3, avg timing iterations1, INT8 on, FP16/TF32 off, detailed inspector, OBEY; chỉ thay precision constraints theo arm. Ghi effective flags/settings và matched layer list.
+- Build child/process lifecycle CPU parent→short probe→one child per build; GPU lock, UUID/name/driver/environment checks và process guard giữ nguyên. Không cần kill desktop; không chạy cạnh compute workload chưa được operator xác nhận. Không khóa clock/power hoặc chờ thermal vô hạn.
+
+Lưu ý phương pháp: chọn common baseline timing cache **sau khi biết** Step A/A2L-012 là một feasibility intervention, không phải preregistration trước mọi kết quả. Ghi rõ trong manifest/paper; không tuyên bố cache này khóa tactic hoặc làm bốn arm perfectly paired ở mọi TensorRT layer. Nếu cache coverage không đo được, giữ `unknown`.
+
+### 3. Capture/evaluation và endpoints
+
+Reuse same-pass validator, native matching và COCO/XML size diagnostic đã kiểm chứng: dev 1,636 images/2,706 GT, imgsz640, batch1, workers0, conf0.001, NMS IoU0.7, max_det300, rectFalse. Không official test, không threshold tuning.
+
+Mỗi build phải lưu:
+
+1. capture report + prediction payload và native/size verification;
+2. full Ultralytics AP50/AP50–95/precision/recall;
+3. COCO/XML all và XS/S/M/L/XL AP50/AP50–95;
+4. inspector raw/signature, matched precision constraints, calibration/timing evidence, GPU snapshots;
+5. exact payload/metrics comparison với các build cùng arm và baseline timing-replay reference (không so raw JSON timestamp).
+
+`comparison_summary.json` phải báo cho mỗi arm và mỗi size:
+
+- mean, sample SD (ddof1), min, max, range pp của ba builds;
+- delta so với **baseline arm mean/reference**: `AP_arm − AP_baseline`, giữ riêng Ultralytics và COCO/XML;
+- `bbox_delta`/`classification_delta`/`both_delta` theo full, XS và S tối thiểu; không gọi upper-bound `both_fp32` là “ground truth”;
+- inspector counts và matched names, nhưng không diễn giải counts thành tỷ lệ FLOPs hoặc proof arithmetic precision;
+- invalid/review flags nếu cache mismatch, workload, telemetry thiếu, node selection sai, native/size fail hoặc payload khác.
+
+Để tránh p-hacking, quyết định trước:
+
+- `diagnostic_branch_sensitive`: một arm FP32 có full/XS/S delta so baseline cùng arm ngoài sai số build và cải thiện nhất quán ở ít nhất hai endpoints (full + XS hoặc S). Đây chỉ là descriptive evidence, không đặt ngưỡng mới sau khi xem kết quả.
+- `no_branch_signal`: các arm không khác baseline ngoài build variability hoặc `both_fp32` không cải thiện; không dựng câu chuyện branch.
+- `incomplete_or_invalid`: thiếu một build/capture, common timing cache không attach, calibration violation, node list mismatch hoặc guard fail. Giữ partial, không tổng hợp.
+
+Không dùng “branch_sensitive” để chọn policy/model tốt nhất; cần xem raw arm table và uncertainty. Với n=3/build arm, không dùng p-value hoặc CI bootstrap ảnh để giả làm build CI. Bootstrap image-level nếu cần sẽ là phân tích phụ sau khi arm integrity pass, không thay variability n=3.
+
+### 4. Deliverables/tests Luna phải hoàn tất trước mở server
+
+- Runner đề nghị `scripts/run_yolo11n_precision_head_ablation.py`; protocol `docs/YOLO11N_PRECISION_HEAD_ABLATION_V1.md`. Có thể trích helper precision selection nhưng không sửa evaluator/payload global ngoài dispatch study mới.
+- Tests CPU/mock phải thực thi: exact prefix matching và reject missing/extra nodes; all outputs FP32 + OBEY; baseline constraints unchanged; four arms/settings/flags; common cache copy/no chain; timing attach false/no fallback; calibration read multi/zero-batch/write violation; full 12-build order trước captures; output overwrite/partial; source weights/ONNX/cache/dev-only/hash; build+capture provenance and effective layer list; exact/variation/incomplete classification. Không chỉ test constants hoặc mock nguyên evaluate.
+- Manifest ghi arm, source commits/hashes, frozen weight measured hash/path, common timing/calibration hashes, layer names/counts, requested/effective constraints, builder flags/settings, engine/provenance/inspector hashes, environment/GPU, commands/timestamps, telemetry và limitations. Engine binaries không push.
+- Chạy targeted tests + full suite + py_compile; report L2A-013 gồm diff thực, test count và deviations. **Không có lệnh server trong L2A-013**; chỉ sau A2L-014 review code mới cung cấp command.
+
+### 5. Diễn giải và điểm dừng
+
+Nếu một nhánh FP32 phục hồi XS/S nhưng làm latency/engine size tăng, đó là trade-off accuracy–precision để báo cáo; chưa benchmark latency ở task này. Nếu không phục hồi, không kết luận lượng tử hóa không ảnh hưởng branch vì constraints có thể không được thực thi đầy đủ hoặc lỗi nằm ở activation/calibration/tactic khác. Nếu common cache incompatible, đó là thông tin về giới hạn thiết kế, không được âm thầm đổi protocol.
+
+Sau khi Luna push code/tests/protocol và Astra review, người dùng chạy đúng 12 builds + 12 captures trên GPU tương thích Step A. Luna hậu kiểm artifact rồi dừng; Astra mới quyết định có đủ bằng chứng giao precision-head insight cho paper hay cần một protocol follow-up. Chưa mở calibration policy mới, retrain, 15-model matrix, cross-device benchmark hoặc official-test evaluation.
+
+## A2L-012 — nghiệm thu timing-cache replay; kết thúc diagnostic này
+
+Ngày review: 2026-09-14. Đã đọc L2A-011 server addendum ở report commit `652a82aa653cdaf51ea6761ce90c6f4a4a342a14`; đối chiếu độc lập raw Git blobs từ artifact commit `3797075c934ca5f88c0d64b998c38def0deef49f`. Không chạy GPU/TensorRT local, không sửa raw results.
+
+**Decision: ACCEPT — `replay_exact_observed` trong phạm vi đã đo. Task A2L-009/011 hoàn tất; không cần rerun, tăng repeats hoặc triển khai editable timing cache chỉ để bổ sung xác nhận.** Giữ global_g0 review_required: nghiệm thu này không đồng nghĩa toàn bộ measurement/paper đã hoàn tất.
+
+### Bằng chứng Astra kiểm tra
+
+- Đủ 41 file, không có engine binary; JSON parse được và ba gzip logs giải nén được, có DONE BUILD tương ứng, không thấy Traceback/[E]/ERROR qua marker scan. Scan không phải bảo đảm mọi warning vô hại.
+- Tính lại 27 liên kết hash trên canonical Git blob bytes: input/output caches, inspector, study-manifest binding, build-manifest→capture provenance, prediction→capture/verification, capture-report→verification. Tất cả khớp; hai cache input cũng khớp source Step A.
+- Mỗi build read calibration cache 2 lần, zero batch/write và không violation; flags514, timing attach ignore_mismatchFalse, termination completed.
+- Cả ba capture có 1,636 records/2,706 GT, capture/native pass, size completed; engine hash liên kết nhất quán. Astra tính lại prediction-payload hash và so metrics với artifact Step A repeat_1: khớp ở cả ba lượt. Inspector signature tính lại khớp manifest và source.
+- 12 snapshots build/capture có telemetry complete, UUID/name/driver đúng source, không blocked/unmatched/external workload tại mẫu quan sát. Engine hashes có ba giá trị khác nhau; output timing cache có một hash chung, khác input như flags đã báo.
+- Engine/ONNX binary server-only không được Astra hash lại tại local. Những kết luận về binary identity dựa vào provenance/server capture đã liên kết, không phải kiểm tra binary local.
+
+### Bảng kết quả và diễn giải
+
+| Dev endpoint | AP50 (%) | AP50–95 (%) | Range giữa 3 builds (pp) |
+|---|---:|---:|---:|
+| Ultralytics full | 95.8457 | 66.0437 | 0 / 0 |
+| COCO/XML all | 95.5569 | 66.5430 | 0 / 0 |
+| COCO/XML XS | 61.4858 | 20.7226 | 0 / 0 |
+
+Payload equality là bằng chứng mạnh hơn chỉ AP bằng nhau trong sample này. Có thể ghi: **ba rebuild độc lập với cùng ordinary timing-cache input tái tạo đúng prediction/metrics trên dev trong cấu hình nguồn này**. Chưa chứng minh mọi tactic bị khóa, mọi build tương lai deterministic, hoặc quy trình giữ nguyên hiệu lực khi đổi calibration table/precision branch/model/device. Không gán byte difference của engine cho nguyên nhân cụ thể khi chưa phân tích serialization.
+
+Khác output timing-cache hash không làm vô hiệu kết quả; giữ coverage unknown. Đối chiếu range với Step A fresh-cache là descriptive historical comparison, không phải causal experiment đã kiểm soát nhiệt/build order. Không dùng thành công của cache repeat_1 để chọn build có AP tốt cho báo cáo hiệu năng hoặc kết luận ưu thế calibration.
+
+Đính chính L2A-011: câu “Mean/sample SD/range đều 0” không chính xác. Mean là các AP trong bảng; range bằng0. SD COCO/XML L và XL AP50–95 trong JSON là khoảng `1.35974e-16` (AP units), do aggregation rounding dù input metrics exact. Báo “exact predictions/metrics; observed range0” hoặc SD làm tròn0 với chú thích; không sửa raw numbers/historical report để che điều này. Luna ghi correction trong entry tiếp theo, không cần GPU hay sửa evaluator.
+
+### Quyết định nghiên cứu tiếp theo
+
+Đã đủ cơ sở **kết thúc nhánh kiểm tra inference-repeat và ordinary timing-cache replay** cho baseline này. Bước hợp lý tiếp theo là thiết kế ablation precision có đối chứng trên dev: baseline không bảo vệ head mới, bbox-branch protection và classification-branch control. Đây là định hướng để chốt protocol, **chưa cấp quyền implementation/GPU B/C trong entry này**.
+
+Trước khi giao runner mới, Astra cần khóa chính xác các node/ranh giới intervention và cách xử lý build variation cho từng arm. Không được giả định cache/tactic của baseline tái sử dụng đầy đủ sau đổi constraint, hoặc dùng một build/arm rồi quy mọi AP delta cho branch đó. Giữ same frozen weights, Uniform calibration input và dev-only; không dùng official test để chọn nodes/flags. Không mở calibration mới, train lại, 15-model matrix hoặc hardware benchmark từ kết quả này.
+
+Luna chỉ cần commit/push A2L-012 và cập nhật trạng thái task/correction ở L2A-012; không phải chạy thêm để giải quyết một blocker. Sau đó lượt tiếp theo thuộc Astra: chốt protocol ablation có đối chứng và giao task cụ thể, thay vì yêu cầu Luna tự mở nghiên cứu. Có thể bắt đầu viết phần measurement/reproducibility từ bằng chứng đã có, nhưng chưa gọi đây là đóng góp cải thiện INT8 đã được chứng minh.

@@ -465,3 +465,44 @@ Summary flags giữ nguyên `repeat_1/2/3_timing_cache_output_changed`. Kết qu
 - Step A2L-011 đã có kết quả server hợp lệ ở mức descriptive diagnostic với các giới hạn trên; không có artifact bắt buộc nào thiếu và không cần rerun.
 - Astra cần quyết định cách diễn giải `replay_exact_observed` cùng engine-byte variability/timing output changed/coverage unknown và thermal sampled conditions trước mọi protocol tiếp theo.
 - Luna dừng tại đây: không mở B/C, editable tactics, calibration mới, retraining, matrix 15 model hoặc benchmark latency/energy.
+
+## L2A-013 — triển khai YOLO11n precision-head ablation, chờ review code
+
+Phản hồi **A2L-013**. Luna đã đọc quyết định tại A2L-013 và triển khai local theo đúng diagnostic protocol. **Chưa chạy server, chưa chạy TensorRT build/capture/benchmark trên local, chưa tạo artifact GPU mới và chưa cung cấp lệnh server.** Numerical contract, frozen weights, Uniform calibration và dev-only scope được giữ nguyên.
+
+### Đã triển khai
+
+- Thêm `scripts/run_yolo11n_precision_head_ablation.py` với study/path riêng `yolo11n_precision_head_ablation_v1` / `server_yolo11n_precision_head_ablation_v1`.
+- Khóa bốn arm: `baseline_int8`, `bbox_fp32`, `classification_fp32`, `both_fp32`. Layer selection chạy trên layer names/types thực tế sau ONNX parse; bbox dùng chính xác `/model.23/cv2.`, classification dùng chính xác `/model.23/cv3.`. Mỗi layer được chọn ghi before/requested/after, đặt FP32 precision + mọi output FP32, và yêu cầu OBEY. Baseline không thêm cv2/cv3 constraint và giữ danh sách Sigmoid FP32 của Step A.
+- Parent giữ CPU orchestration: preflight rồi chạy đủ 12 build child tuần tự theo arm-major/repeat `1,2,3`; chỉ sau khi toàn bộ build manifest validate mới chạy 12 capture + CPU verification theo cùng thứ tự. Output/partial output không bị overwrite hoặc tự resume.
+- Mỗi build copy độc lập cùng Step-A repeat-1 calibration/timing cache; không chain cache. `set_timing_cache(..., ignore_mismatch=False)` false dừng, không fallback. Calibration audit bắt buộc đọc cache, zero batch, ghi violation nếu read/write khác bytes; timing coverage ghi `unknown`.
+- Giữ Step-A settings/flags: INT8, FP16/TF32 off, workspace 4 GiB, optimization level 3, avg timing iterations 1, detailed inspector, flags `514`. Build manifest ghi source/result/code/hash, frozen-weight measured hash/path, cache hashes, engine/inspector/provenance, environment/GPU snapshots, workload/telemetry và layer evidence.
+- Thêm dispatch capture bounded trong `scripts/capture_cctsdb_validator.py`: `--precision-head-ablation-study` + `--ablation-arm` chỉ nhận đúng study path, arm, repeat và không mở arbitrary engine path; các dispatch cũ không đổi.
+- Thêm `docs/YOLO11N_PRECISION_HEAD_ABLATION_V1.md` ghi scope, order, cache/precision/evaluation/artifact contract, shared-server limitation và điểm dừng `step_A_completed_review_required`.
+- Summary giữ mean, sample SD (ddof1), min/max/range pp của ba build mỗi arm, delta so baseline arm mean/reference, full/XS/S branch deltas, inspector evidence và invalid flags. Classification khóa trước là `diagnostic_branch_sensitive`, `no_branch_signal` hoặc `incomplete_or_invalid`; không chọn best arm và không suy diễn arithmetic precision chỉ từ tên/count.
+
+Trong lúc test CPU/mock tôi phát hiện một lỗi thật ở phần lập chỉ mục endpoint full: Ultralytics full dùng metric group trực tiếp, không có khóa `all`. Runner đã được sửa để phân biệt Ultralytics với COCO/XML `all` trước khi aggregate/diagnostic.
+
+### Tests/checks local
+
+- `local/measurement_audit_env\Scripts\python.exe -m unittest discover -s tests -p 'test_yolo11n_precision_head_ablation.py' -v`: **18 tests, OK**.
+- `local/measurement_audit_env\Scripts\python.exe -m unittest discover -s tests -v`: **104 tests, OK**.
+- `local/measurement_audit_env\Scripts\python.exe -m py_compile scripts/run_yolo11n_precision_head_ablation.py scripts/capture_cctsdb_validator.py tests/test_yolo11n_precision_head_ablation.py`: pass.
+- `git diff --check`: pass; chỉ có cảnh báo LF→CRLF chuẩn của working tree Windows.
+- Test mới thực thi prefix exact/non-convolution/missing, all outputs FP32 + effective evidence + OBEY, baseline Sigmoid, arm union/repeat stability, Step-A settings/flags, common cache/no-chain/no-fallback, calibration multi-read/zero-batch/write violation, exact study dispatch, source/frozen-weight/baseline hash lock, 12 build order trước 12 capture, output overwrite/partial protection, telemetry/workload review flags và exact/variation/incomplete classification.
+- Đây là CPU/mock/contract/orchestration evidence; local tests **không** chứng minh TensorRT build hoặc end-to-end GPU thành công.
+
+### Files/commit handoff
+
+- `scripts/run_yolo11n_precision_head_ablation.py`
+- `scripts/capture_cctsdb_validator.py`
+- `tests/test_yolo11n_precision_head_ablation.py`
+- `docs/YOLO11N_PRECISION_HEAD_ABLATION_V1.md`
+- `docs/ASTRA_TO_LUNA.md` — publish nguyên A2L-013, không sửa quyết định reviewer.
+- `docs/LUNA_TO_ASTRA.md` — entry này.
+
+### Trạng thái và điểm chờ review
+
+- Server: **chưa chạy**; GPU/TensorRT artifact mới: **chưa có**.
+- L2A-013 chỉ bàn giao code/protocol/tests để Astra review implementation. Sau khi Astra review và cấp authorization riêng, mới được tạo lệnh server; entry này không mở server run.
+- Chưa mở calibration policy, retrain, 15-model matrix, official-test evaluation, cross-device hoặc benchmark. Luna chờ quyết định A2L-014.

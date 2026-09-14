@@ -25,6 +25,21 @@ REPRESENTATIONS = ("fp16", "uniform", "low_luminance", "vcsc_proportional")
 FROZEN_WEIGHTS_SHA256 = "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
 CONCURRENT_STUDY_DIR = "server_uniform_inference_repeat_concurrent_v1"
 TIMING_CACHE_STUDY_DIR = "server_uniform_timing_cache_replay_v1"
+PRECISION_HEAD_ABLATION_STUDY_DIR = "server_yolo11n_precision_head_ablation_v1"
+PRECISION_HEAD_ABLATION_ARMS = ("baseline_int8", "bbox_fp32", "classification_fp32", "both_fp32")
+
+
+def validate_precision_head_ablation_scope(repo, study_root, arm, repeat_index, representation):
+    """Validate the bounded capture dispatch before opening an engine."""
+    if study_root is None or arm not in PRECISION_HEAD_ABLATION_ARMS:
+        raise ValueError("Precision-head ablation capture requires a valid study and arm")
+    if repeat_index not in (1, 2, 3) or representation != "fp16":
+        raise ValueError("Precision-head ablation capture requires --repeat-index and no --representation override")
+    expected = (Path(repo).resolve() / "results/measurement_audit_v1" /
+                PRECISION_HEAD_ABLATION_STUDY_DIR).resolve()
+    if Path(study_root).resolve() != expected:
+        raise ValueError(f"Precision-head ablation study must use exactly {expected}")
+    return expected
 
 
 def capture_inputs(repo, representation):
@@ -137,6 +152,10 @@ def main():
     parser.add_argument("--repeat-study", type=Path, help="Scoped Step-A Uniform build study; no arbitrary engine")
     parser.add_argument("--timing-cache-study", type=Path,
                         help="Scoped ordinary timing-cache replay study; no arbitrary engine")
+    parser.add_argument("--precision-head-ablation-study", type=Path,
+                        help="Scoped YOLO11n precision-head ablation study; no arbitrary engine")
+    parser.add_argument("--ablation-arm", choices=PRECISION_HEAD_ABLATION_ARMS,
+                        help="Precision-head ablation arm used with --precision-head-ablation-study")
     parser.add_argument("--repeat-index", type=int, choices=(1,2,3))
     parser.add_argument("--confirm-desktop-process", action="append", default=[], metavar="PID=PATH",
                         help="Explicitly confirm a current nvidia-smi desktop row; no /proc access is used")
@@ -150,8 +169,15 @@ def main():
                                       parse_desktop_confirmations, snapshot)
     confirmed_desktop = parse_desktop_confirmations(args.confirm_desktop_process)
     confirmed_background = parse_background_confirmations(args.confirm_background_process)
-    if args.repeat_study is not None and args.timing_cache_study is not None:
-        parser.error("Choose one scoped study input: --repeat-study or --timing-cache-study")
+    selected_studies = [value for value in
+                        (args.repeat_study, args.timing_cache_study,
+                         args.precision_head_ablation_study) if value is not None]
+    if len(selected_studies) > 1:
+        parser.error("Choose one scoped study input: --repeat-study, --timing-cache-study, or --precision-head-ablation-study")
+    if args.ablation_arm is not None and args.precision_head_ablation_study is None:
+        parser.error("--ablation-arm requires --precision-head-ablation-study")
+    if args.precision_head_ablation_study is not None and args.ablation_arm is None:
+        parser.error("--precision-head-ablation-study requires --ablation-arm")
     concurrent_root = (repo / "results/measurement_audit_v1" / CONCURRENT_STUDY_DIR).resolve()
     concurrent_output = args.out_dir.resolve().is_relative_to(concurrent_root)
     if args.allow_confirmed_background_workload != concurrent_output:
@@ -167,7 +193,18 @@ def main():
     import tensorrt as trt
     if not torch.cuda.is_available():
         parser.error("CUDA is unavailable; this capture requires an existing TensorRT engine")
-    if args.timing_cache_study is not None:
+    if args.precision_head_ablation_study is not None:
+        try:
+            validate_precision_head_ablation_scope(
+                repo, args.precision_head_ablation_study, args.ablation_arm,
+                args.repeat_index, args.representation)
+        except ValueError as error:
+            parser.error(str(error))
+        from run_yolo11n_precision_head_ablation import ablation_capture_inputs
+        engine, provenance, previous, old, prov, engine_hash = ablation_capture_inputs(
+            repo, args.precision_head_ablation_study, args.ablation_arm, args.repeat_index)
+        args.representation = f'precision_head_ablation_{args.ablation_arm}_r{args.repeat_index}'
+    elif args.timing_cache_study is not None:
         if args.repeat_index is None or args.representation != 'fp16':
             parser.error('Timing-cache replay capture requires --repeat-index and no --representation override')
         timing_root = (repo / "results/measurement_audit_v1" / TIMING_CACHE_STUDY_DIR).resolve()
