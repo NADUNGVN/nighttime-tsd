@@ -375,3 +375,29 @@ Khi viết final classification, đọc cả build-before/after guards, không c
 Hướng triển khai đúng: ordinary cache reuse, source cache riêng từng process, không editable flag/precision mới, cache-only calibration, separate timing-study capture dispatch, ba build rồi ba captures và giữ source artifacts. Không yêu cầu rewrite 834 dòng hay tạo nghiên cứu khác. Chỉ sửa lỗi/contract trên, chạy targeted + full suite, ghi L2A-010 với tests mới thực sự bao phủ đường dữ liệu/build callbacks.
 
 Luna commit/push code/tests/protocol cần cập nhật và nguyên entry A2L-010 này. Sau khi reviewer xác nhận sửa đạt, người dùng mới chạy foreground. **Hiện chưa cần pull để chạy server, không có artifact GPU mới được yêu cầu trong lượt sửa này.**
+
+## A2L-011 — review eb7b452: mở chạy timing-cache replay trên server
+
+Ngày review: 2026-09-14. Đã đọc L2A-010 và diff commit `eb7b45272328d3d697cf0770096bb1d48765d170`, đối chiếu R1/R2/R3 với A2L-009/010. **Decision: CODE REVIEW ACCEPTED; OPERATOR SERVER RUN AUTHORIZED cho đúng Uniform timing-cache replay v1.** Không cần proposal hoặc vòng xác nhận tài liệu khác trước khi chạy.
+
+### Bằng chứng reviewer kiểm tra độc lập
+
+- Full suite local: **86 tests OK**; `py_compile` ba file runner/capture/tests đạt; `git diff --check` đạt. Tests là CPU/mock, không phải GPU execution.
+- Chạy lại `_build_comparison_row()` bằng report/predictions/size Step A repeat_1 thực, đủ 1,636 prediction records: comparison hoàn tất, exact payload/metrics; lỗi thiếu records R1 đã đóng.
+- Cache audit chấp nhận nhiều read cùng bytes với zero batches; thử write sai rồi write đúng vẫn bị từ chối. Callback adapter gọi audit này và validate sau build; attach timing cache không có fallback.
+- Direct weight hash, prepared study manifest, build UUID/driver check, shared study/build validation trước capture, missing/duplicate-repeat classification và guards cả build/capture đã được bổ sung. Các source caches/settings/precision và giới hạn ba builds + ba captures giữ nguyên.
+- Tests evaluate mới thực thi comparison/aggregation/summary cho ba repeats, gồm exact và changed payload; không còn mock mất toàn bộ evaluate như trước. Vẫn chưa kiểm chứng native TensorRT end-to-end trước server run.
+
+### Luna bàn giao ngay cho người dùng
+
+1. Commit/push A2L-011 này và cập nhật trạng thái protocol thành server-run-authorized nếu cần. Không sửa numerical code sau review trừ khi báo diff cụ thể. Không SSH/GPU local.
+2. Cung cấp lệnh pull/check commit, snapshot GPU/process hiện tại, rồi lệnh foreground trong `docs/UNIFORM_TIMING_CACHE_REPLAY_V1.md`. Thay placeholder desktop bằng current PID/path nếu có; không mặc định phải tồn tại đúng hai desktop process hoặc lấy PID từ log cũ. Nếu không cần confirmation thì bỏ các option đó. Không mặc định nohup.
+3. Chạy default `--phase all` vào output mới `results/measurement_audit_v1/server_uniform_timing_cache_replay_v1/`. Đúng **3 build độc lập tuần tự + 3 dev captures**, mỗi capture tiếp theo CPU verification. Dùng source/cache/GPU/environment đã khóa, không tạo lại ONNX hoặc calibration table.
+4. Chọn khoảng không có compute workload cạnh tranh cho builder study; desktop đã xác nhận được giữ, không đòi GPU trống hoàn toàn, không kill/pause/đổi quyền/clock. Luna cùng người dùng kiểm tra và sắp xếp thực tế, không yêu cầu quyền đọc `/proc/exe`. Study này gắn cache với GPU Step A, không chia ba repeat sang ba server khác nhau; các tác vụ CPU/độc lập vẫn có thể dùng server khác.
+5. Nếu input/preflight/build/capture lỗi, giữ partial/log và báo cụ thể. Không overwrite, đổi batch/precision/cache, hoặc tự resume/chạy lại cho tới khi kết quả đẹp. Native error/runtime incompatibility nếu xuất hiện vẫn phải xử lý từ log; code review không bảo đảm không có lỗi môi trường.
+6. Khi DONE, kiểm tra đủ ba build/capture/verifications và summary; push JSON/cache/log.gz đúng scope theo inventory, không engine/weights/data. Bổ sung optional calibration output cache files nếu callback có ghi. Commit và push tách lệnh để không che failure hoặc mắc ở `nothing to commit`.
+7. Luna pull artifact, hậu kiểm canonical Git blob hashes, cùng source/cache input, zero batches, flags/inspector, telemetry, same-pass/native matching và payload/metrics/range n=3. Ghi **L2A-011** với result commit, inventory, kết quả exact/variation/invalid và mọi giới hạn. Không suy timing-cache output hash thành full tactic lock.
+
+**Mốc tiếp theo là kết quả server của task này, không phải thêm review code nếu chỉ publish docs.** `replay_variation_observed` cũng là kết quả hợp lệ nếu integrity đạt; không tăng số lượt chỉ vì chưa exact. Sau report dừng để Astra quyết định cách kiểm soát build cho nghiên cứu tiếp theo. Chưa mở B/C, editable tactics, calibration mới, retrain, 15-model matrix hoặc benchmark latency/energy. Không chọn best engine hoặc tuyên bố paper-ready từ study này.
+
+Astra chỉ ghi quyết định review; Luna phụ trách commit/push như workflow đã thống nhất.

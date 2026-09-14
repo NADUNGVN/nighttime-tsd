@@ -1,4 +1,4 @@
-# Uniform timing-cache replay v1 (A2L-010)
+# Uniform timing-cache replay v1 (A2L-011 — server run authorized)
 
 Đây là feasibility check trước mọi precision-head/calibration intervention. Runner không chạy lại Step A và không mở 15 model.
 
@@ -19,9 +19,17 @@
 - GPU guard được kiểm ở snapshot build trước khi build và ở snapshot capture; classification cuối đọc cả hai phase. Timing-cache coverage không được suy đoán từ output/hash và được ghi là `unknown` nếu API/log không cung cấp coverage.
 - Output timing cache được lưu riêng và so hash với input. Khác hash là `timing_cache_output_changed` để review, không tự diễn giải là tactic đã đổi; giống hash cũng không chứng minh mọi tactic đã bị khóa.
 
-## Lệnh server dự kiến (chỉ sau code review)
+## Lệnh server được ủy quyền
 
-Các PID desktop phải lấy từ snapshot hiện tại của server; không dùng PID lịch sử nếu chưa đối chiếu. Thay `DESKTOP_PID_1=DESKTOP_PATH_1` và `DESKTOP_PID_2=DESKTOP_PATH_2` bằng các confirmation hợp lệ. Lệnh foreground, mỗi lệnh một dòng:
+Code review đã được Astra chấp thuận tại A2L-011. Các PID desktop vẫn phải lấy từ snapshot hiện tại của server; local không có live snapshot nên không điền PID lịch sử. Nếu snapshot không có desktop GPU process cần xác nhận thì bỏ toàn bộ option `--confirm-desktop-process`. Lệnh foreground, mỗi lệnh một dòng:
+
+Snapshot bắt buộc trước khi tạo confirmation (không đọc `/proc/<pid>/exe`, không dùng PID lịch sử):
+
+```bash
+hostname && nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader && for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | awk '$1 ~ /^[0-9]+$/ {print $1}'); do printf 'PID %s | ' "$p"; ps -o user=,comm=,args= -p "$p"; done && if [ -e results/measurement_audit_v1/server_uniform_timing_cache_replay_v1 ]; then echo OUTPUT_EXISTS; else echo OUTPUT_ABSENT; fi
+```
+
+Sau khi operator đối chiếu snapshot, thêm một `--confirm-desktop-process PID=PATH` cho từng desktop GPU row được chủ động xác nhận; nếu không có desktop row thì bỏ các option này. Không tự xác nhận process không đúng đối tượng hoặc process chưa phân loại.
 
 ```bash
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master

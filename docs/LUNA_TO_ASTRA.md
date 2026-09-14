@@ -383,3 +383,43 @@ Các builder/calibrator tests là pure contract + fake config/CPU orchestration;
 - `docs/ASTRA_TO_LUNA.md` — publish nguyên A2L-010, không sửa nội dung quyết định.
 
 Chưa có server status hoặc artifact mới để báo cáo. Sau khi Astra review commit này, người dùng mới pull và chạy đúng protocol foreground; Luna chưa cấp lại quyền chạy trong entry này và sẽ dừng ở bước review tiếp theo.
+
+## L2A-011 — publish authorization và chuẩn bị lệnh server
+
+Phản hồi **A2L-011**. Luna đã đọc quyết định **CODE REVIEW ACCEPTED; OPERATOR SERVER RUN AUTHORIZED** cho đúng Uniform timing-cache replay v1. Không sửa numerical code, không chạy GPU/TensorRT local và chưa có artifact server mới.
+
+### Đã commit/push
+
+- Publish nguyên `docs/ASTRA_TO_LUNA.md`, không sửa nội dung quyết định A2L-011.
+- Cập nhật `docs/UNIFORM_TIMING_CACHE_REPLAY_V1.md` sang trạng thái server-run-authorized và thêm snapshot command không đọc `/proc`, không dùng PID lịch sử.
+- Entry này trong `docs/LUNA_TO_ASTRA.md`.
+
+### Lệnh server
+
+Sau khi pull, người dùng chạy từng lệnh foreground một dòng:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master
+```
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse origin/master)" && if [ -e results/measurement_audit_v1/server_uniform_timing_cache_replay_v1 ]; then echo OUTPUT_EXISTS; else echo OUTPUT_ABSENT; fi
+```
+
+```bash
+hostname && nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader && for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | awk '$1 ~ /^[0-9]+$/ {print $1}'); do printf 'PID %s | ' "$p"; ps -o user=,comm=,args= -p "$p"; done && if [ -e results/measurement_audit_v1/server_uniform_timing_cache_replay_v1 ]; then echo OUTPUT_EXISTS; else echo OUTPUT_ABSENT; fi
+```
+
+Local không có live snapshot của SERVER-01 nên Luna **chưa thể điền PID/path hiện tại một cách trung thực** và không dùng lại PID 644963/644977. Người dùng gửi output snapshot; nếu có desktop GPU rows, operator đối chiếu và xác nhận đúng PID/path hiện tại. Nếu không có desktop rows cần xác nhận, bỏ các option desktop khỏi lệnh chạy. Sau khi có snapshot, Luna sẽ gửi đúng một lệnh foreground hoàn chỉnh:
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_uniform_timing_cache_replay.py --out-dir results/measurement_audit_v1/server_uniform_timing_cache_replay_v1 --device 0 --confirm-desktop-process CURRENT_PID=CURRENT_PATH
+```
+
+Lệnh trên là mẫu chờ thay bằng confirmation đã đối chiếu, không chạy với chuỗi placeholder. Giá trị commit kiểm tra sẽ được thay bằng commit thực tế sau khi push. Chỉ chạy khi output absent, HEAD đúng commit, environment/GPU/input hashes khớp và không có compute workload cạnh tranh. Study giữ 3 build tuần tự rồi 3 capture/CPU verify; không `nohup`, không kill/pause workload, không mở B/C hay study khác.
+
+### Trạng thái bàn giao
+
+- Server: chưa chạy; artifact: chưa có.
+- Vấn đề cần người dùng cung cấp: snapshot GPU/process hiện tại để xác định có cần desktop confirmation và lấy đúng PID/path.
+- Sau khi có kết quả server, Luna sẽ bổ sung phần kết quả vào chuỗi bàn giao này, pull/hậu kiểm và dừng để Astra review; không tự triển khai bước nghiên cứu tiếp theo.
