@@ -210,3 +210,39 @@ HOLD vẫn áp dụng cho B/C, timing-cache build study, retraining, calibration
 Trước chạy kiểm tra hash/environment/GPU/input và output chưa tồn tại như cũ. Còn VRAM không bảo đảm không OOM; nếu có lỗi tài nguyên, giữ partial/log, không đổi batch/imgsz hoặc tác động job khác để ép hoàn tất. Push JSON đúng concurrent output khi đủ kết quả; không binaries. Sau run Luna ghi báo cáo kết quả vào inbox để Astra review, không tự mở thí nghiệm khác.
 
 Kết luận được phép sau khi có số liệu: repeatability quan sát **trên GPU dùng chung có workload nền được ghi nhận**. Payload giống chỉ chứng minh không thấy biến thiên trong lượt đã kiểm tra; payload khác chưa tách runtime/backend và tác động điều kiện tải. Không so range của concurrent inference với Step A rồi tự quy nguyên nhân cho nhiệt/tactic hoặc chọn best engine. Nghiệm thu vẫn review_required; mọi B/C, rebuild, training và scale-up HOLD.
+
+## A2L-008 — nghiệm thu inference repeatability; đóng task chín captures
+
+Ngày review: 2026-09-14. Astra đã đọc L2A-008 tại HEAD `edfd1ff`, đối chiếu độc lập artifact canonical Git của result commit `c3bbe42740f8f032f7dee0558afb1ed087f66c51`. Không SSH, không chạy TensorRT/GPU local và không thay numerical protocol.
+
+**Decision: ACCEPT cho bounded inference-repeatability diagnostic; task này hoàn tất, không cần chạy lại.** Đây không phải nghiệm thu toàn bộ G0, calibration method hoặc scope submit paper.
+
+### Kết quả hậu kiểm độc lập
+
+- Đủ 65/65 JSON parse được; 27/27 liên kết SHA256 prediction/capture-report khớp canonical Git blobs. Không dùng working-tree CRLF bytes làm chuẩn server.
+- Đúng 9 capture, round order `[[1,2,3],[2,3,1],[3,1,2]]`, 1,636 dev images và 2,706 instances mỗi capture; ba engine hashes khớp study manifest. Binary engines không có trong result commit nên Astra không tự hash lại binary local.
+- Capture/native matching pass và size diagnostic completed ở cả 9 lượt. Astra tính lại normalized prediction-payload hash từ records và kiểm tra exact equality, không chỉ tin cờ summary.
+- Trong từng engine, cả ba prediction payload và metrics giống nhau hoàn toàn. Từng lượt cũng khớp prediction payload, native aggregate metrics và COCO/XML size metrics của engine tương ứng trong artifact Step A.
+- Range AP50/AP50:95 trong từng engine bằng 0 ở all/XS/S/M/L/XL. Một số sample SD trong summary có thể có dư lượng số thực cỡ 1e-16 khi tính trung bình; đó không phải biến thiên quan sát. Khi viết bảng dùng “exact across three captures; observed range 0”, không sửa raw artifact để làm đẹp số.
+- 18/18 snapshots không có blocked/unmatched process; background PID3619779 có `status=exited`, `observed_on_gpu=false` ở toàn bộ 18 snapshots.
+
+### Kết luận khoa học có giới hạn
+
+| Frozen engine | Dev COCO/XML all AP50 (%) | Dev COCO/XML XS AP50 (%) | Range qua 3 captures (pp) |
+|---|---:|---:|---:|
+| 1 | 95.5569 | 61.4858 | 0 |
+| 2 | 94.8803 | 53.6660 | 0 |
+| 3 | 94.9074 | 57.6750 | 0 |
+
+Chênh lệch giữa ba engine Step A được tái hiện, trong khi không thấy biến thiên chạy lại cùng engine trong các lượt đã đo. Điều này hỗ trợ nhận định khác biệt gắn với ba artifact build trong điều kiện quan sát, không phải nhiễu inference-repeat đã quan sát. Chưa xác định nguyên nhân cụ thể là tactic, precision placement, điều kiện build/nhiệt hoặc yếu tố khác; không tuyên bố deterministic trên mọi môi trường, không chọn best build, không dùng bảng này làm bằng chứng ưu thế calibration policy. Đây là dev COCO/XML diagnostic, không thay thế official-test/native benchmark.
+
+Giữ nguyên tên thư mục `server_uniform_inference_repeat_concurrent_v1`, protocol variant và chín flags workload-exited để bảo toàn lịch sử. Phân loại kết quả là **inference repeatability with authorized background workload absent at sampled times**. Không gọi đây là thí nghiệm chứng minh khả năng chịu concurrent load; cũng không loại bỏ kết quả repeatability vì job nền đã kết thúc. Snapshots không chứng minh GPU isolation giữa các lần lấy mẫu. Không cần tạo thêm thí nghiệm concurrent workload chỉ để hợp với tên thư mục.
+
+### Bàn giao và phạm vi tiếp theo
+
+1. Luna commit/push entry này; có thể cập nhật task tracker/báo cáo tổng hợp với reviewer decision ACCEPT và các giới hạn trên. Không đổi raw result statuses hoặc reserialize artifact. Status máy đúng là `inference_repeatability_completed_review_required`; câu cuối L2A-008 dùng `step_A_completed_review_required` là nhầm tên, đính chính trong entry mới nếu cần, không sửa lịch sử.
+2. Không còn blocker hoặc yêu cầu server bổ sung cho task chín captures. Không lặp lại audit/inference này chỉ để có thêm xác nhận. Hiện chưa có lệnh GPU tiếp theo được giao.
+3. Mốc nghiên cứu tiếp theo cần chốt cách kiểm soát/ghi nhận khác biệt giữa builds trước khi quy hiệu ứng cho calibration. Kết quả hiện tại là input cho quyết định đó, không tự mở B/C, rebuild, retrain, 15-model matrix hoặc benchmark. Không đặt success threshold sau khi xem kết quả.
+4. Luna và người dùng được chủ động đề xuất điều chỉnh server/workers/tài nguyên trong scope task; rule vận hành không phải giả thuyết khoa học bất biến. Phải phân biệt inference accuracy, build study và latency/energy benchmark; ghi thay đổi điều kiện thực tế, không đổi batch/precision/evaluator/input hoặc mở nghiên cứu mới mà không nêu rõ tác động. Không cần tiếp tục tranh luận/chạy lại job nền đã kết thúc.
+
+Astra chỉ viết review này; Luna thực hiện commit/push theo workflow đã thống nhất.
