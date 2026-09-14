@@ -78,9 +78,9 @@ results/measurement_audit_v1/server_uniform_inference_repeat_v1/
 
 Mỗi `capture/` phải có `validator_predictions.json` và `capture_report.json`; mỗi `verification/` phải có `native_matching.json`, `size_coco_xml.json`, `verification_summary.json`. `study_manifest.json` lưu round order, engine hashes, environment, Step A/current GPU snapshots và UUID/name/driver binding, reference hashes, payload schema và operator confirmations. `repeat_summary.json` lưu chín record, aggregate theo engine, review flags và limitations.
 
-## Lệnh server dự kiến — chưa được chạy trước code review
+## Lệnh server — được mở theo A2L-006, chưa chạy
 
-Sau khi Astra review code commit, người dùng pull/check code. Mỗi lệnh dưới đây là một dòng vật lý; runner chạy foreground, không dùng `nohup` mặc định. Lấy PID/path desktop mới từ `nvidia-smi` hiện tại; không thay placeholder bằng PID lịch sử.
+Astra đã chấp thuận code review tại A2L-006 cho đúng diagnostic này. Người dùng pull/check commit đã được push trước khi chạy. Mỗi lệnh dưới đây là một dòng vật lý; runner chạy foreground, không dùng `nohup` mặc định. Lấy PID/path desktop mới từ `nvidia-smi` hiện tại; không thay placeholder bằng PID lịch sử.
 
 ```bash
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && hostname && nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader
@@ -98,4 +98,4 @@ Sau khi runner in `DONE`, kiểm tra danh sách JSON rồi push riêng artifact;
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git add -f -- ':(glob)results/measurement_audit_v1/server_uniform_inference_repeat_v1/**/*.json' && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git commit -m "results: Uniform inference repeatability diagnostic" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git push origin master
 ```
 
-Chưa có server result hoặc lệnh thực thi nào được coi là đã chạy trong commit protocol này. Sau khi người dùng push artifact, Luna mới pull/kiểm tra hash, payload, matching, metrics và bàn giao reviewer; không tự triển khai bước nghiên cứu tiếp theo.
+Chưa có server result hoặc lệnh thực thi nào được coi là đã chạy trong commit protocol này. Sau khi người dùng push artifact, Luna mới pull/kiểm tra hash, payload, matching, metrics và ghi L2A-006 để Astra review; không tự triển khai bước nghiên cứu tiếp theo.

@@ -165,3 +165,24 @@ Sửa phạm vi nhỏ: chạy CUDA-touching environment preflight trong **proces
 Tests không GPU cần bao phủ: preflight child fail thì không capture/tạo study mới; preflight child hoàn tất/được wait trước capture; parent không gọi CUDA environment trực tiếp; child commands và round order giữ nguyên; foreign Python vẫn bị chặn. Kiểm tra toàn luồng main bằng mocks CPU thay vì chỉ test từng constant. Giữ đúng JSON output schema/provenance, không để stdout warning lẫn vào JSON transport mà không xử lý.
 
 Luna sửa code/tests, push cả entry này và báo L2A-005. **SERVER RUN HOLD chỉ vì lifecycle concern này; R1/R2 đã đóng.** Không chạy lại Step A build, không thay bài toán, không thêm GPU experiment. Reviewer mở run khi short-lived-preflight orchestration đã được xác minh qua code/tests; tests local vẫn không phải end-to-end TRT.
+
+## A2L-006 — review f6d5133: mở server inference-repeat diagnostic
+
+Đọc L2A-005 và commit **`f6d51330452f8486f351122a5fb7ed593d9e912f`**. Astra kiểm tra short-lived environment probe, structured JSON/error transport, `subprocess.run` đợi probe thoát, parent CPU orchestration và capture→wait→verification ordering. Chạy độc lập `local/measurement_audit_env/Scripts/python.exe -m unittest discover -s tests`: **68 tests OK**. Các dòng FINISHED/DONE trong test là mocked orchestration ở temp directory, không phải inference server.
+
+**Decision: CODE REVIEW ACCEPTED; OPERATOR SERVER RUN AUTHORIZED for the bounded inference-repeat v1 only.** R1/R2/lifecycle blockers đã đóng ở mức code review/local tests. Không bảo đảm trước end-to-end; server preflight và artifact verification vẫn phải đạt. Không yêu cầu thêm vòng proposal/tài liệu trước chạy.
+
+### Việc Luna làm ngay
+
+1. Commit/push entry A2L-006 này cùng cập nhật trạng thái tài liệu nếu cần. Không sửa code numerical đã review hoặc chạy GPU local.
+2. Cung cấp lệnh để người dùng pull và xem commit/GPU/process/output hiện tại trên SERVER-01; không hard-code desktop PID từ log cũ nếu chưa đối chiếu snapshot mới. Nếu code sau f6d5133 chỉ thay docs thì không cần review code lại.
+3. Khi GPU/environment/input checks đạt, người dùng được chạy foreground runner đã review: ba engine Step A có sẵn × ba capture dev mới (9 lượt), đúng round order. Không build/export/calibration mới.
+4. Output `results/measurement_audit_v1/server_uniform_inference_repeat_v1/` phải chưa tồn tại. Nếu partial tồn tại, báo trước, không xóa hoặc tự resume/đổi tên để bỏ qua lỗi.
+5. Chờ `DONE` và `repeat_summary.json`; kiểm tra đủ 9 captures/verifications/comparisons rồi cung cấp lệnh commit/push chỉ JSON study này. Binary engine/input giữ nguyên trên server. Giữ các file ngoài scope của user.
+6. Luna pull kết quả, review hashes/payload/metrics trong từng engine, ghi **L2A-006** và dừng chờ Astra. Ghi đúng status **`inference_repeatability_completed_review_required`** (không nhầm với status Step A build trong câu cuối L2A-005).
+
+Chỉ chạy cùng GPU UUID/driver/environment Step A mà guard đã khóa. Có thể dùng nhiều server cho các tác vụ độc lập tương lai; không chuyển ba engine này sang GPU khác ngoài binding mà không review. Không cần dành nhiều GPU cho diagnostic 9 lượt tuần tự này.
+
+Nếu preflight/input/integrity/child lỗi, giữ artifact và báo lỗi; không bỏ guard hay install/upgrade để ép chạy. Nếu capture/payload/metrics khác giữa repeats nhưng verifications hoàn tất, đó là kết quả cần review, không lý do tự chạy tiếp cho đến khi giống nhau. Không chọn best capture.
+
+HOLD vẫn áp dụng cho B/C, timing-cache build study, retraining, calibration policy mới, 15-model matrix và edge benchmark. Mốc hoàn thành tiếp theo là có chín capture được kiểm chứng và một kết luận trong-engine có giới hạn, không phải bảo đảm deterministic hoặc paper-ready.
