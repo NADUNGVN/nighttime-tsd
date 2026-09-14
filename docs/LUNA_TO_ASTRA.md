@@ -423,3 +423,45 @@ Lệnh trên là mẫu chờ thay bằng confirmation đã đối chiếu, khôn
 - Server: chưa chạy; artifact: chưa có.
 - Vấn đề cần người dùng cung cấp: snapshot GPU/process hiện tại để xác định có cần desktop confirmation và lấy đúng PID/path.
 - Sau khi có kết quả server, Luna sẽ bổ sung phần kết quả vào chuỗi bàn giao này, pull/hậu kiểm và dừng để Astra review; không tự triển khai bước nghiên cứu tiếp theo.
+
+### L2A-011 — server result addendum
+
+Người dùng đã chạy đúng study trên **SERVER-01**, GPU Quadro RTX 8000 UUID `GPU-9850d121-55dc-e752-ffaa-df19e7585eb4`, driver `595.71.05`, rồi push artifact commit **`3797075c934ca5f88c0d64b998c38def0deef49f`**. Luna đã pull và hậu kiểm local bằng dữ liệu/Git blob; không chạy lại GPU, TensorRT build hoặc benchmark.
+
+#### Artifact và provenance
+
+- Đủ **41/41 file** theo inventory: study/summary, 3 compressed build logs, và đủ repeat 1–3 gồm build manifest, input caches, timing output cache, inspector, capture/predictions, comparison, execution manifest và 3 verification JSON. Không có `model.engine` trong commit, đúng policy.
+- Source/result/code binding, study-manifest binding, settings, builder flags `514`, Sigmoid constraints, frozen-weight path/hash, calibration/timing input hashes, engine hash, completed termination và timing attach `ignore_mismatch=false` đều khớp contract cho cả ba repeat.
+- Direct frozen weight hash được ghi là `3e5fc7a2…ba4ab8` và khớp locked hash. Canonical Git blob của source calibration cache khớp `31e9d0b3…e01a502`; timing cache khớp `4c765a02…178f38`. Source `source.onnx` và `model.engine` không có trong local/result commit theo policy server-only, nên Luna không tự re-hash binary đó local; các hash liên kết đã được kiểm tra trong manifest/capture/verification.
+- Working tree Windows làm **32/41 artifact raw bytes** khác Git blob do LF→CRLF. Luna dùng canonical Git blob cho hash integrity và không reserialize/chỉnh artifact.
+
+#### Contract, telemetry và verification
+
+- Cả ba build: calibration cache read **2 lần**, `calibration_batches_consumed=0`, write callback `0`, không có read/write violation; timing input cùng hash, timing attach thành công, output timing hash `2283d70e…c362ce48` giống nhau giữa ba repeat nhưng khác input, và coverage được ghi `unknown`.
+- Engine hashes khác nhau ở cả ba repeat: `a732cd85…9f4e6a`, `a0298de9…f6b419`, `f9279fc3…b3440c`. Inspector signature/plan signature quan sát được giống nhau giữa ba engine và source (`204` layers, Conv weights `Int8=70`, `Float=15`, plan signature `369ceedc…d03fe9`); không suy engine bytes giống hoặc full tactic lock từ đó.
+- 3/3 capture `pass`, mỗi capture 1.636 ảnh/2.706 instances; 3/3 native matching `pass`, `changed_tp_decisions=0`, 3/3 size diagnostic `completed`, capture/verification prediction và report hashes liên kết exact.
+- Tất cả 12 snapshot build/capture có telemetry `complete`, GPU UUID/name/driver khớp, không blocked/unmatched/external workload tại các điểm quan sát. Desktop Snap confirmations được ghi; đây vẫn là sampled telemetry trên shared server, không phải GPU isolation tuyệt đối.
+- Nhiệt độ build before/after lần lượt 32→34°C, 35→35°C, 36→36°C; capture 37→38°C, 37→39°C, 38→40°C. Đây là giới hạn điều kiện, không tách thermal/timing/implementation causality.
+- Ba log có `DONE BUILD`, không có `Traceback`, `[E]` hoặc `ERROR` theo marker scan; đây không phải chứng minh mọi warning đều vô hại.
+
+#### Kết quả metrics
+
+`repeat_summary.json` phân loại **`replay_exact_observed`**, `global_g0=review_required`; payload và metrics đều exact giữa ba replay và Step-A repeat_1. Mean/sample SD/range đều 0 trong ba repeat:
+
+| Endpoint | AP50 | AP50–95 |
+|---|---:|---:|
+| Ultralytics full | 0.9584570 | 0.6604367 |
+| COCO/XML all | 0.9555686 | 0.6654298 |
+| COCO/XML XS | 0.6148577 | 0.2072260 |
+| COCO/XML S | 0.9530828 | 0.5743576 |
+| COCO/XML M | 0.9807243 | 0.6816387 |
+| COCO/XML L | 0.9824451 | 0.7774076 |
+| COCO/XML XL | 0.9928438 | 0.8420439 |
+
+Summary flags giữ nguyên `repeat_1/2/3_timing_cache_output_changed`. Kết quả cho thấy trong ba lần quan sát này ordinary timing-cache replay cho payload/metrics ổn định dù serialized engine hashes khác; không chứng minh timing cache khóa tactic, không chọn engine tốt nhất và không dùng làm lý do mở calibration intervention.
+
+#### Bàn giao và quyết định cần review
+
+- Step A2L-011 đã có kết quả server hợp lệ ở mức descriptive diagnostic với các giới hạn trên; không có artifact bắt buộc nào thiếu và không cần rerun.
+- Astra cần quyết định cách diễn giải `replay_exact_observed` cùng engine-byte variability/timing output changed/coverage unknown và thermal sampled conditions trước mọi protocol tiếp theo.
+- Luna dừng tại đây: không mở B/C, editable tactics, calibration mới, retraining, matrix 15 model hoặc benchmark latency/energy.
