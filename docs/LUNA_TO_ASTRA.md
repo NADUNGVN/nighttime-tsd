@@ -657,3 +657,39 @@ Lệnh không mở CUDA/TensorRT và không cần GPU idle guard, nhưng phải 
 ### Trạng thái bàn giao
 
 `code_ready_server_cpu_required`; chưa có contrast/CI numerical để Astra nghiệm thu. Các giới hạn đã khóa: exploratory dev-only, conditional on frozen captures/one server environment, không tách build/tactic hoặc calibration variability, không causal bbox/classification decomposition, không official test và không mở study tiếp theo. Chưa chọn arm hay đặt success threshold hậu nghiệm.
+
+### L2A-017 addendum — CPU replay đã hoàn tất và hậu kiểm local
+
+Người dùng đã chạy đúng runner CPU foreground và push artifact ở commit `4846c73ddd2cbb2bd522caa0e1a1eb4598deb1e3`. Luna đã pull về local; input artifact commit được runner ghi là `839acdcb6a09569d1e6e130aa523c38d960dabd5`, code commit là `8b5a3420f1eeb460b58198647cbdbe83f1ab1045`.
+
+#### Kiểm tra artifact/provenance
+
+- Đủ **9/9 file**: input manifest, sample plan, bootstrap draws, point estimates, contrast CI, localization per-GT/summary, report Markdown và analysis summary.
+- Tất cả output hash trong `analysis_summary.json` khớp canonical Git blobs; 13 nhóm input (FP16 một repeat và bốn arm × ba repeat) khớp hash manifest. Ba repeat mỗi arm có prediction payload exact; repeat_1 được dùng một lần, không chọn best build.
+- Sample plan tái lập exact với PCG64 seed `20260916`, 1.000 × 1.636, cùng draw cho năm representation, duplicate retained. Tính lại `contrast_ci` khớp artifact; tất cả endpoint có `valid_resamples=1000`, `undefined_resamples=0`.
+- COCO/XML point reproduction khớp persisted size reports với sai số tối đa `0.0`; không dùng CIs COCO/XML cho full Ultralytics points.
+
+#### COCO/XML paired contrasts (percentage points)
+
+Mỗi ô là `point [95% percentile CI]`; bảng đầy đủ sáu size × hai metric nằm trong `contrast_ci.json`. Đây là các endpoint ưu tiên theo A2L-016: all AP50-95, XS AP50/AP50-95, S AP50/AP50-95.
+
+| Contrast | All AP50-95 | XS AP50 | XS AP50-95 | S AP50 | S AP50-95 |
+|---|---:|---:|---:|---:|---:|
+| bbox − baseline | +5.4263 [4.9118, 5.8991] | +6.7094 [2.1525, 11.2544] | +7.3861 [4.9635, 10.1734] | +0.5272 [-0.0354, 1.1975] | +6.7072 [5.6116, 7.7726] |
+| classification − baseline | +3.6271 [2.9389, 4.1490] | +2.8362 [-0.3497, 5.3691] | +1.3778 [0.1425, 2.5680] | +1.7645 [0.7447, 2.8701] | +1.7893 [0.7073, 2.8024] |
+| both − baseline | +8.5067 [7.7104, 8.9999] | +8.9983 [3.1418, 15.1011] | +8.9474 [5.7214, 12.6664] | +2.2296 [1.0662, 3.2093] | +8.7087 [7.3844, 9.9855] |
+| bbox − classification | +1.7993 [1.2384, 2.5085] | +3.8732 [-0.7783, 9.3488] | +6.0083 [3.4869, 8.9770] | -1.2373 [-2.2879, -0.3152] | +4.9178 [3.7078, 6.2846] |
+| both − bbox | +3.0804 [2.4585, 3.4520] | +2.2889 [-1.5951, 5.4316] | +1.5612 [-0.0082, 3.2275] | +1.7024 [0.7675, 2.5102] | +2.0016 [1.0364, 2.9070] |
+| both − classification | +4.8797 [4.4281, 5.2982] | +6.1621 [1.8981, 11.7489] | +7.5696 [4.9545, 10.9084] | +0.4651 [-0.0850, 0.8020] | +6.9194 [5.9152, 8.0245] |
+| baseline − FP16 | -9.1116 [-9.6821, -8.3370] | -10.1958 [-16.0900, -4.3431] | -10.1978 [-13.1254, -7.2703] | -2.1238 [-3.1518, -0.9625] | -9.5003 [-10.7273, -8.0705] |
+| bbox − FP16 | -3.6853 [-4.1638, -3.0439] | -3.4864 [-6.8747, 0.6081] | -2.8117 [-4.6041, -0.7969] | -1.5967 [-2.4735, -0.6599] | -2.7931 [-3.6966, -1.8071] |
+| classification − FP16 | -5.4846 [-5.9896, -5.0174] | -7.3595 [-12.8061, -2.8792] | -8.8200 [-11.7381, -6.3637] | -0.3593 [-0.8469, 0.2664] | -7.7109 [-8.9126, -6.6272] |
+| both − FP16 | -0.6049 [-0.9361, -0.3670] | -1.1975 [-2.9487, 0.6160] | -1.2504 [-2.7020, 0.4311] | +0.1058 [-0.2458, 0.4121] | -0.7915 [-1.4773, -0.1414] |
+
+Full Ultralytics points remain separate in `point_estimates.json` and reproduce the persisted captures: FP16 `97.7750/76.3025`, baseline `95.8457/66.0437`, bbox `96.5501/71.8370`, classification `97.0031/70.6718`, both `97.5986/75.7066` for AP50/AP50-95 (%). These must not be read as the COCO/XML all endpoints above.
+
+Localization is available in `localization_summary.json`; for example at IoU50/all, bbox has 10 gained/8 lost GT matches, classification 0 gained/11 lost, and both 11 gained/18 lost versus baseline. At IoU75/0.90 there are further gained/lost transitions. This remains a conditional GT-centric matching diagnostic, not a causal bbox/classification decomposition.
+
+#### Kết luận và điểm dừng
+
+Kết quả đã hoàn tất đúng estimator và artifact contract, nhưng trạng thái vẫn là **`step_A_completed_review_required`**. Các CIs là exploratory, conditional on frozen captures, một dev sample và một server environment; chưa tách build/tactic variability, calibration variability hoặc thiết bị. Không chọn arm, không đặt success threshold hậu nghiệm, không mở B/C, calibration matrix, 15-model matrix, retraining, official test hoặc benchmark. Astra cần review diễn giải bảng paired contrasts cùng các giới hạn này.
