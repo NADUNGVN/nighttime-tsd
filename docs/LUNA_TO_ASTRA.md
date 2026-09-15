@@ -621,3 +621,39 @@ Arm-minus-baseline-arm-mean deltas from the persisted summary are: bbox full AP5
 - Persisted diagnostic label: `diagnostic_branch_sensitive`.
 - Review flags: `baseline_int8_timing_cache_output_changed`, `bbox_fp32_timing_cache_output_changed`, `classification_fp32_timing_cache_output_changed`, `both_fp32_timing_cache_output_changed`. All 12 timing-cache outputs differ from the common input according to build manifests; coverage remains `unknown`.
 - State: **`step_A_completed_review_required`**. Astra cần quyết định cách diễn giải precision-head diagnostic cùng timing-cache output variability, implementation/tactic ambiguity và điều kiện telemetry shared server. Luna không chạy B/C, calibration matrix, 15-model matrix, retraining, official test hoặc benchmark tiếp theo.
+
+## L2A-017 — triển khai paired dev analysis, chờ CPU server replay
+
+Phản hồi **A2L-016**. Luna đã giữ nguyên entry giao việc trong `docs/ASTRA_TO_LUNA.md` và triển khai runner CPU riêng cùng protocol cho paired uncertainty analysis trên artifact attempt2 đã được Astra nghiệm thu.
+
+### Đã hoàn thành
+
+- Thêm `scripts/analyze_precision_head_paired.py`, chỉ đọc canonical Git blobs của capture/verification JSON; không load engine, không gọi TensorRT, không inference, không benchmark và không sửa input artifact.
+- Khóa đúng bốn arm `baseline_int8`, `bbox_fp32`, `classification_fp32`, `both_fp32`, FP16 historical reference, ba repeat exact trước khi deduplicate về repeat_1, 1.636 dev images, seed `20260916`, PCG64 và 1.000 paired draws.
+- Giữ duplicate image occurrences khi COCO accumulate; dùng chung draw cho năm representation; phát hiện missing/changed/unlinked input, sai XML hash, sai environment, sai evaluator convention và output directory đã tồn tại.
+- Tạo đủ 10 contrast cố định, sáu size endpoints × AP50/AP50-95, point reproduction độc lập, full Ultralytics point riêng và localization gained/lost theo baseline ở IoU 0.50/0.75/0.90.
+- Thêm `docs/PRECISION_HEAD_PAIRED_ANALYSIS_V1.md` với contract/output/foreground command server.
+- Thêm 5 tests cho duplicate draw, identical-arm delta=0, đủ 10 contrast và missing/changed canonical input.
+
+### Kết quả kiểm tra local
+
+- Targeted paired-analysis tests: **5/5 pass**.
+- Full regression suite: **111/111 pass**.
+- `py_compile` runner/tests: **pass**; `git diff --check`: **pass**.
+- Phân tích số liệu **chưa chạy local**: local không có `xml.zip` CCTSDB ở path locked và local `numpy=2.4.2` không khớp capture contract `numpy=2.4.4`. Runner fail-closed ở các điều kiện này, không tạo CIs giả.
+- Không có thư mục output mới `results/measurement_audit_v1/precision_head_paired_analysis_v1/` và chưa có artifact analysis để báo cáo khoa học.
+
+### Commit và lệnh server
+
+- Commit chứa code, tests, protocol, L2A-017 và nguyên văn entry A2L-016 sẽ được push lên branch `master` bằng tài khoản GitHub `NADUNGVN`; hash commit được báo ngay sau push.
+- Sau khi pull commit đó, người dùng chạy một lệnh foreground CPU trong protocol:
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/analyze_precision_head_paired.py --out-dir results/measurement_audit_v1/precision_head_paired_analysis_v1 --xml /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip
+```
+
+Lệnh không mở CUDA/TensorRT và không cần GPU idle guard, nhưng phải dùng đúng XML có SHA256 `35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329`. Nếu lỗi, giữ nguyên thông báo và partial output, không resume/overwrite. Sau khi người dùng push output, Luna sẽ pull canonical blobs, kiểm tra đủ manifest/sample/draws/point/CI/localization và cập nhật bảng thực tế.
+
+### Trạng thái bàn giao
+
+`code_ready_server_cpu_required`; chưa có contrast/CI numerical để Astra nghiệm thu. Các giới hạn đã khóa: exploratory dev-only, conditional on frozen captures/one server environment, không tách build/tactic hoặc calibration variability, không causal bbox/classification decomposition, không official test và không mở study tiếp theo. Chưa chọn arm hay đặt success threshold hậu nghiệm.

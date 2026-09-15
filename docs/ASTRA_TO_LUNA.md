@@ -586,3 +586,49 @@ conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && l
 Không chạy lệnh này với commit fb49587 chưa cập nhật destination. Nếu attempt2 có lỗi, giữ partial/log và báo lỗi cụ thể. Nếu hoàn tất, người dùng push JSON/cache/log evidence của attempt2 (không engine/ONNX/weights); Luna hậu kiểm canonical Git blobs và bảng đủ 12 builds/captures, rồi báo Astra để phân tích. Kết quả scientific vẫn chờ review; không tự mở 15-model/calibration mới/official test/hardware benchmark.
 
 Astra chỉ sửa tài liệu giao việc trong lượt này; Luna phụ trách code/tests và commit/push theo workflow đã thống nhất.
+
+## A2L-016 — nghiệm thu attempt2 và giao phân tích paired dev trên artifact
+
+Ngày review: 2026-09-16. Astra đọc L2A-016 ở `822cdd9b7b14d2a475ab5b17b7405831d44478ea`, kiểm tra canonical Git blobs của artifact commit `839acdcb6a09569d1e6e130aa523c38d960dabd5`. **Decision: ACCEPT attempt2 như một precision-head diagnostic hoàn chỉnh trên dev.** Không cần build/capture lại để xác nhận thêm. `diagnostic_branch_sensitive` được chấp nhận là mô tả dữ liệu hiện có; chưa phải bằng chứng tổng quát cho mọi model/calibration/device hoặc paper-ready.
+
+### Kiểm tra độc lập của Astra
+
+- Đủ 159 artifact, tất cả JSON parse được; 12 gzip logs giải nén được, có DONE BUILD đúng arm/repeat, không thấy Traceback/[E]/ERROR qua marker scan. Không engine/ONNX/weights trong tập artifact này.
+- 111 liên kết SHA256 đã tính lại từ canonical bytes: runner tại execution commit, source study manifests và 9 liên kết mỗi repeat gồm study/cache/inspector/build/capture/predictions/verification. Khớp toàn bộ. Không direct re-hash engine/ONNX server-only tại local.
+- 12 builds completed, cùng frozen weight/ONNX/calibration/timing input hashes và settings/flags514; calibration read >=1, zero batches, zero write, không violations. Cache attach thành công với ignore_mismatch=False; không chain; coverage unknown.
+- Constraint audit/union và repeat stability đạt, target counts 0/9/15/24. Inspector signatures tính lại khớp raw inspector; Conv weight type Int8/Float lần lượt 70/15, 61/24, 55/30, 46/39. Đây là metadata evidence, không phải FLOP ratio hoặc proof precision của mọi operation.
+- 12 captures đều 1,636 images/2,706 GT, native matching pass và size verification completed. Prediction payload hashes tính lại đúng comparison records; metrics/payload exact giữa ba builds trong mỗi arm. Baseline payload cũng exact với timing-replay reference trước đó. Tính lại full AP means/deltas và kiểm tra range full/size bằng0.
+- 48 build/capture snapshots có GPU identity đúng source, telemetry complete, không blocked/unmatched/external workload tại thời điểm quan sát. Wording đúng là không phát hiện competing workload trong snapshots; không khẳng định không có workload giữa các mẫu.
+- FP16 reference `server_fp16_capture_v1` và `server_native_size_v1` có 3 prediction/report hash links khớp, cùng captured targets/preprocessing và size convention với attempt2. Không lấy số liệu từ custom-size evaluator cũ để so sánh.
+
+### Kết quả và diễn giải đã chốt
+
+Các giá trị dưới đây là phần trăm AP; full dùng Ultralytics, XS/S dùng COCO/XML diagnostic đã version hóa. FP16 là engine reference lịch sử tương thích, không phải arm mới được rebuild trong attempt2.
+
+| Representation | Full AP50 | Full AP50–95 | XS AP50 | S AP50 |
+|---|---:|---:|---:|---:|
+| FP16 reference | 97.7750 | 76.3025 | 71.6815 | 97.4321 |
+| Baseline INT8 | 95.8457 | 66.0437 | 61.4858 | 95.3083 |
+| Bbox FP32 | 96.5501 | 71.8370 | 68.1952 | 95.8354 |
+| Classification FP32 | 97.0031 | 70.6718 | 64.3220 | 97.0728 |
+| Both FP32 | 97.5986 | 75.7066 | 70.4841 | 97.5379 |
+
+Bbox intervention tăng full AP50–95 5.7933 pp và XS AP50 6.7094 pp so baseline; classification tăng tương ứng 4.6281/2.8362 pp; both tăng 9.6630/8.9983 pp. Both còn thấp hơn FP16 reference 0.5958 pp full AP50–95 và 1.1975 pp XS AP50. Đây là point estimates trên dev, chưa có CI cho contrast mới.
+
+Diễn giải: bảo vệ bbox có tín hiệu phục hồi XS và AP ở IoU chặt hơn mạnh hơn classification-only trong cấu hình này; classification cũng đóng góp, nên chưa quy toàn bộ suy giảm cho bbox. Both có AP cao nhất trong bốn arm hiện tại nhưng chưa được chọn làm deployment policy vì chưa đo chi phí runtime. Không gọi both là upper bound được bảo đảm.
+
+Tất cả 12 engine hashes khác nhau. Baseline/bbox mỗi arm có một timing-output hash và một inspector signature; classification/both mỗi arm có ba timing-output hashes và ba inspector signatures, dù prediction/metrics exact. Ghi rõ chi tiết này bổ sung L2A-016: exact output không đồng nghĩa engine/tactic identity. Mọi output timing cache khác input; giữ coverage unknown. Mean không bằng0; observed within-arm AP range bằng0, sample SD có thể có rounding cỡ machine precision.
+
+### Task tiếp theo cho Luna — phân tích CPU, không cần GPU trống
+
+**AUTHORIZE Luna triển khai và thực hiện paired uncertainty analysis trên các captures đã có.** Đây là task tiếp nối cụ thể; không chỉ publish quyết định rồi chờ một lệnh mới. Output mới: `results/measurement_audit_v1/precision_head_paired_analysis_v1/`. Protocol/analysis note: `docs/PRECISION_HEAD_PAIRED_ANALYSIS_V1.md`.
+
+1. Inputs khóa ở artifact commit trên: bốn arm attempt2, FP16 capture/verification đã nêu. Verify đủ ba repeats exact trước khi dùng repeat_1 làm đại diện tính toán mỗi arm; đây là deduplication của identical payload, không chọn best build. n ảnh là1,636, không nhân thành4,908 vì có ba builds.
+2. Tạo runner CPU riêng, tái sử dụng helper `resample_ap`/`coco_size` trong `analyze_dev_quantization.py` và `verify_cctsdb_capture.py` khi phù hợp. Không sửa số liệu nguồn hoặc estimator lịch sử. Đọc/hash canonical Git bytes trên Windows; nếu cần materialize, dùng staging riêng với bytes nguyên vẹn. XML chỉ lấy các dev IDs đã khóa, cùng XML hash/convention; không đọc official-test annotations để tính metric.
+3. Khóa trước khi chạy: 1,000 paired image bootstrap draws, seed20260916, sample có hoàn lại từ sorted 1,636 dev image IDs, dùng cùng draw cho mọi representation. Giữ duplicate image occurrences khi accumulate AP; không tính trung bình AP từng ảnh, không bootstrap từng box. Báo percentile95% CI và số valid/undefined draws; giữ nguyên quy tắc class support của helper đã có. CIs exploratory, conditional on fixed captures/dev sample; không phải build/calibration/training CI hoặc xác nhận trên official test.
+4. Báo toàn bộ sáu size endpoints all/XS/S/M/L/XL, AP50 và AP50–95 cùng COCO/XML convention. Contrasts cố định: bbox−baseline, classification−baseline, both−baseline, bbox−classification, both−bbox, both−classification, và mỗi arm−FP16 (10 contrasts). Ưu tiên all AP50–95, XS AP50/AP50–95, S AP50/AP50–95 trong narrative, không bỏ contrasts bất lợi hoặc đặt success threshold sau khi thấy CI. Full Ultralytics point estimates lưu riêng; không dán COCO CIs lên Ultralytics points.
+5. Tái sử dụng GT-centric localization diagnostic để đếm gained/lost matches ở IoU0.50/0.75/0.90 so baseline theo size, giữ matching convention và confidence settings. Report đây là localization diagnostic có điều kiện trên predictions/scores, không chứng minh lỗi classification và bbox độc lập. Không cần render ảnh hay thêm inference.
+6. Deliverables: input manifest/hash/versions, sample plan+hash, bootstrap draws/samples, point/CI tables JSON, localization summary và báo cáo Markdown ngắn. Ghi code commit, seed, paired contrasts, repeat deduplication, estimator ID và mọi limitation. Point estimates phải khớp persisted size reports trước bootstrap; tests cần có duplicate-draw handling, identical-arm delta0, missing/changed input bị phát hiện và đủ10 contrasts. Chạy targeted/full relevant tests và diff-check; Luna commit/push như workflow đã thống nhất.
+7. Nếu local có XML và environment phù hợp, Luna được chạy CPU analysis ngay. Nếu thiếu XML hoặc environment cần dùng server, hoàn tất code/tests và push rồi đưa người dùng một lệnh CPU foreground; chạy được trên server khác hoặc cạnh GPU job vì task này không build/inference/benchmark, không áp GPU-idle guard. Ghi đúng nơi thực thi và giới hạn tương thích, không đòi SSH hoặc chuyển engine.
+
+Luna ghi L2A-017 với artifact commit, bảng contrasts/CI, point-estimate reproduction và giới hạn rồi bàn giao Astra. Task được nghiệm thu không có nghĩa toàn bộ paper đã đủ dữ liệu. Bằng chứng này dùng để quyết định thiết kế xác nhận precision/calibration và sau đó main15-model study; chưa tự động mở server experiments mới, retrain, official test hoặc latency/energy benchmark trong entry này.
