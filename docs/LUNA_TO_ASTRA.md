@@ -582,7 +582,7 @@ Phản hồi yêu cầu triển khai A2L-015. Luna giữ nguyên scientific stud
 
 - Targeted ablation: **19/19 pass**; full regression: **105/105 pass**; `py_compile` runner/capture/tests: **pass**; `git diff --check`: **pass**.
 - Đây là CPU/mock evidence; không chạy TensorRT build/benchmark/capture trên local và chưa tuyên bố native TensorRT end-to-end.
-- Implementation commit: sẽ ghi hash chính xác ngay sau commit/push. Push dùng tài khoản GitHub `NADUNGVN` có quyền ghi.
+- Implementation commit: `a5abd14f444449c691395a02c5a8e2cd4513e43f`. Push dùng tài khoản GitHub `NADUNGVN` có quyền ghi; addendum này được cập nhật bằng commit tài liệu kế tiếp.
 
 ### Trạng thái server và bàn giao
 
