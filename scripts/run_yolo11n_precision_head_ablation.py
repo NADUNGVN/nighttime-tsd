@@ -45,7 +45,12 @@ from run_uniform_timing_cache_replay import (
 
 
 STUDY = "yolo11n_precision_head_ablation_v1"
-STUDY_DIR = "server_yolo11n_precision_head_ablation_v1"
+STUDY_ATTEMPT = 2
+PREVIOUS_STUDY_DIR = "server_yolo11n_precision_head_ablation_v1"
+STUDY_DIR = "server_yolo11n_precision_head_ablation_v1_attempt2"
+PREVIOUS_ATTEMPT_RELATIVE_PATH = (
+    f"results/measurement_audit_v1/{PREVIOUS_STUDY_DIR}")
+EXECUTION_REASON = "implementation_fix_non_convolution_namespace_selection"
 BASELINE_STUDY = "uniform_timing_cache_replay_v1"
 BASELINE_STUDY_DIR = "server_uniform_timing_cache_replay_v1"
 BASELINE_RESULT_COMMIT = "3797075c934ca5f88c0d64b998c38def0deef49f"
@@ -192,10 +197,20 @@ def _expected_timing_input():
 
 
 def expected_study_manifest(source: dict, *, environment=None, gpu_before=None,
-                            gpu_binding=None, confirmations=None, repo=None):
+                            gpu_binding=None, confirmations=None, repo=None,
+                            execution_git_commit=None, runner_script_sha256=None):
+    if execution_git_commit is None:
+        execution_git_commit = source.get("execution_git_commit", "test")
+    if runner_script_sha256 is None:
+        runner_script_sha256 = source.get("runner_script_sha256", sha256(Path(__file__)))
     return {
         "schema_version": 1,
         "study": STUDY,
+        "execution_attempt": STUDY_ATTEMPT,
+        "previous_attempt_path": PREVIOUS_ATTEMPT_RELATIVE_PATH,
+        "execution_reason": EXECUTION_REASON,
+        "execution_git_commit": execution_git_commit,
+        "runner_script_sha256": runner_script_sha256,
         "source_study": SOURCE_STUDY,
         "source_result_commit": SOURCE_RESULT_COMMIT,
         "source_study_code_commit": source["manifest"].get("git_commit"),
@@ -235,7 +250,8 @@ def expected_study_manifest(source: dict, *, environment=None, gpu_before=None,
 def validate_ablation_study_manifest(manifest, source: dict) -> None:
     expected = expected_study_manifest(source)
     exact_keys = (
-        "study", "source_study", "source_result_commit", "source_study_code_commit",
+        "study", "execution_attempt", "previous_attempt_path", "execution_reason",
+        "source_study", "source_result_commit", "source_study_code_commit",
         "source_study_manifest_sha256", "baseline_reference_study",
         "baseline_reference_result_commit", "baseline_reference_study_manifest_sha256",
         "source_weights_sha256", "frozen_weights_path", "frozen_weights_measured_sha256",
@@ -247,6 +263,13 @@ def validate_ablation_study_manifest(manifest, source: dict) -> None:
     for key in exact_keys:
         if manifest.get(key) != expected[key]:
             raise ValueError(f"Precision ablation study contract differs for {key}")
+    execution_commit = manifest.get("execution_git_commit")
+    if not isinstance(execution_commit, str) or not execution_commit.strip():
+        raise ValueError("Precision ablation study execution git commit is missing")
+    runner_hash = manifest.get("runner_script_sha256")
+    if (not isinstance(runner_hash, str) or len(runner_hash) != 64 or
+            any(char not in "0123456789abcdef" for char in runner_hash)):
+        raise ValueError("Precision ablation study runner script hash is invalid")
 
 
 def _normalize_layer_specs(layer_specs):
@@ -1044,10 +1067,12 @@ def _run_child(command, repo: Path):
     return process.pid
 
 
-def _write_study_manifest(output, source, probe, gpu_before, gpu_binding, confirmations):
+def _write_study_manifest(output, source, probe, gpu_before, gpu_binding, confirmations, repo):
     write_json(output / "study_manifest.json", expected_study_manifest(
         source, environment=probe["environment"], gpu_before=gpu_before,
-        gpu_binding=gpu_binding, confirmations=confirmations))
+        gpu_binding=gpu_binding, confirmations=confirmations, repo=repo,
+        execution_git_commit=git_value(repo, "rev-parse", "HEAD"),
+        runner_script_sha256=sha256(Path(__file__))))
 
 
 def _compress_log(log_path: Path, compressed_path: Path):
@@ -1100,7 +1125,8 @@ def main(argv=None, *, repo_override=None, helpers=None):
             parser.error("Output exists; preserve it and do not resume or overwrite")
         probe, gpu_before, gpu_binding = preflight(repo, source, args, helpers)
         output.mkdir(parents=True)
-        _write_study_manifest(output, source, probe, gpu_before, gpu_binding, args.confirmed_desktop)
+        _write_study_manifest(output, source, probe, gpu_before, gpu_binding,
+                              args.confirmed_desktop, repo)
         for item in build_plan():
             log = output / f"build_{item['arm']}_{item['repeat']}.log"
             command = _build_child_command(repo, output, item["arm"], item["repeat"], args.confirmed_desktop)
@@ -1120,7 +1146,8 @@ def main(argv=None, *, repo_override=None, helpers=None):
             parser.error("Output exists; preserve it and do not overwrite")
         probe, gpu_before, gpu_binding = preflight(repo, source, args, helpers)
         output.mkdir(parents=True)
-        _write_study_manifest(output, source, probe, gpu_before, gpu_binding, args.confirmed_desktop)
+        _write_study_manifest(output, source, probe, gpu_before, gpu_binding,
+                              args.confirmed_desktop, repo)
         print(f"PREPARED: {output / 'study_manifest.json'}")
         return 0
     if args.phase == "evaluate":

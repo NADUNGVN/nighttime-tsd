@@ -177,8 +177,11 @@ class PrecisionHeadAblationTests(unittest.TestCase):
             repo = Path(directory)
             source, output = ablation.resolve_protocol_paths(repo)
             self.assertEqual(source.name, "server_uniform_build_repeat_v1")
-            self.assertEqual(output.name, "server_yolo11n_precision_head_ablation_v1")
+            self.assertEqual(output.name, "server_yolo11n_precision_head_ablation_v1_attempt2")
             self.assertEqual(ablation.validate_output_target(repo, output), (source, output))
+            with self.assertRaisesRegex(ValueError, "attempt2"):
+                ablation.validate_output_target(
+                    repo, repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1")
             with self.assertRaisesRegex(ValueError, "server_yolo11n_precision_head_ablation_v1"):
                 ablation.validate_output_target(repo, repo / "results/measurement_audit_v1/other")
 
@@ -323,7 +326,7 @@ class PrecisionHeadAblationTests(unittest.TestCase):
 
     def test_commands_bind_arm_repeat_and_do_not_use_arbitrary_engine_dispatch(self):
         repo = Path("/repo")
-        root = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1"
+        root = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2"
         command = ablation.ablation_capture_command(repo, root, "bbox_fp32", 2,
                                                      root / "bbox_fp32/repeat_2", "0",
                                                      {644963: "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration"})
@@ -343,9 +346,13 @@ class PrecisionHeadAblationTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
-            root = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1"
+            root = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2"
             self.assertEqual(validate_precision_head_ablation_scope(
                 repo, root, "classification_fp32", 3, "fp16"), root.resolve())
+            with self.assertRaisesRegex(ValueError, "exactly"):
+                validate_precision_head_ablation_scope(
+                    repo, repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1",
+                    "classification_fp32", 3, "fp16")
             with self.assertRaisesRegex(ValueError, "exactly"):
                 validate_precision_head_ablation_scope(repo, repo / "other",
                                                        "classification_fp32", 3, "fp16")
@@ -400,6 +407,21 @@ class PrecisionHeadAblationTests(unittest.TestCase):
             }
             manifest = ablation.expected_study_manifest(source)
             ablation.validate_ablation_study_manifest(manifest, source)
+            self.assertEqual(manifest["execution_attempt"], 2)
+            self.assertEqual(manifest["previous_attempt_path"],
+                             "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1")
+            self.assertEqual(manifest["execution_reason"],
+                             "implementation_fix_non_convolution_namespace_selection")
+            self.assertEqual(manifest["execution_git_commit"], "test")
+            self.assertEqual(len(manifest["runner_script_sha256"]), 64)
+            bad_execution = copy.deepcopy(manifest)
+            bad_execution["execution_git_commit"] = ""
+            with self.assertRaisesRegex(ValueError, "execution git commit"):
+                ablation.validate_ablation_study_manifest(bad_execution, source)
+            bad_runner = copy.deepcopy(manifest)
+            bad_runner["runner_script_sha256"] = "not-a-sha256"
+            with self.assertRaisesRegex(ValueError, "runner script hash"):
+                ablation.validate_ablation_study_manifest(bad_runner, source)
             self.assertEqual(manifest["arms"], list(ablation.ARMS))
             self.assertEqual(manifest["dev_images"], 1636)
             self.assertEqual(manifest["dev_instances"], 2706)
@@ -408,6 +430,24 @@ class PrecisionHeadAblationTests(unittest.TestCase):
             bad["capture_order"] = list(reversed(bad["capture_order"]))
             with self.assertRaisesRegex(ValueError, "capture_order"):
                 ablation.validate_ablation_study_manifest(bad, source)
+
+    def test_attempt2_manifest_records_current_execution_provenance(self):
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            source, weights = contract_fixture(repo)
+            with locked_contract_constants(repo, source, weights):
+                contract = ablation.validate_ablation_sources(repo)
+                output = repo / "results/measurement_audit_v1" / ablation.STUDY_DIR
+                output.mkdir(parents=True)
+                with patch.object(ablation, "git_value", return_value="current-execution-commit"):
+                    ablation._write_study_manifest(
+                        output, contract, {"environment": {"gpu": "test"}}, GPU,
+                        {"matched": True}, {}, repo)
+                manifest = json.loads((output / "study_manifest.json").read_text(encoding="utf-8"))
+                ablation.validate_ablation_study_manifest(manifest, contract)
+            manifest = json.loads((output / "study_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["execution_git_commit"], "current-execution-commit")
+            self.assertEqual(manifest["runner_script_sha256"], sha256(Path(ablation.__file__)))
 
     def test_ablation_capture_input_rejects_wrong_root_before_engine_access(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -432,7 +472,7 @@ class PrecisionHeadAblationTests(unittest.TestCase):
     def test_main_all_builds_all_twelve_children_before_evaluate_and_preserves_existing_output(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
-            output = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1"
+            output = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2"
             source = {"input_hashes": {"locked": "yes"}}
             events = []
 
@@ -469,7 +509,7 @@ class PrecisionHeadAblationTests(unittest.TestCase):
     def test_build_phase_requires_prepared_manifest_and_never_resumes_partial_output(self):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
-            output = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1"
+            output = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2"
             with self.assertRaises(SystemExit):
                 ablation.main(["--phase", "build", "--arm", "bbox_fp32", "--repeat", "1",
                                "--out-dir", str(output)], repo_override=repo,
@@ -484,7 +524,7 @@ class PrecisionHeadAblationTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             repo = Path(directory)
             source_root, weights = contract_fixture(repo)
-            output = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1"
+            output = repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2"
             output.mkdir(parents=True)
             events = []
             args = SimpleNamespace(device="0", confirmed_desktop={})

@@ -545,3 +545,44 @@ Không chạy `--phase evaluate` trên partial nếu một build lỗi; giữ to
 ### Cách diễn giải kết quả được phép
 
 Chỉ báo cáo `diagnostic_branch_sensitive`, `no_branch_signal` hoặc `incomplete_or_invalid` theo rule đã khóa trong protocol. Không gọi `both_fp32` là ground truth, không quy mọi AP delta cho branch nếu timing-cache coverage vẫn unknown, và không biến khác biệt engine hash/inspector thành bằng chứng tactic hoặc FLOP ratio. Nếu common timing cache bị TensorRT từ chối, đó là kết quả giới hạn feasibility; không fallback sang cache mới trong study này.
+
+## A2L-015 — nghiệm thu sửa selector fb49587; giao chạy lại attempt2
+
+Ngày review: 2026-09-15. Astra đã đọc L2A-015 và diff commit `fb495870317b51bbe7188fc57319030a2c644fca`. **Decision: ACCEPT bản sửa selector; AUTHORIZE chuẩn bị và operator chạy attempt2 theo các thay đổi cụ thể dưới đây.** Luna triển khai local, kiểm tra và push; người dùng chạy server. Không cần một vòng xin authorization nữa nếu diff chỉ thực hiện entry này và các checks đạt.
+
+### Kết quả review và đính chính
+
+Astra chạy độc lập full suite: **105 tests OK**, gồm 19 tests ablation. `py_compile` runner/capture/tests và `git diff --check fb49587^ fb49587` đạt. Đây là CPU/mock evidence; chưa kiểm chứng native TensorRT trên local.
+
+Selector sửa đúng yêu cầu: convolution có prefix cv2/cv3 được chọn; helper non-convolution cùng namespace được ghi candidate/excluded audit. Regression test dùng đúng tên Sigmoid gây lỗi được nêu trong log. Sigmoid bị loại khỏi tập intervention bổ sung nhưng vẫn được bảo vệ theo baseline Sigmoid constraints. Không thay flags, cache, weights hay evaluator.
+
+Astra đính chính review A2L-014: việc reject mọi non-convolution cùng prefix là giả định sai mà reviewer đã bỏ sót. Test cũ cũng củng cố giả định đó. Không quy sự cố selector cho tài nguyên GPU hoặc operator. Thông tin baseline builds 1–3 hoàn tất và bbox repeat 1 thất bại hiện dựa trên L2A-015; Astra chưa hậu kiểm trực tiếp partial server artifacts.
+
+### Path và phạm vi attempt2 đã chốt
+
+- Scientific study ID giữ `yolo11n_precision_head_ablation_v1`; đây là lần chạy lại sau sửa implementation, không phải phương pháp nghiên cứu v2.
+- Output duy nhất cho lượt mới: `results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2/`.
+- Giữ nguyên `results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1/` và mọi partial/log trong đó. Không xóa, di chuyển, ghi đè, resume hoặc chép ba baseline builds cũ vào attempt2.
+- Attempt2 chạy mới cả 4 arms × 3 builds, rồi 12 dev captures/CPU verification theo thứ tự đã khóa. Dùng cả ba builds mỗi arm để tổng hợp. Không thay source Step-A/timing-replay reference paths hoặc scientific settings.
+
+### Luna triển khai ngay trong một lượt
+
+1. Đồng bộ output target trong `run_yolo11n_precision_head_ablation.py`, capture dispatch `capture_cctsdb_validator.py`, tests và protocol sang attempt2. Chỉ đổi destination của ablation mới; không bulk-replace historical paths trong handoff/artifact. Giữ CLI bounded, không mở arbitrary output/engine hoặc fallback về v1.
+2. Study manifest bổ sung `execution_attempt: 2`, relative `previous_attempt_path`, lý do `implementation_fix_non_convolution_namespace_selection`, current execution `git_commit` và runner `script_sha256`. Phân biệt current commit với source Step-A code commit; giữ binding study manifest → build → capture. Không sửa manifest lịch sử.
+3. Tests phải kiểm tra runner và capture cùng chấp nhận attempt2, từ chối destination v1/ngoài scope, và existing attempt2 không bị overwrite. Chạy regression selector helper hiện có, full suite, py_compile, diff-check. CPU/mock evaluate phải đi hết 12 captures đến summary với destination mới.
+4. Cập nhật protocol active status và lệnh foreground sang attempt2; ghi L2A-015 addendum gồm commit, diff, checks, current output path và điều kiện authorization đã đáp ứng. Commit/push entry A2L-015 nguyên văn cùng thay đổi. Không SSH hoặc chạy TensorRT/GPU local.
+5. Nếu diff đúng phạm vi trên và checks đạt, Luna bàn giao ngay lệnh pull/check/snapshot/run cho người dùng; không chờ Astra cấp số giao việc mới chỉ để đổi path. Nếu phát hiện cần đổi numerical protocol/cache/GPU policy hoặc native error khác, báo căn cứ cụ thể để review.
+
+### Operator run và hậu kiểm
+
+Sau khi Luna push bản cập nhật, người dùng pull đúng commit; kiểm tra attempt2 chưa tồn tại và snapshot GPU/process hiện tại. Dùng cùng GPU/environment nguồn đã khóa cho lượt controlled build này. Runner hiện chỉ hỗ trợ desktop confirmations, **không có option xác nhận background compute cho ablation**: không được diễn giải xác nhận tên Python là đã mở chạy concurrent. Nếu cần đổi điều kiện concurrent, phải có variant được ghi nhận; entry này chỉ xử lý selector/path. Không yêu cầu GPU trống desktop hoặc quyền đọc /proc/exe, không kill/pause process khác.
+
+Lệnh foreground sau khi destination update đã được push/pull (Luna bổ sung desktop confirmations đúng snapshot hiện tại nếu cần):
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_yolo11n_precision_head_ablation.py --phase all --out-dir results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2 --device 0
+```
+
+Không chạy lệnh này với commit fb49587 chưa cập nhật destination. Nếu attempt2 có lỗi, giữ partial/log và báo lỗi cụ thể. Nếu hoàn tất, người dùng push JSON/cache/log evidence của attempt2 (không engine/ONNX/weights); Luna hậu kiểm canonical Git blobs và bảng đủ 12 builds/captures, rồi báo Astra để phân tích. Kết quả scientific vẫn chờ review; không tự mở 15-model/calibration mới/official test/hardware benchmark.
+
+Astra chỉ sửa tài liệu giao việc trong lượt này; Luna phụ trách code/tests và commit/push theo workflow đã thống nhất.

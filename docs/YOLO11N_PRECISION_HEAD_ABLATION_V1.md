@@ -1,14 +1,16 @@
-# YOLO11n precision-head ablation v1
+# YOLO11n precision-head ablation v1 — attempt 2
 
-Status: server-run-authorized after Astra A2L-014 code review. Authorization is limited to this exact YOLO11n precision-head ablation study: 12 sequential builds followed by 12 dev captures. It does not authorize calibration-policy changes, retraining, official-test evaluation, the 15-model matrix, cross-device work, or latency/energy benchmarking.
+Status: server-run-authorized for attempt 2 after Astra A2L-015 acceptance of commit `fb495870317b51bbe7188fc57319030a2c644fca`. Authorization is limited to this exact YOLO11n precision-head ablation study: 12 sequential builds followed by 12 dev captures. It does not authorize calibration-policy changes, retraining, official-test evaluation, the 15-model matrix, cross-device work, or latency/energy benchmarking.
 
 ## Scope
 
 This is a dev-only diagnostic intervention on the frozen YOLO11n CCTSDB2021 model. It uses the already accepted Uniform seed-42 calibration/cache inputs and the same `CCTSDB2021/dev` validator. It does not retrain, change calibration images, use the official test, benchmark a device, open the 15-model matrix, or select a best model.
 
-The locked study ID is `yolo11n_precision_head_ablation_v1`, with output exactly at:
+The scientific study ID remains `yolo11n_precision_head_ablation_v1`. This is execution attempt 2 after an implementation fix, with output exactly at:
 
-`results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1/`
+`results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2/`
+
+The previous partial attempt remains at `results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1/` and is preserved read-only. Attempt 2 must not delete, move, overwrite, resume, or copy artifacts from that directory.
 
 The source is the accepted Step-A study `server_uniform_build_repeat_v1`. The accepted timing-replay study `server_uniform_timing_cache_replay_v1` is the baseline reference for comparison only; its accepted result commit is recorded in every manifest.
 
@@ -74,7 +76,7 @@ Run only after pulling the exact Luna commit named in the handoff and confirming
 The study command is foreground and must be run once from the repository root. If the current snapshot has no allowlisted desktop GPU rows requiring confirmation, omit the desktop options. If it has such rows, append one `--confirm-desktop-process CURRENT_PID=CURRENT_ALLOWLISTED_PATH` option per current row, using the exact current path—not a historical PID. Do not use `nohup`.
 
 ```bash
-conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_yolo11n_precision_head_ablation.py --phase all --out-dir results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1 --device 0
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_yolo11n_precision_head_ablation.py --phase all --out-dir results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2 --device 0
 ```
 
 The parent performs all 12 builds in fixed arm-major order, then all 12 capture/verification pairs. If any build or contract fails, preserve the partial directory and logs; do not resume, overwrite, rebuild with a new cache, or run `--phase evaluate` to bypass the failed build. After a successful run, push JSON/cache/log.gz artifacts listed in this document; do not push `model.engine`, ONNX, weights, or dataset files. Luna will pull and verify provenance, hashes, layer evidence, cache behavior, telemetry/workload flags, matching, size metrics, and the three-build tables, then stop for Astra review.

@@ -25,7 +25,7 @@ REPRESENTATIONS = ("fp16", "uniform", "low_luminance", "vcsc_proportional")
 FROZEN_WEIGHTS_SHA256 = "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
 CONCURRENT_STUDY_DIR = "server_uniform_inference_repeat_concurrent_v1"
 TIMING_CACHE_STUDY_DIR = "server_uniform_timing_cache_replay_v1"
-PRECISION_HEAD_ABLATION_STUDY_DIR = "server_yolo11n_precision_head_ablation_v1"
+PRECISION_HEAD_ABLATION_STUDY_DIR = "server_yolo11n_precision_head_ablation_v1_attempt2"
 PRECISION_HEAD_ABLATION_ARMS = ("baseline_int8", "bbox_fp32", "classification_fp32", "both_fp32")
 
 

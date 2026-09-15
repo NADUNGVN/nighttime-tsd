@@ -563,3 +563,29 @@ Phản hồi sự cố A2L-014 trên server. Luna đã đọc log `build_bbox_fp
 - Partial `results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1/` phải giữ nguyên: baseline builds 1–3 đã hoàn tất, bbox repeat 1 thất bại, chưa có capture.
 - Không resume/overwrite partial và không chạy `--phase evaluate`.
 - Commit sửa khác commit đã được A2L-014 review, nên cần Astra review/re-authorize trước rerun. Vì output v1 đã tồn tại, rerun cũng cần Astra chốt output version/path mới; Luna không tự xóa, di chuyển hoặc ghi đè artifact partial.
+
+## L2A-015 addendum — triển khai attempt2
+
+Phản hồi yêu cầu triển khai A2L-015. Luna giữ nguyên scientific study ID `yolo11n_precision_head_ablation_v1` và chuyển output của execution attempt 2 sang:
+
+`results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2/`
+
+### Thay đổi đã triển khai
+
+- Runner `run_yolo11n_precision_head_ablation.py` chỉ chấp nhận destination attempt2; output v1, path khác và output attempt2 đã tồn tại đều bị từ chối trước khi ghi.
+- Capture dispatch `validate_precision_head_ablation_scope()` và `ablation_capture_inputs()` cùng khóa đúng destination attempt2; destination v1/ngoài scope bị từ chối.
+- `study_manifest.json` của attempt2 ghi `execution_attempt: 2`, relative `previous_attempt_path`, `execution_reason: implementation_fix_non_convolution_namespace_selection`, `execution_git_commit` hiện hành và `runner_script_sha256`. Source Step-A code commit vẫn được ghi riêng trong `source_study_code_commit`.
+- Protocol active và foreground command đã chuyển sang attempt2. Partial v1 được ghi rõ là read-only, không xóa/di chuyển/overwrite/resume/copy.
+- CPU/mock evaluate test đã chuyển sang destination attempt2 và vẫn yêu cầu đủ 12 build/capture theo thứ tự khóa. Không đổi flags, cache, weights, evaluator, numerical settings hoặc GPU policy.
+
+### Kiểm tra và provenance
+
+- Targeted ablation: **19/19 pass**; full regression: **105/105 pass**; `py_compile` runner/capture/tests: **pass**; `git diff --check`: **pass**.
+- Đây là CPU/mock evidence; không chạy TensorRT build/benchmark/capture trên local và chưa tuyên bố native TensorRT end-to-end.
+- Implementation commit: sẽ ghi hash chính xác ngay sau commit/push. Push dùng tài khoản GitHub `NADUNGVN` có quyền ghi.
+
+### Trạng thái server và bàn giao
+
+- Chưa chạy server và chưa tạo artifact attempt2. Partial v1 vẫn giữ nguyên.
+- Sau khi push, người dùng pull đúng commit, kiểm tra `attempt2` absent và snapshot GPU/process/environment; sau đó mới chạy foreground command trong protocol, bổ sung desktop confirmations theo snapshot hiện tại nếu cần.
+- Nếu attempt2 lỗi, giữ partial/log và báo cụ thể; không resume/evaluate bypass. Sau khi hoàn tất, chỉ push JSON/cache/log.gz theo artifact contract để Luna hậu kiểm đủ 12 build/capture rồi dừng ở `step_A_completed_review_required`.
