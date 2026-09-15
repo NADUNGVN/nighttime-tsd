@@ -27,7 +27,11 @@ STUDY = "yolo11n_precision_head_latency_v1"
 OUTPUT_DIR_NAME = "server_yolo11n_precision_head_latency_v1"
 ATTEMPT2_DIR_NAME = "server_yolo11n_precision_head_ablation_v1_attempt2"
 ACCURACY_DIR_NAME = "precision_head_paired_analysis_v1"
+PINNED_ATTEMPT2_COMMIT = "839acdcb6a09569d1e6e130aa523c38d960dabd5"
+PINNED_ACCURACY_COMMIT = "4846c73ddd2cbb2bd522caa0e1a1eb4598deb1e3"
 DATASET_SPLIT = "CCTSDB2021/dev"
+DEFAULT_IMAGES_DIR = Path("data/processed/cctsdb2021_clean/dev/images")
+FP16_DATA_REFERENCE = "results/measurement_audit_v1/server_fp16_capture_v1/dev_absolute.yaml"
 ENGINE_KEYS = (
     "fp16",
     "baseline_int8_1", "bbox_fp32_1", "classification_fp32_1", "both_fp32_1",
@@ -40,6 +44,18 @@ ENGINE_MODELS = {
 }
 ENGINE_REPEATS = {key: (None if key == "fp16" else int(key.rsplit("_", 1)[1])) for key in ENGINE_KEYS}
 ARM_NAMES = ("baseline_int8", "bbox_fp32", "classification_fp32", "both_fp32")
+CONTRASTS = (
+    ("bbox_minus_baseline", "bbox_fp32", "baseline_int8"),
+    ("classification_minus_baseline", "classification_fp32", "baseline_int8"),
+    ("both_minus_baseline", "both_fp32", "baseline_int8"),
+    ("bbox_minus_classification", "bbox_fp32", "classification_fp32"),
+    ("both_minus_bbox", "both_fp32", "bbox_fp32"),
+    ("both_minus_classification", "both_fp32", "classification_fp32"),
+    ("baseline_minus_fp16", "baseline_int8", "fp16"),
+    ("bbox_minus_fp16", "bbox_fp32", "fp16"),
+    ("classification_minus_fp16", "classification_fp32", "fp16"),
+    ("both_minus_fp16", "both_fp32", "fp16"),
+)
 ROUNDS = (1, 2, 3)
 POOL_SIZE = 256
 WARMUP_CALLS = 200
@@ -98,6 +114,38 @@ def write_text(path: Path, value: str) -> None:
 
 def read_json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _relative_git_path(repo: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(repo.resolve()).as_posix()
+    except ValueError as exc:
+        raise ValueError(f"Input is outside repository: {path}") from exc
+
+
+def git_blob(repo: Path, commit: str, path: Path) -> bytes:
+    """Read exact canonical bytes from a pinned commit, not checkout bytes."""
+    relative = _relative_git_path(repo, path)
+    result = subprocess.run(
+        ["git", "cat-file", "blob", f"{commit}:{relative}"],
+        cwd=repo,
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode:
+        raise ValueError(f"Missing canonical input at {commit}: {relative}")
+    return result.stdout
+
+
+def canonical_sha256(repo: Path, commit: str, path: Path) -> str:
+    return sha256_bytes(git_blob(repo, commit, path))
+
+
+def read_json_blob(repo: Path, commit: str, path: Path):
+    try:
+        return json.loads(git_blob(repo, commit, path).decode("utf-8"))
+    except UnicodeDecodeError as exc:
+        raise ValueError(f"Canonical input is not UTF-8 JSON: {_relative_git_path(repo, path)}") from exc
 
 
 def ensure_output_absent(path: Path) -> None:
@@ -196,14 +244,39 @@ def cyclic_sequence(pool_names: list[str], count: int) -> list[str]:
     return [pool_names[index % len(pool_names)] for index in range(count)]
 
 
-def make_image_pool_manifest(image_names: list[str], images_dir: Path, seed: int = SEED) -> dict:
+def _decoded_shape(path: Path):
+    import cv2
+    image = cv2.imread(str(path))
+    if image is None:
+        raise ValueError(f"Image could not be decoded: {path}")
+    return list(image.shape[:2])
+
+
+def validate_decoded_shape(path: Path, expected_shape: list[int], shape_reader=None) -> list[int]:
+    if (not isinstance(expected_shape, list) or len(expected_shape) != 2 or
+            any(type(value) is not int or value <= 0 for value in expected_shape)):
+        raise ValueError(f"Captured orig_shape is malformed for {path}: {expected_shape!r}")
+    actual = list((shape_reader or _decoded_shape)(path))
+    if actual != expected_shape:
+        raise ValueError(f"Decoded image shape differs from captured orig_shape: {path}: {actual} != {expected_shape}")
+    return actual
+
+
+def make_image_pool_manifest(image_names: list[str], images_dir: Path, seed: int = SEED,
+                             captured_shapes: dict[str, list[int]] | None = None,
+                             shape_reader=None) -> dict:
     selected = select_image_pool(image_names, seed)
     files = []
     for name in selected:
         path = images_dir / name
         if path.parent != images_dir or not path.is_file():
             raise FileNotFoundError(f"Missing selected dev image: {path}")
-        files.append({"image": name, "sha256": sha256_file(path), "bytes": path.stat().st_size})
+        row = {"image": name, "sha256": sha256_file(path), "bytes": path.stat().st_size}
+        if captured_shapes is not None:
+            row["captured_orig_shape"] = captured_shapes[name]
+            row["decoded_shape"] = validate_decoded_shape(path, captured_shapes[name], shape_reader)
+            row["decoded_shape_matches_capture"] = True
+        files.append(row)
     measured = cyclic_sequence(selected, MEASURED_CALLS)
     warmup = cyclic_sequence(selected, WARMUP_CALLS)
     return {
@@ -221,6 +294,26 @@ def make_image_pool_manifest(image_names: list[str], images_dir: Path, seed: int
         "measured_sequence_sha256": sha256_bytes(canonical_json(measured)),
         "same_sequence_for_every_engine": True,
         "disk_decode_in_timing": False,
+    }
+
+
+def resolve_images_dir(repo: Path, declared: Path | None) -> tuple[Path, dict]:
+    """Resolve image paths from repo root, never from the caller's cwd."""
+    if declared is None:
+        resolved = (repo / DEFAULT_IMAGES_DIR).resolve()
+        return resolved, {
+            "declared": None,
+            "resolved": str(resolved),
+            "resolution": "repo-relative locked default",
+            "capture_data_reference": FP16_DATA_REFERENCE,
+        }
+    declared_path = Path(declared)
+    resolved = (declared_path if declared_path.is_absolute() else repo / declared_path).resolve()
+    return resolved, {
+        "declared": declared_path.as_posix(),
+        "resolved": str(resolved),
+        "resolution": "explicit operator relocation; resolved relative to repository when not absolute",
+        "capture_data_reference": FP16_DATA_REFERENCE,
     }
 
 
@@ -280,52 +373,125 @@ def _check_environment_subset(actual: dict, expected: dict, label: str, require_
             raise ValueError(f"{label} environment.{key} differs: {actual.get(key)!r} != {expected.get(key)!r}")
 
 
-def _load_accuracy_links(accuracy_root: Path, models: list[str]) -> dict:
+def _load_accuracy_links(repo: Path, accuracy_root: Path, models: list[str]) -> dict:
+    """Bind accuracy references to the accepted analysis commit, not checkout JSON."""
     summary_path = accuracy_root / "analysis_summary.json"
     points_path = accuracy_root / "point_estimates.json"
     ci_path = accuracy_root / "contrast_ci.json"
     for path in (summary_path, points_path, ci_path):
         if not path.is_file():
             raise FileNotFoundError(f"Missing paired accuracy artifact: {path}")
-    summary = read_json(summary_path)
-    points = read_json(points_path)
-    contrasts = read_json(ci_path)
+    summary = read_json_blob(repo, PINNED_ACCURACY_COMMIT, summary_path)
+    points = read_json_blob(repo, PINNED_ACCURACY_COMMIT, points_path)
+    contrasts = read_json_blob(repo, PINNED_ACCURACY_COMMIT, ci_path)
     if summary.get("status") != "completed" or summary.get("estimator_id") != "coco_xml_paired_image_bootstrap_v1":
         raise ValueError("Paired accuracy analysis is not a completed locked analysis")
-    if set(points.get("models", {})) != set(models):
-        raise ValueError("Paired accuracy point table does not cover latency models")
-    if len(contrasts.get("contrasts", {})) != 10:
-        raise ValueError("Paired accuracy CI table does not contain all ten fixed contrasts")
+    if summary.get("artifact_commit") != PINNED_ATTEMPT2_COMMIT:
+        raise ValueError("Paired accuracy analysis is not bound to the accepted attempt2 commit")
+    if set(points.get("models", {})) != set(models) or contrasts.get("models") != models:
+        raise ValueError("Paired accuracy tables do not cover exactly the latency models")
+    if contrasts.get("sizes") != ["all", "xs", "s", "m", "l", "xl"] or contrasts.get("metrics") != ["map50", "map50_95"]:
+        raise ValueError("Paired accuracy CI axes differ from the accepted analysis contract")
+    expected_contrasts = {name for name, _left, _right in CONTRASTS}
+    if set(contrasts.get("contrasts", {})) != expected_contrasts:
+        raise ValueError("Paired accuracy CI table does not contain exactly the ten fixed contrasts")
+    if contrasts.get("estimator_id") != summary["estimator_id"]:
+        raise ValueError("Paired accuracy CI estimator is not bound to the accepted summary")
+    for name, left, right in CONTRASTS:
+        contrast = contrasts["contrasts"].get(name)
+        if not isinstance(contrast, dict):
+            raise ValueError(f"Missing contrast payload: {name}")
+        for model in (left, right):
+            if model not in models:
+                raise ValueError(f"Contrast {name} references an unknown model: {model}")
+        for size in contrasts.get("sizes", ()):
+            if size not in contrast:
+                raise ValueError(f"Contrast {name} is missing size {size}")
+            for metric in contrasts.get("metrics", ()):
+                if metric not in contrast[size]:
+                    raise ValueError(f"Contrast {name}/{size} is missing metric {metric}")
+    output_refs = summary.get("outputs", {})
+    expected_output_refs = {
+        "point_estimates.json": points_path,
+        "contrast_ci.json": ci_path,
+    }
+    canonical_refs = {}
+    for name, path in expected_output_refs.items():
+        expected_hash = canonical_sha256(repo, PINNED_ACCURACY_COMMIT, path)
+        if output_refs.get(name) != expected_hash:
+            raise ValueError(f"Accepted accuracy summary output hash differs for {name}")
+        canonical_refs[name] = {
+            "path": _relative_git_path(repo, path),
+            "commit": PINNED_ACCURACY_COMMIT,
+            "blob_sha256": expected_hash,
+        }
+    canonical_refs["analysis_summary.json"] = {
+        "path": _relative_git_path(repo, summary_path),
+        "commit": PINNED_ACCURACY_COMMIT,
+        "blob_sha256": canonical_sha256(repo, PINNED_ACCURACY_COMMIT, summary_path),
+    }
     refs = {
-        "analysis_summary": {"path": str(summary_path.resolve()), "sha256": sha256_file(summary_path)},
-        "point_estimates": {"path": str(points_path.resolve()), "sha256": sha256_file(points_path)},
-        "contrast_ci": {"path": str(ci_path.resolve()), "sha256": sha256_file(ci_path)},
+        "accepted_commit": PINNED_ACCURACY_COMMIT,
+        "canonical_inputs": canonical_refs,
         "estimator_id": summary["estimator_id"],
         "models": {},
     }
     for model in models:
-        contrast_refs = [name for name, left, right in (
-            ("bbox_minus_baseline", "bbox_fp32", "baseline_int8"),
-            ("classification_minus_baseline", "classification_fp32", "baseline_int8"),
-            ("both_minus_baseline", "both_fp32", "baseline_int8"),
-            ("bbox_minus_classification", "bbox_fp32", "classification_fp32"),
-            ("both_minus_bbox", "both_fp32", "bbox_fp32"),
-            ("both_minus_classification", "both_fp32", "classification_fp32"),
-            ("baseline_minus_fp16", "baseline_int8", "fp16"),
-            ("bbox_minus_fp16", "bbox_fp32", "fp16"),
-            ("classification_minus_fp16", "classification_fp32", "fp16"),
-            ("both_minus_fp16", "both_fp32", "fp16"),
-        ) if model in (left, right)]
+        contrast_refs = [name for name, left, right in CONTRASTS if model in (left, right)]
         refs["models"][model] = {
-            "point_estimate_ref": {"file": "point_estimates.json", "model": model},
+            "point_estimate_ref": {
+                "file": "point_estimates.json", "model": model,
+                "sha256": canonical_refs["point_estimates.json"]["blob_sha256"],
+            },
             "contrast_ci_refs": contrast_refs,
             "evaluator": "COCO/XML diagnostic points; CIs are fixed contrast CIs, not per-model latency CIs",
         }
     return refs
 
 
+def _canonical_ref(repo: Path, commit: str, path: Path) -> dict:
+    return {
+        "path": _relative_git_path(repo, path),
+        "commit": commit,
+        "blob_sha256": canonical_sha256(repo, commit, path),
+    }
+
+
+def _require_link(actual, expected, label: str) -> None:
+    if actual != expected:
+        raise ValueError(f"Canonical provenance link differs for {label}: {actual!r} != {expected!r}")
+
+
+def validate_build_provenance(build: dict, source_manifest: dict, arm: str, repeat: int) -> None:
+    key = f"{arm}_{repeat}"
+    if build.get("study") != source_manifest.get("study") or build.get("arm") != arm or build.get("repeat") != repeat:
+        raise ValueError(f"Build provenance differs for {key}")
+    if build.get("termination_status") != "completed":
+        raise ValueError(f"Build is not complete for {key}")
+    if build.get("environment") != source_manifest.get("environment"):
+        raise ValueError(f"Build environment differs from attempt2 for {key}")
+    for field in (
+        "source_result_commit", "source_study_code_commit", "source_study_manifest_sha256",
+        "source_summary_sha256", "source_weights_sha256", "frozen_weights_measured_sha256",
+        "onnx_sha256", "baseline_reference_study", "baseline_reference_result_commit",
+        "builder_flags", "settings",
+    ):
+        expected_value = source_manifest.get(field)
+        if expected_value is not None and build.get(field) != expected_value:
+            raise ValueError(f"Build source provenance differs for {key}: {field}")
+    for cache_name in ("calibration", "timing"):
+        expected_cache = source_manifest[f"{cache_name}_cache_input"]["sha256"]
+        flat_field = f"{cache_name}_cache_input_sha256"
+        if build.get(flat_field) != expected_cache:
+            raise ValueError(f"Build source provenance differs for {key}: {flat_field}")
+        nested = build.get(f"{cache_name}_cache_input")
+        if nested is not None and (not isinstance(nested, dict) or nested.get("sha256") != expected_cache):
+            raise ValueError(f"Build nested cache provenance differs for {key}: {cache_name}")
+
+
 def validate_inputs(repo: Path, attempt2_root: Path, fp16_capture: Path,
-                    fp16_verification: Path, accuracy_root: Path, images_dir: Path) -> dict:
+                    fp16_verification: Path, accuracy_root: Path, images_dir: Path,
+                    images_binding: dict | None = None) -> dict:
     expected_attempt2 = (repo / "results/measurement_audit_v1" / ATTEMPT2_DIR_NAME).resolve()
     expected_fp16_capture = (repo / "results/measurement_audit_v1/server_fp16_capture_v1").resolve()
     expected_fp16_verification = (repo / "results/measurement_audit_v1/server_native_size_v1").resolve()
@@ -335,7 +501,7 @@ def validate_inputs(repo: Path, attempt2_root: Path, fp16_capture: Path,
     manifest_path = attempt2_root / "study_manifest.json"
     if not manifest_path.is_file():
         raise FileNotFoundError(f"Missing attempt2 study manifest: {manifest_path}")
-    source_manifest = read_json(manifest_path)
+    source_manifest = read_json_blob(repo, PINNED_ATTEMPT2_COMMIT, manifest_path)
     if source_manifest.get("study") != "yolo11n_precision_head_ablation_v1" or source_manifest.get("execution_attempt") != 2:
         raise ValueError("Latency inputs must be the accepted precision-head attempt2")
     if source_manifest.get("dataset_split") != DATASET_SPLIT:
@@ -345,23 +511,42 @@ def validate_inputs(repo: Path, attempt2_root: Path, fp16_capture: Path,
         if expected_env.get(key) != value:
             raise ValueError(f"Attempt2 environment contract differs for {key}")
     expected_gpu = parse_gpu_identity(source_manifest.get("gpu_before"))
+    source_manifest_ref = _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, manifest_path)
+    fp16_data_reference_path = repo / FP16_DATA_REFERENCE
+    fp16_data_reference_ref = _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, fp16_data_reference_path)
+    fp16_data_reference = git_blob(repo, PINNED_ATTEMPT2_COMMIT, fp16_data_reference_path).decode("utf-8")
+    if "val: images" not in fp16_data_reference or "CCTSDB2021" not in fp16_data_reference:
+        raise ValueError("Accepted FP16 data reference does not bind the locked dev image directory")
 
     specs = {}
     fp16_report_path = fp16_capture / "capture_report.json"
-    fp16_report = read_json(fp16_report_path)
+    fp16_payload_path = fp16_capture / "validator_predictions.json"
+    fp16_report = read_json_blob(repo, PINNED_ATTEMPT2_COMMIT, fp16_report_path)
+    fp16_payload = read_json_blob(repo, PINNED_ATTEMPT2_COMMIT, fp16_payload_path)
     expected_capture_runtime(fp16_report)
     if fp16_report.get("status") != "pass" or fp16_report.get("dataset_split") != DATASET_SPLIT:
         raise ValueError("FP16 reference capture is not a passed dev capture")
     _check_environment_subset(fp16_report.get("environment", {}), expected_env, "FP16 capture")
+    _require_link(canonical_sha256(repo, PINNED_ATTEMPT2_COMMIT, fp16_payload_path),
+                  fp16_report.get("predictions_sha256"), "FP16 predictions")
     fp16_engine = Path(fp16_report["runtime_arguments"]["model"])
     fp16_hash = validate_engine_file(fp16_engine, fp16_report["model_sha256"])
-    fp16_summary = read_json(fp16_verification / "verification_summary.json")
+    fp16_summary_path = fp16_verification / "verification_summary.json"
+    fp16_summary = read_json_blob(repo, PINNED_ATTEMPT2_COMMIT, fp16_summary_path)
+    _require_link(fp16_summary.get("capture_report_sha256"), canonical_sha256(repo, PINNED_ATTEMPT2_COMMIT, fp16_report_path), "FP16 capture report")
+    _require_link(fp16_summary.get("capture_prediction_sha256"), canonical_sha256(repo, PINNED_ATTEMPT2_COMMIT, fp16_payload_path), "FP16 predictions")
     if fp16_summary.get("model_sha256") != fp16_hash or fp16_summary.get("native_matching_status") != "pass":
         raise ValueError("FP16 verification is not bound to the direct engine")
     specs["fp16"] = {
         "engine_key": "fp16", "model": "fp16", "arm": "fp16", "build_repeat": None,
         "engine_path": str(fp16_engine.resolve()), "engine_sha256": fp16_hash,
-        "capture_report_sha256": sha256_file(fp16_report_path),
+        "engine_bytes": fp16_engine.stat().st_size,
+        "capture_report_sha256": canonical_sha256(repo, PINNED_ATTEMPT2_COMMIT, fp16_report_path),
+        "accepted_blob_refs": {
+            "capture_report": _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, fp16_report_path),
+            "predictions": _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, fp16_payload_path),
+            "verification_summary": _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, fp16_summary_path),
+        },
     }
     for arm in ARM_NAMES:
         arm_dir = attempt2_root / arm
@@ -369,61 +554,81 @@ def validate_inputs(repo: Path, attempt2_root: Path, fp16_capture: Path,
             key = f"{arm}_{repeat}"
             build_path = arm_dir / f"repeat_{repeat}" / "build_manifest.json"
             capture_path = arm_dir / f"repeat_{repeat}" / "capture" / "capture_report.json"
-            build = read_json(build_path)
-            capture = read_json(capture_path)
-            if build.get("study") != source_manifest.get("study") or build.get("arm") != arm or build.get("repeat") != repeat:
-                raise ValueError(f"Build provenance differs for {key}")
-            if build.get("termination_status") != "completed":
-                raise ValueError(f"Build is not complete for {key}")
-            if build.get("environment") != expected_env:
-                raise ValueError(f"Build environment differs from attempt2 for {key}")
-            for field in (
-                "source_result_commit", "source_study_code_commit", "source_study_manifest_sha256",
-                "source_summary_sha256", "source_weights_sha256", "frozen_weights_measured_sha256",
-                "onnx_sha256", "calibration_cache_input_sha256", "timing_cache_input_sha256",
-                "baseline_reference_study", "baseline_reference_result_commit", "builder_flags", "settings",
-            ):
-                expected_value = source_manifest.get(field)
-                if expected_value is not None and build.get(field) != expected_value:
-                    raise ValueError(f"Build source provenance differs for {key}: {field}")
+            predictions_path = arm_dir / f"repeat_{repeat}" / "capture" / "validator_predictions.json"
+            verification_path = arm_dir / f"repeat_{repeat}" / "verification" / "verification_summary.json"
+            build = read_json_blob(repo, PINNED_ATTEMPT2_COMMIT, build_path)
+            capture = read_json_blob(repo, PINNED_ATTEMPT2_COMMIT, capture_path)
+            predictions = read_json_blob(repo, PINNED_ATTEMPT2_COMMIT, predictions_path)
+            verification = read_json_blob(repo, PINNED_ATTEMPT2_COMMIT, verification_path)
+            validate_build_provenance(build, source_manifest, arm, repeat)
             expected_capture_runtime(capture)
             if capture.get("status") != "pass" or capture.get("dataset_split") != DATASET_SPLIT:
                 raise ValueError(f"Capture is not a passed dev capture for {key}")
             _check_environment_subset(capture.get("environment", {}), expected_env, f"{key} capture")
+            _require_link(canonical_sha256(repo, PINNED_ATTEMPT2_COMMIT, predictions_path),
+                          capture.get("predictions_sha256"), f"{key} predictions")
             if capture.get("model_sha256") != build.get("engine_sha256"):
                 raise ValueError(f"Build/capture engine link differs for {key}")
+            if verification.get("native_matching_status") != "pass" or verification.get("size_diagnostic") != "completed":
+                raise ValueError(f"Verification is not complete for {key}")
+            if verification.get("model_sha256") != build.get("engine_sha256"):
+                raise ValueError(f"Verification engine link differs for {key}")
+            _require_link(verification.get("capture_report_sha256"), canonical_sha256(repo, PINNED_ATTEMPT2_COMMIT, capture_path), f"{key} capture report")
+            _require_link(verification.get("capture_prediction_sha256"), canonical_sha256(repo, PINNED_ATTEMPT2_COMMIT, predictions_path), f"{key} predictions")
             engine_path = Path(capture["runtime_arguments"]["model"])
             engine_hash = validate_engine_file(engine_path, build["engine_sha256"])
             specs[key] = {
                 "engine_key": key, "model": arm, "arm": arm, "build_repeat": repeat,
                 "engine_path": str(engine_path.resolve()), "engine_sha256": engine_hash,
-                "build_manifest_sha256": sha256_file(build_path),
-                "capture_report_sha256": sha256_file(capture_path),
+                "engine_bytes": engine_path.stat().st_size,
+                "build_manifest_sha256": canonical_sha256(repo, PINNED_ATTEMPT2_COMMIT, build_path),
+                "capture_report_sha256": canonical_sha256(repo, PINNED_ATTEMPT2_COMMIT, capture_path),
+                "accepted_blob_refs": {
+                    "build_manifest": _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, build_path),
+                    "capture_report": _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, capture_path),
+                    "predictions": _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, predictions_path),
+                    "verification_summary": _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, verification_path),
+                },
             }
     if len(specs) != 13 or len({row["engine_path"] for row in specs.values()}) != 13 or len({row["engine_sha256"] for row in specs.values()}) != 13:
         raise ValueError("Latency inventory must bind 13 distinct existing engine binaries")
 
-    payload = read_json(fp16_capture / "validator_predictions.json")
-    names = [record.get("image") for record in payload.get("records", [])]
+    names = [record.get("image") for record in fp16_payload.get("records", [])]
     if len(names) != EXPECTED_IMAGES or len(set(names)) != EXPECTED_IMAGES:
         raise ValueError("FP16 capture does not provide the locked 1636 unique dev image IDs")
+    captured_shapes = {}
+    for record in fp16_payload.get("records", []):
+        image = record.get("image")
+        shape = record.get("orig_shape")
+        if not isinstance(image, str) or image in captured_shapes:
+            raise ValueError("FP16 capture image IDs are not unique valid names")
+        if (not isinstance(shape, list) or len(shape) != 2 or
+                any(type(value) is not int or value <= 0 for value in shape)):
+            raise ValueError(f"FP16 capture has invalid orig_shape for {image}")
+        captured_shapes[image] = shape
     if not images_dir.is_dir():
         raise FileNotFoundError(f"Missing dev image directory: {images_dir}")
-    pool = make_image_pool_manifest(names, images_dir)
-    accuracy = _load_accuracy_links(accuracy_root, ["fp16", *ARM_NAMES])
-    source_artifact_commit = None
-    if accuracy_root.is_dir():
-        source_artifact_commit = read_json(accuracy_root / "analysis_summary.json").get("artifact_commit")
+    pool = make_image_pool_manifest(names, images_dir, captured_shapes=captured_shapes)
+    accuracy = _load_accuracy_links(repo, accuracy_root, ["fp16", *ARM_NAMES])
     return {
         "source_manifest": source_manifest,
         "source_manifest_path": manifest_path,
-        "source_manifest_sha256": sha256_file(manifest_path),
-        "source_artifact_commit": source_artifact_commit,
+        "source_manifest_sha256": source_manifest_ref["blob_sha256"],
+        "source_artifact_commit": PINNED_ATTEMPT2_COMMIT,
+        "canonical_input_commit": PINNED_ATTEMPT2_COMMIT,
+        "canonical_input_refs": {
+            "source_manifest": source_manifest_ref,
+            "fp16_data_reference": fp16_data_reference_ref,
+        },
         "expected_environment": expected_env,
         "expected_gpu": expected_gpu,
         "specs": specs,
         "pool": pool,
         "accuracy": accuracy,
+        "images_binding": {
+            **(images_binding or {"declared": None, "resolved": str(images_dir), "resolution": "caller-resolved"}),
+            "capture_data_reference": fp16_data_reference_ref,
+        },
         "fp16_capture_path": fp16_capture,
         "fp16_verification_path": fp16_verification,
     }
@@ -458,8 +663,10 @@ def _load_pool_images(pool_manifest_path: Path, images_dir: Path):
         image = cv2.imread(str(path))
         if image is None:
             raise ValueError(f"Image could not be decoded: {path}")
+        expected_shape = row.get("captured_orig_shape")
+        validate_decoded_shape(path, expected_shape, lambda _path: list(image.shape[:2]))
         images.append(image)
-        shapes.append(list(image.shape))
+        shapes.append(list(image.shape[:2]))
     selected_names = [row["image"] for row in selected]
     expected_warmup = cyclic_sequence(selected_names, WARMUP_CALLS)
     expected_measured = cyclic_sequence(selected_names, MEASURED_CALLS)
@@ -474,15 +681,83 @@ def _load_pool_images(pool_manifest_path: Path, images_dir: Path):
     return manifest, images, shapes
 
 
+def observe_preprocessed_input_shapes(model, images, source_shapes, runtime) -> dict:
+    """Probe one image per source aspect ratio outside the measured timer."""
+    if len(images) != len(source_shapes) or not images:
+        raise ValueError("Shape observation requires one shape per decoded image")
+    representatives = {}
+    for index, shape in enumerate(source_shapes):
+        if len(shape) != 2 or shape[0] <= 0 or shape[1] <= 0:
+            raise ValueError("Decoded source shape is malformed")
+        ratio = round(shape[1] / shape[0], 8)
+        representatives.setdefault(ratio, index)
+    first_index = next(iter(representatives.values()))
+    model.predict(source=images[first_index], **runtime)
+    predictor = getattr(model, "predictor", None)
+    original_preprocess = getattr(predictor, "preprocess", None)
+    if not callable(original_preprocess):
+        raise RuntimeError("Unable to observe the Ultralytics preprocessed input tensor")
+    observed = {}
+    current_index = [first_index]
+
+    def capture_preprocess(batch):
+        tensor = original_preprocess(batch)
+        ratio = round(source_shapes[current_index[0]][1] / source_shapes[current_index[0]][0], 8)
+        observed[ratio] = list(tensor.shape)
+        return tensor
+
+    predictor.preprocess = capture_preprocess
+    try:
+        for ratio, index in representatives.items():
+            current_index[0] = index
+            model.predict(source=images[index], **runtime)
+    finally:
+        predictor.preprocess = original_preprocess
+    expected = [1, 3, RUNTIME_OPTIONS["imgsz"], RUNTIME_OPTIONS["imgsz"]]
+    if set(observed) != set(representatives) or any(shape != expected for shape in observed.values()):
+        raise ValueError(f"Observed preprocessed input shape differs from locked (1,3,640,640): {observed}")
+    return {
+        "expected_shape": expected,
+        "by_source_aspect_ratio": {str(ratio): {"image_index": index, "shape": observed[ratio]}
+                                    for ratio, index in representatives.items()},
+        "timing_excluded": True,
+        "probe_calls": len(representatives) + 1,
+    }
+
+
 def _runtime_environment() -> dict:
     from uniform_build_repeat import environment
     return environment()
 
 
-def run_child(args) -> int:
+def _validate_child_output_contract(args, run_manifest: dict) -> None:
+    schedule = run_manifest.get("round_schedule")
+    validate_schedule(schedule)
+    item = next((row for row in schedule if row.get("round") == args.round and row.get("engine_key") == args.engine_key), None)
+    if item is None:
+        raise ValueError("Child round/engine is not in the locked parent schedule")
+    expected_output = Path(run_manifest["output_dir"]).resolve()
+    expected_session = expected_output / f"round_{args.round}" / args.engine_key
+    if args.session_dir.resolve() != expected_session:
+        raise ValueError("Child session output directory is not the scheduled location")
+    if expected_session.exists() and any(expected_session.iterdir()):
+        raise FileExistsError(f"Child session output is not empty; preserve it: {expected_session}")
+    pool_ref = run_manifest.get("image_pool_manifest", {})
+    if Path(pool_ref.get("path", "")).resolve() != args.pool_manifest.resolve():
+        raise ValueError("Child pool manifest path does not match parent manifest")
+    if not pool_ref.get("sha256") or sha256_file(args.pool_manifest.resolve()) != pool_ref["sha256"]:
+        raise ValueError("Child pool manifest bytes differ from parent manifest hash")
+    image_binding = run_manifest.get("images", {})
+    if image_binding.get("resolved") and args.images_dir.resolve() != Path(image_binding["resolved"]).resolve():
+        raise ValueError("Child image directory does not match parent path binding")
+
+
+def run_child(args, dependencies: dict | None = None) -> int:
+    dependencies = dependencies or {}
     session_dir = args.session_dir.resolve()
-    session_dir.mkdir(parents=True, exist_ok=True)
     run_manifest = read_json(args.run_manifest.resolve())
+    _validate_child_output_contract(args, run_manifest)
+    session_dir.mkdir(parents=True, exist_ok=True)
     expected_env = run_manifest["environment"]
     expected_gpu = run_manifest["gpu_identity"]
     expected_hash = args.engine_sha256
@@ -490,12 +765,16 @@ def run_child(args) -> int:
     expected_spec = run_manifest.get("engine_inventory", {}).get(args.engine_key)
     if not isinstance(expected_spec, dict) or expected_spec.get("engine_path") != str(engine) or expected_spec.get("engine_sha256") != expected_hash:
         raise ValueError("Child engine binding does not match the parent inventory")
-    if not any(item.get("round") == args.round and item.get("engine_key") == args.engine_key for item in run_manifest.get("round_schedule", [])):
-        raise ValueError("Child round/engine is not in the locked parent schedule")
-    validate_engine_file(engine, expected_hash)
+    if expected_spec.get("engine_bytes") is not None and engine.stat().st_size != expected_spec["engine_bytes"]:
+        raise ValueError("Child engine byte length does not match the parent inventory")
+    dependencies.get("validate_engine_file", validate_engine_file)(engine, expected_hash)
     confirmations = _parse_confirmations(args.confirm_desktop_process)
 
-    from uniform_build_repeat import ensure_idle, snapshot
+    if "snapshot" in dependencies and "ensure_idle" in dependencies:
+        snapshot = dependencies["snapshot"]
+        ensure_idle = dependencies["ensure_idle"]
+    else:
+        from uniform_build_repeat import ensure_idle, snapshot
     gpu_before = snapshot(confirmations)
     try:
         ensure_idle(gpu_before)
@@ -506,13 +785,16 @@ def run_child(args) -> int:
         })
         raise
     before_binding = validate_gpu_identity(gpu_before, expected_gpu)
-    runtime_env = _runtime_environment()
+    runtime_env = dependencies.get("runtime_environment", _runtime_environment)()
     _check_environment_subset(runtime_env, expected_env, "Child", require_all=True)
 
-    pool_manifest, images, shapes = _load_pool_images(args.pool_manifest.resolve(), args.images_dir.resolve())
-    import torch
-    import ultralytics
-    from ultralytics import YOLO
+    pool_manifest, images, shapes = dependencies.get("load_pool_images", _load_pool_images)(args.pool_manifest.resolve(), args.images_dir.resolve())
+    torch = dependencies.get("torch")
+    if torch is None:
+        import torch
+    YOLO = dependencies.get("YOLO")
+    if YOLO is None:
+        from ultralytics import YOLO
 
     # Ultralytics receives the existing engine path and handles its own plan
     # metadata/header. This is intentionally not a direct TensorRT deserializer.
@@ -526,6 +808,8 @@ def run_child(args) -> int:
         if torch.cuda.is_available():
             torch.cuda.synchronize()
 
+    shape_observation = dependencies.get("observe_shapes", observe_preprocessed_input_shapes)(model, images, shapes, runtime)
+    synchronize()
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats()
     raw = measure_predict(model, images, predict, synchronize)
@@ -558,6 +842,7 @@ def run_child(args) -> int:
         "runtime": runtime,
         "image_pool": {
             "manifest_path": str(args.pool_manifest.resolve()),
+            "manifest_sha256": sha256_file(args.pool_manifest.resolve()),
             "pool_size": len(images),
             "pool_seed": pool_manifest["seed"],
             "pool_sequence_sha256": pool_manifest["measured_sequence_sha256"],
@@ -574,6 +859,7 @@ def run_child(args) -> int:
         "disk_decode_in_timing": False,
         "model_load_in_timing": False,
         "initial_allocation_in_timing": False,
+        "preprocessed_input_shape_observation": shape_observation,
         "synchronize_before_timer": True,
         "synchronize_after_predict": True,
         "timer": "time.perf_counter_ns monotonic high-resolution clock",
@@ -585,6 +871,11 @@ def run_child(args) -> int:
         "gpu_before": gpu_before,
         "gpu_after": gpu_after,
         "gpu_identity_binding": {"before": before_binding, "after": after_binding},
+        "process_guard_evidence": {
+            "before": gpu_before.get("process_guard"),
+            "after": gpu_after.get("process_guard"),
+        },
+        "session_output_dir": str(session_dir),
         "scope": "Synchronous batch-1 end-to-end model.predict wall time from decoded CPU image through preprocessing/H2D/inference/postprocessing/NMS; not pure TensorRT kernel time.",
     }
     write_json(session_dir / "session.json", session)
@@ -604,6 +895,10 @@ def _session_summary(session: dict) -> dict:
 def _aggregate_engine_sessions(sessions: list[dict]) -> dict:
     if len(sessions) != 3 or {row["round"] for row in sessions} != {1, 2, 3}:
         raise ValueError("Each engine must have exactly one completed session in every round")
+    if any(len(session.get("raw_latency_ms", [])) != MEASURED_CALLS for session in sessions):
+        raise ValueError("Each engine round must contain exactly 1,000 raw latency samples")
+    if len({session.get("engine_sha256") for session in sessions}) != 1:
+        raise ValueError("Engine rounds are not bound to one binary hash")
     raw = [value for session in sessions for value in session["raw_latency_ms"]]
     return {
         "engine_key": sessions[0]["engine_key"],
@@ -612,6 +907,35 @@ def _aggregate_engine_sessions(sessions: list[dict]) -> dict:
         "pooled_calls_3000": latency_statistics(raw),
         "aggregation_note": "Pooled calls summarize 3 measurement rounds for this one build; they are not 3,000 independent builds.",
     }
+
+
+def _validate_persisted_gpu_evidence(snapshot: dict, binding: dict, expected_gpu: dict, label: str) -> None:
+    if not isinstance(snapshot, dict) or snapshot.get("process_guard", {}).get("telemetry_status") != "complete":
+        raise ValueError(f"{label} GPU/process telemetry is missing or incomplete")
+    if not isinstance(snapshot.get("process_details"), list):
+        raise ValueError(f"{label} process details are missing")
+    guard = snapshot["process_guard"]
+    if guard.get("external_gpu_workload_detected") is not False:
+        raise ValueError(f"{label} records an external GPU workload")
+    if guard.get("blocked_processes") or guard.get("unmatched_confirmations"):
+        raise ValueError(f"{label} process guard contains blocked or unmatched processes")
+    if any(item.get("allowed") is not True for item in snapshot["process_details"]):
+        raise ValueError(f"{label} contains an unallowed GPU process")
+    actual_binding = validate_gpu_identity(snapshot, expected_gpu)
+    if not isinstance(binding, dict) or binding.get("matched") is not True or binding.get("actual") != actual_binding["actual"]:
+        raise ValueError(f"{label} GPU identity binding is not independently persisted")
+
+
+def validate_complete_session_set(sessions: list[dict], schedule: list[dict]) -> None:
+    validate_schedule(schedule)
+    expected = {(item["round"], item["engine_key"]) for item in schedule}
+    actual = {(session.get("round"), session.get("engine_key")) for session in sessions}
+    if len(sessions) != len(schedule) or actual != expected:
+        raise ValueError("Completed latency sessions do not cover the locked 39-session schedule exactly")
+    for engine_key in ENGINE_KEYS:
+        rounds = [session.get("round") for session in sessions if session.get("engine_key") == engine_key]
+        if sorted(rounds) != [1, 2, 3]:
+            raise ValueError(f"Engine {engine_key} does not have exactly one session in each round")
 
 
 def _build_report(summary: dict) -> str:
@@ -661,9 +985,11 @@ def _build_report(summary: dict) -> str:
     return "\n".join(lines)
 
 
-def _run_parent(args) -> int:
-    repo = Path(__file__).resolve().parents[1]
-    output = validate_output_target(repo, args.out_dir.resolve())
+def _run_parent(args, dependencies: dict | None = None) -> int:
+    dependencies = dependencies or {}
+    repo = dependencies.get("repo", Path(__file__).resolve().parents[1])
+    validate_output = dependencies.get("validate_output_target", validate_output_target)
+    output = validate_output(repo, args.out_dir.resolve())
     ensure_output_absent(output)
     if str(args.device) != "0":
         raise ValueError("Latency study is locked to --device 0 on the accepted RTX8000")
@@ -672,28 +998,36 @@ def _run_parent(args) -> int:
     fp16_capture = (repo / args.fp16_capture).resolve()
     fp16_verification = (repo / args.fp16_verification).resolve()
     accuracy_root = (repo / args.accuracy_root).resolve()
-    images_dir = args.images_dir.resolve()
+    images_dir, images_binding = resolve_images_dir(repo, args.images_dir)
 
     # Validate all 13 direct engine bytes and all non-GPU input contracts before
     # acquiring the phase or allowing a child to deserialize any engine.
-    context = validate_inputs(repo, attempt2_root, fp16_capture, fp16_verification, accuracy_root, images_dir)
-    schedule = engine_schedule()
-    validate_schedule(schedule)
+    context = dependencies.get("validate_inputs", validate_inputs)(
+        repo, attempt2_root, fp16_capture, fp16_verification, accuracy_root, images_dir, images_binding
+    )
+    schedule = dependencies.get("engine_schedule", engine_schedule)()
+    dependencies.get("validate_schedule", validate_schedule)(schedule)
 
-    from run_uniform_inference_repeat import run_environment_preflight
-    preflight = run_environment_preflight(repo)
-    _check_environment_subset(preflight["environment"], context["expected_environment"], "Parent", require_all=True)
-    from uniform_build_repeat import ensure_idle, snapshot
+    if "ensure_idle" in dependencies and "snapshot" in dependencies:
+        ensure_idle = dependencies["ensure_idle"]
+        snapshot = dependencies["snapshot"]
+    else:
+        from uniform_build_repeat import ensure_idle, snapshot
+    lock_class = dependencies.get("lock_class", GpuPhaseLock)
+    run_process = dependencies.get("run_process", subprocess.run)
+    make_child_command = dependencies.get("child_command", child_command)
+    current_commit = dependencies.get("current_commit")
 
     lock_path = repo / "results/architecture_matrix_v1/.gpu_phase.lock"
-    with GpuPhaseLock(lock_path, STUDY):
+    with lock_class(lock_path, STUDY):
         gpu_before = snapshot(confirmations)
         ensure_idle(gpu_before)
         gpu_binding = validate_gpu_identity(gpu_before, context["expected_gpu"])
         output.mkdir(parents=True)
         pool_path = output / "image_pool_manifest.json"
         write_json(pool_path, context["pool"])
-        current_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=True).stdout.strip()
+        if current_commit is None:
+            current_commit = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=True).stdout.strip()
         run_manifest_path = output / "study_manifest.json"
         manifest = {
             "schema_version": 1,
@@ -705,13 +1039,19 @@ def _run_parent(args) -> int:
             "source_attempt2_manifest": {"path": str(context["source_manifest_path"]), "sha256": context["source_manifest_sha256"]},
             "source_execution_git_commit": context["source_manifest"].get("execution_git_commit"),
             "environment": context["expected_environment"],
-            "environment_preflight": preflight,
+            "environment_preflight": {
+                "status": "not_run_in_parent",
+                "reason": "CUDA-touching environment probe is deferred to each child session",
+                "child_required": True,
+            },
             "gpu_identity": context["expected_gpu"],
             "gpu_before_parent": gpu_before,
             "gpu_identity_binding_parent": gpu_binding,
             "operator_confirmations": [{"pid": pid, "reported_path": path} for pid, path in sorted(confirmations.items())],
             "engine_inventory": context["specs"],
             "round_schedule": schedule,
+            "output_dir": str(output),
+            "images": context["images_binding"],
             "runtime": {**RUNTIME_OPTIONS, "device": args.device},
             "warmup_calls": WARMUP_CALLS,
             "measured_calls_per_session": MEASURED_CALLS,
@@ -727,13 +1067,14 @@ def _run_parent(args) -> int:
         }
         write_json(run_manifest_path, manifest)
         completed = []
+        telemetry_sessions = []
         for item in schedule:
             spec = context["specs"][item["engine_key"]]
             session_dir = output / f"round_{item['round']}" / item["engine_key"]
             session_dir.mkdir(parents=True)
-            command = child_command(repo, spec, item["round"], session_dir, run_manifest_path, pool_path, images_dir, args.device, confirmations)
+            command = make_child_command(repo, spec, item["round"], session_dir, run_manifest_path, pool_path, images_dir, args.device, confirmations)
             print(f"START SESSION {item['sequence']}/39 round {item['round']} {item['engine_key']}", flush=True)
-            completed_process = subprocess.run(command, cwd=repo, capture_output=True, text=True, check=False)
+            completed_process = run_process(command, cwd=repo, capture_output=True, text=True, check=False)
             write_text(session_dir / "child.stdout.log", completed_process.stdout or "")
             write_text(session_dir / "child.stderr.log", completed_process.stderr or "")
             if completed_process.returncode:
@@ -748,26 +1089,43 @@ def _run_parent(args) -> int:
             if not session_path.is_file():
                 raise RuntimeError(f"Latency child returned success without session artifact: {session_path}")
             session = read_json(session_path)
-            _validate_session(session, item, spec, context["pool"], context["expected_environment"])
+            _validate_session(
+                session, item, spec, context["pool"], context["expected_environment"],
+                context["expected_gpu"], pool_path, session_dir, sha256_file(pool_path),
+            )
             write_json(session_dir / "execution_manifest.json", {
                 "schema_version": 1, "study": STUDY, "sequence": item["sequence"],
                 "round": item["round"], "engine_key": item["engine_key"],
                 "engine_sha256": spec["engine_sha256"], "command": command,
                 "returncode": completed_process.returncode,
                 "session_sha256": sha256_file(session_path),
+                "pool_manifest_sha256": sha256_file(pool_path),
+                "session_output_dir": str(session_dir),
                 "created_utc": datetime.now(timezone.utc).isoformat(),
             })
             completed.append(session)
+            telemetry_sessions.append({
+                "sequence": item["sequence"], "round": item["round"], "engine_key": item["engine_key"],
+                "before": session["gpu_before"].get("process_guard"),
+                "after": session["gpu_after"].get("process_guard"),
+            })
             print(f"FINISHED SESSION {item['sequence']}/39 round {item['round']} {item['engine_key']}", flush=True)
 
+        validate_complete_session_set(completed, schedule)
         per_engine = {key: _aggregate_engine_sessions([session for session in completed if session["engine_key"] == key]) for key in ENGINE_KEYS}
         arm_summary = {}
         for arm in ("fp16", *ARM_NAMES):
             rows = [session for session in completed if ENGINE_MODELS[session["engine_key"]] == arm]
             if arm == "fp16":
                 expected_builds = 1
+                expected_sessions = 3
+                expected_calls = 3000
             else:
                 expected_builds = 3
+                expected_sessions = 9
+                expected_calls = 9000
+            if len(rows) != expected_sessions or sum(len(session["raw_latency_ms"]) for session in rows) != expected_calls:
+                raise ValueError(f"Arm {arm} does not have the locked session/call cardinality")
             arm_summary[arm] = {
                 "arm": arm, "builds": expected_builds, "sessions": len(rows),
                 "build_keys": [key for key in ENGINE_KEYS if ENGINE_MODELS[key] == arm],
@@ -776,6 +1134,12 @@ def _run_parent(args) -> int:
             }
         final_gpu = snapshot(confirmations)
         ensure_idle(final_gpu)
+        final_gpu_binding = validate_gpu_identity(final_gpu, context["expected_gpu"])
+        _validate_persisted_gpu_evidence(final_gpu, final_gpu_binding, context["expected_gpu"], "Parent after")
+        external_workload_detected = any(
+            guard.get("external_gpu_workload_detected") is not False
+            for row in telemetry_sessions for guard in (row["before"], row["after"])
+        )
         summary = {
             "schema_version": 1,
             "study": STUDY,
@@ -795,8 +1159,14 @@ def _run_parent(args) -> int:
             "gpu_identity": context["expected_gpu"],
             "gpu_before_parent": gpu_before,
             "gpu_after_parent": final_gpu,
+            "gpu_identity_binding_after_parent": final_gpu_binding,
             "environment": context["expected_environment"],
-            "telemetry": {"external_workload_detected": False, "status": "complete", "limitation": "Sampled nvidia-smi snapshots cannot prove zero interference between observations."},
+            "telemetry": {
+                "external_workload_detected": external_workload_detected,
+                "status": "review_required" if external_workload_detected else "complete",
+                "sessions": telemetry_sessions,
+                "limitation": "Sampled nvidia-smi snapshots cannot prove zero interference between observations.",
+            },
             "created_utc": datetime.now(timezone.utc).isoformat(),
             "limitations": [
                 "Single shared RTX8000/server diagnostic; desktop exception may remain visible and GPU isolation is not absolute.",
@@ -813,8 +1183,11 @@ def _run_parent(args) -> int:
         return 0
 
 
-def _validate_session(session: dict, item: dict, spec: dict, pool: dict, expected_env: dict) -> None:
-    if session.get("status") != "completed" or session.get("study") != STUDY:
+def _validate_session(session: dict, item: dict, spec: dict, pool: dict, expected_env: dict,
+                      expected_gpu: dict | None = None, pool_manifest_path: Path | None = None,
+                      session_dir: Path | None = None, pool_manifest_sha256: str | None = None) -> None:
+    if (session.get("status") != "completed" or session.get("study") != STUDY or
+            session.get("dataset_split") != DATASET_SPLIT):
         raise ValueError(f"Session is not completed: {item['engine_key']} round {item['round']}")
     for key, expected in (("round", item["round"]), ("engine_key", item["engine_key"]), ("engine_sha256", spec["engine_sha256"]),
                           ("warmup_calls", WARMUP_CALLS), ("measured_calls", MEASURED_CALLS)):
@@ -824,16 +1197,52 @@ def _validate_session(session: dict, item: dict, spec: dict, pool: dict, expecte
         raise ValueError("Session runtime shape/options differ from locked latency contract")
     if session.get("image_pool", {}).get("pool_sequence_sha256") != pool.get("measured_sequence_sha256"):
         raise ValueError("Session image sequence differs from locked pool")
+    if pool_manifest_path is not None and session.get("image_pool", {}).get("manifest_path") != str(pool_manifest_path.resolve()):
+        raise ValueError("Session image pool path differs from parent manifest")
+    if pool_manifest_sha256 is not None and session.get("image_pool", {}).get("manifest_sha256") != pool_manifest_sha256:
+        raise ValueError("Session image pool hash differs from parent manifest")
     if session.get("image_pool", {}).get("measured_sequence_calls") != MEASURED_CALLS:
         raise ValueError("Session measured image sequence length differs")
+    if session.get("image_pool", {}).get("pool_size") != POOL_SIZE:
+        raise ValueError("Session image pool size differs from locked pool")
+    if session.get("image_pool", {}).get("same_image_bytes_checked") is not True:
+        raise ValueError("Session does not persist direct image-byte checks")
+    if session.get("engine_path") != spec.get("engine_path"):
+        raise ValueError("Session engine path differs from parent inventory")
+    if spec.get("engine_bytes") is not None and session.get("engine_bytes") != spec["engine_bytes"]:
+        raise ValueError("Session engine byte length differs from parent inventory")
+    if session_dir is not None and session.get("session_output_dir") != str(session_dir.resolve()):
+        raise ValueError("Session output location differs from scheduled directory")
     if session.get("warmup_in_timing") is not False or session.get("disk_decode_in_timing") is not False:
         raise ValueError("Session timing boundary includes excluded work")
     if session.get("synchronize_before_timer") is not True or session.get("synchronize_after_predict") is not True:
         raise ValueError("Session synchronization contract is incomplete")
+    observation = session.get("preprocessed_input_shape_observation", {})
+    if observation.get("expected_shape") != [1, 3, RUNTIME_OPTIONS["imgsz"], RUNTIME_OPTIONS["imgsz"]] or observation.get("timing_excluded") is not True:
+        raise ValueError("Session lacks the locked preprocessed input-shape observation")
+    if not observation.get("by_source_aspect_ratio") or any(
+            row.get("shape") != observation.get("expected_shape")
+            for row in observation["by_source_aspect_ratio"].values()):
+        raise ValueError("Observed preprocessed input shape is not (1,3,640,640) for every sampled aspect ratio")
     _check_environment_subset(session.get("environment", {}), expected_env, "Session", require_all=True)
-    latency_statistics(session.get("raw_latency_ms", []))
-    if session.get("latency_ms") != latency_statistics(session["raw_latency_ms"]):
+    raw = session.get("raw_latency_ms", [])
+    if len(raw) != MEASURED_CALLS:
+        raise ValueError("Session must persist exactly 1,000 raw latency samples")
+    if session.get("latency_ms", {}).get("n_calls") != MEASURED_CALLS:
+        raise ValueError("Session latency metadata does not report 1,000 calls")
+    latency_statistics(raw)
+    if session.get("latency_ms") != latency_statistics(raw):
         raise ValueError("Session latency summary does not reproduce raw samples")
+    before_binding = session.get("gpu_identity_binding", {}).get("before")
+    after_binding = session.get("gpu_identity_binding", {}).get("after")
+    expected_gpu = expected_gpu or (before_binding or {}).get("expected")
+    if not expected_gpu:
+        raise ValueError("Session has no expected GPU identity binding")
+    _validate_persisted_gpu_evidence(session.get("gpu_before"), before_binding, expected_gpu, "Session before")
+    _validate_persisted_gpu_evidence(session.get("gpu_after"), after_binding, expected_gpu, "Session after")
+    guard_evidence = session.get("process_guard_evidence", {})
+    if guard_evidence.get("before") != session["gpu_before"].get("process_guard") or guard_evidence.get("after") != session["gpu_after"].get("process_guard"):
+        raise ValueError("Session process guard evidence is not bound to persisted GPU snapshots")
 
 
 def main(argv=None) -> int:
@@ -846,7 +1255,8 @@ def main(argv=None) -> int:
     parser.add_argument("--fp16-capture", type=Path, default=Path("results/measurement_audit_v1/server_fp16_capture_v1"))
     parser.add_argument("--fp16-verification", type=Path, default=Path("results/measurement_audit_v1/server_native_size_v1"))
     parser.add_argument("--accuracy-root", type=Path, default=Path("results/measurement_audit_v1") / ACCURACY_DIR_NAME)
-    parser.add_argument("--images-dir", type=Path, default=Path("../nighttime-tsd/data/processed/cctsdb2021_clean/dev/images"))
+    parser.add_argument("--images-dir", type=Path, default=None,
+                        help="Optional relocated dev image directory; relative paths are resolved from this repository")
     parser.add_argument("--child", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--engine-key")
     parser.add_argument("--engine", type=Path)

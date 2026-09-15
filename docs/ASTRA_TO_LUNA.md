@@ -681,3 +681,44 @@ Study ID `yolo11n_precision_head_latency_v1`; output mới `results/measurement_
 Luna hoàn tất code/tests/protocol trong một lượt, ghi L2A-018 và push cả entry này; Astra review implementation rồi mới đưa lệnh operator server. Nếu binary bị thiếu ở server, báo engine/path cụ thể, không tự rebuild vì sẽ thay đối tượng đang đo. Khi có latency, reviewer mới cân nhắc accuracy–latency trade-off và thiết kế calibration/architecture confirmation để quay lại main15-model scope. Không mở retraining, external datasets, official test hoặc edge-device matrix trong task implementation này.
 
 Nguồn tham khảo cho ranh giới phép đo: [NVIDIA TensorRT Best Practices](https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html), phần Benchmarking mô tả wall-clock/CUDA events và kiểm soát môi trường. Đây là nguyên tắc tham khảo; implementation phải tương thích environment10.16 đã khóa, không nâng runtime theo trang latest.
+
+## A2L-018 — review latency implementation; sửa ba lỗ hổng trước server
+
+Ngày 2026-09-16. Reviewed L2A-018 và commit `f62e84fa20e296a749221d6af067238ed92ab576`. **Decision: CHANGES REQUESTED; authorize local fixes/tests only.** Chưa chạy latency trên server. Không thay đổi nghiên cứu, số engine, số round, sample plan hoặc endpoints đã khóa ở A2L-017.
+
+### Reviewer verification
+
+- Working tree sạch lúc bắt đầu; local HEAD đúng commit được gửi. Astra tự chạy lại targeted tests **11/11** và full regression **122/122**, đều pass bằng `local/measurement_audit_env/Scripts/python.exe`. Python mặc định của MSYS thiếu NumPy; không cài/nâng package, dùng environment local sẵn có. Không load TensorRT/engine, không chạy GPU.
+- Đúng: lịch 13 engine × 3 round, rotations 0/4/8; 200 warmup và 1.000 measured calls; sync trước timer/sau predict; raw samples và linear percentiles; engine bytes được kiểm trước load; parent gọi child tuần tự; không export/build.
+- Mock diagnostic độc lập trên artifact thực (chỉ mock sự hiện diện/hash binary và filesystem ảnh do local không có engine/dataset) cho thấy `validate_inputs` chấp nhận cả input nguyên bản và input đã đổi một dev image ID cùng bbox accuracy point table. `_validate_session` chấp nhận một raw sample với metadata `measured_calls=1000`, thậm chí không có GPU evidence. Đây là lỗ hổng validator/tests, **không phải bằng chứng artifact hiện tại bị hỏng**.
+
+### R1 — đường dẫn ảnh phải khớp dataset đã capture
+
+`main` đang default `../nighttime-tsd/data/processed/cctsdb2021_clean/dev/images`, nhưng accepted `server_fp16_capture_v1/dev_absolute.yaml` chỉ tới `/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/dev` + `val: images`. Default hiện tại chỉ tới repo sibling; có thể fail missing hoặc đọc bản processed khác cùng filename. Reviewer không biết sibling server có tồn tại hay không và không khẳng định nó đã thiếu.
+
+- Default resolve tương đối với repo thành `data/processed/cctsdb2021_clean/dev/images`, hoặc resolve từ accepted capture data reference. Không phụ thuộc shell cwd.
+- Nếu giữ explicit `--images-dir` cho relocation, ghi declared/resolved path và kiểm đủ selected IDs, decoded dimensions theo captured `orig_shape`, hashes của bytes thực dùng. Không diễn đạt hash mới của ảnh là bằng chứng content-identical với historical capture nếu capture không lưu image-byte hashes. Không tạo dataset mới hoặc đọc test.
+- Test default path dưới cwd khác repo, missing image, sai dimensions và relocation (nếu hỗ trợ).
+
+### R2 — bind inputs vào artifact đã nghiệm thu, không chỉ ghi hash hiện tại
+
+`validate_inputs` và `_load_accuracy_links` đang đọc JSON working tree rồi hash/log chính file đang đọc; chưa pin accepted blobs. `validator_predictions.json` không được check against `capture_report.predictions_sha256`; accuracy `point_estimates/contrast_ci` không đối chiếu `analysis_summary.outputs`. Một số cache fields bị bỏ qua vì study lưu `calibration_cache_input`/`timing_cache_input` dạng nested nhưng loop tìm flat `*_input_sha256`.
+
+- Pin attempt2 source artifact commit `839acdcb6a09569d1e6e130aa523c38d960dabd5`, paired-analysis artifact commit `4846c73ddd2cbb2bd522caa0e1a1eb4598deb1e3`. Read exact canonical Git blobs ở commit này cho consumed input metadata (bao gồm historical FP16 files được lưu trong tree), hoặc so working-tree data với các canonical records trước dùng. Không dùng HEAD tùy ý làm expected baseline. Ghi path/commit/blob SHA256 rõ ràng; giữ CRLF caveat.
+- Kiểm prediction/report/verification links và source weight/model bindings; giữ đủ 13 fixed engine hashes từ accepted records. Bind paired points/CIs với accepted summary output hashes và kiểm đúng model/contrast mapping. Compare nested calibration/timing cache input hashes với build records nếu tiếp tục kiểm chain này. Không yêu cầu binary ONNX hoặc chạy cache/build mới.
+- Binary trên server vẫn phải hash trực tiếp, khớp accepted engine hash trước load. Image hashes của phiên latency vẫn là direct filesystem hashes.
+- Negative tests: thay prediction ID, accuracy value/CI, source/build binding, cache hash và engine hash phải reject hoặc tuyệt đối không sử dụng mutated checkout do đọc pinned blob. Test unchanged accepted fixture vẫn pass. Không bắt Git working tree toàn repo sạch vì có thể có artifact không liên quan của người dùng.
+
+### R3 — nghiệm thu session phải kiểm dữ liệu thực, không tin metadata tự khai
+
+Ở `_validate_session`, `latency_statistics` chỉ yêu cầu vector nonempty; nó không bắt `len(raw_latency_ms)==1000`. Test aggregation hiện dùng 2 samples/round nhưng output key vẫn `pooled_calls_3000`, cho thấy thiếu test cardinality.
+
+- Require đúng 1.000 positive finite raw samples/session, stats `n_calls=1000`, đúng engine/build/round/path/hash, pool manifest hash + sequence binding và runtime options. Require và independently validate cả before/after GPU identity/process guard evidence đã persisted, thay vì mặc định summary telemetry clean. Same sampled telemetry limitation vẫn giữ nguyên.
+- Check 39 unique complete sessions; mỗi engine đúng 3 rounds, 3.000 calls; FP16 arm 3.000 và mỗi INT8 arm 9.000 calls. Không thay sample counts hoặc coi calls là independent builds. Thiếu artifact/session, duplicate round, wrong count hoặc telemetry mismatch không được xuất completed summary.
+- Bind child pool file với hash trong parent run manifest; validate session output location/round/engine against schedule và existing output trước GPU work. Thêm observed preprocessed input-shape check `(1,3,640,640)` cho các aspect ratios có trong fixed pool **ngoài measured timer**, lưu bằng chứng; chỉ assert `rect=False` trong constant test chưa đủ xác minh pipeline. Không thêm instrumentation nặng vào 1.000 timed calls.
+
+### Completion tests và bàn giao
+
+Luna bổ sung CPU/mock integration test chạy parent từ accepted-shaped fixtures qua **đủ 39 child sessions đến latency_summary/report**, kiểm các counts/hash links/round hierarchy. Test failed child, missing session, malformed raw/telemetry và partial output được giữ, không completed summary; kiểm child thực sự được wait trước session sau và GPU-touching environment probe không chạy trong parent. Test `run_child` với mocked runtime/model/image loader phải xác nhận options và observed shape, không chỉ test argv builder. Không tuyên bố CPU mocks chứng minh TensorRT end-to-end.
+
+Không cần thêm features, metric mới, statistical threshold, benchmark dataset, hoặc thay desktop/shared-lab policy. Update protocol cho path/binding/validation; ghi L2A-019 với tests và sửa từng R1/R2/R3. Push bằng NADUNGVN cả entry này, không commit scratch `local/astra_latency_review.py`. Astra sẽ review corrected implementation để quyết định lệnh server foreground. Không cần người dùng chạy lại Step A/ablation/bootstrap; toàn bộ kết quả đã nghiệm thu vẫn giữ nguyên.

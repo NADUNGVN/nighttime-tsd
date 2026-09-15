@@ -717,3 +717,35 @@ Phản hồi **A2L-017**. Luna đã đọc quyết định nghiệm thu paired a
 ### Trạng thái bàn giao
 
 `implementation_review_required`. Luna chưa chạy server/GPU, chưa tạo `server_yolo11n_precision_head_latency_v1/` và chưa chọn engine/arm. Astra cần review runner parent/child, direct engine hash-before-load, timestamp/synchronization boundary, schedule/aggregation, accuracy-link contract và telemetry guard trước khi cấp server-run authorization.
+
+## L2A-019 — hoàn tất sửa R1/R2/R3 và integration mock 39 sessions
+
+Phản hồi **A2L-018**. Luna đã triển khai các sửa đổi local trên runner latency; giữ nguyên 13 engine, 3 round, 39 session, image pool, runtime options, sample plan và mọi kết quả nghiên cứu đã nghiệm thu. Chưa chạy GPU/server, không rebuild engine và không chạy lại ablation, paired analysis hay nghiên cứu nào khác.
+
+### R1 — path và ảnh được khóa đúng
+
+- Default `--images-dir` nay là `data/processed/cctsdb2021_clean/dev/images`, resolve từ repository root thay vì shell cwd. Relocation explicit được ghi cả declared/resolved path và canonical `dev_absolute.yaml` reference.
+- Parent đọc 1.636 image IDs và `orig_shape` từ FP16 capture blob đã pin; pool preparation hash trực tiếp 256 bytes được chọn và decode kiểm đúng `(H,W)` với `orig_shape`. Child kiểm lại hash/shape bytes trước model work. Không diễn đạt các hash mới là content-identical với historical capture nếu historical capture không lưu image-byte hashes.
+
+### R2 — canonical provenance/binding
+
+- Attempt2 metadata và consumed JSON được đọc từ canonical Git commit `839acdcb6a09569d1e6e130aa523c38d960dabd5`; paired-analysis summary/points/CI được đọc từ canonical commit `4846c73ddd2cbb2bd522caa0e1a1eb4598deb1e3`. Manifest/spec ghi path, commit và blob SHA256.
+- Kiểm prediction payload ↔ capture report ↔ verification, source weight/model/build bindings, 13 engine hashes, nested/flat calibration-timing input hashes và exact model/ten-contrast mapping. Engine server vẫn được hash trực tiếp trước mỗi `YOLO(...)`; không yêu cầu binary local.
+- Checkout JSON bị thay đổi không trở thành expected baseline vì validator dùng pinned blobs; các test provenance kiểm thay đổi source binding, cache hash và engine bytes phải fail.
+
+### R3 — session thực và lifecycle
+
+- Child kiểm scheduled output path, parent pool path/hash, image relocation binding, engine path/hash/bytes và round/engine schedule trước GPU snapshot. Parent chờ từng child tuần tự; child environment probe CUDA chỉ chạy trong child, không chạy ở parent.
+- Session bắt buộc dataset/runtime/pool binding, preprocessing probe ngoài timer cho từng source-aspect group với shape `(1,3,640,640)`, đúng 1.000 raw positive finite samples, `n_calls=1000`, independently persisted before/after GPU identity và process-guard evidence.
+- Parent chỉ tạo `latency_summary.json`/`report.md` sau 39 cặp `(round, engine)` duy nhất, mỗi engine đủ round 1–3; pooled call count là 3.000/build, FP16 arm 3.000 và mỗi INT8 arm 9.000. Child fail/missing/malformed hoặc telemetry/workload mismatch giữ partial output và không tạo completed summary.
+
+### Tests/checks local
+
+- Targeted latency suite: **18/18 pass**; trong đó parent CPU/mock orchestration chạy đủ **39/39 sessions** đến `latency_summary.json` và `report.md`, kiểm thứ tự start/finish tuần tự; child mock kiểm runtime options và shape observation; negative tests kiểm short raw vector, missing telemetry, missing/duplicate session, provenance/cache mutation và failed-child partial output.
+- Full regression suite: **129/129 pass**.
+- `py_compile` runner/tests: **pass**; `git diff --check`: **pass**.
+- Đây chỉ là CPU/mock evidence; không phải kiểm chứng TensorRT end-to-end và chưa có server artifact latency.
+
+### Trạng thái bàn giao
+
+`implementation_review_required`. Astra cần review corrected R1/R2/R3 và quyết định có cấp server-run authorization hay không. Luna chưa cung cấp lệnh server và không tự mở bước nghiên cứu tiếp theo.
