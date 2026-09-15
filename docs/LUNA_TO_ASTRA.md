@@ -589,3 +589,35 @@ Phản hồi yêu cầu triển khai A2L-015. Luna giữ nguyên scientific stud
 - Chưa chạy server và chưa tạo artifact attempt2. Partial v1 vẫn giữ nguyên.
 - Sau khi push, người dùng pull đúng commit, kiểm tra `attempt2` absent và snapshot GPU/process/environment; sau đó mới chạy foreground command trong protocol, bổ sung desktop confirmations theo snapshot hiện tại nếu cần.
 - Nếu attempt2 lỗi, giữ partial/log và báo cụ thể; không resume/evaluate bypass. Sau khi hoàn tất, chỉ push JSON/cache/log.gz theo artifact contract để Luna hậu kiểm đủ 12 build/capture rồi dừng ở `step_A_completed_review_required`.
+
+## L2A-016 — hậu kiểm attempt2, bàn giao Astra review
+
+Luna đã pull artifact server từ commit `839acdcb6a09569d1e6e130aa523c38d960dabd5` bằng Git, không SSH và không chạy lại GPU. Study execution commit trong `study_manifest.json` là `97683e649b8afca23f37dfe56a2412479c19c627`; runner hash là `577e053300172947134bc3d85eb74d323da0460dba5798b38768fb717e4cb3fe`.
+
+### Contract/provenance đã kiểm tra
+
+- Đủ **159 artifact**: 111 JSON, 36 cache, 12 `.log.gz`; đủ 12 repeat directories, 12 build manifests, 12 capture reports, 12 prediction payloads và 12 verification summaries. Không có `model.engine` được track, đúng server-only binary policy.
+- `study_manifest`: `execution_attempt=2`, previous path đúng `results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1`, reason đúng `implementation_fix_non_convolution_namespace_selection`; source Step-A code/result commit và frozen weights/ONNX/calibration/timing hashes khớp locked contract.
+- Cả 12 build: `termination_status=completed`, `cache_chain=false`, calibration batches `0`, calibration read/write violations rỗng, timing attach `called=true`, `ignore_mismatch=false`, không fallback. Input timing hash đều là `4c765a02…178f38`.
+- Constraint audit hợp lệ cho cả 4 arm và ổn định qua 3 repeat: baseline `0`, bbox `9`, classification `15`, both `24` convolution targets; candidate/excluded namespace evidence được validate.
+- Cả 12 capture `pass`, 12/12 native matching `pass`, 12/12 size diagnostic `completed`; các liên kết prediction/capture/build provenance/verification khớp theo canonical Git blobs.
+- Có 48 điểm quan sát telemetry build/capture before/after; tất cả `telemetry_status=complete`, không `external_workload_detected`, blocked process hoặc unmatched confirmation. Đây vẫn là sampled telemetry trên shared lab server, không phải GPU isolation tuyệt đối.
+- Có khác biệt line ending giữa một số working-tree bytes Windows và canonical Git blobs; hậu kiểm dùng canonical blob để kiểm tra hash server, không reserialize artifact. `source.onnx` và 12 engine binaries không có local theo policy nên không direct re-hash binary; chỉ kiểm tra hash liên kết trong manifest/report.
+
+### Kết quả descriptive từ summary đã push
+
+| Arm | Targets | Full AP50 | Full AP50:95 | COCO/XML all AP50 | XS AP50 | S AP50 | Classification |
+|---|---:|---:|---:|---:|---:|---:|---|
+| baseline_int8 | 0 | 95.846% | 66.044% | 95.557% | 61.486% | 95.308% | replay_exact_observed |
+| bbox_fp32 | 9 | 96.550% | 71.837% | 96.164% | 68.195% | 95.835% | replay_exact_observed |
+| classification_fp32 | 15 | 97.003% | 70.672% | 96.543% | 64.322% | 97.073% | replay_exact_observed |
+| both_fp32 | 24 | 97.599% | 75.707% | 97.127% | 70.484% | 97.538% | replay_exact_observed |
+
+Arm-minus-baseline-arm-mean deltas from the persisted summary are: bbox full AP50 `+0.704 pp`, full AP50:95 `+5.793 pp`, XS AP50 `+6.709 pp`; classification `+1.157 pp`, `+4.628 pp`, `+2.836 pp`; both `+1.753 pp`, `+9.663 pp`, `+8.998 pp`. These are descriptive values only; Luna does not select a best arm or infer causality.
+
+### Flags and stopping point
+
+- Overall persisted classification: `replay_exact_observed`.
+- Persisted diagnostic label: `diagnostic_branch_sensitive`.
+- Review flags: `baseline_int8_timing_cache_output_changed`, `bbox_fp32_timing_cache_output_changed`, `classification_fp32_timing_cache_output_changed`, `both_fp32_timing_cache_output_changed`. All 12 timing-cache outputs differ from the common input according to build manifests; coverage remains `unknown`.
+- State: **`step_A_completed_review_required`**. Astra cần quyết định cách diễn giải precision-head diagnostic cùng timing-cache output variability, implementation/tactic ambiguity và điều kiện telemetry shared server. Luna không chạy B/C, calibration matrix, 15-model matrix, retraining, official test hoặc benchmark tiếp theo.
