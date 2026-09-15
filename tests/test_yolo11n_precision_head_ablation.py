@@ -182,15 +182,15 @@ class PrecisionHeadAblationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "server_yolo11n_precision_head_ablation_v1"):
                 ablation.validate_output_target(repo, repo / "results/measurement_audit_v1/other")
 
-    def test_exact_prefix_selection_rejects_non_convolution_and_missing_nodes(self):
+    def test_exact_prefix_selection_ignores_non_convolution_branch_helpers_and_rejects_missing_nodes(self):
         specs = [
             {"name": "/model.23/cv2.0.conv", "is_convolution": True},
             {"name": "/model.23/cv3.0.conv", "is_convolution": True},
             {"name": "/model.23/cv2.extra/activation", "is_convolution": False},
         ]
         self.assertEqual(ablation.select_precision_layers(specs, "baseline_int8"), [])
-        with self.assertRaisesRegex(ValueError, "non-convolution"):
-            ablation.select_precision_layers(specs, "bbox_fp32")
+        self.assertEqual(ablation.select_precision_layers(specs, "bbox_fp32"),
+                         ["/model.23/cv2.0.conv"])
         self.assertEqual(ablation.select_precision_layers(specs[:2], "bbox_fp32"),
                          ["/model.23/cv2.0.conv"])
         with self.assertRaisesRegex(ValueError, "No parsed"):
@@ -198,6 +198,24 @@ class PrecisionHeadAblationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "differs"):
             ablation.validate_selected_precision_layers(specs[:2], "bbox_fp32",
                                                         ["/model.23/cv3.0.conv"])
+
+    def test_prefix_audit_records_non_convolution_helpers_without_selecting_them(self):
+        network = FakeNetwork()
+        helper = FakeLayer("/model.23/cv2.0/cv2.0.0/act/Sigmoid",
+                           FakeTRT.LayerType.ACTIVATION)
+        network._layers.insert(1, helper)
+        network.num_layers = len(network._layers)
+        audit = ablation.apply_precision_constraints(
+            network, FakeTRT(), "bbox_fp32",
+            ["/model.23/cv2.0/cv2.0.0/act/Sigmoid", "/model.23/Sigmoid"])
+        self.assertEqual(audit["matched_layer_names"], ["/model.23/cv2.0.0.conv"])
+        self.assertEqual(audit["prefix_candidate_names"], [
+            "/model.23/cv2.0.0.conv", "/model.23/cv2.0/cv2.0.0/act/Sigmoid"])
+        self.assertEqual(audit["excluded_prefix_non_convolution_names"], [
+            "/model.23/cv2.0/cv2.0.0/act/Sigmoid"])
+        ablation.validate_constraint_audit(
+            audit, "bbox_fp32",
+            ["/model.23/cv2.0/cv2.0.0/act/Sigmoid", "/model.23/Sigmoid"])
 
     def test_constraints_set_all_outputs_fp32_and_preserve_baseline_sigmoid(self):
         for arm, expected in (("baseline_int8", []),

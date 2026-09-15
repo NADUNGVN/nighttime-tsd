@@ -267,7 +267,11 @@ def _normalize_layer_specs(layer_specs):
 
 
 def select_precision_layers(layer_specs, arm: str):
-    """Select exact branch layers from parsed network names and layer types."""
+    """Select convolution layers under the exact branch prefix.
+
+    A branch namespace also contains activation/other helper layers. Those
+    nodes are candidates for audit but are not precision-head targets.
+    """
     if arm not in ARMS:
         raise ValueError(f"Unknown precision-ablation arm: {arm}")
     specs = _normalize_layer_specs(layer_specs)
@@ -275,9 +279,8 @@ def select_precision_layers(layer_specs, arm: str):
     selected = []
     for name, is_convolution in specs:
         if any(name.startswith(prefix) for prefix in prefixes):
-            if not is_convolution:
-                raise ValueError(f"Precision branch prefix matched non-convolution layer: {name}")
-            selected.append(name)
+            if is_convolution:
+                selected.append(name)
     if arm != "baseline_int8" and not selected:
         raise ValueError(f"No parsed convolution layers matched {arm} prefixes {prefixes}")
     return selected
@@ -321,6 +324,15 @@ def validate_constraint_audit(constraint, arm: str, source_sigmoid_names) -> Non
     requested = constraint.get("requested", {})
     effective = constraint.get("effective", {})
     selected = constraint.get("matched_layer_names", [])
+    candidates = constraint.get("prefix_candidate_names", [])
+    excluded = constraint.get("excluded_prefix_non_convolution_names", [])
+    if (not isinstance(candidates, list) or len(candidates) != len(set(candidates)) or
+            not isinstance(excluded, list) or len(excluded) != len(set(excluded)) or
+            set(selected) | set(excluded) != set(candidates) or
+            set(selected) & set(excluded)):
+        raise ValueError(f"{arm} prefix candidate/effective layer evidence is incomplete")
+    if arm == "baseline_int8" and candidates:
+        raise ValueError("Baseline arm has unexpected prefix candidates")
     if set(requested) != set(selected) or set(effective) != set(selected):
         raise ValueError(f"{arm} precision constraint evidence is incomplete")
     for name in selected:
@@ -344,6 +356,13 @@ def validate_arm_layer_contract(manifests) -> None:
                   for repeat in REPEATS]
         if any(value != values[0] for value in values[1:]):
             raise ValueError(f"{arm} precision layer list differs across repeats")
+        candidates = [tuple(repeats[repeat]["constraint_audit"].get("prefix_candidate_names", []))
+                     for repeat in REPEATS]
+        excluded = [tuple(repeats[repeat]["constraint_audit"].get(
+            "excluded_prefix_non_convolution_names", [])) for repeat in REPEATS]
+        if any(value != candidates[0] for value in candidates[1:]) or any(
+                value != excluded[0] for value in excluded[1:]):
+            raise ValueError(f"{arm} prefix candidate layer list differs across repeats")
         names[arm] = set(values[0])
     if names["baseline_int8"]:
         raise ValueError("Baseline arm unexpectedly selected head layers")
@@ -377,7 +396,14 @@ def apply_precision_constraints(network, trt, arm: str, source_sigmoid_names):
         layers.append(layer)
         layer_specs.append({"name": layer.name,
                             "is_convolution": layer.type == trt.LayerType.CONVOLUTION})
-    selected = select_precision_layers(layer_specs, arm)
+    normalized_specs = _normalize_layer_specs(layer_specs)
+    selected = select_precision_layers(normalized_specs, arm)
+    prefixes = BRANCH_PREFIXES.get(arm, ())
+    prefix_candidates = [name for name, _is_conv in normalized_specs
+                         if any(name.startswith(prefix) for prefix in prefixes)]
+    excluded_non_convolution = [name for name, is_conv in normalized_specs
+                                if any(name.startswith(prefix) for prefix in prefixes)
+                                and not is_conv]
     by_name = {layer.name: layer for layer in layers}
     before = {}
     after = {}
@@ -413,6 +439,8 @@ def apply_precision_constraints(network, trt, arm: str, source_sigmoid_names):
     return {
         "arm": arm,
         "branch_prefixes": list(BRANCH_PREFIXES.get(arm, ())),
+        "prefix_candidate_names": prefix_candidates,
+        "excluded_prefix_non_convolution_names": excluded_non_convolution,
         "matched_layer_names": selected,
         "matched_layer_count": len(selected),
         "matched_layer_types": {name: "CONVOLUTION" for name in selected},

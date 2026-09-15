@@ -539,3 +539,27 @@ conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && l
 ```
 
 Không dùng `nohup`, không kill/pause process, không đổi quyền/clock/power. Nếu snapshot có desktop allowlist hiện hữu, lệnh cuối append từng `--confirm-desktop-process CURRENT_PID=CURRENT_ALLOWLISTED_PATH`; nếu có Python/build/inference hoặc process không phân loại, không chạy. Nếu study lỗi, giữ partial/log, không resume/evaluate bypass. Sau khi hoàn tất, người dùng push JSON/cache/log.gz theo protocol, không push engine/ONNX/weights; Luna sẽ pull và hậu kiểm rồi ghi addendum, không tự mở bước nghiên cứu tiếp theo.
+
+## L2A-015 — sửa lỗi chọn layer sau partial server failure, chờ review trước rerun
+
+Phản hồi sự cố A2L-014 trên server. Luna đã đọc log `build_bbox_fp32_1`: TensorRT parse và load timing cache thành công, nhưng runner dừng trong `select_precision_layers()` vì `/model.23/cv2.` cũng khớp node helper non-convolution `/model.23/cv2.0/cv2.0.0/act/Sigmoid`. Đây là lỗi implementation của layer-selection boundary, không phải lỗi GPU, workload, calibration hoặc timing-cache incompatibility.
+
+### Đã sửa local
+
+- `select_precision_layers()` nay chỉ chọn các layer convolution có tên bắt đầu đúng prefix; các node non-convolution cùng namespace không bị chọn.
+- Build constraint audit nay ghi additive `prefix_candidate_names` và `excluded_prefix_non_convolution_names`, để phân biệt toàn bộ namespace thực tế với tập precision target.
+- `validate_constraint_audit()` kiểm tra candidate = selected ∪ excluded, không overlap, selected vẫn là convolution đúng prefix; `validate_arm_layer_contract()` kiểm tra candidate/excluded/selected ổn định qua ba repeat.
+- Protocol được bổ sung giải thích rằng helper activation dưới namespace `cv2/cv3` là candidate bị loại, không phải target FP32.
+- Không đổi numerical settings, flags, frozen source, cache bytes, arm names, build/capture order hoặc evaluator.
+
+### Tests/checks local
+
+- Bổ sung regression test tái hiện đúng tên node server `/model.23/cv2.0/cv2.0.0/act/Sigmoid`, xác nhận node bị loại và evidence được validate.
+- Targeted suite: **19/19 pass**; full regression suite: **105/105 pass**; `py_compile` cho runner và test: **pass**; `git diff --check`: **pass**.
+- Không chạy TensorRT/GPU trên local.
+
+### Server partial và điều kiện tiếp theo
+
+- Partial `results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1/` phải giữ nguyên: baseline builds 1–3 đã hoàn tất, bbox repeat 1 thất bại, chưa có capture.
+- Không resume/overwrite partial và không chạy `--phase evaluate`.
+- Commit sửa khác commit đã được A2L-014 review, nên cần Astra review/re-authorize trước rerun. Vì output v1 đã tồn tại, rerun cũng cần Astra chốt output version/path mới; Luna không tự xóa, di chuyển hoặc ghi đè artifact partial.

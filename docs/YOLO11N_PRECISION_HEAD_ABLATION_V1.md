@@ -23,6 +23,8 @@ The source is the accepted Step-A study `server_uniform_build_repeat_v1`. The ac
 
 Selection is performed after parsing the actual network and checks layer type. Every selected convolution receives requested FP32 precision and FP32 output types with `OBEY_PRECISION_CONSTRAINTS`. The builder settings remain Step A: INT8 on, FP16/TF32 off, workspace 4 GiB, optimization level 3, average timing iterations 1, detailed inspector. No `/model.23/dfl`, `/model.23/Sigmoid`, backbone, neck, or decode layer is newly selected.
 
+The `cv2.` and `cv3.` namespaces also contain helper activations and other non-convolution nodes. These prefix candidates are recorded as `prefix_candidate_names` and `excluded_prefix_non_convolution_names`; they are not precision targets and do not cause a failure merely because they share the namespace. A missing convolution match, a selected non-convolution, an outside-prefix name, or an unstable list across repeats remains a hard contract failure.
+
 Each build manifest records full matched names, counts, layer types, branch prefixes, and before/requested/after constraint states. These records describe requested/effective builder evidence; they do not prove that every branch arithmetic operation ran in FP32, and counts are not FLOP ratios.
 
 ## Build and capture order
