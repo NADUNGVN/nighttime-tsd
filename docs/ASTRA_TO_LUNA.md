@@ -632,3 +632,52 @@ Tất cả 12 engine hashes khác nhau. Baseline/bbox mỗi arm có một timing
 7. Nếu local có XML và environment phù hợp, Luna được chạy CPU analysis ngay. Nếu thiếu XML hoặc environment cần dùng server, hoàn tất code/tests và push rồi đưa người dùng một lệnh CPU foreground; chạy được trên server khác hoặc cạnh GPU job vì task này không build/inference/benchmark, không áp GPU-idle guard. Ghi đúng nơi thực thi và giới hạn tương thích, không đòi SSH hoặc chuyển engine.
 
 Luna ghi L2A-017 với artifact commit, bảng contrasts/CI, point-estimate reproduction và giới hạn rồi bàn giao Astra. Task được nghiệm thu không có nghĩa toàn bộ paper đã đủ dữ liệu. Bằng chứng này dùng để quyết định thiết kế xác nhận precision/calibration và sau đó main15-model study; chưa tự động mở server experiments mới, retrain, official test hoặc latency/energy benchmark trong entry này.
+
+## A2L-017 — nghiệm thu paired analysis; giao chuẩn bị đo accuracy–latency
+
+Ngày review: 2026-09-16. Reviewed L2A-017 ở report commit `bb3e280731c076da1c55d2cfbedece9d6c40fbb5`, artifact `4846c73ddd2cbb2bd522caa0e1a1eb4598deb1e3`, code `8b5a3420f1eeb460b58198647cbdbe83f1ab1045`. **Decision: ACCEPT paired dev analysis; kết thúc bước phân tích uncertainty này.** Không yêu cầu bootstrap lại hoặc tăng resamples.
+
+### Kiểm tra độc lập
+
+- Đủ9 artifact; 111 liên kết hash output/code/study/13 nhóm input khớp canonical Git blobs. Ba repeat mỗi arm có payload hashes exact; representative repeat1 là deduplication, không chọn theo AP.
+- Tạo lại PCG64 seed20260916, ma trận1,000×1,636 và sorted sample indices: exact; image names khớp sorted dev capture. Draw array shape1,000×5×6×2, finite toàn bộ.
+- Tính độc lập point deltas và percentile2.5/97.5 từ saved draws: đủ120 ô (10 contrasts×6 sizes×2 metrics), max absolute difference0. Tất cả1,000 valid/0 undefined. Point estimates khớp các persisted size reports, reproduction error0.
+- Tính lại180 gained/lost counts từ localization_per_gt ở 5 representations×6 sizes×3 IoU×2 transitions: khớp. Targeted paired tests5/5 đạt.
+- Reviewer local NumPy2.4.2, server2.4.4: tái lập indices/CI exact trong kiểm tra này. Không tuyên bố đã chạy lại toàn bộ1,000 COCO/XML evaluations ở local; kiểm tra này tái tính CI từ saved draws và hậu kiểm point/input bindings, đọc implementation duplicate handling. XML và TensorRT binaries không được chạy tại local.
+
+### Kết luận khoa học được phép
+
+Tất cả số liệu dưới đây là COCO/XML diagnostic, delta theo điểm phần trăm, với exploratory paired percentile95% CI có điều kiện trên fixed captures/dev sample; không phải CI cho build/calibration/training variance hoặc kiểm định nhiều contrasts đã hiệu chỉnh.
+
+| Contrast | All AP50–95 | XS AP50 | XS AP50–95 |
+|---|---:|---:|---:|
+| Bbox − baseline | +5.4263 [4.9118,5.8991] | +6.7094 [2.1525,11.2544] | +7.3861 [4.9635,10.1734] |
+| Classification − baseline | +3.6271 [2.9389,4.1490] | +2.8362 [-0.3497,5.3691] | +1.3778 [0.1425,2.5680] |
+| Both − baseline | +8.5067 [7.7104,8.9999] | +8.9983 [3.1418,15.1011] | +8.9474 [5.7214,12.6664] |
+
+Bbox/both có tín hiệu phục hồi XS và localization đủ rõ để chuyển sang đánh giá chi phí chạy. Classification-only cũng cải thiện all AP50–95; chưa có bằng chứng XS AP50 tăng nhất quán vì CI chứa0. Bbox−classification XS AP50 CI cũng chứa0, nên không viết bbox chắc chắn tốt hơn classification ở mọi small-object endpoint. Both−bbox XS AP50/AP50–95 CIs chứa0; chưa chứng minh bảo vệ cả hai luôn tốt hơn bbox-only cho XS.
+
+Both−FP16 all AP50–95 = −0.6049 pp [−0.9361,−0.3670]; vẫn còn gap theo metric này. XS CIs so FP16 chứa0 không phải chứng minh equivalence/non-inferiority, vì chưa khóa equivalence margin. S AP50 của bbox−baseline cũng chưa chắc chắn. Giữ cả10 contrasts trong supplementary tables.
+
+Localization all IoU75: bbox gained141/lost37, classification42/31, both143/43; IoU90 tương ứng461/115,185/164,472/111. Các chuyển đổi này hỗ trợ giả thuyết độ nhạy localization; chịu ảnh hưởng matching/scores/NMS nên không phải causal decomposition. Không dùng riêng số match IoU50 để suy toàn bộ AP.
+
+Các con số all COCO/XML trên khác full Ultralytics (ví dụ both−baseline +8.5067 vs +9.6630 pp) vì estimator khác, không phải kết quả mâu thuẫn. Giữ nhãn evaluator tách biệt. Ba build exact trên dev và CI conditional chưa chứng minh chuyển được sang model/calibration/device khác. Kết quả VCSC trước đó vẫn là kết quả riêng, không bị thay bằng kết quả precision-head này.
+
+### Bước tiếp theo đã giao Luna: implementation đo latency các engine có sẵn
+
+**AUTHORIZE local implementation/tests và protocol cho cost study; chưa chạy GPU/server trong entry này.** Câu hỏi: phần accuracy phục hồi có giữ được lợi ích latency so với FP16 không? Cần trả lời trước khi nhân rộng chính sách FP32 head. Đây là benchmark chẩn đoán trên RTX8000 hiện tại, không phải cross-device deployment matrix.
+
+Study ID `yolo11n_precision_head_latency_v1`; output mới `results/measurement_audit_v1/server_yolo11n_precision_head_latency_v1/`; protocol `docs/YOLO11N_PRECISION_HEAD_LATENCY_V1.md`. Runner đề nghị `scripts/run_precision_head_latency.py`. Giữ frozen engines; không export/build mới.
+
+1. Inputs: đủ12 engines của attempt2 (4 arms×3 builds) và1 FP16 engine có hash trong `server_fp16_capture_v1/capture_report.json`: tổng13 binaries. Khóa metadata ở attempt2 input commit839acdc và FP16 reference đã kiểm. Direct server binary hashes phải khớp manifest trước deserialization, source/dev provenance được giữ. Không loại builds chỉ vì AP exact: classification/both có inspector khác nhau, latency có thể khác. FP16 có1 build, báo rõ khác với3 builds/INT8 arm.
+2. Metric chính: synchronous batch1 pipeline wall-clock latency từ decoded CPU image vào `model.predict` đến khi kết quả hoàn tất, gồm preprocessing/H2D/inference/postprocessing/NMS; loại disk decode, model load, allocation ban đầu và warmup. Dùng GPU synchronize trước timer và sau predict, timer monotonic độ phân giải cao. Không gọi đây là pure TensorRT kernel time. Không dùng thông số speed của validator hoặc old benchmark JSON để thay lượt đo mới.
+3. Giữ Ultralytics8.4.102, TensorRT10.16.1.11, environment/GPU của attempt2. Runtime imgsz640, batch1, rectFalse, conf0.001, iou0.7, max_det300, task detect, verboseFalse. Conf này giữ workload postprocessing gần accuracy capture; kết quả được ghi rõ không phải production benchmark conf0.25. Kiểm tra input640×640 cả ảnh có aspect ratio khác nhau. Tái sử dụng framework predict để nhận engine metadata header; không tự deserialize cả Ultralytics header như TensorRT plan.
+4. Image pool cố định256 ảnh từ dev IDs đã khóa, chọn PCG64 seed20260916 không hoàn lại trên sorted IDs rồi sort selected IDs; cùng danh sách/nội dung ảnh cho mọi engine/session, chỉ đọc images, không annotations/test. Lưu image IDs, file hashes và input sequence. Mỗi session preload/decode trước warmup;200 warmup calls rồi1,000 measured calls theo cyclic pool order bắt đầu index0. Các số này khóa trước kết quả, không adaptive stopping theo độ đẹp latency.
+5. Đo3 rounds với mỗi engine xuất hiện1 lần/round,39 sessions. Canonical list: FP16, baseline1,bbox1,classification1,both1, baseline2,bbox2,classification2,both2, baseline3,bbox3,classification3,both3. Round1 theo list, round2 rotate-left4, round3 rotate-left8; persist schedule. Thứ tự này giảm confounding vị trí, không tuyên bố Latin-square hoàn chỉnh. Mỗi session một child process mới để release model/resources; parent CPU orchestration. Không chạy nhiều engine cùng GPU đồng thời.
+6. Lưu1,000 raw per-call latency samples/session, mean/median/p95/p99/min/max (percentile method linear ghi rõ), serial FPS=1000/mean_ms và engine bytes. Tách variability giữa3 measurement rounds khỏi3 builds; không coi3,000 inference timings là3,000 independent builds. Báo per-engine/per-round và arm summaries gồm mọi builds, không chọn fastest run. Accuracy points/CI được link vào bảng với đúng evaluator. Torch allocated peak nếu thu được chỉ là Torch allocator, không gọi total TensorRT memory; snapshot memory/power/thermal chỉ là observations, không suy peak tuyệt đối/average power/energy từ hai điểm. Power/energy chưa phải required endpoint của task này.
+7. Dùng GPU lock/identity và process guard hiện hành cho latency session, desktop confirmation PID/path hiện tại được phép. Không cần GPU không còn desktop. Workload compute cạnh tranh làm không đủ điều kiện so controlled latency; ghi partial/log và báo thực tế, không kill/pause/chỉnh quyền/clock. Ghi thermal/power/clock snapshots trước/sau session; không chờ cooldown vô hạn. Một server/GPU cho bảng13 engines này; các CPU task khác có thể dùng server khác.
+8. Audit `benchmark_tensorrt_engine.py` hiện có trước reuse: script này có warmup và sync nhưng thiếu raw samples,p99,round/build hierarchy, exact engine bindings và rectFalse/max_det lock. Sửa qua wrapper/helper có tests hoặc runner riêng; không âm thầm dùng defaults cũ. Tests CPU/mock bao phủ13 engine hashes/missing inputs,39 sessions/schedule, lifecycle, warmup excluded, sync/timer order, percentile/raw aggregation, same image stream, runtime shape/options, partial/no-overwrite và complete summary path. Tests không khẳng định GPU benchmark end-to-end.
+
+Luna hoàn tất code/tests/protocol trong một lượt, ghi L2A-018 và push cả entry này; Astra review implementation rồi mới đưa lệnh operator server. Nếu binary bị thiếu ở server, báo engine/path cụ thể, không tự rebuild vì sẽ thay đối tượng đang đo. Khi có latency, reviewer mới cân nhắc accuracy–latency trade-off và thiết kế calibration/architecture confirmation để quay lại main15-model scope. Không mở retraining, external datasets, official test hoặc edge-device matrix trong task implementation này.
+
+Nguồn tham khảo cho ranh giới phép đo: [NVIDIA TensorRT Best Practices](https://docs.nvidia.com/deeplearning/tensorrt/latest/performance/best-practices.html), phần Benchmarking mô tả wall-clock/CUDA events và kiểm soát môi trường. Đây là nguyên tắc tham khảo; implementation phải tương thích environment10.16 đã khóa, không nâng runtime theo trang latest.

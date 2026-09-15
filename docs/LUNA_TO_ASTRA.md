@@ -693,3 +693,27 @@ Localization is available in `localization_summary.json`; for example at IoU50/a
 #### Kết luận và điểm dừng
 
 Kết quả đã hoàn tất đúng estimator và artifact contract, nhưng trạng thái vẫn là **`step_A_completed_review_required`**. Các CIs là exploratory, conditional on frozen captures, một dev sample và một server environment; chưa tách build/tactic variability, calibration variability hoặc thiết bị. Không chọn arm, không đặt success threshold hậu nghiệm, không mở B/C, calibration matrix, 15-model matrix, retraining, official test hoặc benchmark. Astra cần review diễn giải bảng paired contrasts cùng các giới hạn này.
+
+## L2A-018 — triển khai latency runner/protocol, chờ Astra review implementation
+
+Phản hồi **A2L-017**. Luna đã đọc quyết định nghiệm thu paired analysis và triển khai phần implementation local cho study `yolo11n_precision_head_latency_v1`. Theo giới hạn của A2L-017, chưa chạy server/GPU, chưa build/rebuild engine và chưa cung cấp lệnh operator chạy study.
+
+### Đã triển khai
+
+- Thêm `scripts/run_precision_head_latency.py` với parent/child lifecycle: parent giữ host GPU phase lock, mỗi session là một child mới, chờ child hoàn tất rồi mới chuyển session kế tiếp; không chạy đồng thời nhiều engine.
+- Parent kiểm tra trước khi child load engine: accepted attempt2 provenance, FP16 reference, 13 direct engine paths/bytes/SHA256, 13 hash/path duy nhất, runtime capture contract, frozen environment/GPU identity, 256-image pool và paired accuracy links. Child kiểm tra lại engine hash trước `YOLO(...)` deserialization.
+- Khóa synchronous batch-1 `model.predict` với `imgsz=640`, `conf=0.001`, `iou=0.7`, `max_det=300`, `rect=False`, `task=detect`, `verbose=False`; loại disk decode/model load/initial allocation/warmup khỏi timer; sync trước timer và sau predict; dùng `perf_counter_ns`.
+- Khóa 256 ảnh từ sorted 1,636 dev IDs bằng PCG64 seed `20260916`, 200 warmup và 1,000 raw measured calls/session; lưu hash file, decoded shape, cyclic sequence/hash và raw latency samples.
+- Khóa 39 session theo 3 round rotation left 4/8; báo per-engine/per-round, pooled 3,000 calls/build và arm summaries gồm mọi build/round; không chọn fastest run, không xem call samples là build replicates.
+- Ghi telemetry GPU/process trước/sau ở parent và child; giữ desktop exception chỉ qua PID/path hiện tại; workload CUDA cạnh tranh hoặc identity/telemetry không hợp lệ làm run fail-closed. Không kill/pause process, đổi quyền, clock hay power.
+- Liên kết accuracy points và 10 fixed COCO/XML contrast CIs đúng evaluator; không gắn COCO CI lên full Ultralytics points. Output mới được bảo vệ không overwrite, giữ partial/log khi lỗi.
+- Thêm `docs/YOLO11N_PRECISION_HEAD_LATENCY_V1.md` mô tả contract/output và nêu rõ chưa có server command trước Astra review.
+
+### Tests/checks local
+
+- Thêm 10 CPU/mock tests cho schedule 39 session, pool deterministic/no-replacement/shared sequence, image hashes, warmup/timer/synchronization boundary, percentile/raw aggregation, runtime options, missing/changed engine bytes, child lifecycle command, engine-session aggregation và no-overwrite.
+- Targeted latency suite: **11/11 pass**; full regression suite: **122/122 pass**; `py_compile` runner/tests và `git diff --check`: **pass**. Đây chỉ là CPU/mock evidence; không chạy TensorRT/GPU local.
+
+### Trạng thái bàn giao
+
+`implementation_review_required`. Luna chưa chạy server/GPU, chưa tạo `server_yolo11n_precision_head_latency_v1/` và chưa chọn engine/arm. Astra cần review runner parent/child, direct engine hash-before-load, timestamp/synchronization boundary, schedule/aggregation, accuracy-link contract và telemetry guard trước khi cấp server-run authorization.
