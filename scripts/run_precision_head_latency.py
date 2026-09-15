@@ -12,14 +12,16 @@ import argparse
 import hashlib
 import json
 import math
+import posixpath
 import platform
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import numpy as np
+import yaml
 
 from run_architecture_matrix import GpuPhaseLock
 
@@ -62,6 +64,14 @@ WARMUP_CALLS = 200
 MEASURED_CALLS = 1000
 SEED = 20260916
 EXPECTED_IMAGES = 1636
+LOCKED_DEV_PATH_SUFFIX = ("data", "processed", "cctsdb2021_clean", "dev")
+LOCKED_DEV_NAMES = {0: "prohibitory", 1: "mandatory", 2: "warning"}
+PROCESS_GUARD_REQUIRED_KEYS = (
+    "version", "allowlist", "verification_method", "operator_confirmation",
+    "background_operator_confirmation", "background_workload", "unmatched_confirmations",
+    "blocked_processes", "telemetry_status", "telemetry_limitation",
+    "external_workload_detected", "external_workload_authorized", "disclaimer",
+)
 EXPECTED_ENV_KEYS = ("torch", "ultralytics", "tensorrt", "numpy", "cuda", "gpu", "pycocotools")
 EXPECTED_ENV = {
     "torch": "2.5.1+cu121",
@@ -146,6 +156,49 @@ def read_json_blob(repo: Path, commit: str, path: Path):
         return json.loads(git_blob(repo, commit, path).decode("utf-8"))
     except UnicodeDecodeError as exc:
         raise ValueError(f"Canonical input is not UTF-8 JSON: {_relative_git_path(repo, path)}") from exc
+
+
+def parse_locked_dev_yaml(data: bytes | str) -> dict:
+    """Parse the accepted FP16 data YAML using its actual YAML/POSIX contract."""
+    if isinstance(data, bytes):
+        try:
+            data = data.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ValueError("Accepted FP16 data reference is not UTF-8 YAML") from exc
+    if not isinstance(data, str):
+        raise ValueError("Accepted FP16 data reference must be text YAML")
+    try:
+        document = yaml.safe_load(data)
+    except yaml.YAMLError as exc:
+        raise ValueError("Accepted FP16 data reference is not valid YAML") from exc
+    if not isinstance(document, dict):
+        raise ValueError("Accepted FP16 data reference must contain a YAML mapping")
+
+    path_text = document.get("path")
+    if not isinstance(path_text, str) or not path_text or not path_text.startswith("/"):
+        raise ValueError("Accepted FP16 data reference must contain an absolute POSIX path")
+    if "\\" in path_text:
+        raise ValueError("Accepted FP16 data reference must use POSIX path syntax")
+    normalized_path = posixpath.normpath(path_text)
+    path_parts = PurePosixPath(normalized_path).parts
+    if normalized_path != path_text or any(part in (".", "..") for part in path_parts):
+        raise ValueError("Accepted FP16 data reference path is not normalized POSIX syntax")
+    if tuple(path_parts[-len(LOCKED_DEV_PATH_SUFFIX):]) != LOCKED_DEV_PATH_SUFFIX:
+        raise ValueError("Accepted FP16 data reference does not bind the locked dev image directory")
+    if document.get("train") != "images" or document.get("val") != "images":
+        raise ValueError("Accepted FP16 data reference must use images for train and val")
+    if type(document.get("nc")) is not int or document.get("nc") != len(LOCKED_DEV_NAMES):
+        raise ValueError("Accepted FP16 data reference class count differs from locked dev metadata")
+    if document.get("names") != LOCKED_DEV_NAMES:
+        raise ValueError("Accepted FP16 data reference class names differ from locked dev metadata")
+    return {
+        "path": path_text,
+        "path_semantics": "absolute POSIX path; locked suffix data/processed/cctsdb2021_clean/dev",
+        "train": "images",
+        "val": "images",
+        "names": dict(LOCKED_DEV_NAMES),
+        "nc": len(LOCKED_DEV_NAMES),
+    }
 
 
 def ensure_output_absent(path: Path) -> None:
@@ -514,9 +567,9 @@ def validate_inputs(repo: Path, attempt2_root: Path, fp16_capture: Path,
     source_manifest_ref = _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, manifest_path)
     fp16_data_reference_path = repo / FP16_DATA_REFERENCE
     fp16_data_reference_ref = _canonical_ref(repo, PINNED_ATTEMPT2_COMMIT, fp16_data_reference_path)
-    fp16_data_reference = git_blob(repo, PINNED_ATTEMPT2_COMMIT, fp16_data_reference_path).decode("utf-8")
-    if "val: images" not in fp16_data_reference or "CCTSDB2021" not in fp16_data_reference:
-        raise ValueError("Accepted FP16 data reference does not bind the locked dev image directory")
+    fp16_data_contract = parse_locked_dev_yaml(
+        git_blob(repo, PINNED_ATTEMPT2_COMMIT, fp16_data_reference_path)
+    )
 
     specs = {}
     fp16_report_path = fp16_capture / "capture_report.json"
@@ -620,6 +673,7 @@ def validate_inputs(repo: Path, attempt2_root: Path, fp16_capture: Path,
             "source_manifest": source_manifest_ref,
             "fp16_data_reference": fp16_data_reference_ref,
         },
+        "fp16_data_contract": fp16_data_contract,
         "expected_environment": expected_env,
         "expected_gpu": expected_gpu,
         "specs": specs,
@@ -910,12 +964,37 @@ def _aggregate_engine_sessions(sessions: list[dict]) -> dict:
 
 
 def _validate_persisted_gpu_evidence(snapshot: dict, binding: dict, expected_gpu: dict, label: str) -> None:
-    if not isinstance(snapshot, dict) or snapshot.get("process_guard", {}).get("telemetry_status") != "complete":
+    if not isinstance(snapshot, dict) or not isinstance(snapshot.get("device"), str) or not isinstance(snapshot.get("processes"), str):
         raise ValueError(f"{label} GPU/process telemetry is missing or incomplete")
     if not isinstance(snapshot.get("process_details"), list):
         raise ValueError(f"{label} process details are missing")
-    guard = snapshot["process_guard"]
-    if guard.get("external_gpu_workload_detected") is not False:
+    guard = snapshot.get("process_guard")
+    if not isinstance(guard, dict):
+        raise ValueError(f"{label} process guard is missing")
+    missing = [key for key in PROCESS_GUARD_REQUIRED_KEYS if key not in guard]
+    if missing:
+        raise ValueError(f"{label} process guard schema is incomplete: {missing}")
+    from uniform_build_repeat import GPU_PROCESS_GUARD_VERSION
+    if guard.get("version") != GPU_PROCESS_GUARD_VERSION:
+        raise ValueError(f"{label} process guard producer version differs")
+    if guard.get("telemetry_status") != "complete":
+        raise ValueError(f"{label} GPU/process telemetry is missing or incomplete")
+    for key in ("background_workload", "unmatched_confirmations", "blocked_processes"):
+        if not isinstance(guard.get(key), list):
+            raise ValueError(f"{label} process guard field {key} is malformed")
+    for key in ("allowlist", "operator_confirmation", "background_operator_confirmation"):
+        if not isinstance(guard.get(key), dict):
+            raise ValueError(f"{label} process guard field {key} is malformed")
+    for key in ("verification_method", "telemetry_limitation", "disclaimer"):
+        if not isinstance(guard.get(key), str) or not guard[key]:
+            raise ValueError(f"{label} process guard field {key} is malformed")
+    if type(guard.get("external_workload_detected")) is not bool:
+        raise ValueError(f"{label} process guard workload state is unknown")
+    if type(guard.get("external_workload_authorized")) is not bool:
+        raise ValueError(f"{label} process guard authorization state is unknown")
+    if guard.get("external_workload_authorized") is not False:
+        raise ValueError(f"{label} records an authorized background workload outside the latency contract")
+    if guard.get("external_workload_detected") is not False:
         raise ValueError(f"{label} records an external GPU workload")
     if guard.get("blocked_processes") or guard.get("unmatched_confirmations"):
         raise ValueError(f"{label} process guard contains blocked or unmatched processes")
@@ -1137,7 +1216,7 @@ def _run_parent(args, dependencies: dict | None = None) -> int:
         final_gpu_binding = validate_gpu_identity(final_gpu, context["expected_gpu"])
         _validate_persisted_gpu_evidence(final_gpu, final_gpu_binding, context["expected_gpu"], "Parent after")
         external_workload_detected = any(
-            guard.get("external_gpu_workload_detected") is not False
+            guard.get("external_workload_detected") is True
             for row in telemetry_sessions for guard in (row["before"], row["after"])
         )
         summary = {

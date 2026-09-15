@@ -749,3 +749,37 @@ Phản hồi **A2L-018**. Luna đã triển khai các sửa đổi local trên r
 ### Trạng thái bàn giao
 
 `implementation_review_required`. Astra cần review corrected R1/R2/R3 và quyết định có cấp server-run authorization hay không. Luna chưa cung cấp lệnh server và không tự mở bước nghiên cứu tiếp theo.
+
+## L2A-020 — sửa F1/F2 theo A2L-019, chờ review implementation
+
+Phản hồi **A2L-019**. Luna đã sửa đúng hai lỗi schema tương thích trong runner latency; giữ nguyên thiết kế latency, không chạy server/GPU, không rebuild engine và không chạy lại bất kỳ nghiên cứu đã hoàn tất nào.
+
+### F1 — canonical YAML metadata
+
+- Thay check substring `"CCTSDB2021"`/`"val: images"` bằng `yaml.safe_load` trên exact Git blob của `results/measurement_audit_v1/server_fp16_capture_v1/dev_absolute.yaml` tại pinned commit `839acdcb6a09569d1e6e130aa523c38d960dabd5`.
+- Validator kiểm tra absolute POSIX path đã normalize và có suffix chính xác `data/processed/cctsdb2021_clean/dev`, `train: images`, `val: images`, `names` `{0: prohibitory, 1: mandatory, 2: warning}` và `nc: 3`. Vì dùng `PurePosixPath`/POSIX semantics, historical Linux path được kiểm đúng trên Windows local; không sửa canonical YAML artifact và không dùng uppercase substring làm dataset identity.
+- Default repo-anchored image path, explicit relocation metadata, canonical blob/hash binding và direct filesystem image hash/shape checks vẫn giữ nguyên. `validate_inputs` trả thêm parsed canonical data contract nhưng không đổi input/data scope.
+
+### F2 — producer/consumer telemetry schema
+
+- Consumer nay đọc đúng `process_guard.external_workload_detected` do `uniform_build_repeat.snapshot` ghi; không rename producer field và không mặc định missing field thành clean.
+- Consumer kiểm schema/version producer thật (`GPU_PROCESS_GUARD_VERSION`), complete `device`/`processes` telemetry, required guard fields, boolean workload/authorization states, blocked/unmatched lists và process details. Missing/unknown/`True`, blocked/unmatched hoặc authorized background workload ngoài latency contract đều fail-closed.
+- Parent summary aggregation cũng dùng đúng `external_workload_detected`; clean desktop exception vẫn đi qua schema producer, còn latency study không mở background-compute exception.
+
+### Kiểm tra trực tiếp và tests
+
+- Canonical metadata test đọc trực tiếp pinned Git blob, parse đúng YAML canonical và reject wrong `val`/wrong dev path.
+- Producer-consumer contract test gọi trực tiếp `uniform_build_repeat.snapshot` với `nvidia-smi` I/O mock, đưa nguyên payload vào `_validate_persisted_gpu_evidence`; negative cases missing/true/blocked/limited đều reject. Không có CUDA/GPU call.
+- Parent CPU/mock integration vẫn chạy đủ **39/39 session** tuần tự đến summary/report; fixtures telemetry lấy từ output schema của producer thay vì tự tạo key sai.
+- Targeted latency suite: **21/21 pass**.
+- Full regression suite: **132/132 pass** trên Python 3.10 local với `pycocotools==2.0.10`.
+- `py_compile` runner/tests: **pass**; `git diff --check`: **pass**. Không chạy TensorRT build/benchmark và không tuyên bố TensorRT end-to-end.
+
+### Files và trạng thái
+
+- Sửa `scripts/run_precision_head_latency.py`, thêm canonical YAML parser và producer-schema validation.
+- Bổ sung `tests/test_precision_head_latency.py` với canonical metadata và producer-consumer contract/negative tests.
+- Cập nhật `docs/YOLO11N_PRECISION_HEAD_LATENCY_V1.md` mô tả hai compatibility corrections.
+- Giữ nguyên entry A2L-019 trong `docs/ASTRA_TO_LUNA.md` và push cùng commit này.
+
+Trạng thái: `implementation_review_required`. Chưa cung cấp lệnh server; Astra cần review F1/F2 và quyết định authorization trước mọi server/GPU run.

@@ -722,3 +722,44 @@ Ngày 2026-09-16. Reviewed L2A-018 và commit `f62e84fa20e296a749221d6af067238ed
 Luna bổ sung CPU/mock integration test chạy parent từ accepted-shaped fixtures qua **đủ 39 child sessions đến latency_summary/report**, kiểm các counts/hash links/round hierarchy. Test failed child, missing session, malformed raw/telemetry và partial output được giữ, không completed summary; kiểm child thực sự được wait trước session sau và GPU-touching environment probe không chạy trong parent. Test `run_child` với mocked runtime/model/image loader phải xác nhận options và observed shape, không chỉ test argv builder. Không tuyên bố CPU mocks chứng minh TensorRT end-to-end.
 
 Không cần thêm features, metric mới, statistical threshold, benchmark dataset, hoặc thay desktop/shared-lab policy. Update protocol cho path/binding/validation; ghi L2A-019 với tests và sửa từng R1/R2/R3. Push bằng NADUNGVN cả entry này, không commit scratch `local/astra_latency_review.py`. Astra sẽ review corrected implementation để quyết định lệnh server foreground. Không cần người dùng chạy lại Step A/ablation/bootstrap; toàn bộ kết quả đã nghiệm thu vẫn giữ nguyên.
+
+## A2L-019 — review eb30a08: hai lỗi schema thực cần sửa, không đổi protocol
+
+Ngày 2026-09-16. Reviewed L2A-019 và commit `eb30a08f4b61fdf653532c362f531897560ec4f9`. **Decision: CHANGES REQUESTED, local sửa hai lỗi tương thích dưới đây; chưa cấp server run.** Đây không phải yêu cầu thêm nghiên cứu hay siết resource guard. Không chạy lại build/ablation/bootstrap; không đổi 13 engine, 39 sessions, runtime, data hoặc telemetry policy.
+
+### Những gì đã kiểm tra và chấp nhận
+
+Astra chạy lại targeted **18/18** và full regression **129/129**, đều pass trên local CPU. Đã đọc code path resolution, pinned canonical input reads, nested cache checks, raw-sample cardinality, shape probe ngoài timer, child output bindings và parent serial aggregation. Các thay đổi này xử lý đúng hướng R1/R2/R3. Tuy nhiên tests integration mock tự tạo metadata/guard schema nên chưa chứng minh code nối được với producer/artifact thật.
+
+### F1 — valid accepted YAML bị reject trước khi kiểm binary
+
+Ở `scripts/run_precision_head_latency.py:518`, điều kiện yêu cầu substring viết hoa `CCTSDB2021`. Canonical `server_fp16_capture_v1/dev_absolute.yaml` tại chính pinned commit chứa:
+
+```yaml
+path: /home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/dev
+train: images
+val: images
+names:
+  0: prohibitory
+  1: mandatory
+  2: warning
+nc: 3
+```
+
+Astra gọi `validate_inputs` trên canonical metadata thật, không mock, đã tái hiện `ValueError: Accepted FP16 data reference does not bind the locked dev image directory`. Lỗi xảy ra trước chỗ local thiếu engine. Không được sửa YAML artifact đã nghiệm thu để chiều theo check.
+
+**Sửa:** parse YAML và validate các field/path theo accepted dev reference, dùng POSIX path semantics cho historical Linux path trên Windows nếu cần. Không dùng uppercase substring làm dataset identity. Giữ canonical commit/hash binding, repo-anchored default và explicit relocation đã có. Test nguyên canonical YAML phải pass phần metadata; wrong split/path phải reject, không chỉ đổi `.lower()` rồi coi là validated dev.
+
+### F2 — tên trường guard không khớp producer, clean GPU sẽ bị báo nhầm
+
+Producer `uniform_build_repeat.snapshot` ghi `process_guard.external_workload_detected` (line 301). Consumer mới ở runner lines 918 và 1140 đọc `external_gpu_workload_detected`, key không tồn tại. Vì `.get(...) is not False`, missing key bị coi là workload. Integration fixtures cũng dùng sai key, nên 39 mock sessions vẫn pass nhưng real session sẽ fail tại parent validation sau lượt đầu.
+
+Astra lấy nguyên `gpu_before` từ accepted attempt2 study manifest: `external_workload_detected=false`, complete telemetry, desktop confirmations hợp lệ; GPU identity validation pass nhưng `_validate_persisted_gpu_evidence` báo `accepted snapshot records an external GPU workload`. Đây là lỗi consumer, **không phải snapshot server mới hay bằng chứng GPU đang bận**.
+
+**Sửa:** đọc đúng `external_workload_detected` ở validation lẫn summary aggregation. Không rename producer/old artifact. Không default missing key thành False: missing/unknown vẫn incomplete, True vẫn rejected cho controlled latency. Fixture phải dùng schema thật. Thêm contract test gọi producer `snapshot` với OS/nvidia-smi I/O được mock (không GPU), đưa output trực tiếp qua consumer; thêm regression với canonical accepted snapshot. Negative cases True/missing/blocked/incomplete vẫn reject.
+
+### Hậu kiểm và bàn giao lần sửa này
+
+- Chạy `validate_inputs` qua toàn bộ canonical metadata thật của 13 engines và accuracy refs, chỉ mock filesystem engine stat/hash và ảnh vì không có ở local. **Không mock `validate_inputs`, canonical readers, provenance validators hoặc sửa nội dung blob.** Hiện Astra đã kiểm đường downstream 13 records có thể hoàn tất khi bypass riêng F1 trong diagnostic in-memory; đó chỉ giúp khoanh vùng, không phải production fix hoặc server validation.
+- Giữ test 39-session integration, chuyển guard fixture sang output/schema producer thực. Giữ tests thiếu sample, hash mutation, failed-child/partial. Không mở thêm chức năng hay thay thiết kế đo.
+- Ghi L2A-020, kết quả targeted/full và exact canonical/producer-consumer checks; push cả A2L-019. Không commit scratch `local/astra_latency_review_eb30.py`. Chưa đưa lệnh GPU/server cho người dùng ở commit đang lỗi này. Sau sửa, Astra review hai điểm này và quyết định authorization; không yêu cầu người dùng trả giá bằng một lần chạy server thất bại để phát hiện lỗi đã tái hiện local.

@@ -4,7 +4,7 @@ import copy
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from unittest.mock import patch
 
 import numpy as np
@@ -32,9 +32,34 @@ from run_precision_head_latency import (  # noqa: E402
     validate_build_provenance,
     validate_output_target,
     validate_schedule,
+    parse_locked_dev_yaml,
+    _validate_persisted_gpu_evidence,
     write_json,
 )
 import run_precision_head_latency as latency  # noqa: E402
+
+
+def producer_snapshot_fixture():
+    """Create a real uniform_build_repeat.snapshot payload without touching a GPU."""
+    import importlib
+
+    # uniform_build_repeat imports the GPU capture producer at module import time;
+    # replace only that unrelated heavy module so this producer contract test
+    # remains CPU-only on the local inspection environment.
+    producer_import = ModuleType("capture_cctsdb_validator")
+    producer_import.FROZEN_WEIGHTS_SHA256 = "test-frozen-weights"
+    producer_import.write_json = lambda *_args, **_kwargs: None
+    with patch.dict(sys.modules, {"capture_cctsdb_validator": producer_import}):
+        uniform_build_repeat = importlib.import_module("uniform_build_repeat")
+    sys.modules["uniform_build_repeat"] = uniform_build_repeat
+    snapshot = uniform_build_repeat.snapshot
+
+    device = "GPU-test, Quadro RTX 8000, 595.71.05, P8, 30, 9 W, 300 MHz, 405 MHz, 29 MiB"
+    with patch.object(uniform_build_repeat.subprocess, "run", side_effect=[
+        SimpleNamespace(stdout=device),
+        SimpleNamespace(stdout=""),
+    ]):
+        return snapshot({})
 
 
 class PrecisionHeadLatencyTests(unittest.TestCase):
@@ -85,6 +110,52 @@ class PrecisionHeadLatencyTests(unittest.TestCase):
                 latency.validate_decoded_shape(Path("image.jpg"), [720, 1280], lambda _: [1280, 720])
             with self.assertRaises(ValueError):
                 latency.validate_decoded_shape(Path("image.jpg"), [720, 1280], lambda _: [720, 1280, 3])
+
+    def test_pinned_canonical_dev_yaml_is_parsed_with_posix_semantics(self):
+        repo = Path(__file__).resolve().parents[1]
+        raw = latency.git_blob(repo, latency.PINNED_ATTEMPT2_COMMIT, repo / latency.FP16_DATA_REFERENCE)
+        contract = parse_locked_dev_yaml(raw)
+        self.assertEqual(contract["train"], "images")
+        self.assertEqual(contract["val"], "images")
+        self.assertEqual(contract["names"], latency.LOCKED_DEV_NAMES)
+        self.assertTrue(contract["path"].endswith("/data/processed/cctsdb2021_clean/dev"))
+        for bad in (raw.decode().replace("val: images", "val: test"),
+                    raw.decode().replace("cctsdb2021_clean/dev", "cctsdb2021_clean/test")):
+            with self.assertRaises(ValueError):
+                parse_locked_dev_yaml(bad)
+
+    def test_real_producer_snapshot_schema_reaches_consumer_and_missing_key_fails(self):
+        state = producer_snapshot_fixture()
+        expected_gpu = {"uuid": "GPU-test", "name": "Quadro RTX 8000", "driver_version": "595.71.05"}
+        binding = latency.validate_gpu_identity(state, expected_gpu)
+        _validate_persisted_gpu_evidence(state, binding, expected_gpu, "Producer snapshot")
+        self.assertFalse(state["process_guard"]["external_workload_detected"])
+        self.assertNotIn("external_gpu_workload_detected", state["process_guard"])
+        for mutation in ("missing", "true", "blocked", "limited"):
+            bad = copy.deepcopy(state)
+            if mutation == "missing":
+                del bad["process_guard"]["external_workload_detected"]
+            elif mutation == "true":
+                bad["process_guard"]["external_workload_detected"] = True
+            elif mutation == "blocked":
+                bad["process_guard"]["blocked_processes"] = [{"allowed": False}]
+            else:
+                bad["process_guard"]["telemetry_status"] = "limited"
+            with self.assertRaises(ValueError):
+                _validate_persisted_gpu_evidence(bad, binding, expected_gpu, f"bad-{mutation}")
+
+    def test_accepted_canonical_snapshot_reaches_consumer(self):
+        repo = Path(__file__).resolve().parents[1]
+        manifest = latency.read_json_blob(
+            repo,
+            latency.PINNED_ATTEMPT2_COMMIT,
+            repo / "results/measurement_audit_v1/server_yolo11n_precision_head_ablation_v1_attempt2/study_manifest.json",
+        )
+        snapshot = manifest["gpu_before"]
+        expected_gpu = latency.parse_gpu_identity(snapshot)
+        binding = latency.validate_gpu_identity(snapshot, expected_gpu)
+        _validate_persisted_gpu_evidence(snapshot, binding, expected_gpu, "Accepted canonical snapshot")
+        self.assertFalse(snapshot["process_guard"]["external_workload_detected"])
 
     def test_timer_boundary_excludes_warmup_and_synchronizes(self):
         events = []
@@ -196,12 +267,8 @@ class PrecisionHeadLatencyTests(unittest.TestCase):
                 "torch": "2.5.1+cu121", "ultralytics": "8.4.102", "tensorrt": "10.16.1.11",
                 "numpy": "2.4.4", "cuda": "12.1", "gpu": "Quadro RTX 8000", "pycocotools": "2.0.10",
             }
-            guard = {
-                "telemetry_status": "complete", "external_gpu_workload_detected": False,
-                "blocked_processes": [], "unmatched_confirmations": [],
-            }
-            state = {"device": "GPU-test, Quadro RTX 8000, 595.71.05, P8, 30, 9 W, 300 MHz, 405 MHz, 29 MiB",
-                     "process_details": [], "process_guard": guard}
+            state = producer_snapshot_fixture()
+            guard = state["process_guard"]
             pool = {"measured_sequence_sha256": "pool-sequence", "pool_size": 256,
                     "selected_files": [{"image": "a.jpg"}] * 256}
             specs = {}
@@ -318,10 +385,8 @@ class PrecisionHeadLatencyTests(unittest.TestCase):
             expected_gpu = {"uuid": "GPU-test", "name": "Quadro RTX 8000", "driver_version": "595.71.05"}
             env = {"torch": "2.5.1+cu121", "ultralytics": "8.4.102", "tensorrt": "10.16.1.11",
                    "numpy": "2.4.4", "cuda": "12.1", "gpu": "Quadro RTX 8000", "pycocotools": "2.0.10"}
-            guard = {"telemetry_status": "complete", "external_gpu_workload_detected": False,
-                     "blocked_processes": [], "unmatched_confirmations": []}
-            state = {"device": "GPU-test, Quadro RTX 8000, 595.71.05, P8, 30, 9 W, 300 MHz, 405 MHz, 29 MiB",
-                     "process_details": [], "process_guard": guard}
+            state = producer_snapshot_fixture()
+            guard = state["process_guard"]
             schedule = latency.engine_schedule()
             manifest_path = root / "output/study_manifest.json"
             write_json(manifest_path, {"study": latency.STUDY, "environment": env, "gpu_identity": expected_gpu,
