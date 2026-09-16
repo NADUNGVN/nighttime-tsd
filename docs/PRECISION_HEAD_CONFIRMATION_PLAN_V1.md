@@ -1,11 +1,12 @@
 # Precision-Head Confirmation Plan V1
 
-Status: `protocol_only_review_required`
+Status: `design_locked_readiness_implementation`
 
-This document is a protocol proposal following A2L-021. It does not authorize a
-server run, create a new runner, export an ONNX model, build TensorRT engines,
-or select a deployment method. Astra must review and lock this plan before any
-implementation or GPU execution.
+This document is the design-locked readiness protocol following A2L-022. It
+authorizes only local CPU readiness implementation. It does not authorize a
+server run, scored build/capture matrix, ONNX export, TensorRT build, or
+deployment selection. The reviewed preparation output must be accepted before
+an operator receives a server execution command.
 
 ## 1. Purpose and claim boundary
 
@@ -97,7 +98,10 @@ runtime settings. These are six additional builds and six captures. The three
 FP16 repeats estimate build variation of the reference; they do not introduce
 a calibration factor.
 
-Total planned workload is therefore **78 engine builds and 78 dev captures**:
+The scored workload is **78 engine builds and 78 dev captures**. In addition,
+six auxiliary baseline cache-generation builder invocations are required and
+are never scored or captured. The total builder workload is therefore **84
+invocations**, not 78:
 
 | Component | Builds/captures per model | Both models |
 |---|---:|---:|
@@ -107,9 +111,11 @@ Total planned workload is therefore **78 engine builds and 78 dev captures**:
 
 Each capture uses the full `CCTSDB2021/dev` split: 1,636 images and 2,706
 instances. The plan therefore contains 127,608 model-image passes before any
-calibration preprocessing. Six model/selection calibration-cache creation
-phases are required; each cache is created once and then consumed read-only by
-the 12 INT8 builds in that model/selection block.
+calibration preprocessing. Six model/selection auxiliary cache-generation
+builds are required; each cache is created once and then consumed read-only by
+the 12 scored INT8 builds in that model/selection block. The auxiliary build
+has its own provenance/log/cache, but its engine is not an accuracy observation
+and cannot be selected by AP.
 
 ### Isolation rules
 
@@ -145,6 +151,27 @@ The YOLO11n names `/model.23/cv2.` and `/model.23/cv3.` must not be reused for
 either target architecture without evidence. Before any build, the execution
 record must derive the actual detection-head namespace from the model's frozen
 ONNX/TRT network and persist:
+
+The local CPU readiness probe against the frozen checkpoints provides a
+pre-export contract check, not an ONNX mapping claim. Under the locked
+Ultralytics `8.4.102` runtime it observed:
+
+- YOLOv8n: `Detect` index `22`, `end2end=false`, active `cv2`/`cv3`, no
+  `one2one_*` branches, and a tuple of raw decoded primary tensor
+  `[1,7,8400]` plus the head dictionary (`boxes`, `scores`, `feats`). The
+  head output contains no NMS/top-k postprocess.
+- YOLO26n: `Detect` index `23`, `end2end=true`, active `one2one_cv2`/
+  `one2one_cv3`, with `cv2`/`cv3` retained as inactive auxiliary branches, and
+  a tuple of postprocessed top-k primary detections `[1,300,6]` plus
+  `one2many`/`one2one` head dictionaries. The active one-to-one branch is
+  selected by the frozen head's end-to-end path.
+
+These observations are checked together with head flags, branch availability,
+output representation, nested tensor paths and postprocess semantics; a shape
+match alone never establishes the contract. The final server prepare phase
+must repeat this evidence on the architecture-specific exported ONNX and
+parser/validator path before any constrained build. Until then, effective
+precision and ONNX graph-level mapping remain `unknown`/deferred.
 
 - all candidate names matched by the architecture-specific head discovery;
 - layer type for every candidate;
@@ -208,17 +235,19 @@ For each model, arm and selection, retain all three build-level point estimates
 and prediction payload hashes. Define:
 
 - `cell_mean(m,c,a)`: arithmetic mean of the three build-repeat metrics;
-- `build_SD(m,c,a)`: sample SD (`ddof=1`) across the three repeats;
+- `within_selection_build_SD(m,c,a)`: sample SD (`ddof=1`) across the three
+  independent repeats;
 - `selection_mean(m,a)`: arithmetic mean of the three `cell_mean` values;
-- `calibration_SD(m,a)`: sample SD (`ddof=1`) across U42/U43/U44 selection
-  means;
+- `between_selection_mean_SD(m,a)`: sample SD (`ddof=1`) across U42/U43/U44
+  selection means;
 - selection range and per-selection build range.
 
 Report these quantities for full, XS and S endpoints and for every contrast.
-The calibration SD describes variation from the pre-registered image
-selection; build SD describes repeated TensorRT construction under the same
-selection/cache. Do not pool all 9 INT8 engines as independent calibration
-replicates, and do not treat 3,000 calls or 3 captures as 3,000 builds.
+`between_selection_mean_SD` still contains residual build variation and is not
+purified calibration variance; `within_selection_build_SD` describes repeated
+TensorRT construction under the same selection/cache. Do not subtract SDs,
+claim causal isolation, pool all 9 INT8 engines as independent calibration
+replicates, or treat 3,000 calls or 3 captures as 3,000 builds.
 
 Image-bootstrap CIs are conditional on the observed build and calibration
 factors. The report must show them beside, not in place of, the empirical
@@ -231,45 +260,28 @@ and selection levels. This preserves pairing while making the aggregation
 rule auditable. Do not choose a seed, selection, build or arm by AP before
 reporting the complete table.
 
-## 7. Proposed decision margins, fixed before new data
+## 7. Decision reporting, fixed before new data
 
-These are proposed practical margins for Astra to lock or amend before
-implementation; they are not thresholds inferred from the YOLO11n result and
-are not substitutes for statistical testing.
+Keep `+2.0` percentage points on full AP50–95 only as a reviewer-set
+engineering screening target. It is not a domain-validated utility threshold,
+significance threshold or paper/deployment gate. Keep the descriptive rule of
+at least two of three selections positive and no reversal larger than 2.0 pp,
+but do not turn it into a hypothesis test or select favorable selections.
 
-- `δ_primary = 2.0` percentage points for full AP50–95. This is a deliberately
-  visible improvement margin, larger than reporting-rounding noise, intended
-  to distinguish a useful recovery from a negligible fluctuation.
-- `δ_size = 3.0` percentage points for XS/S AP50. Smaller subsets have fewer
-  instances and higher conditional variability, so the secondary margin is
-  wider and is reported as a practical diagnostic, not a superiority test.
-- `δ_fp16 = 1.0` percentage point for full AP50–95 and `2.0` points for XS/S
-  AP50 when describing practical non-inferiority to the FP16 reference. This
-  does not assert that INT8 must match FP16 on every endpoint.
+Report continuous point estimates and paired image-bootstrap CIs for full, XS
+and S endpoints. The FP16 gap and CI are reported continuously; there is no
+FP16 non-inferiority/equivalence margin. XS/S effects are reported with their
+point estimates, CIs and adverse effects; there is no `δ_size` gate and a full
+endpoint result does not establish size robustness.
 
-The proposed confirmation disposition for each model is:
-
-1. `both_fp32 − baseline_int8` has a selection-aggregated point estimate at
-   least `δ_primary` on full AP50–95 and the paired image-bootstrap 95% CI does
-   not cross zero;
-2. at least two of the three pre-registered selections have a positive
-   full-endpoint contrast and no selection is a negative reversal larger than
-   `δ_primary`; this is a consistency description, not seed selection;
-3. XS and S contrasts are reported; a loss larger than `δ_size` is flagged and
-   prevents a claim of broad size robustness, even if full AP passes;
-4. the FP16 contrast is reported with the `δ_fp16` non-inferiority description;
-   failure means an accuracy trade-off, not automatic rejection of the
-   precision-head mechanism;
-5. bbox-only and classification-only are retained as mechanism controls. Their
-   deltas are not subtracted to claim a causal decomposition, and `both_fp32`
-   is not accepted merely because it has the largest AP.
-
-If the conditions are not met, use `confirmation_not_established` or
+The primary contrast remains `both_fp32 − baseline_int8` on full AP50–95, with
+bbox-only and classification-only as mandatory controls. Do not subtract
+control effects as a causal decomposition and do not accept `both_fp32` merely
+because it has the largest AP. If the descriptive evidence is not coherent,
+use `confirmation_not_established` or
 `architecture_or_calibration_sensitive`, preserve all artifacts and stop.
-Do not tune a new calibration policy, change nodes, select a favorable build,
-or open the main 15-model matrix from an unfavorable result. Passing the
-conditions supports a narrowly stated cross-architecture diagnostic; it does
-not by itself authorize main15 or deployment selection.
+Passing a narrow cross-model diagnostic does not authorize main15,
+deployment selection or another research phase.
 
 ## 8. One-server and multi-server execution policy
 
@@ -278,9 +290,11 @@ servers are available, split only by source model block: all YOLOv8n cells on
 one matched host and all YOLO26n cells on another matched host. This keeps
 every within-model arm/selection/repeat comparison on one device and runtime.
 
-Before assignment, each host must record GPU UUID/model/driver, CUDA, Python,
-TensorRT, Torch, Ultralytics, NumPy, dependencies, frozen checkpoint hash,
-ONNX hash, calibration-manifest hashes and dataset hashes. A host with a
+Before scored assignment, each host must record GPU UUID/model/driver, CUDA,
+Python, TensorRT, Torch, Ultralytics, NumPy, dependencies, frozen checkpoint
+hash, calibration-manifest hashes and dataset hashes. After the reviewed
+prepare/export phase, it must also bind the model-specific ONNX hash and
+mapping evidence. A host with a
 different GPU or incompatible TensorRT engine must rebuild its own reviewed
 architecture-specific engines; it must not receive serialized engines from a
 different host. If a model's repeats are split across devices, the result is
@@ -295,18 +309,28 @@ record the violation and mark affected cells for review.
 
 ## 9. Prerequisites and artifact contract
 
-Before implementation, the operator must be able to provide or verify:
+The local readiness phase requires only raw, immutable inputs and the reviewed
+runtime/config contract. The reviewed server prepare phase creates the
+architecture-specific ONNX and graph mapping evidence; the operator must not
+perform an unreviewed export merely to satisfy a circular prerequisite.
+
+Before server preparation, the operator must be able to provide or verify:
 
 1. the reviewed code/protocol commit and clean destination paths;
 2. both frozen checkpoint files with the hashes in Section 2;
 3. exact train YAML and dataset-manifest hashes;
 4. U42/U43/U44 manifest files, materialized YAMLs and all image-byte hashes,
    with train-only/no-overlap validation;
-5. one model-specific ONNX per frozen checkpoint and its export manifest/hash;
-6. a compatible TensorRT environment and one GPU identity per host;
-7. architecture-specific detection-head mapping evidence before the first
-   precision-constrained build;
-8. separate output roots for this plan, with no overwrite or implicit resume.
+5. a compatible TensorRT environment and one GPU identity per host;
+6. separate output roots for readiness, prepare and scored work, with no
+   overwrite or implicit resume.
+
+The reviewed prepare phase must then create and validate one model-specific
+ONNX per frozen checkpoint, export manifest/hash, active output dataflow
+mapping, parser/validator evidence and model-specific constraints. A missing
+or ambiguous head/output contract is `head_contract_unresolved` and blocks
+all builds; it is not repaired by changing output shape or adding a second
+postprocess step.
 
 The eventual runner, which is explicitly out of scope here, must write a
 study manifest, model/calibration inventory, mapping audit, per-build manifest,
@@ -325,9 +349,10 @@ than a completed confirmation summary.
 
 ## 10. Workload, stopping and reporting
 
-The count estimate is fixed at 6 calibration-cache creation phases, 78 engine
-builds, 78 dev captures and 127,608 dev image-model passes, excluding warmups
-and calibration preprocessing. No wall-clock estimate is supplied: the local
+The count estimate is fixed at 6 auxiliary calibration-cache builder
+invocations, 78 scored engine builds, 78 dev captures, **84 total builder
+invocations** and 127,608 dev image-model passes, excluding warmups and
+calibration preprocessing. No wall-clock estimate is supplied: the local
 environment cannot benchmark TensorRT and previous latency timings are not a
 build-time predictor.
 
@@ -338,7 +363,8 @@ per-selection and pooled arm summaries, build SD, calibration SD/range,
 image-bootstrap CI, FP16 contrasts, control contrasts, mapping/inspector
 evidence, telemetry limitations and invalid flags.
 
-The only permitted next decision is Astra's review of whether this protocol is
-locked and worth implementing. This document does not provide a server
-command, does not authorize GPU execution, does not open B/C or main15, and
-does not authorize official-test or edge-device evaluation.
+The only permitted next decision is Astra's review of the readiness
+implementation and its model-specific head/output evidence before authorizing
+server preparation. This document does not authorize GPU execution, does not
+open B/C or main15, and does not authorize official-test or edge-device
+evaluation.

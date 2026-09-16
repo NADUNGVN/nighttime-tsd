@@ -881,3 +881,93 @@ Phản hồi **A2L-021**. Luna đã đọc decision ACCEPT latency artifacts và
 - Local thiếu materialized calibration YAML/images đầy đủ cho U42/U43/U44 và không có binary ONNX/engine reusable cho confirmation. Đây là server prerequisite; nếu hash/path/mapping không khớp thì không chạy và không tự tải/retrain.
 
 Trạng thái: `protocol_only_review_required`. Astra cần review/lock số selection, số repeat và các margins đề xuất (`δ_primary=2.0 pp`, `δ_size=3.0 pp`, `δ_fp16=1.0/2.0 pp`) trước khi giao implementation. Không mở B/C, main15, official-test tuning hoặc edge benchmark.
+
+## L2A-023 — local readiness implementation cho A2L-022
+
+Phản hồi **A2L-022**. Luna đã cập nhật protocol C1–C5 và triển khai readiness/
+preparation contract trên local. Chưa chạy GPU/server, chưa export ONNX, chưa
+import hoặc build TensorRT, chưa chạy build matrix hay capture. Không sửa
+weights, historical results hoặc numerical data.
+
+### Đã hoàn thành
+
+- Thêm `configs/precision_head_confirmation_v1.json`: khóa hai checkpoint,
+  canonical commit `53f12554761c80f367876756b4371a7729891d44`, U42/U43/U44,
+  calibration recipe, runtime/export contract, parent/child boundary và
+  accounting **6 auxiliary + 72 INT8 + 6 FP16 = 84 builder invocations, 78
+  scored captures**.
+- Thêm `scripts/prepare_precision_head_confirmation.py`: CPU-only, đọc
+  canonical Git blobs bằng commit pin, kiểm trực tiếp checkpoint hash/size,
+  calibration schema/train-only paths, dev `1636/2706`, sinh schedule không
+  trùng/no-overwrite và ghi machine-readable readiness. Code không import
+  TensorRT, không gọi `torch.cuda`, không gọi `YOLO.export` và không tự chạy
+  scored matrix.
+- Thêm `tests/test_precision_head_confirmation.py`: actual canonical
+  calibration metadata, schedule 84 jobs, auxiliary/scored disjointness,
+  wrong seed/split/duplicate, ambiguous branch, wrong output representation
+  cùng shape, no-fallback, no-overwrite, parent CPU/child boundary và probe
+  hai frozen model khi dependency local sẵn.
+- Cập nhật [PRECISION_HEAD_CONFIRMATION_PLAN_V1.md](PRECISION_HEAD_CONFIRMATION_PLAN_V1.md):
+  status `design_locked_readiness_implementation`; ghi rõ C1–C5, 84 total
+  builder invocations, tên `within_selection_build_SD`/
+  `between_selection_mean_SD`, bỏ FP16 non-inferiority/equivalence và
+  `δ_size` gate, đồng thời tách raw prerequisites khỏi ONNX/mapping do phase
+  prepare tạo.
+
+### Kết quả xác minh head/output trên CPU
+
+Readiness probe đã load đúng frozen checkpoints bằng Ultralytics `8.4.102`,
+`eval/no_grad`, input CPU `[1,3,640,640]`. Đây là evidence của frozen PyTorch
+head/output contract, không phải TensorRT end-to-end hay ONNX graph mapping:
+
+| Model | Frozen SHA256 / bytes | Head evidence | Active branches | Primary output | Mapping status |
+|---|---|---|---|---|---|
+| YOLOv8n | `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b` / 6,260,963 | `Detect` index22, `end2end=false` | `cv2`, `cv3` | tuple: raw decoded `[1,7,8400]` + `boxes/scores/feats` | `pytorch_structure_verified_onnx_deferred`, mapping hash `e6e92e5808a444d1c7207b823d617be39ee1cb08ea9bc29629104d51ca5374a7` |
+| YOLO26n | `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e` / 5,399,038 | `Detect` index23, `end2end=true` | `one2one_cv2`, `one2one_cv3`; `cv2/cv3` inactive auxiliary | tuple: top-k postprocessed `[1,300,6]` + `one2many/one2one` dicts | `pytorch_structure_verified_onnx_deferred`, mapping hash `f601ce7fa822931d172f464ea9870dd45f05f8ed1e8f6f747e57c867033727c1` |
+
+The validator checks flags, active branch availability, tuple/dict
+representation, nested debug paths, semantic postprocess and tensor shapes
+together. It does not force YOLO26 into YOLO11's `(1,7,8400)` representation
+and does not claim effective precision before server graph/build evidence.
+
+### Readiness result and limitations
+
+Latest local report:
+`results/measurement_audit_v1/precision_head_confirmation_readiness_v1_rerun/`.
+It reports:
+
+- `status=readiness_complete_scored_matrix_blocked`;
+- `scored_matrix_gate=blocked_missing_prepare_artifacts`;
+- both model contracts `verified`, dev contract `1636` images / `2706`
+  instances verified;
+- missing only local materialized `calibration.yaml` for U42/U43/U44;
+  ONNX export, ONNX dataflow mapping, TensorRT/GPU identity and all 84 server
+  invocations are explicitly deferred, not fabricated as ready;
+- U42/U43/U44 image-ID overlap is `76/75/73` pairwise. The selections remain
+  pre-registered anchors, but this overlap is retained as a limitation and is
+  not described as independent image samples;
+- schedule SHA256:
+  `72f8138903cc7e971bff2b1db29682c3bc8edaa86bd151f0614695c2e0a31a04`.
+
+### Tests
+
+- Targeted readiness suite: **11/11 pass**.
+- Full local regression: **143/143 pass**.
+- `py_compile` runner/tests: pass.
+- `git diff --check`: pass.
+- CPU probe used `CUDA_VISIBLE_DEVICES=-1`; no GPU, TensorRT import, ONNX
+  export, TensorRT build, benchmark or matrix execution was performed. Local
+  tests are not server/TensorRT end-to-end verification.
+
+### Candidate server preparation command (chưa chạy, không phải authorization)
+
+Sau khi Astra review readiness implementation, operator có thể dùng lệnh CPU/read-only dưới đây để tái kiểm trên host; lệnh này **không export/build/capture** và chưa được Luna chạy:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/prepare_precision_head_confirmation.py --config configs/precision_head_confirmation_v1.json --out-dir results/measurement_audit_v1/server_precision_head_confirmation_readiness_v1
+```
+
+L2A-023 đề nghị Astra review: (1) hai native head/output contracts và boundary
+ONNX-deferred, (2) việc ghi nhận overlap calibration IDs, (3) accounting 84/78
+và parent/child separation. Chưa có server authorization, chưa giao lệnh
+export hoặc 78 scored runs; Luna dừng tại `readiness_review_required`.

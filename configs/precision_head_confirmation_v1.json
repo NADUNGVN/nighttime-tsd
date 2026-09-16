@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_confirmation_v1",
+  "status": "design_locked_readiness_implementation",
+  "canonical_input_commit": "53f12554761c80f367876756b4371a7729891d44",
+  "models": [
+    {
+      "label": "yolov8n",
+      "checkpoint": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+      "bytes": 6260963,
+      "expected_contract": {
+        "head_type": "Detect",
+        "head_index": 22,
+        "end2end": false,
+        "active_branches": ["cv2", "cv3"],
+        "inactive_branches": [],
+        "output_kind": "decoded_raw_plus_head_dict",
+        "primary_output_representation": "tuple_tensor_plus_dict",
+        "primary_output_shape": [1, 7, 8400],
+        "primary_output_dtype": "torch.float32",
+        "debug_paths": ["boxes", "scores", "feats"],
+        "boxes_shape": [1, 64, 8400],
+        "scores_shape": [1, 3, 8400],
+        "feature_shapes": [[1, 64, 80, 80], [1, 128, 40, 40], [1, 256, 20, 20]],
+        "postprocess": "none_in_model_head_output",
+        "nms": "not_in_model_head_output"
+      }
+    },
+    {
+      "label": "yolo26n",
+      "checkpoint": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+      "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e",
+      "bytes": 5399038,
+      "expected_contract": {
+        "head_type": "Detect",
+        "head_index": 23,
+        "end2end": true,
+        "active_branches": ["one2one_cv2", "one2one_cv3"],
+        "inactive_branches": ["cv2", "cv3"],
+        "output_kind": "end2end_topk_detections_plus_head_dict",
+        "primary_output_representation": "tuple_tensor_plus_dict",
+        "primary_output_shape": [1, 300, 6],
+        "primary_output_dtype": "torch.float32",
+        "debug_paths": ["one2many", "one2one"],
+        "boxes_shape": [1, 4, 8400],
+        "scores_shape": [1, 3, 8400],
+        "feature_shapes": [[1, 64, 80, 80], [1, 128, 40, 40], [1, 256, 20, 20]],
+        "postprocess": "topk_300_detections_in_model_head_output",
+        "nms": "postprocess_only_as_defined_by_locked_ultralytics_runtime"
+      }
+    }
+  ],
+  "calibration_selections": [
+    {
+      "id": "U42",
+      "seed": 42,
+      "manifest": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/calibration_manifest.json",
+      "canonical_sha256": "ef1c4416986118814ed52367e9e04a935dfe2f2bf200f3752a4b5beb11b5ca18",
+      "strategy": "uniform",
+      "requested_size": 1024,
+      "selected_size": 1024,
+      "train_only": true,
+      "materialized_yaml_required": true
+    },
+    {
+      "id": "U43",
+      "seed": 43,
+      "manifest": "data/processed/cctsdb2021_clean/calibration/uniform_s43_n1024/calibration_manifest.json",
+      "canonical_sha256": "0ad1dfe04c0a983babed1ac4409ed199d260a2310653dc5b11527c9ee12b5889",
+      "strategy": "uniform",
+      "requested_size": 1024,
+      "selected_size": 1024,
+      "train_only": true,
+      "materialized_yaml_required": true
+    },
+    {
+      "id": "U44",
+      "seed": 44,
+      "manifest": "data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/calibration_manifest.json",
+      "canonical_sha256": "100914438e4d1b037e2b1bd046442d881b089ca6ba6a7f2ecab4a6270fb05a3c",
+      "strategy": "uniform",
+      "requested_size": 1024,
+      "selected_size": 1024,
+      "train_only": true,
+      "materialized_yaml_required": true
+    }
+  ],
+  "arms": ["baseline_int8", "bbox_fp32", "classification_fp32", "both_fp32"],
+  "build_repeats": [1, 2, 3],
+  "fp16_repeats": [1, 2, 3],
+  "accounting": {
+    "auxiliary_calibration_builds": 6,
+    "scored_int8_builds": 72,
+    "scored_fp16_builds": 6,
+    "scored_builds": 78,
+    "total_builder_invocations": 84,
+    "captures": 78,
+    "onnx_exports": 2,
+    "dev_images": 1636,
+    "dev_instances": 2706,
+    "image_passes": 127608
+  },
+  "runtime": {
+    "imgsz": 640,
+    "batch": 1,
+    "task": "detect",
+    "rect": false,
+    "conf": 0.001,
+    "iou": 0.7,
+    "max_det": 300,
+    "workers": 0,
+    "torch": "2.5.1+cu121",
+    "ultralytics": "8.4.102",
+    "tensorrt": "10.16.1.11",
+    "cuda": "12.1",
+    "numpy": "2.4.4",
+    "pycocotools": "2.0.10"
+  },
+  "calibration_recipe": {
+    "algorithm": "MinMax",
+    "batch_size": 1,
+    "input_shape": [1, 3, 640, 640],
+    "preprocessing": "locked CCTSDB train image decode/resize/normalize path",
+    "order": "manifest file order, deterministic",
+    "scored_int8_mode": "cache_only_zero_batches_zero_writes",
+    "fp16_mode": "no_calibration"
+  },
+  "export_contract": {
+    "format": "onnx",
+    "imgsz": 640,
+    "batch": 1,
+    "opset": 17,
+    "simplify": true,
+    "dynamic": false,
+    "half": false,
+    "end2end": "preserve_frozen_model_head_flag",
+    "output_semantics": "model-specific_expected_contract_and_native_parser_validation"
+  },
+  "execution_boundary": {
+    "readiness_process": "single_cpu_only_parent",
+    "server_prepare": "reviewed_prepare_process_creates_onnx_and_mapping",
+    "scored_execution": "one_isolated_child_per_builder_or_capture_job",
+    "parent_must_not_import_tensorrt_or_touch_cuda": true,
+    "child_must_bind_model_selection_arm_repeat": true
+  },
+  "schedule": {
+    "version": "model_block_selection_aux_then_scored_v1",
+    "model_order": ["yolov8n", "yolo26n"],
+    "selection_order": ["U42", "U43", "U44"],
+    "arm_order": ["baseline_int8", "bbox_fp32", "classification_fp32", "both_fp32"],
+    "build_repeat_order": [1, 2, 3],
+    "fp16_repeat_order": [1, 2, 3]
+  },
+  "output_contract": {
+    "root": "results/measurement_audit_v1/precision_head_confirmation_readiness_v1",
+    "files": ["readiness_manifest.json", "model_contracts.json", "calibration_readiness.json", "schedule.json", "report.md"],
+    "no_overwrite": true
+  },
+  "decision_rules": {
+    "screening_margin_full_map50_95_pp": 2.0,
+    "consistency_positive_selections": 2,
+    "consistency_no_reversal_pp": 2.0,
+    "fp16_noninferiority_margin": null,
+    "size_gate_pp": null,
+    "fp16_reporting": "continuous_gap_and_ci_only",
+    "size_reporting": "continuous_xs_s_point_ci_and_adverse_effects"
+  },
+  "dev_contract": {
+    "split": "CCTSDB2021/dev",
+    "images": 1636,
+    "instances": 2706,
+    "yaml_reference": "results/measurement_audit_v1/server_fp16_capture_v1/dev_absolute.yaml",
+    "evaluator": "coco_xml_paired_image_bootstrap_v1",
+    "bootstrap_seed": 20260916,
+    "bootstrap_resamples": 1000
+  },
+  "limitations": [
+    "CPU readiness evidence is not TensorRT end-to-end evidence.",
+    "ONNX graph mapping is deferred to the reviewed server prepare/export phase.",
+    "Shared-lab GPU interference remains an execution-time limitation.",
+    "Two source models are not a random architecture sample."
+  ]
+}
