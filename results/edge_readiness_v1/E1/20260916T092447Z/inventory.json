@@ -1,0 +1,149 @@
+{
+  "schema_version": "e2l1-edge-inventory-v1",
+  "created_utc": "2026-09-16T09:24:47.466505+00:00",
+  "target": "E1",
+  "ssh_alias": "pi5",
+  "ssh_command": [
+    "ssh",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "pi5",
+    "sh",
+    "-s"
+  ],
+  "collector_sha256": "b9abe9272cae4c015d6094248e559f854f417840b9ac1abe877745b6ed87b212",
+  "transport": {
+    "status": "ok",
+    "returncode": 0,
+    "timed_out": false,
+    "stderr_or_unmarked_output": null
+  },
+  "operator_notes": "E2L1-001 bounded read-only inventory; no installation, compilation, inference, benchmark, or state change.",
+  "commands": {
+    "hostname": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "raspberrypi"
+    },
+    "model": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Raspberry Pi 5 Model B Rev 1.1"
+    },
+    "os_release": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.5\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\""
+    },
+    "l4t_release_file": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "nvidia_driver_proc": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "uname": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Linux raspberrypi 6.18.34+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.18.34-1+rpt1 (2026-06-09) aarch64 GNU/Linux"
+    },
+    "architecture": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "aarch64"
+    },
+    "lscpu": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Architecture:                            aarch64\nCPU op-mode(s):                          32-bit, 64-bit\nByte Order:                              Little Endian\nCPU(s):                                  4\nOn-line CPU(s) list:                     0-3\nVendor ID:                               ARM\nModel name:                              Cortex-A76\nModel:                                   1\nThread(s) per core:                      1\nCore(s) per cluster:                     4\nSocket(s):                               -\nCluster(s):                              1\nStepping:                                r4p1\nFrequency boost:                         disabled\nCPU(s) scaling MHz:                      62%\nCPU max MHz:                             2400.0000\nCPU min MHz:                             1500.0000\nBogoMIPS:                                108.00\nFlags:                                   fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp\nL1d cache:                               256 KiB (4 instances)\nL1i cache:                               256 KiB (4 instances)\nL2 cache:                                2 MiB (4 instances)\nL3 cache:                                2 MiB (1 instance)\nNUMA node(s):                            8\nNUMA node0 CPU(s):                       0-3\nNUMA node1 CPU(s):                       0-3\nNUMA node2 CPU(s):                       0-3\nNUMA node3 CPU(s):                       0-3\nNUMA node4 CPU(s):                       0-3\nNUMA node5 CPU(s):                       0-3\nNUMA node6 CPU(s):                       0-3\nNUMA node7 CPU(s):                       0-3\nVulnerability Gather data sampling:      Not affected\nVulnerability Ghostwrite:                Not affected\nVulnerability Indirect target selection: Not affected\nVulnerability Itlb multihit:             Not affected\nVulnerability L1tf:                      Not affected\nVulnerability Mds:                       Not affected\nVulnerability Meltdown:                  Not affected\nVulnerability Mmio stale data:           Not affected\nVulnerability Old microcode:             Not affected\nVulnerability Reg file data sampling:    Not affected\nVulnerability Retbleed:                  Not affected\nVulnerability Spec rstack overflow:      Not affected\nVulnerability Spec store bypass:         Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:                Mitigation; __user pointer sanitization\nVulnerability Spectre v2:                Mitigation; CSV2, BHB\nVulnerability Srbds:                     Not affected\nVulnerability Tsa:                       Not affected\nVulnerability Tsx async abort:           Not affected\nVulnerability Vmscape:                   Not affected"
+    },
+    "memory": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "total        used        free      shared  buff/cache   available\nMem:           7.9Gi       575Mi       424Mi        34Mi       7.1Gi       7.3Gi\nSwap:          2.0Gi          0B       2.0Gi"
+    },
+    "root_filesystem": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Filesystem     Type  Size  Used Avail Use% Mounted on\n/dev/mmcblk0p2 ext4   29G   23G  4.9G  83% /"
+    },
+    "mounts": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "/dev/mmcblk0p2 ext4 28.7G 22.6G  4.8G /"
+    },
+    "pci": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "0001:00:00.0 PCI bridge [0604]: Broadcom Inc. and subsidiaries BCM2712 PCIe Bridge [14e4:2712] (rev 30)\n0001:01:00.0 Co-processor [0b40]: Hailo Technologies Ltd. Hailo-8 AI Processor [1e60:2864] (rev 01)\n0002:00:00.0 PCI bridge [0604]: Broadcom Inc. and subsidiaries BCM2712 PCIe Bridge [14e4:2712] (rev 30)\n0002:01:00.0 Ethernet controller [0200]: Raspberry Pi Ltd RP1 PCIe 2.0 South Bridge [1de4:0001]"
+    },
+    "nvidia_smi": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "nvcc": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "trtexec": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "hailortcli_version": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "HailoRT-CLI version 4.23.0"
+    },
+    "hailo_identify": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Executing on device: 0001:01:00.0\nIdentifying board\nControl Protocol Version: 2\nFirmware Version: 4.23.0 (release,app,extended context switch buffer)\nLogger Version: 0\nBoard Name: Hailo-8\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\nDevice Architecture: HAILO8"
+    },
+    "l4t_package": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "nvidia-l4t-core=missing\nlibcudnn8=missing\ntensorrt=missing\npython3-libnvinfer=missing"
+    },
+    "python": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Python 3.13.5"
+    },
+    "python_runtime_packages": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "hailort=4.23.0"
+    },
+    "power_mode": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "clock_state": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "thermal_sources": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 49050"
+    },
+    "telemetry_and_power_sources": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "command:tegrastats=missing\ncommand:jtop=missing\ncommand:vcgencmd=/usr/bin/vcgencmd\ncommand:sensors=missing\ncommand:ipmitool=missing\npath:/sys/class/powercap=missing\npath:/sys/bus/iio/devices=missing"
+    }
+  }
+}

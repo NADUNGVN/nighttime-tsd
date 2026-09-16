@@ -1,0 +1,37 @@
+{
+  "schema_version": "e2l1-edge-measurement-protocol-v1",
+  "status": "proposed-review-required",
+  "benchmark_run_performed": false,
+  "fields_to_bind_before_authorization": {
+    "source_weight_sha256": null,
+    "calibration_image_ids": [],
+    "calibration_manifest_sha256": null,
+    "calibration_order": "explicit, frozen, review-required",
+    "backend_native_quantization": true,
+    "runtime_versions": "capture per device and run",
+    "preprocessing": "exact code/config/hash required",
+    "postprocessing": "exact code/config/hash required",
+    "input_shape_and_batch": "explicit and frozen",
+    "warmup_count": null,
+    "measured_count": null,
+    "latency_boundary": "preprocess + model + postprocess; synchronization rules required",
+    "percentiles": ["p50", "p95", "p99"],
+    "memory_peak_mb": true,
+    "power_boundary": "external meter boundary if available; otherwise report unavailable",
+    "thermal_steady_state": "baseline and post-warmup temperature required",
+    "throttle_state": "record without changing clocks/power/fan"
+  },
+  "proposed_conditions": {
+    "cpu_reference": "FP32 where supported; do not relabel as INT8",
+    "jetson_gpu": ["FP16", "INT8 only after conversion/calibration review"],
+    "hailo": ["native Hailo path only after export/compiler review"],
+    "power_modes": "use only explicitly approved fixed modes; current inventory snapshots are not benchmark conditions",
+    "telemetry": "tegrastats/vcgencmd availability is recorded; no telemetry sample was taken in E2L1-001"
+  },
+  "hard_gates": [
+    "Astra/reviewer approval before installation, export, compilation, inference, or benchmark",
+    "same frozen source weights across backends",
+    "same calibration image IDs where logically applicable",
+    "no copied RTX engine treated as portable edge artifact"
+  ]
+}

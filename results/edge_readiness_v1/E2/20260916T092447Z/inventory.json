@@ -1,0 +1,149 @@
+{
+  "schema_version": "e2l1-edge-inventory-v1",
+  "created_utc": "2026-09-16T09:24:49.543045+00:00",
+  "target": "E2",
+  "ssh_alias": "nx",
+  "ssh_command": [
+    "ssh",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=10",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "nx",
+    "sh",
+    "-s"
+  ],
+  "collector_sha256": "b9abe9272cae4c015d6094248e559f854f417840b9ac1abe877745b6ed87b212",
+  "transport": {
+    "status": "ok",
+    "returncode": 0,
+    "timed_out": false,
+    "stderr_or_unmarked_output": null
+  },
+  "operator_notes": "E2L1-001 bounded read-only inventory; no installation, compilation, inference, benchmark, or state change.",
+  "commands": {
+    "hostname": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "arar-desktop"
+    },
+    "model": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "NVIDIA Jetson Xavier NX Developer Kit"
+    },
+    "os_release": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "NAME=\"Ubuntu\"\nVERSION=\"20.04.6 LTS (Focal Fossa)\"\nID=ubuntu\nID_LIKE=debian\nPRETTY_NAME=\"Ubuntu 20.04.6 LTS\"\nVERSION_ID=\"20.04\"\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nVERSION_CODENAME=focal\nUBUNTU_CODENAME=focal"
+    },
+    "l4t_release_file": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "# R35 (release), REVISION: 4.1, GCID: 33958178, BOARD: t186ref, EABI: aarch64, DATE: Tue Aug  1 19:57:35 UTC 2023"
+    },
+    "nvidia_driver_proc": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "uname": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Linux arar-desktop 5.10.120-tegra #1 SMP PREEMPT Tue Aug 1 12:32:50 PDT 2023 aarch64 aarch64 aarch64 GNU/Linux"
+    },
+    "architecture": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "aarch64"
+    },
+    "lscpu": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Architecture:                    aarch64\nCPU op-mode(s):                  32-bit, 64-bit\nByte Order:                      Little Endian\nCPU(s):                          6\nOn-line CPU(s) list:             0-5\nThread(s) per core:              1\nCore(s) per socket:              2\nSocket(s):                       3\nVendor ID:                       Nvidia\nModel:                           0\nModel name:                      ARMv8 Processor rev 0 (v8l)\nStepping:                        0x0\nCPU max MHz:                     1907,2000\nCPU min MHz:                     115,2000\nBogoMIPS:                        62.50\nL1d cache:                       384 KiB\nL1i cache:                       768 KiB\nL2 cache:                        6 MiB\nL3 cache:                        4 MiB\nVulnerability Itlb multihit:     Not affected\nVulnerability L1tf:              Not affected\nVulnerability Mds:               Not affected\nVulnerability Meltdown:          Not affected\nVulnerability Spec store bypass: Not affected\nVulnerability Spectre v1:        Mitigation; __user pointer sanitization\nVulnerability Spectre v2:        Mitigation; Branch predictor hardening, but not BHB\nVulnerability Srbds:             Not affected\nVulnerability Tsx async abort:   Not affected\nFlags:                           fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm dcpop"
+    },
+    "memory": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "total        used        free      shared  buff/cache   available\nMem:          6,7Gi       1,8Gi       3,2Gi        66Mi       1,7Gi       4,6Gi\nSwap:         3,3Gi        14Mi       3,3Gi"
+    },
+    "root_filesystem": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Filesystem     Type  Size  Used Avail Use% Mounted on\n/dev/mmcblk0p1 ext4  117G   18G   94G  17% /"
+    },
+    "mounts": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "/dev/mmcblk0p1 ext4   116,4G 17,9G 93,7G /"
+    },
+    "pci": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "0004:00:00.0 PCI bridge [0604]: NVIDIA Corporation Device [10de:1ad1] (rev a1)\n0004:01:00.0 Network controller [0280]: Realtek Semiconductor Co., Ltd. RTL8822CE 802.11ac PCIe Wireless Network Adapter [10ec:c822]"
+    },
+    "nvidia_smi": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "nvcc": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "nvcc: NVIDIA (R) Cuda compiler driver\nCopyright (c) 2005-2022 NVIDIA Corporation\nBuilt on Sun_Oct_23_22:16:07_PDT_2022\nCuda compilation tools, release 11.4, V11.4.315\nBuild cuda_11.4.r11.4/compiler.31964100_0"
+    },
+    "trtexec": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "&&&& RUNNING TensorRT.trtexec [TensorRT v8502] # /usr/src/tensorrt/bin/trtexec --help"
+    },
+    "hailortcli_version": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "hailo_identify": {
+      "status": "missing",
+      "returncode": 127,
+      "output": null
+    },
+    "l4t_package": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "nvidia-l4t-core\t35.4.1-20230801124926\nlibcudnn8\t8.6.0.166-1+cuda11.4\ntensorrt\t8.5.2.2-1+cuda11.4\npython3-libnvinfer\t8.5.2-1+cuda11.4"
+    },
+    "python": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "Python 3.8.10"
+    },
+    "python_runtime_packages": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "tensorrt=8.5.2.2"
+    },
+    "power_mode": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "NV Power Mode: MODE_20W_6CORE\n8\nNVPM ERROR: Error opening /sys/kernel/nvpmodel_emc_cap/emc_iso_cap: 13\nNVPM ERROR: failed to read PARAM EMC: ARG MAX_FREQ: PATH /sys/kernel/nvpmodel_emc_cap/emc_iso_cap\nNVPM ERROR: Error opening /sys/devices/platform/c250000.i2c/i2c-7/7-0040/hwmon/hwmon5/curr1_max: 13\nNVPM ERROR: failed to read PARAM VDDIN_OC_LIMIT: ARG WARN: PATH /sys/devices/platform/c250000.i2c/i2c-7/7-0040/hwmon/hwmon5/curr1_max\nNVPM ERROR: Error opening /sys/devices/platform/c250000.i2c/i2c-7/7-0040/hwmon/hwmon5/curr1_crit: 13\nNVPM ERROR: failed to read PARAM VDDIN_OC_LIMIT: ARG CRIT: PATH /sys/devices/platform/c250000.i2c/i2c-7/7-0040/hwmon/hwmon5/curr1_crit"
+    },
+    "clock_state": {
+      "status": "unavailable",
+      "returncode": 1,
+      "output": "SOC family:tegra194  Machine:NVIDIA Jetson Xavier NX Developer Kit\nError: Run this script(/usr/bin/jetson_clocks) as a root user"
+    },
+    "thermal_sources": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 29000\n/sys/class/thermal/thermal_zone1/temp: 28500\n/sys/class/thermal/thermal_zone2/temp: 28500\n/sys/class/thermal/thermal_zone3/temp: 28000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 28500"
+    },
+    "telemetry_and_power_sources": {
+      "status": "ok",
+      "returncode": 0,
+      "output": "command:tegrastats=/usr/bin/tegrastats\ncommand:jtop=missing\ncommand:vcgencmd=missing\ncommand:sensors=missing\ncommand:ipmitool=missing\npath:/sys/class/powercap=missing\npath:/sys/bus/iio/devices=present"
+    }
+  }
+}

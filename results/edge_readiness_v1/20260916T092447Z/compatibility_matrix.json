@@ -1,0 +1,49 @@
+{
+  "schema_version": "e2l1-edge-compatibility-v1",
+  "inventory_run_id": "20260916T092447Z",
+  "status": "observed-capability-only",
+  "scored_study_authorized": false,
+  "rows": [
+    {
+      "device_id": "E1",
+      "backend": "HailoRT",
+      "observed": "Hailo-8 PCIe device; HailoRT-CLI/Python 4.23.0; fw-control identify succeeds",
+      "source_model_export": "unverified",
+      "yolo26_native_end2end": "unverified",
+      "quantization": "backend-native INT8 procedure not run",
+      "risks": ["PCIe x1 bandwidth was historical and not re-verified", "CCTSDB YOLO operator coverage/export path not established"]
+    },
+    {
+      "device_id": "E2",
+      "backend": "TensorRT GPU",
+      "observed": "TensorRT 8.5.2.2, CUDA 11.4.19, cuDNN 8.6.0.166; trtexec --help returns TensorRT v8502",
+      "source_model_export": "unverified",
+      "yolo26_native_end2end": "unverified",
+      "quantization": "backend-native INT8 calibration/build not run",
+      "risks": ["Jetson Xavier NX is L4T 35.4.1; version-specific operator and parser support must be checked before conversion"]
+    },
+    {
+      "device_id": "E3",
+      "backend": "TensorRT GPU",
+      "observed": "TensorRT 8.5.2.2, CUDA 11.4.19, cuDNN 8.6.0.166; trtexec --help returns TensorRT v8502",
+      "source_model_export": "unverified",
+      "yolo26_native_end2end": "unverified",
+      "quantization": "backend-native INT8 calibration/build not run",
+      "risks": ["Exact RAM SKU remains uncertain", "Xavier DLA is not a full-model target based on historical project smoke evidence"]
+    },
+    {
+      "device_id": "E5",
+      "backend": "TensorRT GPU",
+      "observed": "TensorRT 10.3.0, CUDA 12.6.68, NVIDIA driver 540.5.0; trtexec --help returns TensorRT v100300",
+      "source_model_export": "unverified",
+      "yolo26_native_end2end": "unverified",
+      "quantization": "backend-native INT8 calibration/build not run",
+      "risks": ["This is Orin Nano Super, not legacy Jetson Nano", "DLA absent per infrastructure record; no DLA path is assumed"]
+    }
+  ],
+  "non_targets": {
+    "E4": "out of E2L1-001 scope",
+    "legacy_nano": "unmapped; no network scan performed",
+    "separate_pi5_cpu_board": "not identified separately; E1 CPU-only is a condition, not a fifth board"
+  }
+}
