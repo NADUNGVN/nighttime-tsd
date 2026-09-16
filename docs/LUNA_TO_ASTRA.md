@@ -1468,3 +1468,54 @@ Unknown operators vẫn fail-closed.
 review trước khi rerun preparation. Nếu được duyệt, dùng output root mới
 `results/measurement_audit_v1/precision_head_confirmation_graph_prep_v3/`; không
 overwrite v2 và không mở TensorRT/scored matrix.
+
+## L2A-031 — G4 corrected and G5 preserved-ONNX audit-only diagnostic
+
+Đã hoàn tất A2L-029 trên graph worktree, không chạy server/GPU và không chạy
+lại full export. G4 được sửa theo counterexample của Astra: alias nested của
+`one2one_cv3` lấy `<scale>` và `<block>` độc lập từ source path. Với source
+`model.23.one2one_cv3.<scale>.<block>.<leaf>.conv`, alias nested được tạo thành
+`model.23.one2one_cv3.<scale>.one2one_cv3.<scale>.<block>.one2one_cv3.<scale>.<block>.<leaf>.conv`.
+Terminal `.2` dùng alias one-wrapper; source malformed không tạo alias. Không
+có prefix/shape/fused-name fallback.
+
+Đã bổ sung test cho toàn bộ pattern source inventory YOLO26 `scale=0/1/2`,
+`block=0/1`, hai inner leaves, terminal leaves, malformed path, alias
+duplicate ambiguity và inactive branches. Graph regression hiện **21/21
+PASS**.
+
+G5 được triển khai bằng
+`scripts/audit_precision_head_confirmation_graph.py`. Helper:
+
+- yêu cầu ONNX v2 và model-specific prepare/failure record có sẵn; thiếu input
+  thì dừng trước khi tạo output và không export thay thế;
+- đọc ONNX bằng checker/shape inference trong memory rồi gọi graph mapping;
+- lưu source ONNX hash trước/sau, source records/log hashes, code/helper/config/
+  readiness hashes, actual head Conv names, source-to-node candidates, I/O/
+  opset/schema, post-merge topology/attributes/shapes, small referenced
+  constants và mapping errors kể cả khi unresolved;
+- ghi evidence vào output mới trước khi kết thúc; không sửa v1/v2;
+- không import/load model, không forward/exporter/calibration/TensorRT/build/
+  capture/scored execution. Flags bắt buộc là `audit_only=true`,
+  `export_performed=false`, `build_performed=false`,
+  `scored_run_authorized=false`.
+
+Diagnostic tests: **3/3 PASS**; gồm persistence của unresolved evidence và
+hash không đổi, missing-ONNX fail-closed không tạo output, và source guard
+không có model/export dispatch. `py_compile` và `git diff --check` cũng PASS.
+
+Chưa có diagnostic artifact server; ONNX v2 vẫn là operator/server evidence,
+không có trong local graph worktree và không được push. Chưa có kết luận graph
+mapping thực tế mới, chưa có producer-output equivalence, numeric forward,
+TensorRT compatibility hay scored authorization.
+
+### G5 operator command and scoped artifacts
+
+Sau khi pull commit mới, operator chạy foreground command dưới đây với
+CUDA-hidden CPU environment. Không cần GPU trống. Output v3 phải chưa tồn tại;
+v2 không được overwrite/resume. Chỉ push đúng năm file: `audit_plan.json`,
+`graph_audit_manifest.json`, `report.md`,
+`models/yolov8n/graph_audit.json`,
+`models/yolo26n/graph_audit.json`. Không push ONNX/PT/engine/cache/private
+binary. Mapping unresolved là kết quả hợp lệ của diagnostic và phải được giữ
+nguyên để review, không rerun full export.

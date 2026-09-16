@@ -683,12 +683,17 @@ def _exporter_wrapper_aliases(source_name: str) -> set[str]:
         if branch_index + 1 >= len(parts) or not parts[branch_index + 1].isdigit():
             continue
         scale_index = parts[branch_index + 1]
+        if branch == "one2one_cv3" and (
+            branch_index + 2 >= len(parts) or not parts[branch_index + 2].isdigit()
+        ):
+            continue
         aliases.add(".".join(parts[: branch_index + 1] + [scale_index, branch] + parts[branch_index + 1 :]))
-        if branch == "one2one_cv3":
+        if branch == "one2one_cv3" and branch_index + 2 < len(parts) and parts[branch_index + 2].isdigit():
+            block_index = parts[branch_index + 2]
             aliases.add(
                 ".".join(
                     parts[: branch_index + 1]
-                    + [scale_index, branch, scale_index, scale_index, branch]
+                    + [scale_index, branch, scale_index, block_index, branch]
                     + parts[branch_index + 1 :]
                 )
             )

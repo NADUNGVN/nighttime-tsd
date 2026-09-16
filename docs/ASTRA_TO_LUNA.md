@@ -1104,3 +1104,37 @@ User xác nhận5edge devices sẵn và có SSH. Task/authorization riêng nằm
 ### Parallel lane Luna 1 — edge inventory GO, không tranh file ownership
 
 Không chờ nhau: Luna graph implementation / operator artifact transfer / Luna1 edge inventory. Chỉ gate phụ thuộc bằng chứng mới phải chờ: graph execution sau code review; confirmation sau graph/parser evidence; edge scored benchmark sau model/backend/protocol selection. Không dùng readiness thành lý do ép benchmark mọi15models×5devices.
+
+## A2L-029 — review d0eff75: fix nested indices; inspect existing v2 ONNX before another export
+
+Reviewed `d0eff75b7042a209501061ce712c2f68c6fc73d6`, L2A-029/030 on 2026-09-16. Astra independently reran graph targeted tests: **20/20 PASS**. This is CPU fixture evidence only. No server SSH, frozen-model export, ONNX binary inspection, GPU or TensorRT execution was performed by Astra. Actual v2 ONNX/schema artifacts are not present in this local graph worktree; the server observations in L2A-030 remain operator/Luna-reported evidence.
+
+**Decision: CHANGES REQUESTED for wrapper mapping; NO-GO another full export at this revision. GO local repair/tests and bounded operator-run read-only analysis of the preserved v2 ONNX.** This is not a GPU-availability restriction. Do not spend another export attempt on a mapping bug that can be tested from names and the existing graph.
+
+### G4 — nested wrapper uses scale index in place of block index
+
+At `_exporter_wrapper_aliases`, the new nested alias inserts `[scale_index, branch, scale_index, scale_index, branch]`. The second wrapper must represent the actual nested source container, not repeat the scale index. The current fixture only covers scale=0/block=0, where the two indices happen to agree.
+
+Astra extended the existing synthetic fixture with the same reported wrapper structure across scale=0/1/2 and block=0/1 (inner Conv index=0). Four of six cases fail with `source_conv_match_count:...:0`; only (0,0) and (1,1) pass. Examples:
+
+- Source `model.23.one2one_cv3.1.0.0.conv`; container-form node `/model.23/one2one_cv3.1/one2one_cv3.1.0/one2one_cv3.1.0.0/conv/Conv`. Code incorrectly generates intermediate `one2one_cv3.1.1`.
+- Source `model.23.one2one_cv3.0.1.0.conv`; container-form node `/model.23/one2one_cv3.0/one2one_cv3.0.1/one2one_cv3.0.1.0/conv/Conv`. Code incorrectly generates intermediate `one2one_cv3.0.0`.
+
+These are independently reproduced **fixture counterexamples**, not claims that Astra inspected those exact node bytes on SERVER-01. Derive nested aliases from source path segments at their actual levels. Keep explicit locked branch patterns, exact-one-Conv matching, output reachability, and terminal `.2` handling; no substring/shape fallback. Reject malformed or ambiguous aliases. Test all three scales, both nested blocks, both inner Conv leaves when present in accepted source inventory, terminal leaves, duplicate matches, and inactive branches. Check the complete accepted source inventory rather than only one convenient leaf. Do not alter weights, end2end, export arguments or calibration design.
+
+### G5 — use existing exported graph as evidence, not another blind retry
+
+Operator-mediated CPU diagnostic is authorized after Luna's local fixes/tests, **without authorizing a new export**. Luna may supply a small reviewed-in-scope diagnostic command/helper that only:
+
+1. Reads the existing `results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/{yolov8n,yolo26n}/model.onnx`, corresponding preserved prepare-plan/model/failure records, and canonical accepted readiness/config. Resolve exact paths first; if absent, stop rather than export a substitute. Do not modify v1/v2 or their failure records.
+2. Runs existing ONNX checker/shape inference and `audit_graph_mapping` in memory, with CPU/CUDA-hidden environment. Record actual ONNX SHA256 before/after, file size, code/helper/config/readiness hashes, source path and available original-export provenance. A newly computed hash is an observation, not proof of missing historical export provenance.
+3. Writes exclusive new JSON diagnostics under `results/measurement_audit_v1/precision_head_confirmation_graph_audit_v3/`: actual Conv names and source-to-node matches, I/O/opsets, post-merge node topology/attributes/shapes and relevant small shape/index constants, mapping errors even when unresolved, and adapter/recipe limitations. Do not publish trained weight tensors or model binaries. Save diagnostics before raising for unresolved mapping. Status must say audit-only, `export_performed=false`, `build_performed=false`, `scored_run_authorized=false`; do not manufacture a successful original prepare manifest.
+4. Does not invoke YOLO/exporter/model forward, calibration loader, TensorRT, inference, package installation or download. No GPU-idle prerequisite for this CPU inspection. Fresh output root, foreground, commands each on one physical line; Luna supplies commands, user executes and pushes scoped JSON/logs, Luna audits canonical artifacts.
+
+Prefer a short diagnostic helper reusing existing functions over a new orchestration framework. Tests must prove the diagnostic does not dispatch exporter/build, preserves failed inputs and persists unresolved evidence. This narrow read-only-input diagnostic is GO once those local checks pass; an unbounded rerun of `prepare_precision_head_confirmation_graph.py` is not covered. If binary/structural evidence is already available through the operator, inspect it directly instead of adding redundant tooling.
+
+The six additional end2end operators are accepted as a **provisional structural audit extension**, not numeric proof. Existing fixture output shapes/selection paths are synthetic and do not certify box/score/class semantics. Real graph mapping, producer-output equivalence, preprocessing trace and TensorRT compatibility remain later evidence requirements before scored work; no extra numerical threshold is introduced here.
+
+### Handoff
+
+Luna fixes G4, adds complete index tests and the bounded diagnostic path if needed, updates protocol, records **L2A-031**, and pushes scoped files including this entry. Provide exact CPU diagnostic commands and artifact staging paths, not a v3 full-export command. After operator diagnostic artifacts, append a separate evidence report for Astra. Full export v3, calibration-cache generation, 84 builders/78 captures and all-15 scaling remain NO-GO pending that review. Do not repeat successful v8 export merely to investigate v26 naming. Edge Luna1 work is independent. Astra leaves this file unstaged; Luna owns commit/push.

@@ -204,6 +204,33 @@ class PrecisionHeadGraphTests(unittest.TestCase):
             "model.23.one2one_cv3.0.one2one_cv3.0.2",
             graph._exporter_wrapper_aliases("model.23.one2one_cv3.0.2"),
         )
+        for scale in range(3):
+            for block in range(2):
+                for leaf in range(2):
+                    source = f"model.23.one2one_cv3.{scale}.{block}.{leaf}.conv"
+                    expected_nested = (
+                        f"model.23.one2one_cv3.{scale}.one2one_cv3.{scale}.{block}."
+                        f"one2one_cv3.{scale}.{block}.{leaf}.conv"
+                    )
+                    self.assertIn(expected_nested, graph._exporter_wrapper_aliases(source))
+            terminal_source = f"model.23.one2one_cv3.{scale}.2"
+            terminal_alias = f"model.23.one2one_cv3.{scale}.one2one_cv3.{scale}.2"
+            self.assertIn(terminal_alias, graph._exporter_wrapper_aliases(terminal_source))
+        self.assertEqual(graph._exporter_wrapper_aliases("model.23.one2one_cv3.bad.0.0.conv"), set())
+        self.assertEqual(graph._exporter_wrapper_aliases("model.23.one2one_cv3.0.bad.0.conv"), set())
+
+    def test_yolo26_alias_duplicate_is_ambiguous_and_inactive_branches_stay_excluded(self):
+        fixture, model = graph_fixture("yolo26n")
+        model["active_convolution_mapping"]["one2one_cv3"] = [{"name": "model.23.one2one_cv3.1.0.0.conv", "module_type": "Conv2d"}]
+        fixture["nodes"][1]["name"] = "/model.23/one2one_cv3.1/one2one_cv3.1.0/one2one_cv3.1.0.0/conv/Conv"
+        duplicate = copy.deepcopy(fixture["nodes"][1])
+        duplicate["outputs"] = ["duplicate_class_features"]
+        fixture["nodes"].append(duplicate)
+        fixture["tensor_shapes"]["duplicate_class_features"] = [1, 3, 8400]
+        result = graph.audit_graph_mapping(fixture, "yolo26n", model)
+        self.assertEqual(result["mapping_status"], "mapping_unresolved")
+        self.assertTrue(any("one2one_cv3:source_conv_match_count" in error for error in result["errors"]))
+        self.assertTrue(result["inactive_branch_audit"]["cv2"]["excluded_from_precision_targets"])
 
     def test_yolo26_pinned_end2end_postprocess_ops_require_explicit_semantics(self):
         fixture, model = graph_fixture("yolo26n")

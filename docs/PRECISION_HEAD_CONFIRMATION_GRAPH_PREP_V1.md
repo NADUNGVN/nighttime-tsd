@@ -97,6 +97,12 @@ For every active source branch the audit:
   `/model.22/cv2.0/cv2.0.0/conv/Conv`) only as a deterministic one-to-one
   name mapping; arbitrary prefix, shape or renamed/fused matches remain
   unresolved;
+- for YOLO26 `one2one_cv3`, derives the nested alias from the source path’s
+  actual `<scale>` and `<block>` segments:
+  `model.23/one2one_cv3.<scale>/one2one_cv3.<scale>.<block>/` followed by
+  `one2one_cv3.<scale>.<block>.<leaf>`; terminal `.2` leaves use only the
+  one-wrapper form. This is tested across all accepted scales, nested blocks
+  and inner leaves; malformed or ambiguous paths remain unresolved;
 - traces each matched node through consumers to the unique relevant primary
   output, not to a debug-only output;
 - finds exactly one output-linked branch-owned channel merge with explicit
@@ -123,12 +129,33 @@ builder/inspector constraints, not claims about every other convolution. The
 three intervention sets are derived only from the verified ownership map.
 
 For YOLO26n, the active `one2one_cv2/one2one_cv3` branches own the pre/post-
+processing channel spans while later TopK/Gather nodes may share final-output
 ancestry. Shared reachability is recorded as expected and is not treated as a
 precision-target overlap. Inactive `cv2/cv3` branches remain explicitly
 audited and excluded. The accepted exporter wrapper adapter records both
 observed `one2one_cv3` forms: one wrapper for terminal `.2` Conv leaves and the
 nested two-wrapper form for the preceding Conv leaves; other renamed/fused
 forms remain unresolved.
+
+## Preserved graph audit boundary (G5)
+
+After a prepare child leaves an existing ONNX and a failure/prepare record,
+`scripts/audit_precision_head_confirmation_graph.py` may inspect that preserved
+tree without invoking the exporter or loading a frozen model. It requires the
+exact existing v2 `model.onnx` files and corresponding records; a missing input
+stops the diagnostic and cannot trigger a substitute export. The helper runs
+ONNX checker and shape inference in memory, calls only the graph mapping audit,
+and writes a fresh audit-v3 root. It records source ONNX hashes before/after,
+actual head Conv names, source-to-node candidates, I/O/opset/schema, post-merge
+topology/attributes/shapes, small referenced constants, provenance hashes and
+unresolved errors. It does not modify v1/v2, create a prepare manifest, perform
+model forward, calibration, TensorRT, build, capture or scored execution.
+
+Audit output is evidence only. `audit_only=true`,
+`export_performed=false`, `build_performed=false`, and
+`scored_run_authorized=false` are mandatory even when mapping is verified.
+Only JSON diagnostics and the Markdown report are eligible for Git; ONNX/PT,
+engine, cache and private binaries remain server-only.
 
 ## Adapter contract
 
