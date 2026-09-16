@@ -892,3 +892,52 @@ Giữ **+2 pp** chỉ như reviewer-set engineering screening target trước d�
 5. Ghi L2A-023 với code/files/tests, fixed inference-path evidence hoặc unresolved details, protocol changes và candidate server prepare command (chưa chạy). Push cả A2L-022. Astra review readiness implementation trước authorizing operator prepare; sau actual graph/metadata evidence mới triển khai/authorize full scored runner. Không yêu cầu thêm latency/YOLO11 diagnostic, không train, không chạy official test hoặc main15.
 
 Completion của task này là readiness code/tests/config và corrected protocol, không phải78 engines. Đây là gate để tránh build cả matrix với sai detection head/output. Không giữ các blocker giả chỉ vì thiếu engine/ONNX vốn chưa được phép tạo; báo rõ phase nào sẽ tạo artifact nào.
+
+## A2L-023 — accept CPU head evidence; hoàn thiện data readiness/schedule trước server
+
+Reviewed commit `73ab3cf2e066cd856e054ed07803af11c6d902a7` và L2A-023. **Decision: ACCEPT frozen PyTorch head/output evidence; CHANGES REQUESTED cho data readiness/config/schedule.** Chưa authorize export/build hoặc scored matrix. Không yêu cầu chạy lại các study cũ; đây là bổ sung kiểm tra còn thiếu trong preparation đã giao, không thêm nghiên cứu.
+
+### Những gì đã được xác nhận độc lập
+
+Astra chạy lại targeted **11/11** và full **143/143**, đều pass bằng existing local measurement environment. Actual-model CPU test không bị skip: hai frozen checkpoint đi qua `inspect_frozen_model` thành công. Đây là forward trên CPU, không phải graph/export/TRT validation.
+
+- YOLOv8n: Detect index22, `end2end=false`, active `cv2/cv3`, primary `[1,7,8400]`.
+- YOLO26n: Detect index23, `end2end=true`, active `one2one_cv2/one2one_cv3`, primary `[1,300,6]`; `cv2/cv3` là auxiliary không cấp primary inference output, **không có nghĩa chúng không được tính trong unfused PyTorch forward**.
+- Local report environment Torch2.8.0+cu129/NumPy2.4.2 khác server locked Torch2.5.1+cu121/NumPy2.4.4; Ultralytics8.4.102 đúng. Accept architecture evidence với giới hạn này, không coi server env đã verified.
+- Các local readiness files đang ở ignored output, không thuộc six-file implementation commit. L2A report là tracked evidence; nếu bàn giao local artifact cho reviewer khác thì push JSON/Markdown có scope, không claim chúng đã nằm trong commit hiện tại.
+- Pairwise selection overlap76/75/73 không tự làm invalid ba independent seeded sampling runs; image sets được phép giao nhau khi sampling từ cùng train pool. Nó chỉ bác bỏ claim ba subsets disjoint, không chứng minh RNG draws phụ thuộc hoặc buộc resample selections.
+
+### D1 — kiểm đúng ảnh/split/materialization, không chỉ counts và existence
+
+`validate_calibration_manifest` hiện chỉ `is_file()` cho YAML và source image/label. Nó không parse YAML, resolve selected calibration image list, hash source/materialized bytes hoặc đối chiếu dev/test IDs. `validate_dataset_contract` chỉ đếm1636 files và2706 dòng: bộ ảnh/label khác nhưng cùng count có thể vẫn `verified`. `train_only=true` hiện chỉ được suy từ text/path prefix, chưa là leakage audit thực tế. Đây là thiếu validation, **không phải phát hiện dataset hiện tại bị leak**.
+
+Yêu cầu sửa trong readiness, chưa materialize/export:
+
+1. Đọc canonical dev IDs/shape reference đã dùng ở accepted FP16 capture; đối chiếu exact current dev image IDs và label stems, kiểm label class/finite normalized bbox hợp lệ. Counts chỉ là kiểm bổ sung. Record actual file hashes hoặc ordered inventory hash + per-file inventory để lần prepare sau bind cùng dữ liệu. Không mô tả newly measured hashes là historical image-byte hashes.
+2. Selected calibration IDs phải nằm trong actual train inventory, loại dev/test ID overlaps qua membership checks. Chỉ đọc exclusion inventory/IDs cho test, không đọc test labels/images để xây policy. Chuẩn hóa path thành `train/images/basename` và `train/labels/basename`, reject traversal/symlink escape khỏi intended split; image-label stem phải match. Giữ đúng U42/U43/U44 IDs và deterministic order, không tạo lựa chọn khác để làm check pass.
+3. Nếu calibration.yaml tồn tại, parse YAML theo producer schema, resolve calibration source đúng và kiểm **đúng1024 IDs**, materialized image bytes khớp corresponding train files. Một YAML trỏ test/selection khác/empty/extra image phải bị ghi invalid chứ không `complete`. Nếu YAML/images thiếu, ghi missing; không tự rebuild/move/repair. Bind actual bytes/order, không chỉ manifest metadata.
+4. Định nghĩa recipe bằng helper/source hash và concrete decoder/color/letterbox/resize/normalization/order parameters, hoặc đánh dấu recipe `unresolved` nếu chưa kiểm; chuỗi `locked CCTSDB train image decode/resize/normalize path` chưa khóa preprocessing. Reuse audited preparation logic `uniform_build_repeat.py` nếu phù hợp nhưng không import GPU `environment()` vào CPU readiness. Không tạo multi-GB tensors trong task local này.
+
+### D2 — config/provenance/status phải thể hiện đúng mức đã kiểm
+
+Reviewer đã tái hiện `load_config` nhận `runtime.conf=0.9` mà không reject. Model path/hash và expected head contracts cũng lấy từ cùng mutable JSON; config path trong report luôn hard-coded dù CLI cho phép file khác. Output chưa lưu run timestamp/code/script/config hashes. Do đó config tự khai chưa đủ để gọi protocol locked.
+
+- Validate tất cả locked scientific fields (source model identity/hash, U42/U43/U44 identity/hash, runtime conf/iou/max_det, counts, head/export semantics và bootstrap/decision settings) against reviewed configuration identity hoặc explicit immutable contract, không lấy observed và expected từ cùng một mutable object. Record config path thực, bytes/canonical semantic hash, execution Git commit, script hash và UTC timestamp. Không ép toàn working tree sạch nếu chỉ có unrelated user results.
+- Record observed CPU package versions trước probe; phân biệt architecture evidence trên compatible local env với server-runtime-ready. Unsupported Ultralytics/head behavior là unresolved, không tự thay đổi mode. `probe_models=False` phải có explicit missing probe reason, không có trạng thái gate ready chỉ vì error list rỗng.
+- Scored matrix gate luôn blocked/deferred ở runner readiness này, kể cả raw inputs đầy đủ, vì ONNX/TRT graph/mapping chưa được kiểm. Có thể thêm `raw_inputs_ready_for_server_prepare` riêng. `scored_run_authorized=false` giữ nguyên. Main readiness DONE chỉ có nghĩa report đã viết, không chứng minh mọi prerequisite pass.
+
+### D3 — lịch đang group theo arm, trái protocol interleaving; validator bỏ lọt cell sai
+
+Current generator chạy U42 baseline repeats1/2/3 rồi bbox repeats1/2/3, rồi classification và both; FP16 đều cuối model block. Đây không phải interleaving đã yêu cầu. Astra đã đổi một scored repeat1 thành99 trong memory và `validate_schedule` vẫn trả verified vì kiểm counts/uniqueness chưa đủ.
+
+Khóa revised deterministic schedule **trước scored data mới**, giữ tổng84/78:
+
+- Mỗi model: ba auxiliary cache creations U42/U43/U44 trước, không capture/scored; timing outputs của chúng không được reuse.
+- Canonical13 scored cells/round: FP16 rồi `[U42 × baseline,bbox,classification,both]`, `[U43 × four arms]`, `[U44 × four arms]`. Round r dùng build repeat r; rounds1/2/3 rotate-left0/4/8 trên canonical13 cells. Tổng39 scored/model và42invocations/model. Đây là reproducible interleaving, không claim full Latin square hoặc randomized causal assignment.
+- Validate exact model×selection×arm×repeat expected keys, phase/scored/cache flags, order và dependency auxiliary-before-use; reject missing/repeat99/wrong selection/extra arm ngay cả khi tổngcounts không đổi. Publish schedule version/hash mới; supersede proposed old schedule chưa chạy, không sửa historical study.
+
+### Tests và bàn giao
+
+Luna sửa D1–D3 và thêm fixtures cho same-count wrong dev IDs, wrong/malformed calibration YAML, substituted materialized bytes, train/dev overlap, wrong config hash/runtime, model-not-probed và malformed schedule. Tests filesystem nên dùng temporary fixtures hoặc canonical producer inputs để pass cả local thiếu YAML lẫn server đã có YAML; không assert mặc định rằng mọi môi trường đều thiếu calibration.yaml.
+
+Giữ CPU-only boundary, no export/build/GPU, no auto-install. Chạy targeted/full, cập nhật protocol/config/L2A-024, push cả A2L-023. Sau review bản sửa, CPU inventory trên server **không cần GPU idle** và có thể chạy trên server được operator chọn; chỉ phase GPU sau mới cần workload controls. Không viết thêm full84-job runner ở task sửa readiness này. Không yêu cầu người dùng giải quyết local missing YAML bằng tải dataset/train lại; server audit sẽ xác định vật liệu có sẵn.

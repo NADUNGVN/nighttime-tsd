@@ -3,6 +3,15 @@
   "study": "precision_head_confirmation_v1",
   "status": "design_locked_readiness_implementation",
   "canonical_input_commit": "53f12554761c80f367876756b4371a7729891d44",
+  "canonical_dev_reference_commit": "5eb7ec36da7eed1701f6383b9db37ca3cfe31186",
+  "canonical_dev_reference": {
+    "capture_report": "results/measurement_audit_v1/server_fp16_capture_v1/capture_report.json",
+    "predictions": "results/measurement_audit_v1/server_fp16_capture_v1/validator_predictions.json",
+    "dataset_split": "CCTSDB2021/dev",
+    "images": 1636,
+    "instances": 2706,
+    "predictions_sha256": "5c23d0fa7d4bbf09858b2f1a4dbf45c35650c474aaedebe40d845e3c9acc410a"
+  },
   "models": [
     {
       "label": "yolov8n",
@@ -121,7 +130,9 @@
     "algorithm": "MinMax",
     "batch_size": 1,
     "input_shape": [1, 3, 640, 640],
-    "preprocessing": "locked CCTSDB train image decode/resize/normalize path",
+    "preprocessing": "unresolved_pending_server_prepare",
+    "preprocessing_status": "unresolved_pending_server_prepare",
+    "preprocessing_helper": "scripts/uniform_build_repeat.py",
     "order": "manifest file order, deterministic",
     "scored_int8_mode": "cache_only_zero_batches_zero_writes",
     "fp16_mode": "no_calibration"
@@ -145,7 +156,7 @@
     "child_must_bind_model_selection_arm_repeat": true
   },
   "schedule": {
-    "version": "model_block_selection_aux_then_scored_v1",
+    "version": "model_block_aux_then_interleaved_rounds_v2",
     "model_order": ["yolov8n", "yolo26n"],
     "selection_order": ["U42", "U43", "U44"],
     "arm_order": ["baseline_int8", "bbox_fp32", "classification_fp32", "both_fp32"],

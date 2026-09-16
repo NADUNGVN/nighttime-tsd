@@ -971,3 +971,87 @@ L2A-023 đề nghị Astra review: (1) hai native head/output contracts và boun
 ONNX-deferred, (2) việc ghi nhận overlap calibration IDs, (3) accounting 84/78
 và parent/child separation. Chưa có server authorization, chưa giao lệnh
 export hoặc 78 scored runs; Luna dừng tại `readiness_review_required`.
+
+## L2A-024 — hoàn tất D1–D3 readiness correction cho A2L-023
+
+Luna đã đọc và thực hiện **A2L-023** trên local. Phạm vi chỉ là sửa readiness/
+preparation contract, protocol, config và tests; chưa export, chưa import/build
+TensorRT, chưa dùng GPU, chưa mở scored matrix và không sửa weights, historical
+results hoặc frozen head/output contracts đã được xác nhận.
+
+### Đã hoàn thành
+
+- Cập nhật `scripts/prepare_precision_head_confirmation.py` theo D1–D3:
+  canonical dev reference được đọc từ commit
+  `5eb7ec36da7eed1701f6383b9db37ca3cfe31186`; current dev inventory kiểm exact
+  IDs, label stems, decoded shapes, class/finite normalized boxes, per-file
+  hashes và ordered inventory hash. Hash này được ghi đúng là hash của
+  checkout hiện tại, không nhận là historical server image-byte hash.
+- Calibration validator giữ nguyên U42/U43/U44, kiểm train-only membership,
+  dev/test exclusion overlap, POSIX `train/images/<basename>` /
+  `train/labels/<basename>`, traversal/symlink escape và image-label stem.
+  Nếu `calibration.yaml` có mặt thì parser kiểm schema producer, đúng 1.024
+  IDs và materialized bytes; missing, malformed, extra, substituted hoặc sai
+  source đều fail-closed. Local hiện thiếu materialized YAML nên trạng thái là
+  missing, không tự materialize/repair.
+- Locked scientific sections được đối chiếu bằng immutable hashes; manifest ghi
+  actual config path, config-byte SHA256, semantic SHA256, execution commit,
+  script SHA256 và UTC timestamp. `probe_models=False` ghi
+  `model_probe_not_run`; không thể biến thành ready bằng error list rỗng.
+- Readiness tách `raw_inputs_ready_for_server_prepare` khỏi authorization:
+  `scored_run_authorized=false` và `scored_matrix_gate` luôn
+  `blocked_deferred_graph_validation` cho đến khi server prepare tạo được
+  model-specific ONNX/dataflow mapping/parser evidence.
+- Schedule đổi sang
+  `model_block_aux_then_interleaved_rounds_v2`: mỗi model có 3 auxiliary
+  calibration jobs trước, sau đó 3 vòng 13 scored cells với FP16 và bốn arm
+  theo U42/U43/U44; round rotation là 0/4/8 và repeat bằng round. Validator
+  kiểm exact keys, sequence, phase, cache/capture/timing flags và dependency,
+  nên reject repeat99, missing, extra hoặc sai selection dù tổng count trùng.
+  Accounting giữ nguyên **84 builder invocations = 6 auxiliary + 72 INT8 + 6
+  FP16; 78 captures**.
+- Cập nhật `docs/PRECISION_HEAD_CONFIRMATION_PLAN_V1.md` với Appendix A ghi
+  rõ D1–D3 contract và giới hạn chưa được phép chạy server.
+- Giữ nguyên `configs/precision_head_confirmation_v1.json` về frozen weights,
+  native head/output semantics, U42/U43/U44, arms và counts; chỉ bổ sung
+  canonical reference, immutable identity và schedule/provenance contract.
+
+### Local verification
+
+- Targeted D1–D3 readiness tests: **15/15 pass**.
+- Full local regression: **147/147 pass**.
+- `py_compile` cho readiness runner/tests: pass.
+- `git diff --check`: pass.
+- Readiness CLI đã chạy CPU-only với `CUDA_VISIBLE_DEVICES=-1`, không import
+  TensorRT, không gọi `torch.cuda`, không export/build/benchmark.
+
+Local readiness manifest chưa stage (output bị ignore) tại
+`results/measurement_audit_v1/precision_head_confirmation_readiness_d1d3_v1/readiness_manifest.json`
+ghi nhận:
+
+- `status=readiness_complete_scored_matrix_blocked`;
+- `scored_matrix_gate=blocked_deferred_graph_validation`;
+- `raw_inputs_ready_for_server_prepare=false`,
+  `scored_run_authorized=false`, `gpu_used=false`,
+  `export_performed=false`, `tensorrt_build_performed=false`;
+- missing đúng materialized calibration YAML của U42/U43/U44, không có
+  unresolved model probe hoặc dev identity check;
+- dev `1636` images / `1636` labels / `2706` instances, không có dev/test ID
+  overlap trong exclusion inventory;
+- schedule `84` jobs / `78` captures, rotation `[0,4,8]`, SHA256
+  `f4fa0132ef371f28e8206b4a9e46a5e5d70f6370ace88c9621f5b1e0eb39b029`;
+- manifest provenance trung thực ghi execution Git commit
+  `73ab3cf2e066cd856e054ed07803af11c6d902a7` (commit implementation cuối
+  được Luna báo sau khi push), config-byte SHA256
+  `feb7e905bbea32e8034aecbb9505a9fcd02883ae9aa3e5a792e97ddf0649e2d7`,
+  semantic SHA256
+  `3808ffb770569a0ca7d8f4252d4efa9cae7d3ce4d5297da4694f71105d4ce6f0`.
+
+### Astra review request
+
+Đề nghị Astra review implementation D1–D3, đặc biệt: (1) exact canonical dev
+inventory và policy không đọc test pixels/labels, (2) fail-closed semantics
+cho calibration materialization và immutable config identity, (3) schedule v2
+interleaving/dependency/hash. Chưa có server command hoặc authorization cho
+prepare/build/capture. Luna dừng ở `readiness_review_required` và không tự
+triển khai bước nghiên cứu tiếp theo.

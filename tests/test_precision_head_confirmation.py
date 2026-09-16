@@ -51,6 +51,28 @@ class PrecisionHeadConfirmationTests(unittest.TestCase):
                 self.assertEqual(len(rows), 13)
                 self.assertEqual({row["arm"] for row in rows[1:]}, set(readiness.ARM_NAMES))
 
+    def test_schedule_rounds_use_exact_canonical_interleaving_and_reject_mutations(self):
+        schedule = readiness.generate_schedule(self.config)
+        scored = [row for row in schedule if row["model"] == "yolov8n" and row["scored"]]
+        expected_cells = [
+            (None, "fp16"),
+            *[(selection, arm) for selection in readiness.SELECTION_IDS for arm in readiness.ARM_NAMES],
+        ]
+        self.assertEqual([(row["selection"], row["arm"]) for row in scored[:13]], expected_cells)
+        self.assertEqual([(row["selection"], row["arm"]) for row in scored[13:26]], expected_cells[4:] + expected_cells[:4])
+        self.assertEqual([(row["selection"], row["arm"]) for row in scored[26:]], expected_cells[8:] + expected_cells[:8])
+        self.assertEqual({row["repeat"] for row in scored if row["round"] == 1}, {1})
+        self.assertEqual({row["repeat"] for row in scored if row["round"] == 2}, {2})
+        self.assertEqual({row["repeat"] for row in scored if row["round"] == 3}, {3})
+        mutated = copy.deepcopy(schedule)
+        mutated[4]["repeat"] = 99
+        with self.assertRaisesRegex(ValueError, "canonical order"):
+            readiness.validate_schedule(mutated, self.config)
+        mutated_selection = copy.deepcopy(schedule)
+        mutated_selection[4]["selection"] = "U44"
+        with self.assertRaisesRegex(ValueError, "canonical order"):
+            readiness.validate_schedule(mutated_selection, self.config)
+
     def test_canonical_calibration_metadata_and_train_only_paths(self):
         records = [
             readiness.validate_calibration_manifest(REPO, self.config["canonical_input_commit"], selection)
@@ -78,6 +100,63 @@ class PrecisionHeadConfirmationTests(unittest.TestCase):
         bad_duplicate["files"][1]["source_image"] = bad_duplicate["files"][0]["source_image"]
         with self.assertRaises(ValueError):
             readiness.validate_calibration_payload(bad_duplicate, selection)
+
+        bad_nested = copy.deepcopy(payload)
+        bad_nested["files"][0]["source_image"] = "train/images/nested/00006.jpg"
+        with self.assertRaises(ValueError):
+            readiness.validate_calibration_payload(bad_nested, selection)
+        bad_stem = copy.deepcopy(payload)
+        bad_stem["files"][0]["source_label"] = "train/labels/different.txt"
+        with self.assertRaises(ValueError):
+            readiness.validate_calibration_payload(bad_stem, selection)
+
+    def test_same_count_wrong_dev_ids_and_shapes_are_rejected(self):
+        canonical = [{"image": f"{index:05d}.jpg", "orig_shape": [720, 1280]} for index in range(1636)]
+        current_names = [row["image"] for row in canonical]
+        current_labels = [f"{Path(name).stem}.txt" for name in current_names]
+        shapes = {name: [720, 1280] for name in current_names}
+        self.assertEqual(readiness.validate_dev_inventory_identity(current_names, current_labels, shapes, canonical), [])
+        wrong_ids = list(current_names)
+        wrong_ids[-1] = "99999.jpg"
+        self.assertIn("dev_image_ids_differ_from_canonical_reference", readiness.validate_dev_inventory_identity(wrong_ids, current_labels, shapes, canonical))
+        wrong_shapes = dict(shapes)
+        wrong_shapes["00000.jpg"] = [1080, 1920]
+        self.assertIn("dev_shape_differs_from_canonical_reference:00000.jpg", readiness.validate_dev_inventory_identity(current_names, current_labels, wrong_shapes, canonical))
+        wrong_labels = list(current_labels)
+        wrong_labels[0] = "different.txt"
+        self.assertIn("dev_image_label_stem_set_mismatch", readiness.validate_dev_inventory_identity(current_names, wrong_labels, shapes, canonical))
+
+    def test_materialized_calibration_yaml_and_bytes_are_fail_closed(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source_root = root / "data"
+            expected_dir = root / "calibration" / "uniform_test_n2"
+            image_dir = expected_dir / "images"
+            (source_root / "train/images").mkdir(parents=True)
+            image_dir.mkdir(parents=True)
+            rows = []
+            for name, payload in (("00001.jpg", b"one"), ("00002.jpg", b"two")):
+                source = source_root / "train/images" / name
+                source.write_bytes(payload)
+                (image_dir / name).write_bytes(payload)
+                rows.append({"source_image": f"train/images/{name}", "source_label": f"train/labels/{Path(name).stem}.txt"})
+            yaml_path = expected_dir / "calibration.yaml"
+            yaml_path.write_text(
+                f"path: {str(expected_dir).replace(chr(92), '/') }\ntrain: images\nval: images\nnames:\n  0: prohibitory\n  1: mandatory\n  2: warning\nnc: 3\n",
+                encoding="utf-8",
+            )
+            complete = readiness.parse_materialized_calibration_yaml(yaml_path, expected_dir, rows, source_root)
+            self.assertEqual(complete["status"], "complete")
+            (image_dir / "00002.jpg").write_bytes(b"substituted")
+            invalid_bytes = readiness.parse_materialized_calibration_yaml(yaml_path, expected_dir, rows, source_root)
+            self.assertEqual(invalid_bytes["status"], "invalid")
+            (image_dir / "00002.jpg").write_bytes(b"two")
+            (image_dir / "extra.jpg").write_bytes(b"extra")
+            invalid_extra = readiness.parse_materialized_calibration_yaml(yaml_path, expected_dir, rows, source_root)
+            self.assertEqual(invalid_extra["status"], "invalid")
+            yaml_path.write_text("path: wrong\ntrain: images\nval: images\nnc: 3\n", encoding="utf-8")
+            invalid_yaml = readiness.parse_materialized_calibration_yaml(yaml_path, expected_dir, rows, source_root)
+            self.assertEqual(invalid_yaml["status"], "invalid")
 
     def test_head_contract_rejects_ambiguous_branch_and_wrong_representation(self):
         self.assertEqual(readiness.derive_active_branches(False, ["cv2", "cv3"]), (["cv2", "cv3"], []))
@@ -120,6 +199,15 @@ class PrecisionHeadConfirmationTests(unittest.TestCase):
         self.assertEqual(self.config["execution_boundary"]["scored_execution"], "one_isolated_child_per_builder_or_capture_job")
         self.assertEqual(self.config["export_contract"]["end2end"], "preserve_frozen_model_head_flag")
 
+    def test_config_mutation_fails_immutable_identity_check(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "config.json"
+            mutated = copy.deepcopy(self.config)
+            mutated["runtime"]["conf"] = 0.9
+            path.write_text(json.dumps(mutated), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "immutable section hash mismatch: runtime"):
+                readiness.load_config(path, REPO)
+
     def test_output_writer_is_no_overwrite(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "manifest.json"
@@ -153,6 +241,11 @@ class PrecisionHeadConfirmationTests(unittest.TestCase):
         self.assertFalse(manifest["gpu_used"])
         self.assertFalse(manifest["export_performed"])
         self.assertFalse(manifest["tensorrt_build_performed"])
+        self.assertEqual(manifest["scored_matrix_gate"], "blocked_deferred_graph_validation")
+        self.assertFalse(manifest["raw_inputs_ready_for_server_prepare"])
+        self.assertTrue(any("model_probe_not_run" in item for item in manifest["unresolved_checks"]))
+        self.assertIn("semantic_sha256", manifest["config_identity"])
+        self.assertIn("script_sha256", manifest["execution_provenance"])
         self.assertEqual(manifest["accounting"]["total_builder_invocations"], 84)
         self.assertTrue(any("materialized_calibration_yaml" in item for item in manifest["missing_prerequisites"]))
 

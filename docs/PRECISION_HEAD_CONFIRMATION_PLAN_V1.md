@@ -368,3 +368,69 @@ implementation and its model-specific head/output evidence before authorizing
 server preparation. This document does not authorize GPU execution, does not
 open B/C or main15, and does not authorize official-test or edge-device
 evaluation.
+
+## Appendix A. D1–D3 readiness correction (A2L-023)
+
+The readiness implementation now applies the following pre-server checks. This
+appendix records the implementation contract; it does not authorize export,
+TensorRT build, capture, or scored execution.
+
+### D1. Canonical split and calibration materialization
+
+The accepted FP16 dev capture at commit
+`5eb7ec36da7eed1701f6383b9db37ca3cfe31186` is the canonical reference for
+the `CCTSDB2021/dev` image IDs, label stems, decoded shapes, and 2,706 label
+instances. Readiness compares the current checkout's ordered IDs, label stems,
+decoded shapes, class IDs, finite normalized YOLO boxes, and per-file byte
+inventory. The resulting inventory hash is explicitly scoped to the current
+checkout; it is not relabeled as a historical server image-byte hash. Derived
+box corners are not used as an additional rejection rule because the canonical
+label format is center/width/height and rounded edge arithmetic can exceed one
+slightly; downstream evaluator clipping remains the contract.
+
+U42, U43, and U44 remain the only selections. Each selected path must normalize
+to `train/images/<basename>` or `train/labels/<basename>`, remain inside the
+intended train root, have a matching image/label stem, and be present in the
+actual train inventory. Dev and test exclusion IDs are checked by membership;
+test pixels and labels are not read to construct the policy. If a producer
+`calibration.yaml` is present, readiness parses its schema, resolves the exact
+1,024 selected source images, and compares materialized bytes to train source
+bytes. Missing materialization is reported as missing, while malformed YAML,
+extra/substituted images, wrong selection, or byte mismatch is invalid. No
+materialization is rebuilt or repaired locally. The preprocessing recipe stays
+`unresolved_pending_server_prepare` until the concrete server producer/helper
+and source hash are observed.
+
+### D2. Immutable identity, provenance, and fail-closed status
+
+Locked scientific sections are checked against the reviewed immutable section
+hashes, so mutating the same JSON used as both expectation and observation
+cannot silently pass. The readiness manifest records the actual config path,
+config-byte SHA256, semantic SHA256, execution Git commit, script SHA256, and
+UTC creation time. Environment/package observations are recorded before any
+model probe. A disabled model probe is an explicit unresolved
+`model_probe_not_run` state, not an empty-error ready state.
+
+`raw_inputs_ready_for_server_prepare` is separate from scored authorization.
+The latter remains false and `scored_matrix_gate` remains
+`blocked_deferred_graph_validation` until the reviewed server prepare phase
+has produced model-specific ONNX/dataflow mapping and parser evidence. Local
+readiness completion therefore cannot be reported as TensorRT or end-to-end
+verification.
+
+### D3. Exact model-block and interleaved schedule
+
+Schedule version `model_block_aux_then_interleaved_rounds_v2` contains, per
+model, auxiliary U42/U43/U44 calibration-cache creation jobs first. These jobs
+do not capture, score, or provide timing outputs to scored jobs. Each model then
+has three rounds of 13 scored cells: FP16 followed by the four arms for U42,
+U43, and U44. Round 1 uses shift 0, round 2 shift 4, and round 3 shift 8 over
+the canonical 13-cell order; round number is also the build repeat number.
+This yields 3 auxiliary + 39 scored jobs per model, 84 builder invocations and
+78 captures across both models.
+
+Validation compares every expected model/selection/arm/repeat key and every
+phase, cache, capture, timing-policy, dependency, and sequence field. Missing,
+extra, wrong-selection, wrong-repeat, or malformed jobs are rejected even when
+aggregate counts happen to match. The schedule hash is new and supersedes the
+unrun grouped schedule; no historical result is rewritten.
