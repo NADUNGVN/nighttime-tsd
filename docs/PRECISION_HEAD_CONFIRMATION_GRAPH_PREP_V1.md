@@ -105,6 +105,11 @@ For every active source branch the audit:
 - audits post-merge `Reshape`, `Transpose`, `Slice`, `Gather` and `TopK`
   semantics from explicit attributes/constant evidence. Unknown semantics are
   `mapping_unresolved`; shape alone is never treated as proof;
+- for the locked YOLO26n end-to-end contract only, also audits the observed
+  `Split`, `ReduceMax`, `Flatten`, `Unsqueeze`, `Tile`, and `Mod` operators
+  using explicit attributes/Constant values plus static output-shape checks;
+  these operators remain unresolved when the model is not the locked end-to-
+  end adapter or when any control value/shape evidence is missing;
 - records source-to-export node names, reachability, downstream operations and
   a stable mapping payload.
 
@@ -118,10 +123,12 @@ builder/inspector constraints, not claims about every other convolution. The
 three intervention sets are derived only from the verified ownership map.
 
 For YOLO26n, the active `one2one_cv2/one2one_cv3` branches own the pre/post-
-processing channel spans while later TopK/Gather nodes may share final-output
 ancestry. Shared reachability is recorded as expected and is not treated as a
 precision-target overlap. Inactive `cv2/cv3` branches remain explicitly
-audited and excluded.
+audited and excluded. The accepted exporter wrapper adapter records both
+observed `one2one_cv3` forms: one wrapper for terminal `.2` Conv leaves and the
+nested two-wrapper form for the preceding Conv leaves; other renamed/fused
+forms remain unresolved.
 
 ## Adapter contract
 

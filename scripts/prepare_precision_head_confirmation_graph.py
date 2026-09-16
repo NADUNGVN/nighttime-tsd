@@ -662,11 +662,15 @@ def _branch_from_name(name: str) -> str | None:
 def _exporter_wrapper_aliases(source_name: str) -> set[str]:
     """Return only the observed Ultralytics ONNX container alias for a source Conv.
 
-    The pinned producer names a branch container twice in ONNX, e.g.
-    ``model.22.cv2.0.0.conv`` becomes
-    ``model.22.cv2.0.cv2.0.0.conv``.  This is an explicit exporter naming
-    adapter, not a prefix/shape guess; it is usable only for the four locked
-    detection branch tokens and a numeric branch index.
+    The pinned producer names a branch container one or more times in ONNX,
+    e.g. ``model.22.cv2.0.0.conv`` becomes
+    ``model.22.cv2.0.cv2.0.0.conv``.  YOLO26 ``one2one_cv3`` has a nested
+    container and becomes
+    ``model.23.one2one_cv3.0.one2one_cv3.0.0.one2one_cv3.0.0.0.conv``; its
+    terminal ``.2`` Conv leaves use the one-wrapper form.
+    This is an explicit exporter naming adapter, not a prefix/shape guess; it
+    is usable only for the four locked detection branch tokens and a numeric
+    branch index.
     """
     normalized = normalize_module_name(source_name)
     parts = normalized.split(".")
@@ -680,6 +684,14 @@ def _exporter_wrapper_aliases(source_name: str) -> set[str]:
             continue
         scale_index = parts[branch_index + 1]
         aliases.add(".".join(parts[: branch_index + 1] + [scale_index, branch] + parts[branch_index + 1 :]))
+        if branch == "one2one_cv3":
+            aliases.add(
+                ".".join(
+                    parts[: branch_index + 1]
+                    + [scale_index, branch, scale_index, scale_index, branch]
+                    + parts[branch_index + 1 :]
+                )
+            )
     return aliases
 
 
@@ -724,6 +736,74 @@ def _attribute_int(attributes: dict[str, Any], key: str, default: int | None = N
     if isinstance(value, list) and len(value) == 1 and isinstance(value[0], int):
         return value[0]
     return default
+
+
+def _constant_sequence(value: Any) -> list[Any] | None:
+    """Flatten a small ONNX initializer/Constant value without guessing it."""
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return [value]
+    if not isinstance(value, list):
+        return None
+    result: list[Any] = []
+    queue: list[Any] = list(value)
+    while queue:
+        item = queue.pop(0)
+        if isinstance(item, list):
+            queue[0:0] = item
+        elif isinstance(item, (int, float)) and not isinstance(item, bool):
+            result.append(item)
+        else:
+            return None
+    return result
+
+
+def _parameter_sequence(
+    node: dict[str, Any], key: str, input_index: int, initializers: dict[str, Any]
+) -> tuple[list[Any] | None, str]:
+    if key in node["attributes"]:
+        return _constant_sequence(node["attributes"].get(key)), f"attribute:{key}"
+    if len(node["inputs"]) > input_index and node["inputs"][input_index] in initializers:
+        return _constant_sequence(initializers[node["inputs"][input_index]]), f"initializer:{node['inputs'][input_index]}"
+    return None, "missing"
+
+
+def _static_product(shape: list[Any] | None) -> int | None:
+    if not isinstance(shape, list) or not all(isinstance(item, int) and item >= 0 for item in shape):
+        return None
+    result = 1
+    for item in shape:
+        result *= item
+    return result
+
+
+def _broadcast_shape(left: list[Any] | None, right: list[Any] | None) -> list[int] | None:
+    if not isinstance(left, list) or not isinstance(right, list):
+        return None
+    if not all(isinstance(item, int) and item >= 0 for item in left + right):
+        return None
+    result: list[int] = []
+    for left_dim, right_dim in zip(reversed(left), reversed(right)):
+        if left_dim == right_dim or left_dim == 1:
+            result.append(right_dim)
+        elif right_dim == 1:
+            result.append(left_dim)
+        else:
+            return None
+    longer = left if len(left) > len(right) else right
+    result.extend(reversed(longer[: abs(len(left) - len(right))]))
+    return list(reversed(result))
+
+
+def _normalized_axes(raw_axes: list[Any] | None, rank: int) -> list[int] | None:
+    if raw_axes is None or not raw_axes or not all(isinstance(item, int) for item in raw_axes):
+        return None
+    axes = []
+    for item in raw_axes:
+        axis = item + rank if item < 0 else item
+        if axis < 0 or axis >= rank or axis in axes:
+            return None
+        axes.append(axis)
+    return sorted(axes)
 
 
 def _find_branch_merge(
@@ -795,9 +875,11 @@ def _downstream_semantic_audit(
     consumers: dict[str, list[dict[str, Any]]],
     shapes: dict[str, list[Any]],
     initializers: dict[str, Any] | None = None,
+    allowed_postprocess_ops: set[str] | None = None,
 ) -> dict[str, Any]:
     """Check known post-merge operators without treating shape as semantics."""
     initializers = initializers or {}
+    allowed_postprocess_ops = set(allowed_postprocess_ops or ())
     queue = [start_tensor]
     seen_tensors: set[str] = set()
     visited: list[dict[str, Any]] = []
@@ -857,6 +939,136 @@ def _downstream_semantic_audit(
                     unresolved.append(f"topk_output_shape_unresolved:{node['name']}")
                 else:
                     semantic["evidence"] = "explicit_topk_axis_or_k_input_and_output_shape"
+            elif op in {"Split", "ReduceMax", "Flatten", "Unsqueeze", "Tile", "Mod"}:
+                if op not in allowed_postprocess_ops:
+                    unresolved.append(f"unknown_post_merge_semantics:{node['name']}:{op}")
+                elif op == "Split":
+                    axis = _attribute_int(node["attributes"], "axis")
+                    splits, split_source = _parameter_sequence(node, "split", 1, initializers)
+                    input_shape = input_shapes[0] if input_shapes else None
+                    normalized_axis = axis + len(input_shape) if axis is not None and axis < 0 and input_shape is not None else axis
+                    valid = (
+                        normalized_axis is not None and isinstance(input_shape, list)
+                        and 0 <= normalized_axis < len(input_shape)
+                        and splits is not None and all(isinstance(item, int) and item > 0 for item in splits)
+                        and len(splits) == len(node["outputs"])
+                        and isinstance(input_shape[normalized_axis], int)
+                        and sum(splits) == input_shape[normalized_axis]
+                        and all(isinstance(shape, list) for shape in output_shapes)
+                    )
+                    if valid:
+                        for split, output_shape in zip(splits, output_shapes):
+                            expected_shape = list(input_shape)
+                            expected_shape[normalized_axis] = split
+                            if output_shape != expected_shape:
+                                valid = False
+                                break
+                    if not valid:
+                        unresolved.append(f"split_semantics_unresolved:{node['name']}")
+                    else:
+                        semantic.update({
+                            "axis": normalized_axis,
+                            "split": splits,
+                            "parameter_source": split_source,
+                            "evidence": "explicit_split_axis_values_and_output_shape_match",
+                        })
+                elif op == "ReduceMax":
+                    axes, axes_source = _parameter_sequence(node, "axes", 1, initializers)
+                    input_shape = input_shapes[0] if input_shapes else None
+                    output_shape = output_shapes[0] if output_shapes else None
+                    normalized = _normalized_axes(axes, len(input_shape)) if isinstance(input_shape, list) else None
+                    keepdims = _attribute_int(node["attributes"], "keepdims", 1)
+                    valid = normalized is not None and keepdims in (0, 1) and isinstance(output_shape, list)
+                    if valid:
+                        expected_shape = [
+                            1 if index in normalized and keepdims else dimension
+                            for index, dimension in enumerate(input_shape)
+                            if keepdims or index not in normalized
+                        ]
+                        valid = expected_shape == output_shape
+                    if not valid:
+                        unresolved.append(f"reducemax_semantics_unresolved:{node['name']}")
+                    else:
+                        semantic.update({
+                            "axes": normalized,
+                            "keepdims": keepdims,
+                            "parameter_source": axes_source,
+                            "evidence": "explicit_reduce_axes_keepdims_and_output_shape_match",
+                        })
+                elif op == "Flatten":
+                    input_shape = input_shapes[0] if input_shapes else None
+                    output_shape = output_shapes[0] if output_shapes else None
+                    axis = _attribute_int(node["attributes"], "axis", 1)
+                    normalized_axis = axis + len(input_shape) if axis is not None and axis < 0 and input_shape is not None else axis
+                    valid = (
+                        isinstance(input_shape, list) and isinstance(output_shape, list)
+                        and normalized_axis is not None and 0 <= normalized_axis <= len(input_shape)
+                    )
+                    if valid:
+                        expected_shape = [_static_product(input_shape[:normalized_axis]), _static_product(input_shape[normalized_axis:])]
+                        valid = expected_shape == output_shape
+                    if not valid:
+                        unresolved.append(f"flatten_semantics_unresolved:{node['name']}")
+                    else:
+                        semantic.update({
+                            "axis": normalized_axis,
+                            "evidence": "explicit_or_default_flatten_axis_and_output_shape_match",
+                        })
+                elif op == "Unsqueeze":
+                    axes, axes_source = _parameter_sequence(node, "axes", 1, initializers)
+                    input_shape = input_shapes[0] if input_shapes else None
+                    output_shape = output_shapes[0] if output_shapes else None
+                    normalized = _normalized_axes(axes, len(input_shape) + len(axes or ())) if isinstance(input_shape, list) else None
+                    valid = normalized is not None and isinstance(output_shape, list) and len(output_shape) == len(input_shape) + len(normalized or ())
+                    if valid:
+                        expected_shape = []
+                        input_index = 0
+                        normalized_set = set(normalized)
+                        for output_index in range(len(output_shape)):
+                            if output_index in normalized_set:
+                                expected_shape.append(1)
+                            else:
+                                expected_shape.append(input_shape[input_index])
+                                input_index += 1
+                        valid = expected_shape == output_shape
+                    if not valid:
+                        unresolved.append(f"unsqueeze_semantics_unresolved:{node['name']}")
+                    else:
+                        semantic.update({
+                            "axes": normalized,
+                            "parameter_source": axes_source,
+                            "evidence": "explicit_unsqueeze_axes_and_output_shape_match",
+                        })
+                elif op == "Tile":
+                    repeats, repeats_source = _parameter_sequence(node, "repeats", 1, initializers)
+                    input_shape = input_shapes[0] if input_shapes else None
+                    output_shape = output_shapes[0] if output_shapes else None
+                    valid = (
+                        repeats is not None and isinstance(input_shape, list) and isinstance(output_shape, list)
+                        and len(repeats) == len(input_shape)
+                        and all(isinstance(item, int) and item >= 0 for item in repeats)
+                    )
+                    if valid:
+                        valid = [dimension * repeat for dimension, repeat in zip(input_shape, repeats)] == output_shape
+                    if not valid:
+                        unresolved.append(f"tile_semantics_unresolved:{node['name']}")
+                    else:
+                        semantic.update({
+                            "repeats": repeats,
+                            "parameter_source": repeats_source,
+                            "evidence": "explicit_tile_repeats_and_output_shape_match",
+                        })
+                else:
+                    fmod = _attribute_int(node["attributes"], "fmod", 0)
+                    broadcast = _broadcast_shape(input_shapes[0] if input_shapes else None, input_shapes[1] if len(input_shapes) > 1 else None)
+                    output_shape = output_shapes[0] if output_shapes else None
+                    if fmod not in (0, 1) or broadcast is None or output_shape != broadcast:
+                        unresolved.append(f"mod_semantics_unresolved:{node['name']}")
+                    else:
+                        semantic.update({
+                            "fmod": fmod,
+                            "evidence": "explicit_or_default_mod_mode_and_broadcast_shape_match",
+                        })
             elif op in known_passthrough:
                 if input_shapes and output_shapes and input_shapes[0] is not None and output_shapes[0] is not None and op != "Concat" and input_shapes[0] != output_shapes[0]:
                     unresolved.append(f"passthrough_shape_changed:{node['name']}")
@@ -997,9 +1209,13 @@ def audit_graph_mapping(graph: Any, model_label: str, accepted_model: dict[str, 
     if merge is None:
         errors.append("branch_owned_channel_merge_unresolved")
     else:
+        allowed_postprocess_ops = {
+            "Split", "ReduceMax", "Flatten", "Unsqueeze", "Tile", "Mod",
+        } if expected_contract.get("end2end") is True else set()
         merge["downstream_semantic_audit"] = _downstream_semantic_audit(
             merge["output"], primary_output_names, consumers, shapes,
             graph.get("initializers", {}) if isinstance(graph, dict) else {},
+            allowed_postprocess_ops,
         )
         if merge["downstream_semantic_audit"]["status"] != "verified":
             errors.extend(merge["downstream_semantic_audit"]["unresolved"])

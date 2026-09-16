@@ -1427,3 +1427,44 @@ Rerun sau chẩn đoán này là một CPU ONNX preparation mới có cơ sở, 
 silent resume và không mở TensorRT/scored matrix. ONNX cũ không push; chỉ push
 JSON/report/log/schema sau khi Luna kiểm tra output thực tế. `scored_run_authorized`
 vẫn là `false`.
+
+## L2A-030 — YOLO26 actual graph naming and guarded end-to-end semantic adapter
+
+Operator đã chạy commit `0215ea1c22be3fca613813542ed332754a65bed5` trên
+SERVER-01 với output mới `precision_head_confirmation_graph_prep_v2/`. YOLOv8n
+đã tạo `graph_schema.json` và `model_prepare.json`; YOLO26n export CPU cũng
+thành công nhưng child dừng ở graph audit. Không có TensorRT import/build,
+CUDA/GPU run, calibration hay scored execution.
+
+Evidence YOLO26n do operator cung cấp: input `images [1,3,640,640]` float32,
+output `output0 [1,300,6]` float32, opset 17. Active `one2one_cv3` source
+Conv trung gian như `model.23.one2one_cv3.0.0.0.conv` được exporter ghi qua
+hai container lồng nhau:
+`/model.23/one2one_cv3.0/one2one_cv3.0.0/one2one_cv3.0.0.0/conv/Conv`.
+Terminal `.2` Conv dùng một container. Lỗi còn lại của lần chạy là do alias
+trước chỉ mô tả một dạng, nên 12 source Conv trung gian có match count 0.
+
+### Local correction
+
+`_exporter_wrapper_aliases()` nay ghi nhận riêng hai alias tường minh cho
+`one2one_cv3`: one-wrapper terminal `.2` và nested two-wrapper preceding Conv.
+Không dùng prefix/shape/fused-name fallback. Với end-to-end contract YOLO26n,
+semantic audit nay cho phép có điều kiện đúng sáu op đã quan sát: `Split`,
+`ReduceMax`, `Flatten`, `Unsqueeze`, `Tile`, `Mod`. Mỗi op phải có control
+attribute/Constant value cần thiết và static output-shape khớp; model không
+phải locked end-to-end hoặc evidence thiếu vẫn là `mapping_unresolved`.
+Unknown operators vẫn fail-closed.
+
+### Verification and boundary
+
+- Graph targeted regression: **20/20 PASS**.
+- `py_compile`: PASS.
+- Không local export, GPU, TensorRT build/benchmark hoặc calibration run.
+- ONNX SHA256 YOLO26n chưa được operator gửi trong snapshot này; không suy ra
+  hash từ tên/output.
+- `scored_run_authorized=false`; output v2 lỗi được giữ nguyên và không resume.
+
+Đây là bounded implementation correction dựa trên ONNX thực tế, cần Astra
+review trước khi rerun preparation. Nếu được duyệt, dùng output root mới
+`results/measurement_audit_v1/precision_head_confirmation_graph_prep_v3/`; không
+overwrite v2 và không mở TensorRT/scored matrix.

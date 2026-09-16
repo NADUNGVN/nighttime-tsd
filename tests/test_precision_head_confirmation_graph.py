@@ -188,11 +188,117 @@ class PrecisionHeadGraphTests(unittest.TestCase):
         model["active_convolution_mapping"]["one2one_cv2"] = [{"name": "model.23.one2one_cv2.0.0.conv", "module_type": "Conv2d"}]
         model["active_convolution_mapping"]["one2one_cv3"] = [{"name": "model.23.one2one_cv3.0.0.0.conv", "module_type": "Conv2d"}]
         fixture["nodes"][0]["name"] = "/model.23/one2one_cv2.0/one2one_cv2.0.0/conv/Conv"
-        fixture["nodes"][1]["name"] = "/model.23/one2one_cv3.0/one2one_cv3.0.0.0/conv/Conv"
+        fixture["nodes"][1]["name"] = "/model.23/one2one_cv3.0/one2one_cv3.0.0/one2one_cv3.0.0.0/conv/Conv"
         result = graph.audit_graph_mapping(fixture, "yolo26n", model)
         self.assertEqual(result["mapping_status"], "verified", result["errors"])
         self.assertEqual(result["active_branch_audit"]["one2one_cv2"]["matched_convolutions"][0]["match"], "explicit_ultralytics_exporter_wrapper_alias")
         self.assertEqual(result["active_branch_audit"]["one2one_cv3"]["matched_convolutions"][0]["match"], "explicit_ultralytics_exporter_wrapper_alias")
+        self.assertEqual(
+            graph._exporter_wrapper_aliases("model.23.one2one_cv3.0.0.0.conv"),
+            {
+                "model.23.one2one_cv3.0.one2one_cv3.0.0.0.conv",
+                "model.23.one2one_cv3.0.one2one_cv3.0.0.one2one_cv3.0.0.0.conv",
+            },
+        )
+        self.assertIn(
+            "model.23.one2one_cv3.0.one2one_cv3.0.2",
+            graph._exporter_wrapper_aliases("model.23.one2one_cv3.0.2"),
+        )
+
+    def test_yolo26_pinned_end2end_postprocess_ops_require_explicit_semantics(self):
+        fixture, model = graph_fixture("yolo26n")
+        merge_node = next(node for node in fixture["nodes"] if node["op_type"] == "Concat")
+        merge_node["outputs"] = ["merged_head"]
+        fixture["nodes"].extend([
+            {
+                "name": "model.23/Transpose",
+                "op_type": "Transpose",
+                "inputs": ["merged_head"],
+                "outputs": ["transposed"],
+                "attributes": {"perm": [0, 2, 1]},
+            },
+            {
+                "name": "model.23/Split",
+                "op_type": "Split",
+                "inputs": ["transposed"],
+                "outputs": ["split_boxes", "split_scores"],
+                "attributes": {"axis": 2, "split": [4, 3]},
+            },
+            {
+                "name": "model.23/ReduceMax",
+                "op_type": "ReduceMax",
+                "inputs": ["split_scores"],
+                "outputs": ["max_scores"],
+                "attributes": {"axes": [2], "keepdims": 1},
+            },
+            {
+                "name": "model.23/Flatten",
+                "op_type": "Flatten",
+                "inputs": ["split_boxes"],
+                "outputs": ["flat_boxes"],
+                "attributes": {"axis": 2},
+            },
+            {
+                "name": "model.23/Unsqueeze",
+                "op_type": "Unsqueeze",
+                "inputs": ["max_scores"],
+                "outputs": ["expanded_scores"],
+                "attributes": {"axes": [2]},
+            },
+            {
+                "name": "model.23/Tile",
+                "op_type": "Tile",
+                "inputs": ["max_scores", "tile_repeats"],
+                "outputs": ["tiled_scores"],
+            },
+            {
+                "name": "model.23/Mod",
+                "op_type": "Mod",
+                "inputs": ["max_scores", "mod_divisor"],
+                "outputs": ["mod_scores"],
+                "attributes": {"fmod": 0},
+            },
+            {
+                "name": "model.23/TopK",
+                "op_type": "TopK",
+                "inputs": ["max_scores"],
+                "outputs": ["top_values", "top_indices"],
+                "attributes": {"axis": 1, "k": 300},
+            },
+            {
+                "name": "model.23/Concat_6",
+                "op_type": "Concat",
+                "inputs": ["top_values", "top_indices"],
+                "outputs": ["output0"],
+                "attributes": {"axis": 2},
+            },
+        ])
+        fixture["tensor_shapes"].update({
+            "transposed": [1, 8400, 7],
+            "split_boxes": [1, 8400, 4],
+            "split_scores": [1, 8400, 3],
+            "max_scores": [1, 8400, 1],
+            "flat_boxes": [8400, 4],
+            "expanded_scores": [1, 8400, 1, 1],
+            "tile_repeats": [3],
+            "tiled_scores": [3, 8400, 1],
+            "mod_divisor": [1],
+            "mod_scores": [1, 8400, 1],
+            "top_values": [1, 300, 1],
+            "top_indices": [1, 300, 1],
+        })
+        fixture["initializers"] = {"tile_repeats": [3, 1, 1], "mod_divisor": [2]}
+        result = graph.audit_graph_mapping(fixture, "yolo26n", model)
+        self.assertEqual(result["mapping_status"], "verified", result["errors"])
+        audited_ops = {row["op_type"] for row in result["branch_merge"]["downstream_semantic_audit"]["visited_nodes"]}
+        self.assertTrue({"Split", "ReduceMax", "Flatten", "Unsqueeze", "Tile", "Mod"}.issubset(audited_ops))
+
+        invalid = copy.deepcopy(fixture)
+        split = next(node for node in invalid["nodes"] if node["op_type"] == "Split")
+        split["attributes"].pop("split")
+        invalid_result = graph.audit_graph_mapping(invalid, "yolo26n", model)
+        self.assertEqual(invalid_result["mapping_status"], "mapping_unresolved")
+        self.assertIn("split_semantics_unresolved", " ".join(invalid_result["errors"]))
 
     def test_precision_targets_require_verified_mapping_and_consistent_merge(self):
         fixture, model = graph_fixture("yolov8n")
