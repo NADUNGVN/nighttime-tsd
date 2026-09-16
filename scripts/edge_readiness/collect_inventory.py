@@ -21,6 +21,7 @@ SCHEMA_VERSION = "e2l1-edge-inventory-v1"
 BEGIN = "__E2L1_COMMAND__"
 END = "__E2L1_EXIT__"
 TARGET_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
+SSH_ALIAS_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 # These are queries only.  Keep this list small and review changes before use.
 REMOTE_COMMANDS: tuple[tuple[str, str], ...] = (
@@ -46,7 +47,7 @@ REMOTE_COMMANDS: tuple[tuple[str, str], ...] = (
     ),
     (
         "trtexec",
-        "sh -c 'for p in \"$(command -v trtexec 2>/dev/null)\" /usr/src/tensorrt/bin/trtexec; do if [ -x \"$p\" ]; then \"$p\" --help 2>&1 | head -n 1; exit 0; fi; done; exit 127'",
+        "sh -c 'for p in \"$(command -v trtexec 2>/dev/null)\" /usr/src/tensorrt/bin/trtexec; do if [ -x \"$p\" ]; then \"$p\" --help; exit $?; fi; done; exit 127'",
     ),
     (
         "hailortcli_version",
@@ -121,21 +122,38 @@ def command_status(returncode: int | None, timed_out: bool = False) -> str:
     return "unavailable"
 
 
-def parse_remote_output(raw: str) -> dict[str, dict[str, object]]:
-    """Parse marker-delimited command output without losing raw evidence."""
+def validate_ssh_alias(value: str) -> str:
+    if not SSH_ALIAS_RE.fullmatch(value):
+        raise ValueError("ssh_alias must be a safe existing SSH alias, not an option")
+    return value
+
+
+def parse_remote_output(
+    raw: str,
+    expected_names: set[str] | None = None,
+    *,
+    strict: bool = True,
+) -> dict[str, dict[str, object]]:
+    """Parse marker output and optionally enforce the complete command contract."""
     records: dict[str, dict[str, object]] = {}
     current: str | None = None
     buffer: list[str] = []
+    duplicate_names: list[str] = []
+    unexpected_names: list[str] = []
     for line in raw.splitlines():
         if line.startswith(BEGIN + " "):
             if current is not None:
                 raise ValueError(f"nested command marker for {current}")
             current = line[len(BEGIN) + 1 :].strip()
+            if expected_names is not None and current not in expected_names:
+                unexpected_names.append(current)
             buffer = []
         elif line.startswith(END + " "):
             parts = line.split()
             if current is None or len(parts) != 3 or parts[1] != current:
                 raise ValueError("unmatched command end marker")
+            if current in records:
+                duplicate_names.append(current)
             records[current] = {
                 "status": command_status(int(parts[2])),
                 "returncode": int(parts[2]),
@@ -146,14 +164,27 @@ def parse_remote_output(raw: str) -> dict[str, dict[str, object]]:
         elif current is not None:
             buffer.append(line)
     if current is not None:
-        raise ValueError(f"unterminated command marker for {current}")
+        if strict:
+            raise ValueError(f"unterminated command marker for {current}")
+        records[current] = {
+            "status": "partial",
+            "returncode": None,
+            "output": "\n".join(buffer).strip() or None,
+        }
+    if strict and duplicate_names:
+        raise ValueError(f"duplicate command markers: {sorted(set(duplicate_names))}")
+    if strict and unexpected_names:
+        raise ValueError(f"unexpected command markers: {sorted(set(unexpected_names))}")
+    if strict and expected_names is not None:
+        missing = sorted(expected_names.difference(records))
+        if missing:
+            raise ValueError(f"missing command markers: {missing}")
     return records
 
 
 def collect(target: str, ssh_alias: str, out: Path, notes: str = "") -> dict[str, object]:
     validate_target(target)
-    if not ssh_alias or any(ch.isspace() for ch in ssh_alias):
-        raise ValueError("ssh_alias must be one existing SSH config alias")
+    validate_ssh_alias(ssh_alias)
     if out.exists():
         raise FileExistsError(f"refusing to overwrite inventory: {out}")
 
@@ -190,7 +221,24 @@ def collect(target: str, ssh_alias: str, out: Path, notes: str = "") -> dict[str
         raw = ((exc.stdout or b"") + (exc.stderr or b"")).decode(errors="replace").strip() if isinstance(exc.stdout, bytes) else ((exc.stdout or "") + (exc.stderr or "")).strip()
         returncode = None
 
-    records = parse_remote_output(raw) if not timed_out and BEGIN in raw else {}
+    parse_error: str | None = None
+    records: dict[str, dict[str, object]] = {}
+    if BEGIN in raw:
+        try:
+            records = parse_remote_output(
+                raw,
+                {name for name, _ in REMOTE_COMMANDS},
+                strict=not timed_out and returncode == 0,
+            )
+        except ValueError as exc:
+            parse_error = str(exc)
+            try:
+                records = parse_remote_output(raw, strict=False)
+            except ValueError:
+                records = {}
+    expected_names = {name for name, _ in REMOTE_COMMANDS}
+    missing_commands = sorted(expected_names.difference(records))
+    complete = not timed_out and returncode == 0 and not parse_error and not missing_commands and len(records) == len(expected_names)
     payload: dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
         "created_utc": started,
@@ -203,6 +251,13 @@ def collect(target: str, ssh_alias: str, out: Path, notes: str = "") -> dict[str
             "returncode": returncode,
             "timed_out": timed_out,
             "stderr_or_unmarked_output": raw if not records else None,
+        },
+        "inventory_completeness": {
+            "status": "complete" if complete else ("partial" if records else "unavailable"),
+            "expected_count": len(expected_names),
+            "recorded_count": len(records),
+            "missing_commands": missing_commands,
+            "parse_error": parse_error,
         },
         "operator_notes": notes or None,
         "commands": records,

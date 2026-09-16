@@ -1,0 +1,36 @@
+{
+  "schema_version": "e2l1-edge-setup-matrix-v1",
+  "status": "proposed-review-required",
+  "scored_device_scope": [],
+  "devices": {
+    "E1": {
+      "observed": ["Hailo-8 identify succeeds", "HailoRT 4.23.0", "4.9G root free"],
+      "missing_or_unresolved": ["external power meter", "cooling and supply boundary", "PCIe x1 recheck"],
+      "proposed_actions": ["CPU FP32 reference", "Hailo-native path after export review", "approved x86 compiler host only"],
+      "disk_budget": "preserve local headroom; no board installation",
+      "permission_risk": "no sudo/install/firmware change"
+    },
+    "E2": {
+      "observed": ["L4T R35.4.1", "CUDA 11.4.19", "cuDNN 8.6.0.166", "TensorRT 8.5.2.2", "tegrastats", "94G free"],
+      "missing_or_unresolved": ["nvidia-smi", "root-only jetson_clocks view", "external power/cooling boundary"],
+      "proposed_actions": ["GPU-native TensorRT FP16 review", "backend-native INT8 review after approval"],
+      "disk_budget": "no apt/pip; preserve existing space",
+      "permission_risk": "root-only observations remain unknown"
+    },
+    "E3": {
+      "observed": ["L4T R35.6.4", "CUDA 11.4.19", "cuDNN 8.6.0.166", "TensorRT 8.5.2.2", "tegrastats", "11G free"],
+      "missing_or_unresolved": ["exact RAM SKU", "nvidia-smi", "root-only jetson_clocks view", "external power/cooling boundary"],
+      "proposed_actions": ["GPU-native TensorRT FP16 review", "INT8 review after memory/thermal confirmation"],
+      "disk_budget": "eMMC headroom tight; no install/build",
+      "permission_risk": "root-only observations remain unknown"
+    },
+    "E5": {
+      "observed": ["Orin Nano Super", "L4T R36.5.2", "CUDA 12.6.68", "TensorRT 10.3.0", "driver 540.5.0", "792G free"],
+      "missing_or_unresolved": ["external power meter", "cooling boundary", "legacy Nano mapping"],
+      "proposed_actions": ["GPU-native TensorRT review after model/backend confirmation"],
+      "disk_budget": "no firmware/power-mode change",
+      "permission_risk": "MAXN_SUPER is observation only"
+    }
+  },
+  "excluded": ["E4 Qualcomm", "unmapped legacy Nano", "separate Pi5 CPU board", "DLA matrix", "all 15 models"]
+}

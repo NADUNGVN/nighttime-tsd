@@ -130,3 +130,71 @@ server RTX engine to an edge device.
 **Git:** branch `luna1/e2l1-001-edge-readiness`; final commit is `HEAD` at
 handoff. Confirm with `git rev-parse HEAD` (the hash is reported in the handoff
 message; embedding HEAD's hash in this file would be self-referential).
+
+## L1A-002 — local measurement harness and setup planning
+
+**Status:** GO local CPU/mock harness and protocol; **NO-GO** device inference,
+export, compilation, calibration, installation, or scored latency/power study.
+No device was re-SSH'd for this task; the accepted E2L1-001 snapshots remain
+canonical.
+
+### Implementation
+
+- `scripts/edge_readiness/measurement_harness.py` defines the backend-neutral
+  adapter contract. It requires explicit synchronization hooks, model SHA-256,
+  stable target/device binding, batch 1 and `(1,3,640,640)` shape.
+- Timing boundaries are explicit: `inference_only` excludes postprocess, while
+  `decoded_image_to_detections` includes preprocess/inference/postprocess from an
+  already-decoded image and excludes disk decode/model load/allocation.
+- The starting protocol is 200 warmup calls, 1,000 measured calls and 3 serial
+  sessions. Raw samples are retained per session; p50/p95/p99 use linear
+  interpolation; serial FPS is kept separate from unavailable pipelined
+  throughput.
+- `integrate_power_energy` accepts only time-aligned nonnegative watts with one
+  declared boundary and uses trapezoidal joule integration. Missing telemetry,
+  memory, thermal, throttle or permission evidence remains a structured
+  `unavailable`/`permission_denied` state.
+- `scripts/edge_readiness/collect_inventory.py` was hardened for future use
+  without rerunning devices: SSH aliases reject option-like values; complete
+  collection rejects duplicate, unexpected and missing command markers; timeout
+  partial records are preserved; transport status is separate from inventory
+  completeness; `trtexec` future probing uses direct `--help` without `head`.
+
+### Setup and protocol artifacts
+
+- [EDGE_READINESS_V1.md](EDGE_READINESS_V1.md): concrete boundaries, metric
+  semantics, proposed E1/E2/E3/E5 action matrix, options and operator questions.
+- [EDGE_READINESS_V1.json](EDGE_READINESS_V1.json): machine-readable proposed
+  setup matrix. It excludes E4, the unmapped legacy Nano, a separate Pi5 board,
+  DLA and the all-15-model matrix.
+- [mock manifest](../results/edge_readiness_v1/e2l1-002/mock/manifest.json) and
+  three session JSONs: local contract exercise only, not edge evidence.
+
+### Tests
+
+```text
+python -m unittest tests/test_edge_readiness.py tests/test_edge_measurement_harness.py -v
+Ran 15 tests ... OK
+python -m py_compile scripts/edge_readiness/collect_inventory.py scripts/edge_readiness/measurement_harness.py
+```
+
+The full repository suite was not used as the gate for this isolated lane; its
+existing tests require unrelated optional/runtime artifacts. The 15 relevant
+edge tests and both module syntax checks pass. No server/device command was run.
+
+### Review options and outstanding operator questions
+
+Proposed order is CPU FP32 reference, E2/E3 GPU-native TensorRT FP16 then
+backend-native INT8 after review, and E1 Hailo-native conversion on an approved
+x86 compiler host. These are planning options only; no final model/arm/backend
+selection is made. E5 remains Orin Nano Super and cannot substitute silently for
+legacy Nano.
+
+Before expansion, Astra/operator must provide or approve E3 exact RAM SKU,
+per-board cooling/supply and external-meter boundary, whether E1 CPU/Hailo are
+two conditions on one physical board, representative model/arm/device scope,
+and the approved offline Hailo compiler host/output transfer path.
+
+**Git:** worktree `D:/Research/paper-luna-edge-002`, branch
+`luna1/e2l1-002-edge-harness`; final commit is `HEAD` at handoff. Do not open or
+merge a PR automatically.

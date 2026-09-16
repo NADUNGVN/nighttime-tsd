@@ -1,0 +1,98 @@
+{
+  "schema_version": "e2l1-edge-measurement-v1",
+  "protocol_version": "e2l1-edge-measurement-protocol-v1",
+  "status": "completed_mock",
+  "session_index": 3,
+  "target_id": "E1",
+  "backend": "cpu_fp32_reference",
+  "backend_adapter": "mock_cpu",
+  "synchronization_policy": "no_device_sync; calls are recorded for ordering tests",
+  "model": {
+    "model_id": "mock-model",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "boundary": "inference_only",
+  "disk_decode_in_timing": false,
+  "input_shape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "batch": 1,
+  "warmup_calls": 2,
+  "measured_calls": 5,
+  "warmup_in_timing": false,
+  "raw_latency_ms": [
+    0.0005,
+    0.0002,
+    0.0001,
+    0.0003,
+    0.0001
+  ],
+  "latency_statistics": {
+    "n_calls": 5,
+    "unit": "ms",
+    "mean": 0.00024000000000000003,
+    "median": 0.0002,
+    "p50": 0.0002,
+    "p95": 0.00045999999999999996,
+    "p99": 0.000492,
+    "min": 0.0001,
+    "max": 0.0005,
+    "serial_fps": 4166666.666666666,
+    "pipelined_throughput_fps": {
+      "status": "unavailable",
+      "reason": "not measured by this serial session"
+    }
+  },
+  "throughput_semantics": {
+    "serial_fps": "reciprocal of mean synchronous latency",
+    "pipelined_throughput_fps": {
+      "status": "unavailable",
+      "reason": "no pipelined producer/consumer measurement"
+    }
+  },
+  "device": {
+    "device_id": "E1",
+    "hardware_identity": "mock-cpu-fixture",
+    "runtime_versions": {
+      "runtime": "mock"
+    },
+    "power_mode_before": {
+      "status": "unavailable",
+      "reason": "CPU/mock test fixture; no device telemetry sampled"
+    },
+    "power_mode_after": {
+      "status": "unavailable",
+      "reason": "CPU/mock test fixture; no device telemetry sampled"
+    },
+    "thermal_before": {
+      "status": "unavailable",
+      "reason": "CPU/mock test fixture; no device telemetry sampled"
+    },
+    "thermal_after": {
+      "status": "unavailable",
+      "reason": "CPU/mock test fixture; no device telemetry sampled"
+    },
+    "throttle_before": {
+      "status": "unavailable",
+      "reason": "CPU/mock test fixture; no device telemetry sampled"
+    },
+    "throttle_after": {
+      "status": "unavailable",
+      "reason": "CPU/mock test fixture; no device telemetry sampled"
+    }
+  },
+  "memory_peak": {
+    "status": "unavailable",
+    "reason": "not measured by CPU/mock harness",
+    "scope": "backend-specific"
+  },
+  "power_energy": {
+    "status": "unavailable",
+    "reason": "fewer than two time-aligned power samples",
+    "scope": "unknown"
+  },
+  "mock_only": true
+}

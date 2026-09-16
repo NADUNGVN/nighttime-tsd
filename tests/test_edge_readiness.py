@@ -12,6 +12,7 @@ from edge_readiness.collect_inventory import (  # noqa: E402
     REMOTE_SCRIPT,
     command_status,
     parse_remote_output,
+    validate_ssh_alias,
     validate_target,
 )
 
@@ -23,6 +24,13 @@ class EdgeReadinessTests(unittest.TestCase):
         for value in ("../E1", "E1 device", "E1;rm", ""):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 validate_target(value)
+
+    def test_ssh_alias_rejects_options_and_shellish_values(self):
+        self.assertEqual(validate_ssh_alias("pi5"), "pi5")
+        self.assertEqual(validate_ssh_alias("edge.host-1"), "edge.host-1")
+        for value in ("-oProxyCommand=x", "--", "pi 5", "pi;echo", ""):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                validate_ssh_alias(value)
 
     def test_cpu_fixture_parses_ok_missing_and_permission_states(self):
         raw = "\n".join(
@@ -45,6 +53,30 @@ class EdgeReadinessTests(unittest.TestCase):
     def test_parser_rejects_unterminated_fixture(self):
         with self.assertRaisesRegex(ValueError, "unterminated"):
             parse_remote_output(f"{BEGIN} hostname\nfixture-host")
+
+    def test_parser_rejects_duplicate_unexpected_and_missing_markers(self):
+        raw = "\n".join(
+            [
+                f"{BEGIN} hostname", "one", f"{END} hostname 0",
+                f"{BEGIN} hostname", "two", f"{END} hostname 0",
+                f"{BEGIN} surprise", "x", f"{END} surprise 0",
+            ]
+        )
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            parse_remote_output(raw, {"hostname", "memory"})
+        unique = "\n".join(
+            [f"{BEGIN} hostname", "one", f"{END} hostname 0", f"{BEGIN} surprise", "x", f"{END} surprise 0"]
+        )
+        with self.assertRaisesRegex(ValueError, "unexpected"):
+            parse_remote_output(unique, {"hostname", "memory"})
+        with self.assertRaisesRegex(ValueError, "missing"):
+            parse_remote_output(f"{BEGIN} hostname\none\n{END} hostname 0", {"hostname", "memory"})
+
+    def test_parser_preserves_partial_timeout_evidence(self):
+        raw = f"{BEGIN} hostname\nfixture-host"
+        records = parse_remote_output(raw, {"hostname", "memory"}, strict=False)
+        self.assertEqual(records["hostname"]["status"], "partial")
+        self.assertIsNone(records["hostname"]["returncode"])
 
     def test_command_status(self):
         self.assertEqual(command_status(0), "ok")
