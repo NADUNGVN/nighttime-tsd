@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import bisect
 import hashlib
+import inspect
 import json
 import math
 import numbers
@@ -29,6 +30,9 @@ DEFAULT_SESSION_COUNT = 3
 DEFAULT_INPUT_SHAPE = (1, 3, 640, 640)
 SHA256_RE = set("0123456789abcdef")
 UNKNOWN_ALIGNMENT = {"", "unknown", "unverified", "none", "null"}
+SESSION_CLOCK_IDENTITY = "host_perf_counter_ns"
+SESSION_CLOCK_METHOD = "time.perf_counter_ns"
+SESSION_ALIGNMENT_SOURCE = "same_process_run_session"
 
 
 class Boundary(str, Enum):
@@ -121,6 +125,10 @@ class MeasurementConfig:
             raise HarnessError("INVALID_POOL_BINDING", "pool_ids and pool_order are required")
         if any(not isinstance(image_id, str) or not image_id for image_id in self.pool_ids):
             raise HarnessError("INVALID_POOL_BINDING", "pool_ids must contain non-empty strings")
+        if len(set(self.pool_ids)) != len(self.pool_ids):
+            raise HarnessError("INVALID_POOL_BINDING", "pool_ids must be unique")
+        if any(isinstance(index, bool) or not isinstance(index, numbers.Integral) for index in self.pool_order):
+            raise HarnessError("INVALID_POOL_BINDING", "pool_order must contain integer, non-boolean indices")
         if sorted(self.pool_order) != list(range(len(self.pool_ids))):
             raise HarnessError("INVALID_POOL_BINDING", "pool_order must be a permutation of pool indices")
         if self.pool_hash is None or len(self.pool_hash) != 64 or any(c not in SHA256_RE for c in self.pool_hash.lower()):
@@ -244,6 +252,26 @@ def _coverage_metadata(
     }
 
 
+def _validate_clock_conversion(conversion: dict[str, Any], expected_clock_identity: str) -> tuple[str, float, int]:
+    if not isinstance(conversion, dict):
+        raise HarnessError("INVALID_CLOCK_CONVERSION", "clock_conversion must be a validated mapping")
+    source = conversion.get("source_clock_identity")
+    target = conversion.get("target_clock_identity")
+    evidence = conversion.get("evidence")
+    validated = conversion.get("validated")
+    offset_ns = conversion.get("offset_ns")
+    scale = conversion.get("scale", 1.0)
+    if not isinstance(source, str) or not source or target != expected_clock_identity:
+        raise HarnessError("INVALID_CLOCK_CONVERSION", "clock conversion source/target must bind to the expected target clock")
+    if validated is not True or not isinstance(evidence, str) or not evidence.strip():
+        raise HarnessError("INVALID_CLOCK_CONVERSION", "clock conversion requires validated=true and explicit evidence")
+    if isinstance(offset_ns, bool) or not isinstance(offset_ns, numbers.Integral):
+        raise HarnessError("INVALID_CLOCK_CONVERSION", "clock conversion offset_ns must be an integer")
+    if isinstance(scale, bool) or not isinstance(scale, numbers.Real) or not math.isfinite(float(scale)) or float(scale) <= 0:
+        raise HarnessError("INVALID_CLOCK_CONVERSION", "clock conversion scale must be finite and positive")
+    return source, float(scale), int(offset_ns)
+
+
 def integrate_power_energy(
     samples: Iterable[dict[str, Any]],
     start_ns: int,
@@ -251,12 +279,16 @@ def integrate_power_energy(
     *,
     clock_identity: str | None = None,
     alignment_source: str | None = None,
+    clock_conversion: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Integrate aligned power samples without extrapolation.
 
-    Samples must be supplied in strictly increasing timestamp order.  The
-    interval is measured only when samples bracket both requested endpoints;
-    otherwise an overlapping result is explicitly ``partial``.
+    Samples must be supplied in strictly increasing timestamp order and must
+    match the explicit expected ``clock_identity`` and ``alignment_source``.
+    A different source clock is accepted only with a validated conversion
+    mapping and evidence. The interval is measured only when samples bracket
+    both requested endpoints; otherwise an overlapping result is explicitly
+    ``partial``.
     """
     if not isinstance(start_ns, numbers.Integral) or not isinstance(end_ns, numbers.Integral):
         raise HarnessError("INVALID_TIME_RANGE", "start_ns and end_ns must be integer nanoseconds")
@@ -265,6 +297,8 @@ def integrate_power_energy(
     raw_rows = list(samples)
     if len(raw_rows) < 2:
         return {"status": "unavailable", "reason": "fewer than two time-aligned power samples", "coverage": _coverage_metadata(requested_start_ns=start_ns, requested_end_ns=end_ns, first_sample_ns=None, last_sample_ns=None, coverage_start_ns=None, coverage_end_ns=None, sample_count=len(raw_rows), clock_identity=clock_identity, alignment_source=alignment_source)}
+    if clock_identity is None or str(clock_identity).lower() in UNKNOWN_ALIGNMENT or alignment_source is None or str(alignment_source).lower() in UNKNOWN_ALIGNMENT:
+        raise HarnessError("UNBOUND_CLOCK_ALIGNMENT", "integration requires an explicit expected clock identity and alignment source")
 
     rows: list[tuple[int, float, str, str, str]] = []
     previous_ns: int | None = None
@@ -272,20 +306,20 @@ def integrate_power_energy(
     units: set[str] = set()
     clocks: set[str] = set()
     alignments: set[str] = set()
+    source_clocks: set[str] = set()
+    conversion_spec: tuple[str, float, int] | None = None
     for row in raw_rows:
         timestamp = row.get("monotonic_ns")
         if isinstance(timestamp, bool) or not isinstance(timestamp, numbers.Real) or not math.isfinite(float(timestamp)) or int(timestamp) != timestamp:
             raise HarnessError("INVALID_TIMESTAMP", "timestamps must be finite integer nanoseconds")
         timestamp = int(timestamp)
-        if previous_ns is not None and timestamp <= previous_ns:
-            raise HarnessError("NONMONOTONIC_TIMESTAMPS", "timestamps must be strictly increasing; sorting is not implicit")
         watts = _finite(row.get("power_w"))
         if watts < 0:
             raise HarnessError("INVALID_POWER_SAMPLE", "power_w must be nonnegative")
         boundary_value = row.get("boundary")
         unit_value = row.get("unit")
-        row_clock_value = row.get("clock_identity", row.get("clock_id", clock_identity))
-        row_alignment_value = row.get("alignment_source", alignment_source)
+        row_clock_value = row.get("clock_identity", row.get("clock_id"))
+        row_alignment_value = row.get("alignment_source")
         boundary = "" if boundary_value is None else str(boundary_value)
         unit = "" if unit_value is None else str(unit_value)
         row_clock = "" if row_clock_value is None else str(row_clock_value)
@@ -294,11 +328,27 @@ def integrate_power_energy(
             raise HarnessError("INVALID_POWER_SAMPLE", "power samples require boundary and unit")
         if row_clock.lower() in UNKNOWN_ALIGNMENT or row_alignment.lower() in UNKNOWN_ALIGNMENT:
             raise HarnessError("UNVERIFIED_CLOCK_ALIGNMENT", "power samples require verified clock identity and alignment source")
+        source_clocks.add(row_clock)
+        if row_clock != str(clock_identity):
+            if clock_conversion is None:
+                raise HarnessError("CLOCK_CONVERSION_REQUIRED", "power sample clock differs from the expected session clock; validated conversion evidence is required", {"expected": clock_identity, "observed": row_clock})
+            if conversion_spec is None:
+                conversion_spec = _validate_clock_conversion(clock_conversion, str(clock_identity))
+            source_clock, scale, offset_ns = conversion_spec
+            if row_clock != source_clock:
+                raise HarnessError("MIXED_CLOCK_ALIGNMENT", "converted samples must use one source clock")
+            timestamp = int(round(timestamp * scale + offset_ns))
+            if timestamp < 0:
+                raise HarnessError("INVALID_CLOCK_CONVERSION", "converted timestamps must be nonnegative")
+        if row_alignment != str(alignment_source):
+            raise HarnessError("ALIGNMENT_BINDING_MISMATCH", "power sample alignment does not match the expected session alignment", {"expected": alignment_source, "observed": row_alignment})
+        if previous_ns is not None and timestamp <= previous_ns:
+            raise HarnessError("NONMONOTONIC_TIMESTAMPS", "timestamps must be strictly increasing after clock binding; sorting is not implicit")
         rows.append((timestamp, watts, boundary, unit, row_alignment))
         previous_ns = timestamp
         boundaries.add(boundary)
         units.add(unit)
-        clocks.add(row_clock)
+        clocks.add(str(clock_identity))
         alignments.add(row_alignment)
     if len(boundaries) != 1:
         raise HarnessError("MIXED_POWER_BOUNDARY", "all energy samples must use one measurement boundary")
@@ -306,6 +356,8 @@ def integrate_power_energy(
         raise HarnessError("MIXED_POWER_UNIT", "all energy samples must use one unit")
     if next(iter(units)) != "W":
         raise HarnessError("INVALID_POWER_SAMPLE", "power samples must use unit=W")
+    if len(source_clocks) != 1:
+        raise HarnessError("MIXED_CLOCK_ALIGNMENT", "all power samples must use one source clock")
     if len(clocks) != 1 or len(alignments) != 1:
         raise HarnessError("MIXED_CLOCK_ALIGNMENT", "all energy samples must use one verified clock identity and alignment source")
 
@@ -361,6 +413,7 @@ def _run_one_call(
     postprocess: Callable[[Any], Any],
     *,
     timed: bool,
+    clock_ns: Callable[[], int],
 ) -> tuple[float | None, dict[str, Any]]:
     start_ns: int | None = None
     if config.boundary is Boundary.INFERENCE_ONLY:
@@ -369,26 +422,30 @@ def _run_one_call(
             raise HarnessError("SHAPE_MISMATCH", "preprocessing did not produce the locked input shape", {"observed": prepared.shape})
         backend.synchronize("before_timer")
         if timed:
-            start_ns = time.perf_counter_ns()
+            start_ns = clock_ns()
         output = backend.infer(prepared)
         backend.synchronize("after_inference")
         if timed:
-            elapsed = (time.perf_counter_ns() - start_ns) / 1_000_000.0
+            elapsed = (clock_ns() - start_ns) / 1_000_000.0
         else:
             elapsed = None
         return elapsed, {"detections": unavailable("postprocess excluded by inference_only boundary")}
 
     backend.synchronize("before_timer")
     if timed:
-        start_ns = time.perf_counter_ns()
+        start_ns = clock_ns()
     prepared = preprocess(decoded_image)
     if prepared.shape != config.input_shape:
         raise HarnessError("SHAPE_MISMATCH", "preprocessing did not produce the locked input shape", {"observed": prepared.shape})
     output = backend.infer(prepared)
     backend.synchronize("after_inference")
     detections = postprocess(output)
+    if inspect.isawaitable(detections):
+        if inspect.iscoroutine(detections):
+            detections.close()
+        raise HarnessError("ASYNC_POSTPROCESS_UNSUPPORTED", "postprocessing must complete synchronously on the CPU/mock path")
     if timed:
-        elapsed = (time.perf_counter_ns() - start_ns) / 1_000_000.0
+        elapsed = (clock_ns() - start_ns) / 1_000_000.0
     else:
         elapsed = None
     return elapsed, {"detections": detections}
@@ -405,6 +462,8 @@ def run_session(
     device: DeviceBinding,
     power_samples: Iterable[dict[str, Any]] | None = None,
     memory_peak: dict[str, Any] | None = None,
+    include_warmup_energy: bool = False,
+    clock_ns: Callable[[], int] | None = None,
 ) -> dict[str, Any]:
     """Run one session; intended for CPU/mock tests until separately authorized."""
     config.validate()
@@ -412,18 +471,63 @@ def run_session(
         raise HarnessError("INVALID_SESSION", "session_index is outside configured session_count")
     if device.device_id != config.target_id:
         raise HarnessError("DEVICE_BINDING_MISMATCH", "device binding does not match target_id")
-    session_start_ns = time.perf_counter_ns()
+    clock = clock_ns or time.perf_counter_ns
+    session_clock = {
+        "identity": SESSION_CLOCK_IDENTITY,
+        "method": SESSION_CLOCK_METHOD,
+        "alignment_source": SESSION_ALIGNMENT_SOURCE,
+        "monotonic": True,
+        "verification": "harness_session_binding; not independent device-clock verification",
+        "mock_only": True,
+    }
+    session_start_ns = clock()
     pool_indices = list(config.pool_order)
+    consumed: dict[str, dict[str, Any]] = {}
+
+    def sequence_record(indices: list[int]) -> dict[str, Any]:
+        ids = [config.pool_ids[index] for index in indices]
+        sequence = {"indices": indices, "ids": ids}
+        return {
+            **sequence,
+            "count": len(indices),
+            "sequence_hash": hashlib.sha256(json.dumps(sequence, separators=(",", ":")).encode("utf-8")).hexdigest(),
+        }
+
+    warmup_indices: list[int] = []
     for index in range(config.warmup_calls):
-        _run_one_call(config, backend, image_provider(pool_indices[index % len(pool_indices)]), preprocess, postprocess, timed=False)
+        pool_index = pool_indices[index % len(pool_indices)]
+        warmup_indices.append(pool_index)
+        _run_one_call(config, backend, image_provider(pool_index), preprocess, postprocess, timed=False, clock_ns=clock)
+    consumed["warmup"] = sequence_record(warmup_indices)
+
     raw: list[float] = []
-    measured_start = time.perf_counter_ns()
+    measured_indices: list[int] = []
+    measured_start = clock()
     for index in range(config.measured_calls):
-        latency, _ = _run_one_call(config, backend, image_provider(index % 256), preprocess, postprocess, timed=True)
+        pool_index = pool_indices[index % len(pool_indices)]
+        measured_indices.append(pool_index)
+        latency, _ = _run_one_call(config, backend, image_provider(pool_index), preprocess, postprocess, timed=True, clock_ns=clock)
         assert latency is not None
         raw.append(latency)
-    measured_end = time.perf_counter_ns()
+    measured_end = clock()
     session_end_ns = measured_end
+    measured_window = {
+        "start_monotonic_ns": measured_start,
+        "end_monotonic_ns": measured_end,
+        "duration_ns": measured_end - measured_start,
+        "image_count": config.measured_calls,
+        "includes_warmup": False,
+        "scope": "measured_loop_outer_window",
+    }
+    session_window = {
+        "start_monotonic_ns": session_start_ns,
+        "end_monotonic_ns": session_end_ns,
+        "duration_ns": session_end_ns - session_start_ns,
+        "image_count": config.warmup_calls + config.measured_calls,
+        "scope": "total_session_window",
+    }
+    consumed["measured"] = sequence_record(measured_indices)
+    power_sample_rows = list(power_samples or [])
     result = {
         "schema_version": SCHEMA_VERSION,
         "protocol_version": PROTOCOL_VERSION,
@@ -440,6 +544,9 @@ def run_session(
         "batch": config.batch,
         "warmup_calls": config.warmup_calls,
         "measured_calls": config.measured_calls,
+        "session_window": session_window,
+        "measured_window": measured_window,
+        "session_clock": session_clock,
         "session_start_monotonic_ns": session_start_ns,
         "session_end_monotonic_ns": session_end_ns,
         "session_duration_ns": session_end_ns - session_start_ns,
@@ -456,17 +563,39 @@ def run_session(
             "pool_hash": config.pool_hash,
             "pool_order": list(config.pool_order),
             "pool_size": len(config.pool_ids),
+            "phase_policy": "restart_each_phase",
+            "consumed": consumed,
         },
         "memory_peak": memory_peak or unavailable("not measured by CPU/mock harness", scope="backend-specific"),
         "energy_interval": {
-            "start_monotonic_ns": session_start_ns,
-            "end_monotonic_ns": session_end_ns,
+            "start_monotonic_ns": measured_start,
+            "end_monotonic_ns": measured_end,
+            "duration_ns": measured_end - measured_start,
+            "image_count": config.measured_calls,
+            "includes_warmup": False,
             "boundary": "declared_by_power_samples_or_unavailable",
             "includes_provider_overhead": True,
+            "scope": "measured_loop_outer_window",
         },
-        "power_energy": integrate_power_energy(power_samples or [], session_start_ns, session_end_ns),
+        "latency_interval": {
+            "boundary": config.boundary.value,
+            "image_count": config.measured_calls,
+            "includes_warmup": False,
+            "scope": "per_call_timing_boundary",
+        },
+        "power_energy": integrate_power_energy(power_sample_rows, measured_start, measured_end, clock_identity=session_clock["identity"], alignment_source=session_clock["alignment_source"]),
         "mock_only": True,
     }
+    if include_warmup_energy:
+        result["warmup_inclusive_energy_interval"] = {
+            "start_monotonic_ns": session_start_ns,
+            "end_monotonic_ns": session_end_ns,
+            "duration_ns": session_end_ns - session_start_ns,
+            "image_count": config.warmup_calls + config.measured_calls,
+            "includes_warmup": True,
+            "scope": "total_session_window",
+        }
+        result["warmup_inclusive_power_energy"] = integrate_power_energy(power_sample_rows, session_start_ns, session_end_ns, clock_identity=session_clock["identity"], alignment_source=session_clock["alignment_source"])
     return result
 
 

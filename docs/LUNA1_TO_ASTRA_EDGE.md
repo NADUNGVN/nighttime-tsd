@@ -251,3 +251,68 @@ no maximum-gap threshold or power boundary was selected for future runs.
 
 **Git:** branch `luna1/e2l1-003-energy-fix` in worktree
 `D:/Research/paper-luna-edge-002`; commit to be recorded after scoped commit.
+
+## L1A-004 — bind pool consumption, measured energy window and session clock
+
+**Status:** GO bounded local CPU/mock contract completion; **NO-GO** for device
+inference, telemetry collection, conversion, installation or benchmark. No SSH or
+device command was run. Earlier inventory and mock artifacts were not rewritten.
+
+### E3 — declared pool is used by every provider call
+
+- `run_session` now applies the declared `pool_order` in both warmup and measured
+  loops. The explicit policy is `restart_each_phase`, so each phase begins at the
+  first declared pool index and wraps over that permutation; the old hidden
+  `index % 256` path is gone.
+- Pool IDs must be unique, and `pool_order` must contain integer, non-boolean
+  indices forming a complete permutation. Each phase persists actual consumed
+  indices, IDs, count and a deterministic sequence hash. The provider receives
+  only declared pool indices, so non-256, reversed-order and wraparound cases are
+  testable and out-of-range providers fail immediately.
+- The persisted ID hash remains mock provenance only; it is not a substitute for
+  future image-content provenance.
+
+### E4 — energy is measured-loop scoped
+
+- The result now persists `session_window` (warmup + measured) and a distinct
+  post-warmup `measured_window` whose outer boundaries include provider/Python
+  overhead for measured calls.
+- Primary `power_energy` integrates only the measured window and records
+  `includes_warmup=false`, measured image count and scope. Optional
+  `include_warmup_energy=true` produces separately named
+  `warmup_inclusive_energy_interval` and `warmup_inclusive_power_energy` fields;
+  they cannot be silently mixed with the primary result.
+- A deterministic injected-clock test uses a large warmup interval and verifies
+  50J measured-window energy versus 150J warmup-inclusive energy for the same
+  constant 10W fixture.
+
+### E5 — explicit session clock/alignment and synchronous postprocess
+
+- `integrate_power_energy` requires an explicit expected clock identity and
+  alignment source. Missing/unverified binding, contradictory metadata and mixed
+  source clocks fail closed; equal row strings are not treated as proof of
+  alignment to the session boundaries.
+- A differing source clock requires a validated conversion mapping with matching
+  source/target identities, finite positive scale, integer offset, `validated=true`
+  and non-empty evidence. The session record binds host `time.perf_counter_ns`,
+  its alignment source and the limitation that this is harness/session binding,
+  not independent device-clock verification.
+- The CPU/mock decoded-to-detections path rejects awaitable postprocessing with
+  `ASYNC_POSTPROCESS_UNSUPPORTED`; no future adapter is assumed synchronous.
+
+### Verification
+
+```text
+python -m unittest tests/test_edge_readiness.py tests/test_edge_measurement_harness.py -v
+Ran 23 tests ... OK
+python -m unittest discover -s tests -p 'test_edge*.py' -v
+Ran 23 tests ... OK
+python -m py_compile scripts/edge_readiness/collect_inventory.py scripts/edge_readiness/measurement_harness.py
+```
+
+No real runtime/telemetry/energy measurement was performed. The local tests use
+only the mock backend and deterministic fixtures; no benchmark claim is made.
+
+**Git:** branch `luna1/e2l1-004-session-pool-clock` in worktree
+`D:/Research/paper-luna-edge-002`; commit and push recorded after the scoped
+handoff commit. Do not open or merge a PR automatically.

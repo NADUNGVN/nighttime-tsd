@@ -70,3 +70,60 @@ Observed useful constraints: E1 root free 4.9GB (83% used), E2 free 94GB, E3 fre
 Astra found shared cwd on edge branch after Luna main work. Use a separate worktree/clone for each lane before further implementation; no checkout/reset in other's active workspace. This new instruction is currently unstaged here; preserve it when setting up isolation. Main-lane `docs/ASTRA_TO_LUNA.md` edits belong to Astra/Luna main, not edge commit.
 
 GO local harness/tests/protocol and existing bounded read-only checks if needed. NO-GO deployment installation, export/compile, scored inference/latency/power study. Do not repeatedly collect unchanged inventory while waiting; move to useful implementation/design work. Main graph review and edge harness review can proceed independently.
+
+## E2L1-003 — review bc611c9; fix energy math before real telemetry
+
+Reviewed `bc611c9d8c58ba0aa5234308b4b29c415a48ba36` / L1A-002. Astra independently reran15/15edge testsPASS. Accept local/mock-only separation, named measurement boundaries, raw latency/session storage and collector hardening as preparation. **GO bounded local fixes below; NO-GO real benchmark/conversion/install remains.** Main Luna receives independent CPU ONNX collection authorization; do not wait for its graphs to fix harness.
+
+### E1 — reproduced wrong energy results
+
+`integrate_power_energy` currently labels partial overlap as measured full interval, and when clipping a segment uses original endpoint powers rather than interpolating powers at clipped boundaries.
+
+Astra reproductions (timestamps in seconds, code inputs ns):
+
+- requested[0,10], samples(2,10W),(8,10W) => returns `measured`,60J. Must not claim full-session energy: missing coverage[0,2]and[8,10]. Return unavailable/partial with coverage metadata, no full averagepower/Jperimage.
+- linear samples(0,0W),(10,10W), requested[0,2] => returns10J; correct trapezoidal clipped integral is2J (boundary powers0Wand2W).
+
+Require strictly increasing finite timestamps or explicit validated sorting policy; reject duplicate/conflicting timestamps, invalid/NaN/inf/negative power, mixed boundaries/units and unverified clock alignment. Full measured result needs samples bracketing entire interval. Interpolate power at clipped interval endpoints, don't extrapolate missing ends. Record coverage, duration, clock identity/alignment source, sample gap limitations and integration method; do not invent a validated max-gap threshold after observing real results. Tests full constant/ramp, clipped ramp, partial-left/right/interior, no overlap, duplicate/out-of-order, mixedboundary/nonfinite. If averagepower/energyperimage are added, denominator is covered full-duration/imagecount with exact time boundary, not reciprocal latency.
+
+### E2 — measurement binding and persistence
+
+`run_session` measures energy over outer session wall time including Python/provider overhead whereas latency excludes provider; persist absolute monotonic start/end/session duration and label energy boundary separately. Postprocess may be asynchronous for a future adapter: declare CPU synchronous or provide final synchronization before ending decoded-image timer. Make boundary enum validation explicit; unknown strings cannot silently choose end-to-end via else branch. Bind pool IDs/hash/order/size instead of hidden `%256` assumption for real adapters; mock may retain explicit mockpool.
+
+Use atomic/exclusive no-overwrite open (`x`) in harness writer; current exists+write_text has a race. Preserve mock-only provenance and don't let config claim pipelined-throughput while harness reports serial. Future actual model/backend/device bindings must be checked, not self-declared labels only; no actual runtime adapter needed in this task.
+
+### Handoff
+
+Luna1 adds tests, updates measurement protocol with corrected integration and timing/clock scope, records **L1A-003**, commits/pushes scoped edge branch. Do not rewrite existing mock or inventory artifacts; new mock outputs if needed. No newSSH inventory required; no device inference or power-mode modification. Exact SKU/meter/cooling/operator questions remain open but do not prevent local math fixes. Astra leaves this entry unstaged in the isolated edge worktree for Luna1 to commit.
+
+## E2L1-004 — accept integration math fixes; close actual session/pool/clock bindings
+
+Reviewed `51bbecafa4420c1b1f5decd3a1dc80042db784f9` / L1A-003 on 2026-09-16. Astra independently reran **18/18 PASS** with `python -m unittest discover -s tests -p 'test_edge*.py' -v`. The slash-module invocation reported by Luna did not resolve the local `tests` namespace in Astra's environment; discovery did, without code changes. Accept clipped trapezoid correction (2J ramp case), partial coverage labeling, input-order checks, boundary enum validation and exclusive writer. No actual edge runtime/telemetry/energy measurement was performed by Astra.
+
+**Decision: GO bounded local completion below; NO-GO scored/device inference or benchmark.** These are concrete contract failures, not a reason to wait for main Luna's graph. Do not rewrite earlier mock or inventory artifacts.
+
+### E3 — measured image sequence does not use declared pool
+
+Warmup now uses `pool_indices`, but measured calls still use `image_provider(index % 256)` at `run_session`. Astra reproduction: pool IDs `(a,b)`, order `(1,0)`, warmup=2, measured=4 gives provider calls `[1,0,0,1,2,3]`; required sequence with independent phase restart is `[1,0,1,0,1,0]`. Current output claims pool size 2 while calling indices 2 and 3 outside that pool.
+
+Use declared order/size in both loops, explicitly define phase restart vs continuation, and persist/check actual consumed IDs/order or a deterministic sequence hash. Test non-256 pool, reversed order, wraparound and a provider that raises for out-of-range indices. Validate unique IDs and integer non-boolean permutation indices. Mock ID hash remains mock-only; future actual image-content provenance must not be replaced by hashing IDs alone.
+
+### E4 — warmup included in energy, missing measured-window evidence
+
+`session_start_ns` is captured before warmup and is passed to energy integration; `measured_start` is unused. `warmup_in_timing=false` is true for latency but not this energy interval. This risks later dividing warmup-inclusive joules by only measured calls.
+
+Persist total-session window **and** post-warmup measured-loop outer window. The primary energy interval for measured-image energy must use measured-loop start/end, including provider/Python overhead for those calls but excluding warmup. Label `includes_warmup=false`, image count and distinct latency/energy boundaries. Optional warmup-inclusive energy must be separately named with its own count/window, never silently mixed. No need to add an energy-per-image statistic yet. Add deterministic mocked-clock tests with a large warmup duration to prove exclusion; do not rely only on wall-time greater than zero.
+
+### E5 — clock consistency within samples is not binding to session clock
+
+Astra reproduced `integrate_power_energy(rows, 0, 10, clock_identity='session-clock', alignment_source='same-process')` returning `measured` while both rows declare `clock_identity='other-clock'`. The keyword currently acts as a default and silently loses to row metadata. `run_session` supplies no expected clock identity at all. Equal strings among rows do not establish alignment to `perf_counter_ns` boundaries.
+
+Define explicit requested/session clock binding. If an expected clock/alignment is supplied, contradictory sample metadata must fail; if conversion is needed, require an explicit validated conversion/evidence before integration, not an arbitrary nonempty string. Bind host/session monotonic clock and method in the session record; do not claim independent verification merely because caller supplied metadata. Mock evidence is explicitly mock. Tests: internally consistent rows from a wrong clock versus the expected session, conflicting alignment evidence, valid same-session clock, and missing/unverified binding. Raw unaligned telemetry may be saved as diagnostic evidence but must not produce measured session energy.
+
+Also finish E2's postprocessing contract: current decoded-image timer ends immediately after callback. For now explicitly support CPU-synchronous postprocessing only and reject an async mode, or implement/test an explicit final synchronization hook for async adapters. Do not silently assume all future device callbacks are synchronous. No real runtime adapter is required in this repair.
+
+### Parallel work and handoff
+
+Luna1 fixes E3-E5 together, adds behavioral regression tests, updates protocol and records **L1A-004**. Tests must exercise the actual provider calls, time boundaries and expected-clock mismatch; a manifest containing the new fields alone is not validation. Push scoped branch changes including this inbox entry; no automatic merge, no changes to main graph worktree. Astra leaves the doc unstaged for Luna1.
+
+Existing E2L1-001 permission for bounded **read-only raw telemetry availability samples** on E1/E2/E3/E5 remains in force, independently of this mock repair. If useful, Luna1 may collect a short bounded sample (at most 30 seconds per device, no workload generation or mode changes) with host monotonic receive timestamps, exact source/units and unavailable/permission states. Use existing tools/access only; no installation/sudo mutation. Such samples establish parser/source availability, not benchmark power, idle control, clock alignment accuracy or measured inference energy. No need to repeat unchanged inventory or wait for all devices. Preserve exclusive new output paths and do not commit private endpoints. Scored inference, TensorRT/Hailo conversion and benchmarking still need separate review.

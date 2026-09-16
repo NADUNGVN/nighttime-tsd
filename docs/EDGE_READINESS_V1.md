@@ -40,12 +40,16 @@ metric and remains unavailable until a producer/consumer measurement exists.
 
 Power samples must contain strictly increasing finite monotonic nanoseconds,
 nonnegative finite watts, unit `W`, one declared boundary such as `whole_device`
-or `module_input`, and verified clock identity/alignment source. Duplicate or
-out-of-order timestamps, mixed boundaries/units/clocks, unverified alignment and
-invalid values fail closed; sorting is not implicit. Energy uses trapezoidal
-integration over the covered interval and linearly interpolates power at clipped
-interval endpoints without extrapolation. A result is `measured` only when
-samples bracket both requested endpoints; overlapping but incomplete coverage is
+or `module_input`, and verified clock identity/alignment source. The integration
+caller must also provide the expected session clock and alignment; equal strings
+inside telemetry alone do not bind samples to the session clock. Duplicate or
+out-of-order timestamps, mixed boundaries/units/clocks, contradictory expected
+bindings, unverified alignment and invalid values fail closed; sorting is not
+implicit. A different clock requires an explicit validated conversion with
+evidence before it can be integrated. Energy uses trapezoidal integration over
+the covered interval and linearly interpolates power at clipped interval
+endpoints without extrapolation. A result is `measured` only when samples
+bracket both requested endpoints; overlapping but incomplete coverage is
 `partial` with coverage metadata, and no-overlap is `unavailable`. TDP/TOPS is
 never used as measured power. Memory is a backend-specific, unit-labelled
 observation (for example `MiB`, scope `runtime_allocator`), not silently promoted
@@ -55,13 +59,26 @@ The integration record includes requested/covered start and end, duration,
 coverage fraction, sample gaps/max gap, clock identity, alignment source and
 method. No maximum-gap acceptance threshold is invented in advance.
 
-Persist absolute monotonic session start/end and duration. Energy covers that
-outer session interval, including Python/provider overhead, while latency samples
-retain their narrower declared timing boundary. Persist before/after observations
-for power mode, thermal sources, throttle state, runtime versions and hardware
-identity. These snapshots do not establish a controlled idle or steady-state
-condition. External meter model, sampling rate, measurement boundary, clock
-alignment, cooling and power supply remain operator-supplied.
+Persist a total-session window and a post-warmup measured-loop outer window. The
+primary measured-image energy interval is the latter, including provider/Python
+overhead for measured calls and `includes_warmup=false`; its image count and
+window are distinct from the per-call latency boundary. A warmup-inclusive
+energy result, if requested, must have its own named interval, count and
+`includes_warmup=true` flag. The session record binds the host monotonic clock
+identity, method and alignment source; this is harness/session binding, not
+independent device-clock verification. The local CPU/mock path supports only
+synchronous postprocessing and rejects async callbacks. Persist before/after
+observations for power mode, thermal sources, throttle state, runtime versions
+and hardware identity. These snapshots do not establish a controlled idle or
+steady-state condition. External meter model, sampling rate, measurement
+boundary, clock alignment, cooling and power supply remain operator-supplied.
+
+Image consumption uses the declared `pool_order` in both warmup and measured
+loops. The policy is `restart_each_phase`: each phase starts at the first pool
+index, wraps over the declared permutation, and records consumed indices, IDs
+and a deterministic sequence hash. Pool IDs are unique and pool-order entries
+are integer, non-boolean permutation indices. ID hashes are mock provenance only;
+future image-content provenance must bind actual content separately.
 
 ## Setup action matrix — proposed only
 
