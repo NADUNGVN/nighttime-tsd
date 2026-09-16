@@ -8,9 +8,11 @@ and can be exercised with a deterministic mock adapter only.
 from __future__ import annotations
 
 import argparse
+import bisect
 import hashlib
 import json
 import math
+import numbers
 import statistics
 import time
 from dataclasses import asdict, dataclass, field
@@ -26,6 +28,7 @@ DEFAULT_MEASURED_CALLS = 1000
 DEFAULT_SESSION_COUNT = 3
 DEFAULT_INPUT_SHAPE = (1, 3, 640, 640)
 SHA256_RE = set("0123456789abcdef")
+UNKNOWN_ALIGNMENT = {"", "unknown", "unverified", "none", "null"}
 
 
 class Boundary(str, Enum):
@@ -90,6 +93,9 @@ class MeasurementConfig:
     session_count: int = DEFAULT_SESSION_COUNT
     decoded_from_disk_in_timing: bool = False
     pipelined_throughput_measured: bool = False
+    pool_ids: tuple[str, ...] = ()
+    pool_hash: str | None = None
+    pool_order: tuple[int, ...] = ()
 
     def validate(self) -> None:
         if not self.target_id or self.target_id.startswith("-") or any(c.isspace() for c in self.target_id):
@@ -99,6 +105,8 @@ class MeasurementConfig:
         digest = self.model_sha256.lower()
         if len(digest) != 64 or any(c not in SHA256_RE for c in digest):
             raise HarnessError("INVALID_MODEL_HASH", "model_sha256 must be a 64-character lowercase hexadecimal SHA-256")
+        if not isinstance(self.boundary, Boundary):
+            raise HarnessError("INVALID_BOUNDARY", "boundary must be an explicit Boundary enum value")
         if tuple(self.input_shape) != DEFAULT_INPUT_SHAPE:
             raise HarnessError("INVALID_INPUT_SHAPE", "E2L1-002 requires batch-1 input shape (1,3,640,640)")
         if self.batch != 1:
@@ -107,6 +115,16 @@ class MeasurementConfig:
             raise HarnessError("INVALID_COUNTS", "warmup_calls >= 0, measured_calls > 0, and session_count > 0 are required")
         if self.decoded_from_disk_in_timing:
             raise HarnessError("DISK_DECODE_BOUNDARY", "disk decode is excluded; use a decoded image provider")
+        if self.pipelined_throughput_measured:
+            raise HarnessError("PIPELINED_UNSUPPORTED", "this harness reports serial latency only")
+        if not self.pool_ids or not self.pool_order:
+            raise HarnessError("INVALID_POOL_BINDING", "pool_ids and pool_order are required")
+        if any(not isinstance(image_id, str) or not image_id for image_id in self.pool_ids):
+            raise HarnessError("INVALID_POOL_BINDING", "pool_ids must contain non-empty strings")
+        if sorted(self.pool_order) != list(range(len(self.pool_ids))):
+            raise HarnessError("INVALID_POOL_BINDING", "pool_order must be a permutation of pool indices")
+        if self.pool_hash is None or len(self.pool_hash) != 64 or any(c not in SHA256_RE for c in self.pool_hash.lower()):
+            raise HarnessError("INVALID_POOL_BINDING", "pool_hash must be a 64-character hexadecimal SHA-256")
 
 
 @dataclass(frozen=True)
@@ -147,7 +165,10 @@ class MockBackend:
 
 
 def _finite(value: float) -> float:
-    value = float(value)
+    try:
+        value = float(value)
+    except (TypeError, ValueError) as exc:
+        raise HarnessError("NONFINITE_SAMPLE", "numeric samples are required") from exc
     if not math.isfinite(value):
         raise HarnessError("NONFINITE_SAMPLE", "latency and telemetry samples must be finite")
     return value
@@ -187,33 +208,149 @@ def summarize_latencies(latencies_ms: Iterable[float]) -> dict[str, Any]:
     }
 
 
-def integrate_power_energy(samples: Iterable[dict[str, Any]], start_ns: int, end_ns: int) -> dict[str, Any]:
-    """Integrate time-aligned whole-boundary power samples using trapezoids."""
+def _coverage_metadata(
+    *,
+    requested_start_ns: int,
+    requested_end_ns: int,
+    first_sample_ns: int | None,
+    last_sample_ns: int | None,
+    coverage_start_ns: int | None,
+    coverage_end_ns: int | None,
+    sample_count: int,
+    gaps_ns: list[int] | None = None,
+    clock_identity: str | None = None,
+    alignment_source: str | None = None,
+    method: str = "trapezoidal_linear_interpolation",
+) -> dict[str, Any]:
+    requested_duration_ns = requested_end_ns - requested_start_ns
+    covered_duration_ns = 0 if coverage_start_ns is None or coverage_end_ns is None else max(0, coverage_end_ns - coverage_start_ns)
+    return {
+        "requested_start_ns": requested_start_ns,
+        "requested_end_ns": requested_end_ns,
+        "requested_duration_ns": requested_duration_ns,
+        "first_sample_ns": first_sample_ns,
+        "last_sample_ns": last_sample_ns,
+        "coverage_start_ns": coverage_start_ns,
+        "coverage_end_ns": coverage_end_ns,
+        "covered_duration_ns": covered_duration_ns,
+        "coverage_fraction": covered_duration_ns / requested_duration_ns if requested_duration_ns else 0.0,
+        "full_interval_covered": covered_duration_ns == requested_duration_ns,
+        "sample_count": sample_count,
+        "gaps_ns": gaps_ns or [],
+        "max_gap_ns": max(gaps_ns or [0]),
+        "clock_identity": clock_identity,
+        "alignment_source": alignment_source,
+        "method": method,
+    }
+
+
+def integrate_power_energy(
+    samples: Iterable[dict[str, Any]],
+    start_ns: int,
+    end_ns: int,
+    *,
+    clock_identity: str | None = None,
+    alignment_source: str | None = None,
+) -> dict[str, Any]:
+    """Integrate aligned power samples without extrapolation.
+
+    Samples must be supplied in strictly increasing timestamp order.  The
+    interval is measured only when samples bracket both requested endpoints;
+    otherwise an overlapping result is explicitly ``partial``.
+    """
+    if not isinstance(start_ns, numbers.Integral) or not isinstance(end_ns, numbers.Integral):
+        raise HarnessError("INVALID_TIME_RANGE", "start_ns and end_ns must be integer nanoseconds")
     if end_ns <= start_ns:
         raise HarnessError("INVALID_TIME_RANGE", "end_ns must be greater than start_ns")
-    rows = sorted(samples, key=lambda row: int(row["monotonic_ns"]))
-    if len(rows) < 2:
-        return unavailable("fewer than two time-aligned power samples", scope="unknown")
-    previous = None
-    joules = 0.0
-    for row in rows:
-        timestamp = int(row["monotonic_ns"])
-        watts = _finite(row["power_w"])
-        if watts < 0 or not row.get("boundary") or row.get("unit") != "W":
-            raise HarnessError("INVALID_POWER_SAMPLE", "power samples require nonnegative power_w, boundary, and unit=W")
-        if previous is not None:
-            previous_ns, previous_watts = previous
-            left = max(previous_ns, start_ns)
-            right = min(timestamp, end_ns)
-            if right > left:
-                joules += ((previous_watts + watts) / 2.0) * ((right - left) / 1_000_000_000.0)
-        previous = (timestamp, watts)
-    if previous is None or previous[0] < start_ns or rows[0]["monotonic_ns"] > end_ns:
-        return unavailable("power samples do not span the measured interval", scope="unknown")
-    boundary = {str(row["boundary"]) for row in rows}
-    if len(boundary) != 1:
+    raw_rows = list(samples)
+    if len(raw_rows) < 2:
+        return {"status": "unavailable", "reason": "fewer than two time-aligned power samples", "coverage": _coverage_metadata(requested_start_ns=start_ns, requested_end_ns=end_ns, first_sample_ns=None, last_sample_ns=None, coverage_start_ns=None, coverage_end_ns=None, sample_count=len(raw_rows), clock_identity=clock_identity, alignment_source=alignment_source)}
+
+    rows: list[tuple[int, float, str, str, str]] = []
+    previous_ns: int | None = None
+    boundaries: set[str] = set()
+    units: set[str] = set()
+    clocks: set[str] = set()
+    alignments: set[str] = set()
+    for row in raw_rows:
+        timestamp = row.get("monotonic_ns")
+        if isinstance(timestamp, bool) or not isinstance(timestamp, numbers.Real) or not math.isfinite(float(timestamp)) or int(timestamp) != timestamp:
+            raise HarnessError("INVALID_TIMESTAMP", "timestamps must be finite integer nanoseconds")
+        timestamp = int(timestamp)
+        if previous_ns is not None and timestamp <= previous_ns:
+            raise HarnessError("NONMONOTONIC_TIMESTAMPS", "timestamps must be strictly increasing; sorting is not implicit")
+        watts = _finite(row.get("power_w"))
+        if watts < 0:
+            raise HarnessError("INVALID_POWER_SAMPLE", "power_w must be nonnegative")
+        boundary_value = row.get("boundary")
+        unit_value = row.get("unit")
+        row_clock_value = row.get("clock_identity", row.get("clock_id", clock_identity))
+        row_alignment_value = row.get("alignment_source", alignment_source)
+        boundary = "" if boundary_value is None else str(boundary_value)
+        unit = "" if unit_value is None else str(unit_value)
+        row_clock = "" if row_clock_value is None else str(row_clock_value)
+        row_alignment = "" if row_alignment_value is None else str(row_alignment_value)
+        if not boundary or not unit:
+            raise HarnessError("INVALID_POWER_SAMPLE", "power samples require boundary and unit")
+        if row_clock.lower() in UNKNOWN_ALIGNMENT or row_alignment.lower() in UNKNOWN_ALIGNMENT:
+            raise HarnessError("UNVERIFIED_CLOCK_ALIGNMENT", "power samples require verified clock identity and alignment source")
+        rows.append((timestamp, watts, boundary, unit, row_alignment))
+        previous_ns = timestamp
+        boundaries.add(boundary)
+        units.add(unit)
+        clocks.add(row_clock)
+        alignments.add(row_alignment)
+    if len(boundaries) != 1:
         raise HarnessError("MIXED_POWER_BOUNDARY", "all energy samples must use one measurement boundary")
-    return {"status": "measured", "energy_j": joules, "unit": "J", "boundary": next(iter(boundary)), "method": "trapezoidal"}
+    if len(units) != 1:
+        raise HarnessError("MIXED_POWER_UNIT", "all energy samples must use one unit")
+    if next(iter(units)) != "W":
+        raise HarnessError("INVALID_POWER_SAMPLE", "power samples must use unit=W")
+    if len(clocks) != 1 or len(alignments) != 1:
+        raise HarnessError("MIXED_CLOCK_ALIGNMENT", "all energy samples must use one verified clock identity and alignment source")
+
+    timestamps = [row[0] for row in rows]
+    first_ns, last_ns = timestamps[0], timestamps[-1]
+    overlap_start = max(start_ns, first_ns)
+    overlap_end = min(end_ns, last_ns)
+    gaps = [timestamps[i + 1] - timestamps[i] for i in range(len(timestamps) - 1)]
+    coverage = _coverage_metadata(
+        requested_start_ns=start_ns,
+        requested_end_ns=end_ns,
+        first_sample_ns=first_ns,
+        last_sample_ns=last_ns,
+        coverage_start_ns=overlap_start if overlap_start < overlap_end else None,
+        coverage_end_ns=overlap_end if overlap_start < overlap_end else None,
+        sample_count=len(rows),
+        gaps_ns=gaps,
+        clock_identity=next(iter(clocks)),
+        alignment_source=next(iter(alignments)),
+    )
+    if overlap_start >= overlap_end:
+        return {"status": "unavailable", "reason": "power samples do not overlap measured interval", "coverage": coverage}
+
+    def interpolate(timestamp: int) -> float:
+        if timestamp == first_ns:
+            return rows[0][1]
+        if timestamp == last_ns:
+            return rows[-1][1]
+        index = bisect.bisect_left(timestamps, timestamp)
+        if index < len(timestamps) and timestamps[index] == timestamp:
+            return rows[index][1]
+        left_t, left_w = rows[index - 1][0], rows[index - 1][1]
+        right_t, right_w = rows[index][0], rows[index][1]
+        ratio = (timestamp - left_t) / (right_t - left_t)
+        return left_w + (right_w - left_w) * ratio
+
+    points = [(overlap_start, interpolate(overlap_start))]
+    points.extend((timestamp, watts) for timestamp, watts, *_ in rows if overlap_start < timestamp < overlap_end)
+    points.append((overlap_end, interpolate(overlap_end)))
+    joules = sum((left_w + right_w) / 2.0 * (right_t - left_t) / 1_000_000_000.0 for (left_t, left_w), (right_t, right_w) in zip(points, points[1:]))
+    status = "measured" if coverage["full_interval_covered"] else "partial"
+    result = {"status": status, "energy_j": joules, "unit": "J", "boundary": next(iter(boundaries)), "coverage": coverage}
+    if status != "measured":
+        result["reason"] = "samples do not bracket the full measured interval; energy is covered overlap only"
+    return result
 
 
 def _run_one_call(
@@ -275,8 +412,10 @@ def run_session(
         raise HarnessError("INVALID_SESSION", "session_index is outside configured session_count")
     if device.device_id != config.target_id:
         raise HarnessError("DEVICE_BINDING_MISMATCH", "device binding does not match target_id")
+    session_start_ns = time.perf_counter_ns()
+    pool_indices = list(config.pool_order)
     for index in range(config.warmup_calls):
-        _run_one_call(config, backend, image_provider(index % 256), preprocess, postprocess, timed=False)
+        _run_one_call(config, backend, image_provider(pool_indices[index % len(pool_indices)]), preprocess, postprocess, timed=False)
     raw: list[float] = []
     measured_start = time.perf_counter_ns()
     for index in range(config.measured_calls):
@@ -284,6 +423,7 @@ def run_session(
         assert latency is not None
         raw.append(latency)
     measured_end = time.perf_counter_ns()
+    session_end_ns = measured_end
     result = {
         "schema_version": SCHEMA_VERSION,
         "protocol_version": PROTOCOL_VERSION,
@@ -300,6 +440,9 @@ def run_session(
         "batch": config.batch,
         "warmup_calls": config.warmup_calls,
         "measured_calls": config.measured_calls,
+        "session_start_monotonic_ns": session_start_ns,
+        "session_end_monotonic_ns": session_end_ns,
+        "session_duration_ns": session_end_ns - session_start_ns,
         "warmup_in_timing": False,
         "raw_latency_ms": raw,
         "latency_statistics": summarize_latencies(raw),
@@ -308,18 +451,33 @@ def run_session(
             "pipelined_throughput_fps": unavailable("no pipelined producer/consumer measurement"),
         },
         "device": asdict(device),
+        "image_pool": {
+            "pool_ids": list(config.pool_ids),
+            "pool_hash": config.pool_hash,
+            "pool_order": list(config.pool_order),
+            "pool_size": len(config.pool_ids),
+        },
         "memory_peak": memory_peak or unavailable("not measured by CPU/mock harness", scope="backend-specific"),
-        "power_energy": integrate_power_energy(power_samples or [], measured_start, measured_end),
+        "energy_interval": {
+            "start_monotonic_ns": session_start_ns,
+            "end_monotonic_ns": session_end_ns,
+            "boundary": "declared_by_power_samples_or_unavailable",
+            "includes_provider_overhead": True,
+        },
+        "power_energy": integrate_power_energy(power_samples or [], session_start_ns, session_end_ns),
         "mock_only": True,
     }
     return result
 
 
 def write_json_no_overwrite(path: Path, payload: dict[str, Any]) -> None:
-    if path.exists():
-        raise HarnessError("OUTPUT_EXISTS", "refusing to overwrite existing output", {"path": str(path)})
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+    try:
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, indent=2, ensure_ascii=False)
+            handle.write("\n")
+    except FileExistsError as exc:
+        raise HarnessError("OUTPUT_EXISTS", "refusing to overwrite existing output", {"path": str(path)}) from exc
 
 
 def mock_device(target_id: str = "E1") -> DeviceBinding:
@@ -327,9 +485,16 @@ def mock_device(target_id: str = "E1") -> DeviceBinding:
     return DeviceBinding(target_id, "mock-cpu-fixture", {"runtime": "mock"}, evidence, evidence, evidence, evidence, evidence, evidence)
 
 
+def mock_pool() -> tuple[tuple[str, ...], str, tuple[int, ...]]:
+    pool_ids = tuple(f"mock-{index:03d}" for index in range(256))
+    pool_hash = hashlib.sha256("\n".join(pool_ids).encode("utf-8")).hexdigest()
+    return pool_ids, pool_hash, tuple(range(len(pool_ids)))
+
+
 def run_mock_sessions(out_dir: Path, *, measured_calls: int = 5, warmup_calls: int = 2) -> dict[str, Any]:
     """Create a tiny local-only mock artifact for tests/manual contract review."""
-    config = MeasurementConfig("E1", "cpu_fp32_reference", "mock-model", "0" * 64, warmup_calls=warmup_calls, measured_calls=measured_calls)
+    pool_ids, pool_hash, pool_order = mock_pool()
+    config = MeasurementConfig("E1", "cpu_fp32_reference", "mock-model", "0" * 64, warmup_calls=warmup_calls, measured_calls=measured_calls, pool_ids=pool_ids, pool_hash=pool_hash, pool_order=pool_order)
     session_paths: list[str] = []
     for session_index in range(1, config.session_count + 1):
         backend = MockBackend(output={"mock": True})

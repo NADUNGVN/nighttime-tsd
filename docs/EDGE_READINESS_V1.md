@@ -38,18 +38,30 @@ metric and remains unavailable until a producer/consumer measurement exists.
 
 ## Power, memory and thermal contract
 
-Power samples must contain monotonic nanoseconds, nonnegative watts, unit `W`,
-and exactly one declared boundary such as `whole_device` or `module_input`.
-Energy is trapezoidal integration over the measured interval and is reported in
-joules. Fewer than two aligned samples, a missing boundary, mixed boundaries or
-non-spanning samples produce `unavailable`; TDP/TOPS is never used as measured
-power. Memory is a backend-specific, unit-labelled observation (for example
-`MiB`, scope `runtime_allocator`), not silently promoted to whole-device peak.
+Power samples must contain strictly increasing finite monotonic nanoseconds,
+nonnegative finite watts, unit `W`, one declared boundary such as `whole_device`
+or `module_input`, and verified clock identity/alignment source. Duplicate or
+out-of-order timestamps, mixed boundaries/units/clocks, unverified alignment and
+invalid values fail closed; sorting is not implicit. Energy uses trapezoidal
+integration over the covered interval and linearly interpolates power at clipped
+interval endpoints without extrapolation. A result is `measured` only when
+samples bracket both requested endpoints; overlapping but incomplete coverage is
+`partial` with coverage metadata, and no-overlap is `unavailable`. TDP/TOPS is
+never used as measured power. Memory is a backend-specific, unit-labelled
+observation (for example `MiB`, scope `runtime_allocator`), not silently promoted
+to whole-device peak.
 
-Persist before/after observations for power mode, thermal sources, throttle state,
-runtime versions and hardware identity. These snapshots do not establish a
-controlled idle or steady-state condition. External meter model, sampling rate,
-measurement boundary, cooling and power supply remain operator-supplied.
+The integration record includes requested/covered start and end, duration,
+coverage fraction, sample gaps/max gap, clock identity, alignment source and
+method. No maximum-gap acceptance threshold is invented in advance.
+
+Persist absolute monotonic session start/end and duration. Energy covers that
+outer session interval, including Python/provider overhead, while latency samples
+retain their narrower declared timing boundary. Persist before/after observations
+for power mode, thermal sources, throttle state, runtime versions and hardware
+identity. These snapshots do not establish a controlled idle or steady-state
+condition. External meter model, sampling rate, measurement boundary, clock
+alignment, cooling and power supply remain operator-supplied.
 
 ## Setup action matrix — proposed only
 
@@ -88,4 +100,4 @@ session counts, telemetry boundary and thermal/throttle evidence are bound.
 
 The mock artifact under `results/edge_readiness_v1/e2l1-002/mock/` is a contract
 exercise only and must not be cited as edge latency, accuracy, energy or runtime
-evidence.
+evidence. Existing mock/inventory artifacts are not rewritten by E2L1-003.

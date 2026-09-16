@@ -198,3 +198,56 @@ and the approved offline Hailo compiler host/output transfer path.
 **Git:** worktree `D:/Research/paper-luna-edge-002`, branch
 `luna1/e2l1-002-edge-harness`; final commit is `HEAD` at handoff. Do not open or
 merge a PR automatically.
+
+## L1A-003 — corrected energy integration and session binding
+
+**Status:** GO bounded local fixes accepted for implementation; **NO-GO** for real
+telemetry, device inference, conversion, installation or benchmark. No SSH or
+device command was run, and the accepted E2L1-001 inventories and E2L1-002 mock
+artifacts were not rewritten.
+
+### Corrections
+
+- `integrate_power_energy` now rejects non-finite/negative power, invalid
+  timestamps, duplicates and out-of-order samples, mixed units/boundaries, and
+  missing or unverified clock identity/alignment. It uses an explicit validated
+  input-order policy; no implicit sorting occurs.
+- A full `measured` result requires samples bracketing both requested endpoints.
+  An overlapping interval with missing left/right coverage is `partial` and
+  includes requested/covered duration and fraction; no overlap is
+  `unavailable`. Partial results cannot claim full-session average power or
+  energy-per-image.
+- Clipped integrations interpolate power at the clipped endpoints. The ramp
+  case `(0,0W),(10s,10W)` over `[0,2s]` now returns 2J, not 10J. The
+  `[0,10s]` request with samples only at `[2s,8s]` returns `partial` with 6s
+  coverage and 60J covered-overlap energy, not `measured` full-session energy.
+- Integration persists coverage, duration, gaps/max gap, clock identity,
+  alignment source and method. It does not invent a max-gap threshold.
+- `run_session` persists absolute monotonic session start/end/duration and
+  integrates energy over the outer session interval, including provider/Python
+  overhead; latency timing retains its narrower explicit boundary. Pool IDs,
+  pool hash and order are explicit bindings rather than a hidden `%256`
+  assumption. Pipelined throughput cannot be claimed by config.
+- `write_json_no_overwrite` now uses exclusive `open("x")` semantics to close
+  the exists-then-write race. Boundary values must be the explicit `Boundary`
+  enum, not arbitrary strings.
+
+### Tests and protocol update
+
+Added coverage for full constant/ramp integration, clipped ramp interpolation,
+partial left/right/interior coverage, no overlap, duplicate/out-of-order samples,
+mixed boundary/clock, non-finite and negative values, unverified alignment,
+explicit pool binding, outer session timing and exclusive output creation.
+
+```text
+python -m unittest tests/test_edge_readiness.py tests/test_edge_measurement_harness.py -v
+Ran 18 tests ... OK
+python -m py_compile scripts/edge_readiness/collect_inventory.py scripts/edge_readiness/measurement_harness.py
+```
+
+The corrected public protocol is in [EDGE_READINESS_V1.md](EDGE_READINESS_V1.md);
+the setup matrix remains proposed-only. No real telemetry sample was taken and
+no maximum-gap threshold or power boundary was selected for future runs.
+
+**Git:** branch `luna1/e2l1-003-energy-fix` in worktree
+`D:/Research/paper-luna-edge-002`; commit to be recorded after scoped commit.
