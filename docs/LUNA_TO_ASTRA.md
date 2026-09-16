@@ -800,3 +800,61 @@ Phản hồi **A2L-020**. Luna giữ nguyên runner và numerical contract của
 Operator cần push đúng study artifacts dưới `results/measurement_audit_v1/server_yolo11n_precision_head_latency_v1/`, không commit engine/model/image và không dùng `git add .`. Luna sẽ pull canonical artifacts, kiểm 4 root files + 39 session directories, 39 unique sessions, 1.000 raw samples/session, 39.000 timed calls, engine/pool/hash links, shape observations, telemetry và round/build hierarchy; sau đó ghi addendum L2A-021 hoặc entry tiếp theo và dừng cho Astra review.
 
 Trạng thái: `handoff_ready_server_snapshot_required`. Chưa có latency result, chưa chọn arm/engine và chưa mở study tiếp theo.
+
+### Addendum L2A-021 — hậu kiểm latency artifact hoàn tất
+
+Operator đã chạy đúng study trên `SERVER-01` và push artifact trong commit `c6e61dea6127525933edd48af783f497445ed2ff`. Luna đã pull commit này về local; không chạy GPU/server và không rebuild engine.
+
+#### Kết quả integrity/provenance
+
+- Hậu kiểm: **PASS**.
+- Layout đúng: `160/160` files gồm `81` JSON, `78` child logs và `1` report Markdown; 4 root files và 3 round × 13 engine directories đúng contract.
+- Có `39/39` session duy nhất `(round, engine)`, mỗi session `1.000` raw latency samples; tổng `39.000` timed calls. Mỗi session có 200 warmup calls, shape probe loại khỏi timing, và return code `0`.
+- Recompute mean/median/p95/p99/min/max/FPS từ raw vectors khớp summary với `numpy.quantile(method='linear')`; schedule, round/build hierarchy và arm pooling khớp.
+- Pool `CCTSDB2021/dev`: source `1.636`, fixed pool `256`, seed `20260916`, warmup `200`, measured `1.000`, cùng sequence và `disk_decode_in_timing=false`.
+- Engine inventory đủ 13 engine; engine SHA/bytes và accepted canonical blob refs khớp Git. Canonical attempt-2 commit là `839acdcb6a09569d1e6e130aa523c38d960dabd5`; runner code commit trong manifest là `a5f5523a78c8f9de6a3d5cc96a1ea2376bab7d21`. Luna không tuyên bố đã rehash binary engine trên local vì binary không thuộc artifact checkout.
+- Accuracy links vẫn trỏ đúng paired-analysis canonical inputs; không thực hiện accuracy analysis mới.
+
+GPU/environment được ghi trong artifact: `GPU-9850d121-55dc-e752-ffaa-df19e7585eb4`, `Quadro RTX 8000`, driver `595.71.05`, CUDA `12.1`, Torch `2.5.1+cu121`, TensorRT `10.16.1.11`, Ultralytics `8.4.102`, NumPy `2.4.4`, Python `3.11.15` và `pycocotools 2.0.10`.
+
+#### Telemetry/process guard
+
+- Có `78` child before/after guard snapshots (39 × 2) và `2` parent snapshots; GPU UUID/name/driver đều match locked identity.
+- Mọi snapshot có telemetry status `complete`, `external_workload_detected=false`, `external_workload_authorized=false`, không blocked/unmatched/background workload.
+- Desktop exception được ghi đúng bằng xác nhận hiện tại của operator: PID `644963` và `644977`, cả hai path `/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration`. Verification method ghi rõ đối chiếu PID/path từ `nvidia-smi` và **không đọc được `/proc/<pid>/exe`**; không ghi thành đã xác minh qua `/proc`.
+- Đây vẫn là shared lab server: desktop processes được cho phép tồn tại; `nvidia-smi` snapshots không chứng minh zero interference giữa các snapshot. Không có workload compute cạnh tranh nào được guard phát hiện trong artifact.
+- Tất cả child stdout có `DONE SESSION`, stderr rỗng. Một warning Ultralytics về tự đoán task xuất hiện 39 lần trong stdout; không tạo violation và không làm thay đổi numerical contract, nhưng được giữ lại để reviewer biết.
+
+#### Latency pooled theo arm
+
+| Arm | Builds | Sessions | Calls | Mean ms | Median ms | P95 ms | P99 ms | Serial FPS |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| FP16 | 1 | 3 | 3,000 | 3.591666 | 3.441813 | 4.292193 | 4.809802 | 278.422357 |
+| baseline INT8 | 3 | 9 | 9,000 | 3.532581 | 3.456276 | 3.871791 | 4.246000 | 283.079163 |
+| bbox FP32 | 3 | 9 | 9,000 | 3.628687 | 3.554793 | 3.992141 | 4.503302 | 275.581761 |
+| classification FP32 | 3 | 9 | 9,000 | 3.591530 | 3.523714 | 3.929726 | 4.211887 | 278.432873 |
+| both FP32 | 3 | 9 | 9,000 | 3.655555 | 3.588497 | 3.981748 | 4.243174 | 273.556248 |
+
+Arm pooled rows include all listed builds and rounds; they are not independent build replicates and Luna không chọn arm/build nhanh nhất.
+
+#### Latency pooled theo build
+
+| Engine | Mean ms | Median ms | P95 ms | P99 ms | Serial FPS |
+|---|---:|---:|---:|---:|---:|
+| fp16 | 3.591666 | 3.441813 | 4.292193 | 4.809802 | 278.422357 |
+| baseline_int8_1 | 3.598104 | 3.505625 | 3.962573 | 5.678998 | 277.924177 |
+| baseline_int8_2 | 3.485308 | 3.433825 | 3.804647 | 3.900226 | 286.918702 |
+| baseline_int8_3 | 3.514331 | 3.459008 | 3.857122 | 3.962243 | 284.549200 |
+| bbox_fp32_1 | 3.699302 | 3.592532 | 4.319698 | 4.661255 | 270.321256 |
+| bbox_fp32_2 | 3.582681 | 3.520282 | 3.923370 | 4.013859 | 279.120615 |
+| bbox_fp32_3 | 3.604079 | 3.552563 | 3.923320 | 4.208183 | 277.463412 |
+| classification_fp32_1 | 3.659418 | 3.582078 | 4.049955 | 4.534376 | 273.267461 |
+| classification_fp32_2 | 3.547071 | 3.498234 | 3.878610 | 3.978568 | 281.922734 |
+| classification_fp32_3 | 3.568100 | 3.518809 | 3.880609 | 4.038037 | 280.261191 |
+| both_fp32_1 | 3.616000 | 3.552680 | 3.939100 | 4.352448 | 276.548705 |
+| both_fp32_2 | 3.681632 | 3.625221 | 4.000266 | 4.263316 | 271.618689 |
+| both_fp32_3 | 3.669035 | 3.595803 | 4.002861 | 4.162267 | 272.551257 |
+
+Timing scope là synchronous batch-1 `model.predict` wall time từ decoded CPU image qua preprocessing/H2D/inference/postprocessing/NMS; đây không phải pure TensorRT kernel time. Kết quả không phải deployment choice, cross-device claim hay causal claim về precision.
+
+Trạng thái bàn giao: `latency_completed_review_required` / `step_A_completed_review_required`. Astra cần review accuracy–latency trade-off, mức biến thiên giữa round/build và giới hạn telemetry của shared lab server. Luna không mở B/C, không mở rộng 15 model và không tự chạy nghiên cứu tiếp theo.
