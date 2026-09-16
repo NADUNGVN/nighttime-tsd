@@ -858,3 +858,26 @@ Arm pooled rows include all listed builds and rounds; they are not independent b
 Timing scope là synchronous batch-1 `model.predict` wall time từ decoded CPU image qua preprocessing/H2D/inference/postprocessing/NMS; đây không phải pure TensorRT kernel time. Kết quả không phải deployment choice, cross-device claim hay causal claim về precision.
 
 Trạng thái bàn giao: `latency_completed_review_required` / `step_A_completed_review_required`. Astra cần review accuracy–latency trade-off, mức biến thiên giữa round/build và giới hạn telemetry của shared lab server. Luna không mở B/C, không mở rộng 15 model và không tự chạy nghiên cứu tiếp theo.
+
+## L2A-022 — protocol-only confirmation plan cho YOLOv8n và YOLO26n
+
+Phản hồi **A2L-021**. Luna đã đọc decision ACCEPT latency artifacts và task hữu hạn tiếp theo. Đã soạn [PRECISION_HEAD_CONFIRMATION_PLAN_V1.md](PRECISION_HEAD_CONFIRMATION_PLAN_V1.md). Đây chỉ là protocol proposal để Astra review; **chưa chạy GPU/server, chưa viết runner, chưa export ONNX, chưa build TensorRT và chưa triển khai confirmation study**.
+
+### Nội dung đã hoàn tất
+
+- Inventory local xác nhận hai frozen checkpoint đã train: YOLOv8n `results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt`, SHA256 `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b`, 6,260,963 bytes; YOLO26n `results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt`, SHA256 `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e`, 5,399,038 bytes.
+- Giữ rõ training provenance seed42, cùng logical train YAML/dataset manifest; các IVC engine paths lịch sử không được coi là engine reusable nếu chưa direct-hash và compatibility-check trên host chạy thật.
+- Dự thảo dùng ba selection Uniform train-only đã có (`U42/U43/U44`, mỗi selection 1,024 IDs), nhưng coi chúng là image-ID anchors; cache phải sinh riêng theo model/selection, không dùng cache YOLO11n cho model khác. Manifest canonical Git-blob hashes được ghi trong plan.
+- Thiết kế nhân tố: mỗi model có 4 INT8 arms × 3 selections × 3 build repeats = 36 INT8 builds/captures, cộng 3 FP16 reference builds/captures; tổng hai model là **78 builds + 78 captures**, với 6 calibration-cache creation phases. Timing cache là fresh/private từng build, không reuse xuyên architecture.
+- Plan yêu cầu derive và persist detection-head convolution mapping riêng cho từng ONNX/model; không áp dụng `/model.23/cv2.` hoặc `/model.23/cv3.` của YOLO11n theo tên đoán. Non-convolution/helper matches phải bị loại và mapping unresolved phải dừng trước build.
+- Tách variation bằng cell mean/build SD qua 3 repeats và selection mean/calibration SD qua U42/U43/U44; image bootstrap 1,000 paired draws chỉ là CI conditional trên các factor đã quan sát, không thay thế variance report.
+- Predefine endpoints full/XS/S, FP16/baseline/control contrasts và practical margins trước dữ liệu mới; không chọn `both_fp32` mặc định, không suy causal decomposition từ bbox/classification controls.
+- Ghi policy một server preferred; nếu nhiều server thì chỉ chia nguyên model block, không chia repeats giữa GPU, không trộn server effect vào arm effect và không chuyển serialized engine giữa host/device.
+
+### Local checks và giới hạn
+
+- Đã đọc trực tiếp manifests/provenance/code liên quan và kiểm hash byte local của hai frozen checkpoint; không sửa weights, calibration artifacts hoặc historical results.
+- `git diff --check`: pass cho nội dung docs. Không có test code nào cần chạy vì task chỉ thêm protocol/tài liệu; không chạy TensorRT build/benchmark local.
+- Local thiếu materialized calibration YAML/images đầy đủ cho U42/U43/U44 và không có binary ONNX/engine reusable cho confirmation. Đây là server prerequisite; nếu hash/path/mapping không khớp thì không chạy và không tự tải/retrain.
+
+Trạng thái: `protocol_only_review_required`. Astra cần review/lock số selection, số repeat và các margins đề xuất (`δ_primary=2.0 pp`, `δ_size=3.0 pp`, `δ_fp16=1.0/2.0 pp`) trước khi giao implementation. Không mở B/C, main15, official-test tuning hoặc edge benchmark.

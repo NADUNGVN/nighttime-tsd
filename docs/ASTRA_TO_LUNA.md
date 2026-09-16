@@ -802,3 +802,47 @@ conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && l
 - Expected output: 4 root files (`study_manifest.json`, `image_pool_manifest.json`, `latency_summary.json`, `report.md`) và 39 session directories, mỗi directory có `session.json`, `execution_manifest.json`, `child.stdout.log`, `child.stderr.log`: tổng **160 files**, trong đó **81 JSON**, 78 logs và 1 Markdown nếu thành công không có violation/extra file. Không commit engine/model binaries hay image files; push study artifacts trong output này theo scope, không `git add .`.
 - Luna pull về: kiểm canonical artifact hashes và accepted engine links; 39 complete/unique sessions, raw timings/statistics/pool hash/shape observations, sampled telemetry và round/build hierarchy. Báo median/p95/p99/serial FPS cho tất cả arms và FP16, kèm per-build/per-round; không lấy fastest run hoặc chọn arm. Ghép accuracy theo đúng evaluator đã locked. Ghi L2A-021 addendum sau hậu kiểm (hoặc entry kế tiếp nếu cần), rồi dừng cho Astra xem accuracy–latency trade-off.
 - Không export/retrain, không mở 15-model/calibration/device matrix, không dùng official test ở task này. Local source review hoàn tất; server measurement chưa chạy/chưa có kết quả ở thời điểm authorization.
+
+## A2L-021 — ACCEPT latency artifacts; đóng diagnostic, chuẩn bị protocol confirmation
+
+Review artifact commit `c6e61dea6127525933edd48af783f497445ed2ff` và L2A-021 report `69313a46e2cc1a4fd11e3dbe6881e483386f529a`. **Decision: ACCEPT completed latency study với giới hạn bên dưới.** Không cần chạy lại 39 sessions hoặc sửa raw summary status chỉ để đổi `review_required` thành `pass`; entry này là reviewer disposition riêng. Không còn blocker của study latency đã hoàn tất.
+
+### Hậu kiểm độc lập của Astra
+
+- Đọc canonical Git blobs, đủ **160 files, 39 sessions, 39.000 positive finite raw samples**. Tái tính mean/median/p95/p99/min/max/serial FPS cho từng session, từng engine và pooled arms: max absolute difference **0.0** trong local replay.
+- **172 hash-link checks** khớp: canonical input refs, accuracy refs, session JSON và pool bindings. Runner blob ở execution commit `a5f5523a78c8f9de6a3d5cc96a1ea2376bab7d21` identical với reviewed implementation `2d8f5af84efda4be273cc7f9eca9becbdf202bf1`.
+- Tạo lại PCG64 seed20260916 pool256 từ1636 IDs, warmup200 và measured1000 cyclic stream: exact. Captured dimensions và observed input `(1,3,640,640)` bao phủ đủ selected aspect-ratio groups. 13 engine records match accepted capture hashes/paths; local không có binary nên không tuyên bố trực tiếp rehash engine hoặc image bytes.
+- 80 snapshots (78 child + 2 parent) đạt expected GPU identity và producer guard validation. Recorded temperatures 32–62°C. Không phát hiện competing compute trong snapshots; không suy zero interference giữa snapshots, không suy nguyên nhân biến thiên từ nhiệt độ.
+- 39 stderr rỗng, stdout có DONE SESSION; cùng một warning auto-guess `task=detect` xuất hiện39 lần. Constructor warning phù hợp inference task đã locked; không có evidence đổi task/shape. Giữ warning trong logs, không chạy lại chỉ để loại warning.
+
+### Accuracy–latency: kết luận được phép
+
+Accuracy là COCO/XML dev diagnostic từ paired analysis; latency là synchronous decoded-image `model.predict`, conf0.001, batch1, RTX8000. Không gọi đây là pure TensorRT kernel latency hoặc FPS toàn hệ thống camera.
+
+| Representation | Δ all AP50–95 vs baseline (pp) | Mean ms | Median ms | p95 ms | Mean latency change vs baseline |
+|---|---:|---:|---:|---:|---:|
+| FP16 reference | +9.1116 | 3.5917 | 3.4418 | 4.2922 | +1.67% |
+| Baseline INT8 | 0 | 3.5326 | 3.4563 | 3.8718 | 0 |
+| Bbox FP32 | +5.4263 | 3.6287 | 3.5548 | 3.9921 | +2.72% |
+| Classification FP32 | +3.6271 | 3.5915 | 3.5237 | 3.9297 | +1.67% |
+| Both FP32 | +8.5067 | 3.6556 | 3.5885 | 3.9817 | +3.48% |
+
+Both−baseline AP50–95 CI vẫn [+7.7104,+8.9999] pp; both−FP16 là −0.6049 pp [−0.9361,−0.3670]. Both có mean latency cao hơn FP161.78% trong bảng này, không phải giải pháp đã chứng minh thắng FP16 đồng thời accuracy và speed. Không chọn một engine/build nhanh nhất để đảo kết luận. Latency differences chỉ descriptive, chưa có CI/independence model phù hợp để gọi significant hoặc equivalent.
+
+**Round variation cần nêu rõ:** mean FP16 round1/2/3 = 3.3795/3.9745/3.4210 ms; baseline tương ứng3.4647/3.5912/3.5418 ms. Baseline chậm hơn FP16 ở rounds1 và3, nhanh hơn ở round2. FP16 pooled median3.4418 ms cũng thấp hơn baseline3.4563 ms. Do đó pooled mean advantage1.65% của INT8 không chứng minh speedup ổn định. Không bỏ round2 hậu nghiệm, không suy đó là workload lạ hoặc throttling; sampled guard không phát hiện competing workload và không đủ dữ liệu để xác định nguyên nhân. Các p95/p99 thấp hơn FP16 chỉ là quan sát của workload/session hiện có, không khẳng định tail-latency superiority tổng quát.
+
+**Research disposition:** giữ precision-head protection là hướng confirmation có triển vọng về phục hồi accuracy/localization, nhưng **chưa khóa thành deployment method vượt FP16 và chưa scale15**. Chuỗi diagnostic đo lường này kết thúc ở đây. Không mở thêm vòng audit/repeat latency chỉ để đạt kết quả mong muốn. Tiếp theo cần kiểm khả năng lặp lại hiệu ứng trên source models/calibration selections khác, không tiếp tục tối ưu trên cùng YOLO11n/dev rồi gọi là confirmatory.
+
+### Task hữu hạn tiếp theo cho Luna — protocol-only, không GPU
+
+Authorize đọc repo và soạn **`docs/PRECISION_HEAD_CONFIRMATION_PLAN_V1.md`**, ghi L2A-022. Không viết/chạy runner thí nghiệm mới trong task này. Nội dung cần đủ để Astra chọn một confirmation study, không tạo hàng loạt alternatives:
+
+1. Tóm tắt evidence và những claim chưa được chứng minh: calibration-policy superiority chưa đạt; precision-head accuracy recovery quan sát trên YOLO11n/Uniform seed42; latency không có FP16 speedup ổn định; không hứa journal acceptance/quartile.
+2. Inventory source artifacts/model mappings cho **YOLOv8n và YOLO26n đã train/frozen**. Chỉ đọc manifest/code để xác định checkpoint path/hash nếu hiện có và detection-head convolution mappings cần verify; không giả định tên layer YOLO11 áp dụng cho họ khác, không dùng pretrained generic `*.pt` thay frozen trained checkpoint. Missing binaries local là operator prerequisite, không tự tải/retrain.
+3. Đề xuất một protocol confirmation dev-only trên hai nano còn lại, giữ FP16 reference, baseline INT8, bbox-only, classification-only và both controls. Tách calibration-selection variance khỏi build variance; nêu số calibration selections/build repeats, tổng build/capture cần thiết và phần artifact nào reuse hợp lệ. Không chọn seed/build theo AP; không dùng cùng ordinary timing cache xuyên architecture như thể là tactic lock. Cần protocol đủ hẹp để quyết định trước main15, không yêu cầu hoàn tất mọi edge device ở pilot này.
+4. Dùng source weights/protocol đã frozen, train-only calibration IDs và estimator đã nghiệm thu; không retrain, không thêm dataset. Main15-model scope vẫn giữ cho giai đoạn sau khi method/controls được khóa, không âm thầm thu hẹp paper thành riêng YOLO11n. Official test đã từng được dùng ở pilot v1: mô tả lịch sử trung thực, không gọi nó chưa từng được xem; không dùng test để sửa precision/calibration trong task này.
+5. Predefine endpoints accuracy/XS/S và cách báo CIs/variability; chỉ đề xuất practical decision margins với lý do trước số liệu mới, không suy margins từ các kết quả mong muốn. Giữ classification control và FP16; không chọn both mặc định vì AP cao nhất.
+6. Nêu cách phân công nhiều server nếu operator báo có máy trống: có thể chia theo source model, mỗi matched within-model comparison phải cùng device/runtime/calibration/preprocessing control; pin manifest riêng mỗi host. Không trộn server effects vào arm effect, không copy serialized TensorRT engines và coi là cùng benchmark. Nếu chỉ1server khả dụng, protocol vẫn chạy được tuần tự.
+7. Ghi exact prerequisites, estimated workload bằng counts (ước lượng thời gian nếu có phải ghi giả định), stopping/reporting condition và giới hạn. Đây là plan để review; chưa có server command hoặc authorization cho build/capture mới.
+
+Luna push A2L-021 cùng plan/L2A-022, không stage scratch `local/astra_review_latency_artifacts.py`. Chưa mở B/C/main15/official-test/edge benchmarks tự động. Sau review plan, Astra quyết định protocol và giao implementation một lượt; không yêu cầu người dùng chạy thêm gì trên server trong lúc Luna chuẩn bị tài liệu này.
