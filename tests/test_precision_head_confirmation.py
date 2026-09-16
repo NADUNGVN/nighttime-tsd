@@ -249,14 +249,38 @@ class PrecisionHeadConfirmationTests(unittest.TestCase):
             self.assertEqual(record["mapping_status"], "pytorch_structure_verified_onnx_deferred")
 
     def test_build_readiness_preserves_missing_prepare_artifacts_without_authorizing_run(self):
-        manifest = readiness.build_readiness(REPO, self.config, probe_models=False)
+        model_records = [
+            {"label": model["label"], "status": "verified", "errors": []}
+            for model in self.config["models"]
+        ]
+        dataset = {"status": "verified", "errors": []}
+        missing = [
+            {
+                "id": selection["id"],
+                "status": "missing",
+                "errors": [],
+                "manifest_contract": {"status": "canonical_manifest_valid", "image_ids": []},
+                "materialization": {
+                    "status": "missing_materialization",
+                    "missing": ["materialized_calibration_yaml"],
+                    "errors": [],
+                },
+            }
+            for selection in self.config["calibration_selections"]
+        ]
+        # Use an explicit fixture instead of relying on whether a developer's
+        # checkout happens to contain the server materializations.
+        with patch.object(readiness, "inspect_frozen_model", side_effect=model_records), \
+             patch.object(readiness, "validate_dataset_contract", return_value=dataset), \
+             patch.object(readiness, "validate_calibration_manifest", side_effect=missing):
+            manifest = readiness.build_readiness(REPO, self.config, probe_models=True)
         self.assertFalse(manifest["scored_run_authorized"])
         self.assertFalse(manifest["gpu_used"])
         self.assertFalse(manifest["export_performed"])
         self.assertFalse(manifest["tensorrt_build_performed"])
         self.assertEqual(manifest["scored_matrix_gate"], "blocked_deferred_graph_validation")
         self.assertFalse(manifest["raw_inputs_ready_for_server_prepare"])
-        self.assertTrue(any("model_probe_not_run" in item for item in manifest["unresolved_checks"]))
+        self.assertFalse(any("model_probe_not_run" in item for item in manifest["unresolved_checks"]))
         self.assertIn("semantic_sha256", manifest["config_identity"])
         self.assertIn("script_sha256", manifest["execution_provenance"])
         self.assertEqual(manifest["accounting"]["total_builder_invocations"], 84)

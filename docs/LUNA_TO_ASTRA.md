@@ -1217,3 +1217,98 @@ Artifact đáp ứng contract CPU inventory, không có readiness violation ho�
 blocker. Chưa có ONNX export, graph mapping, engine, GPU identity hay scored
 result. Luna không chọn arm và không triển khai phase kế tiếp. Astra review
 L2A-026; dừng tại `readiness_prepare_review_required`.
+
+## L2A-027 — implementation graph preparation cho A2L-026
+
+Luna đã triển khai local prepare-only package theo A2L-026. Không chạy GPU,
+không export ONNX thật, không import TensorRT, không build/capture/benchmark
+và không mở matrix nghiên cứu.
+
+### Files
+
+- `scripts/prepare_precision_head_confirmation_graph.py`: parent/isolated-child
+  runner. Parent chỉ kiểm tra canonical readiness/config/checkpoint/dataset/
+  calibration và metadata; mỗi model được dispatch vào một child tuần tự.
+  Child copy frozen checkpoint vào private workspace, export static float ONNX,
+  chạy ONNX checker/schema/graph dataflow audit và ghi model evidence. Không có
+  arbitrary checkpoint/engine/precision CLI, không silent resume/fallback.
+- `tests/test_precision_head_confirmation_graph.py`: synthetic graph fixtures
+  cho YOLOv8 raw và YOLO26 end2end, helper/non-Conv exclusion, inactive branch,
+  missing/ambiguous/unreachable mapping, branch ownership/shared ancestry,
+  precision target sets, adapters, no-double-NMS, no-overwrite và parent
+  dispatch.
+- `docs/PRECISION_HEAD_CONFIRMATION_GRAPH_PREP_V1.md`: protocol, output policy
+  và candidate command chưa được authorize.
+- `tests/test_precision_head_confirmation.py`: đổi test missing-YAML cũ sang
+  explicit mocked materialization fixture, không còn phụ thuộc trạng thái
+  server/local checkout.
+
+### Implementation contract
+
+- Accepted readiness root bị khóa vào artifact commit
+  `7c0ea9e7fe86dfa6358ec1ee90473f9243a53f76` và đúng năm raw file hashes;
+  standalone JSON phải exact bằng nested manifest sections.
+- Config bytes/semantic hash và readiness-helper hash được đối chiếu trước
+  export; frozen YOLOv8n/YOLO26n checkpoint hashes, current split inventory,
+  U42/U43/U44 manifests/materializations được recheck.
+- Export args cố định: `format=onnx`, `imgsz=640`, `batch=1`, `opset=17`,
+  `simplify=true`, `dynamic=false`, `half=false`, `device=cpu`, `task=detect`.
+  Không truyền `end2end=false`; flag frozen model được bảo toàn.
+- Graph audit chỉ nhận exact normalized source-module → đúng một exported
+  `Conv`, trace tới output và branch-owned channel merge có shape/axis/span.
+  Prefix/shape đơn độc, helper/non-Conv, renamed/fused thiếu lineage,
+  duplicate/missing/unreachable/ambiguous mapping đều `mapping_unresolved`.
+- YOLO26 target ownership là `one2one_cv2`/`one2one_cv3`; inactive `cv2/cv3`
+  bị loại. Shared downstream TopK/Gather ancestry được ghi nhận, không bị
+  hiểu sai thành overlap target. Baseline không có FP32 targets; intervention
+  sets chỉ tạo từ mapping verified.
+- Adapter giữ YOLOv8 `[1,7,8400]` raw/non-end2end và YOLO26 `[1,300,6]`
+  end2end/top-k; không áp dụng NMS lần hai. Real parser/forward evidence vẫn
+  deferred.
+- Calibration recipe chỉ bind helper/source hash và materialized manifest;
+  `materialized_tensor_file_created=false`, preprocessing vẫn unresolved
+  tới server preflight reviewed.
+
+### Tests and checks
+
+- Targeted graph tests: **11/11 pass**.
+- Existing readiness regression test đã được chuyển sang fixture explicit.
+- Đã chạy `py_compile` cho runner/readiness test thành công và `git diff --check`
+  pass. Full local regression sau patch: **166/166 pass**.
+- Source test xác nhận parent không có `import tensorrt`, `from tensorrt` hoặc
+  `torch.cuda`; parent dispatch chỉ truyền model/readiness-root/output-root.
+
+### Candidate operator command — chưa được chạy
+
+Sau khi Astra review package này, lệnh foreground dự kiến là một dòng:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && local/g0_size_env/bin/python scripts/prepare_precision_head_confirmation_graph.py --readiness-root results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 --model all --out-dir results/measurement_audit_v1/precision_head_confirmation_graph_prep_v1
+```
+
+Expected success output is `graph_preparation_manifest.json` with
+`status=graph_preparation_completed_review_required`, one verified model record
+per selected model, ONNX/schema/mapping hashes, `scored_run_authorized=false`,
+and no TensorRT/build/capture flags. Operator chỉ push JSON/report/log/schema;
+ONNX và private source copies ở server-only policy. Nếu child fail, giữ partial
+tree và push structured failure JSON/report thay vì rerun/overwrite.
+
+### Unresolved semantics and server resource needs
+
+- ONNX exporter/onnx checker dependencies và actual Ultralytics producer
+  source/version/module hashes chỉ được biết trên server; local tests dùng
+  synthetic fixtures.
+- Simplification/fusion có thể làm mất source names. Khi không còn exact
+  lineage hoặc branch-owned merge, runner phải dừng `mapping_unresolved`;
+  không force map để làm đủ hai model.
+- Calibration decoder/color/letterbox/pad/interpolation/layout/dtype/
+  normalization/batch producer recipe vẫn là prerequisite server-side; chưa
+  tạo tensor và chưa authorize cache/build.
+- Cần server có accepted five-file readiness root, đúng frozen weights,
+  current U42/U43/U44 materializations, Python/Ultralytics/ONNX dependencies
+  tương thích và private disk đủ cho hai ONNX/checker workspace. Không cần GPU
+  cho prepare-only export theo thiết kế, nhưng mọi GPU/TRT evidence remains
+  deferred; không dùng server khác thiếu readiness artifact như verification.
+
+Commit/push code và entry này sau khi hoàn tất local checks. Chưa giao lệnh
+export cho operator trước Astra review implementation.
