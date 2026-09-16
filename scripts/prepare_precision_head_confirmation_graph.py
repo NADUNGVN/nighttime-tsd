@@ -21,6 +21,8 @@ import importlib
 import importlib.metadata as metadata
 import inspect
 import json
+import math
+import os
 import platform
 import re
 import shutil
@@ -256,6 +258,15 @@ def validate_current_bindings(repo: Path, config: dict[str, Any], accepted: dict
     for record in calibrations:
         if record.get("status") != "verified" or (record.get("materialization") or {}).get("status") != "complete":
             raise ValueError(f"Current calibration binding is unresolved for {record.get('id')}")
+    accepted_manifest = accepted["manifest"]
+    accepted_dataset = accepted_manifest.get("dev_contract", {})
+    accepted_calibrations = (accepted_manifest.get("calibration_readiness") or {}).get("selections", [])
+    binding_comparison = compare_current_to_accepted_snapshot(
+        dataset, calibrations, accepted_dataset, accepted_calibrations,
+    )
+    if binding_comparison["status"] != "matched":
+        first = binding_comparison["differences"][0]
+        raise ValueError(f"Current binding differs from accepted snapshot at {first['path']}")
     return {
         "selected_models": [row["label"] for row in selected],
         "checkpoint_bindings": {
@@ -269,10 +280,66 @@ def validate_current_bindings(repo: Path, config: dict[str, Any], accepted: dict
         "dataset": dataset,
         "calibrations": calibrations,
         "selected_calibration_ids": [row["id"] for row in config["calibration_selections"]],
+        "accepted_snapshot_comparison": binding_comparison,
     }
 
 
-def package_evidence(package_names: tuple[str, ...] = ("torch", "ultralytics", "onnx", "onnxslim")) -> dict[str, Any]:
+def _binding_differences(expected: Any, observed: Any, path: str) -> list[dict[str, Any]]:
+    """Return JSON-safe differences without normalizing away source hashes."""
+    if isinstance(expected, dict) and isinstance(observed, dict):
+        differences: list[dict[str, Any]] = []
+        for key in sorted(set(expected) | set(observed)):
+            child = f"{path}.{key}" if path else str(key)
+            if key not in expected:
+                differences.append({"path": child, "expected": "<absent>", "observed": observed[key]})
+            elif key not in observed:
+                differences.append({"path": child, "expected": expected[key], "observed": "<absent>"})
+            else:
+                differences.extend(_binding_differences(expected[key], observed[key], child))
+        return differences
+    if isinstance(expected, list) and isinstance(observed, list):
+        if len(expected) != len(observed):
+            return [{"path": path, "expected": expected, "observed": observed}]
+        differences = []
+        for index, (left, right) in enumerate(zip(expected, observed)):
+            differences.extend(_binding_differences(left, right, f"{path}[{index}]"))
+        return differences
+    return [] if expected == observed else [{"path": path, "expected": expected, "observed": observed}]
+
+
+def compare_current_to_accepted_snapshot(
+    dataset: dict[str, Any],
+    calibrations: list[dict[str, Any]],
+    accepted_dataset: dict[str, Any],
+    accepted_calibrations: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Compare current byte-level bindings to fields present in accepted readiness."""
+    if not accepted_dataset or not accepted_calibrations:
+        raise ValueError("Accepted readiness is missing the binding snapshot")
+    current_by_id = {row.get("id"): row for row in calibrations}
+    accepted_by_id = {row.get("id"): row for row in accepted_calibrations}
+    differences = _binding_differences(accepted_dataset, dataset, "dataset")
+    differences.extend(_binding_differences(accepted_by_id, current_by_id, "calibrations"))
+    accepted_ids = [row.get("id") for row in accepted_calibrations]
+    current_ids = [row.get("id") for row in calibrations]
+    if accepted_ids != current_ids:
+        differences.append({"path": "calibrations.order", "expected": accepted_ids, "observed": current_ids})
+    compared_fields = [
+        "dataset.dev_image_ids", "dataset.inventory", "dataset.inventory_sha256",
+        "dataset.train_image_ids", "dataset.train_inventory", "dataset.test_image_ids",
+        "dataset.test_exclusion_inventory", "dataset.train_dev_overlap", "dataset.dev_test_overlap",
+        "calibrations.<id>.manifest_contract", "calibrations.<id>.selection_audit",
+        "calibrations.<id>.materialization",
+    ]
+    return {
+        "status": "matched" if not differences else "mismatch",
+        "differences": differences,
+        "compared_fields": compared_fields,
+        "comparison_policy": "exact accepted dev inventory and calibration source/materialized IDs, order, and byte hashes; no same-shape substitution accepted",
+    }
+
+
+def package_evidence(package_names: tuple[str, ...] = ("torch", "ultralytics", "numpy", "pycocotools", "onnx", "onnxslim")) -> dict[str, Any]:
     packages: dict[str, Any] = {}
     for name in package_names:
         try:
@@ -293,13 +360,81 @@ def package_evidence(package_names: tuple[str, ...] = ("torch", "ultralytics", "
     return packages
 
 
+def cpu_child_environment() -> dict[str, str]:
+    """Contain child-side auto-install/CUDA visibility without claiming no API queries."""
+    child_env = dict(os.environ)
+    child_env.update({
+        "YOLO_AUTOINSTALL": "0",
+        "ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS": "1",
+        "PIP_NO_INDEX": "1",
+        "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+        "CUDA_VISIBLE_DEVICES": "-1",
+        "OMP_NUM_THREADS": "2",
+        "MKL_NUM_THREADS": "2",
+    })
+    return child_env
+
+
+def preflight_producer_dependencies(config: dict[str, Any]) -> dict[str, Any]:
+    """Check locked producer/export prerequisites using metadata only before imports."""
+    expected = config.get("runtime", {})
+    distribution_names = ("torch", "ultralytics", "numpy", "pycocotools", "onnx", "onnxslim")
+    versions: dict[str, str | None] = {}
+    missing: list[str] = []
+    mismatches: list[dict[str, str]] = []
+    for name in distribution_names:
+        try:
+            version = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            version = None
+        versions[name] = version
+        if version is None:
+            missing.append(name)
+        locked = expected.get(name)
+        if locked is not None and version is not None and version != locked:
+            mismatches.append({"package": name, "expected": locked, "observed": version})
+
+    runtime_variants = ("onnxruntime", "onnxruntime-gpu", "onnxruntime-qnn")
+    runtime_versions = {}
+    for name in runtime_variants:
+        try:
+            runtime_versions[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            runtime_versions[name] = None
+    if not any(runtime_versions.values()):
+        missing.append("one_of:" + ",".join(runtime_variants))
+    auto_install_guard = {
+        key: cpu_child_environment()[key]
+        for key in ("YOLO_AUTOINSTALL", "ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS", "PIP_NO_INDEX", "PIP_DISABLE_PIP_VERSION_CHECK")
+    }
+    return {
+        "status": "verified" if not missing and not mismatches else "unresolved",
+        "distribution_versions_from_metadata": versions,
+        "runtime_variants_from_metadata": runtime_versions,
+        "missing": missing,
+        "mismatches": mismatches,
+        "auto_install_guard": auto_install_guard,
+        "network_or_install_mutation": False,
+        "import_performed": False,
+        "prerequisite_policy": "onnx, onnxslim, and one ONNX runtime distribution required before exporter import; no pip/network mutation",
+    }
+
+
 def environment_evidence() -> dict[str, Any]:
+    packages = package_evidence()
+    versions = {
+        name: (packages.get(name) or {}).get("version")
+        for name in ("torch", "ultralytics", "numpy", "pycocotools")
+    }
     return {
         "python": platform.python_version(),
         "platform": platform.platform(),
         "git_commit": None,
-        "producer_packages": package_evidence(),
-        "cuda_touched": False,
+        **versions,
+        "producer_packages": packages,
+        "cpu_child_environment": {key: os.environ.get(key) for key in ("CUDA_VISIBLE_DEVICES", "OMP_NUM_THREADS", "MKL_NUM_THREADS")},
+        "cuda_api_query_status": "not_instrumented; CUDA visibility hidden for child",
+        "cuda_touched": "not_claimed_zero_api_queries",
         "tensorrt_imported": False,
     }
 
@@ -317,7 +452,8 @@ def parent_environment_evidence() -> dict[str, Any]:
         "platform": platform.platform(),
         "package_versions_from_metadata_only": versions,
         "imports_performed": [],
-        "cuda_touched": False,
+        "cuda_api_query_status": "not_instrumented_parent_cpu_orchestration",
+        "cuda_touched": "not_claimed_zero_api_queries",
         "tensorrt_imported": False,
     }
 
@@ -339,6 +475,35 @@ def _node_field(node: Any, key: str, default: Any = None) -> Any:
     return getattr(node, key, default)
 
 
+def _onnx_attribute_value(attribute: Any) -> Any:
+    """Convert an ONNX AttributeProto to a small JSON-compatible value."""
+    attr_type = int(getattr(attribute, "type", 0) or 0)
+    if attr_type == 2:
+        return int(getattr(attribute, "i", 0))
+    if attr_type == 1:
+        return float(getattr(attribute, "f", 0.0))
+    if attr_type == 3:
+        value = getattr(attribute, "s", b"")
+        return value.decode("utf-8", errors="replace") if isinstance(value, bytes) else str(value)
+    if attr_type == 7:
+        return [int(item) for item in getattr(attribute, "ints", [])]
+    if attr_type == 6:
+        return [float(item) for item in getattr(attribute, "floats", [])]
+    if attr_type == 8:
+        return [item.decode("utf-8", errors="replace") if isinstance(item, bytes) else str(item) for item in getattr(attribute, "strings", [])]
+    for field in ("ints", "floats", "strings"):
+        values = getattr(attribute, field, None)
+        if values:
+            if field == "strings":
+                return [item.decode("utf-8", errors="replace") if isinstance(item, bytes) else str(item) for item in values]
+            return list(values)
+    for field in ("i", "f", "s"):
+        value = getattr(attribute, field, None)
+        if value not in (None, 0, 0.0, b""):
+            return value.decode("utf-8", errors="replace") if field == "s" and isinstance(value, bytes) else value
+    return None
+
+
 def graph_node_records(graph: Any) -> list[dict[str, Any]]:
     raw_nodes = graph.get("nodes", []) if isinstance(graph, dict) else getattr(graph, "node", [])
     records = []
@@ -346,11 +511,15 @@ def graph_node_records(graph: Any) -> list[dict[str, Any]]:
         name = _node_field(node, "name", "") or f"<unnamed:{index}>"
         inputs = list(_node_field(node, "inputs", _node_field(node, "input", [])) or [])
         outputs = list(_node_field(node, "outputs", _node_field(node, "output", [])) or [])
-        attributes = _node_field(node, "attributes", {}) or {}
+        attributes = _node_field(node, "attributes", None)
+        if attributes is None and not isinstance(node, dict):
+            attributes = _node_field(node, "attribute", [])
+        attributes = attributes or {}
         if not isinstance(attributes, dict):
             attributes = {
-                getattr(attr, "name", ""): getattr(attr, "i", None)
+                getattr(attr, "name", ""): _onnx_attribute_value(attr)
                 for attr in attributes
+                if getattr(attr, "name", "")
             }
         records.append({
             "index": index,
@@ -384,6 +553,20 @@ def _value_shape(value: Any) -> list[Any] | None:
     return result
 
 
+def _value_dtype(value: Any) -> str | None:
+    if isinstance(value, dict):
+        dtype = value.get("dtype")
+        return str(dtype) if dtype is not None else None
+    type_proto = getattr(value, "type", None)
+    tensor_type = getattr(type_proto, "tensor_type", None)
+    elem_type = getattr(tensor_type, "elem_type", None)
+    mapping = {
+        1: "float32", 2: "uint8", 6: "int32", 7: "int64", 9: "bool",
+        10: "float16", 11: "float64",
+    }
+    return mapping.get(int(elem_type)) if elem_type else None
+
+
 def graph_tensor_shapes(graph: Any) -> dict[str, list[Any]]:
     result: dict[str, list[Any]] = {}
     if isinstance(graph, dict):
@@ -401,9 +584,24 @@ def graph_tensor_shapes(graph: Any) -> dict[str, list[Any]]:
     return result
 
 
+def graph_tensor_dtypes(graph: Any) -> dict[str, str | None]:
+    result: dict[str, str | None] = {}
+    if isinstance(graph, dict):
+        for name, dtype in (graph.get("tensor_dtypes", {}) or {}).items():
+            result[str(name)] = str(dtype) if dtype is not None else None
+        for row in graph.get("inputs", []) + graph.get("outputs", []) + graph.get("value_info", []):
+            if isinstance(row, dict) and isinstance(row.get("name"), str):
+                result[row["name"]] = _value_dtype(row)
+        return result
+    for row in list(getattr(graph, "input", [])) + list(getattr(graph, "output", [])) + list(getattr(graph, "value_info", [])):
+        result[str(row.name)] = _value_dtype(row)
+    return result
+
+
 def graph_output_records(graph: Any) -> list[dict[str, Any]]:
     raw_outputs = graph.get("outputs", []) if isinstance(graph, dict) else getattr(graph, "output", [])
     shapes = graph_tensor_shapes(graph)
+    dtypes = graph_tensor_dtypes(graph)
     records = []
     for row in raw_outputs:
         if isinstance(row, dict):
@@ -414,7 +612,27 @@ def graph_output_records(graph: Any) -> list[dict[str, Any]]:
             shape = shapes.get(name)
         if not isinstance(name, str):
             continue
-        records.append({"name": name, "shape": list(shape) if isinstance(shape, list) else None})
+        dtype = row.get("dtype", dtypes.get(name)) if isinstance(row, dict) else dtypes.get(name)
+        records.append({"name": name, "shape": list(shape) if isinstance(shape, list) else None, "dtype": dtype})
+    return records
+
+
+def graph_input_records(graph: Any) -> list[dict[str, Any]]:
+    raw_inputs = graph.get("inputs", []) if isinstance(graph, dict) else getattr(graph, "input", [])
+    shapes = graph_tensor_shapes(graph)
+    dtypes = graph_tensor_dtypes(graph)
+    records = []
+    for row in raw_inputs:
+        if isinstance(row, dict):
+            name = row.get("name")
+            shape = row.get("shape", shapes.get(name))
+            dtype = row.get("dtype", dtypes.get(name))
+        else:
+            name = getattr(row, "name", None)
+            shape = shapes.get(name)
+            dtype = dtypes.get(name)
+        if isinstance(name, str):
+            records.append({"name": name, "shape": list(shape) if isinstance(shape, list) else None, "dtype": dtype})
     return records
 
 
@@ -487,9 +705,11 @@ def _attribute_int(attributes: dict[str, Any], key: str, default: int | None = N
 def _find_branch_merge(
     nodes: list[dict[str, Any]],
     producers: dict[str, dict[str, Any]],
+    consumers: dict[str, list[dict[str, Any]]],
     shapes: dict[str, list[Any]],
     branch_targets: dict[str, set[str]],
     expected_shape: list[int],
+    primary_output_names: set[str],
 ) -> dict[str, Any] | None:
     ancestor_memo: dict[str, set[str]] = {}
     candidates = []
@@ -503,6 +723,8 @@ def _find_branch_merge(
         if output_shape != expected_shape:
             continue
         inputs = node["inputs"]
+        if len(inputs) != 2:
+            continue
         owners: dict[str, list[str]] = {}
         input_spans = []
         channel_cursor = 0
@@ -525,17 +747,107 @@ def _find_branch_merge(
             width = int(input_shape[1])
             input_spans.append({"input": input_name, "owner": owner, "span": [channel_cursor, channel_cursor + width], "shape": input_shape})
             channel_cursor += width
-        if valid and set(owners) == {"bbox", "classification"} and channel_cursor == expected_shape[1]:
+        expected_spans = {"bbox": [0, 4], "classification": [4, 7]}
+        actual_spans = {row["owner"]: row["span"] for row in input_spans}
+        _, reached_primary = _forward([node["outputs"][0]], consumers, primary_output_names)
+        if valid and set(owners) == {"bbox", "classification"} and channel_cursor == expected_shape[1] and actual_spans == expected_spans:
             candidates.append({
                 "node": node["name"],
                 "output": node["outputs"][0],
                 "axis": axis,
                 "shape": output_shape,
                 "input_spans": input_spans,
+                "expected_channel_spans": expected_spans,
+                "primary_output_reachability": sorted(reached_primary),
             })
-    if len(candidates) != 1:
+    if len(candidates) != 1 or not candidates[0].get("primary_output_reachability"):
         return None
     return candidates[0]
+
+
+def _downstream_semantic_audit(
+    start_tensor: str,
+    primary_output_names: set[str],
+    consumers: dict[str, list[dict[str, Any]]],
+    shapes: dict[str, list[Any]],
+    initializers: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Check known post-merge operators without treating shape as semantics."""
+    initializers = initializers or {}
+    queue = [start_tensor]
+    seen_tensors: set[str] = set()
+    visited: list[dict[str, Any]] = []
+    reached: set[str] = set()
+    unresolved: list[str] = []
+    known_passthrough = {"Add", "Sub", "Mul", "Div", "Sigmoid", "Identity", "Cast", "Concat", "Clip", "Max", "Min"}
+    while queue:
+        tensor = queue.pop(0)
+        if tensor in seen_tensors:
+            continue
+        seen_tensors.add(tensor)
+        if tensor in primary_output_names:
+            reached.add(tensor)
+        for node in consumers.get(tensor, []):
+            op = node["op_type"]
+            input_shapes = [shapes.get(name) for name in node["inputs"]]
+            output_shapes = [shapes.get(name) for name in node["outputs"]]
+            semantic: dict[str, Any] = {"node": node["name"], "op_type": op, "inputs": node["inputs"], "outputs": node["outputs"]}
+            if op == "Reshape":
+                if not input_shapes or not output_shapes or input_shapes[0] is None or output_shapes[0] is None:
+                    unresolved.append(f"reshape_semantics_missing_shape:{node['name']}")
+                else:
+                    semantic["evidence"] = "static_input_output_shape_recorded; reshape target tensor semantics still require initializer audit"
+                    shape_input = node["inputs"][1] if len(node["inputs"]) > 1 else None
+                    if shape_input not in initializers:
+                        unresolved.append(f"reshape_target_not_recorded:{node['name']}")
+                    else:
+                        semantic["target_shape_initializer"] = initializers[shape_input]
+            elif op == "Transpose":
+                perm = node["attributes"].get("perm")
+                if perm is None:
+                    unresolved.append(f"transpose_perm_missing:{node['name']}")
+                elif input_shapes[0] is None or output_shapes[0] is None or len(perm) != len(input_shapes[0]):
+                    unresolved.append(f"transpose_semantics_unresolved:{node['name']}")
+                else:
+                    expected = [input_shapes[0][index] for index in perm]
+                    if expected != output_shapes[0]:
+                        unresolved.append(f"transpose_shape_mismatch:{node['name']}")
+                    semantic["evidence"] = "explicit_perm_and_shape_match"
+            elif op == "Slice":
+                required = ("starts", "ends", "axes", "steps")
+                if not all(key in node["attributes"] or (len(node["inputs"]) > index and node["inputs"][index] in initializers) for index, key in enumerate(required, start=1)):
+                    unresolved.append(f"slice_semantics_unresolved:{node['name']}")
+                else:
+                    semantic["evidence"] = "explicit_slice_parameters_or_initializer_records"
+            elif op in {"Gather", "GatherElements"}:
+                if "axis" not in node["attributes"] or len(node["inputs"]) < 2:
+                    unresolved.append(f"gather_semantics_unresolved:{node['name']}")
+                else:
+                    semantic["evidence"] = "explicit_axis_and_index_input"
+            elif op == "TopK":
+                has_axis = "axis" in node["attributes"]
+                has_k = "k" in node["attributes"] or (len(node["inputs"]) >= 2 and node["inputs"][1] in initializers)
+                if not has_axis or not has_k:
+                    unresolved.append(f"topk_axis_unresolved:{node['name']}")
+                elif not output_shapes or output_shapes[0] is None:
+                    unresolved.append(f"topk_output_shape_unresolved:{node['name']}")
+                else:
+                    semantic["evidence"] = "explicit_topk_axis_or_k_input_and_output_shape"
+            elif op in known_passthrough:
+                if input_shapes and output_shapes and input_shapes[0] is not None and output_shapes[0] is not None and op != "Concat" and input_shapes[0] != output_shapes[0]:
+                    unresolved.append(f"passthrough_shape_changed:{node['name']}")
+                semantic["evidence"] = "recognized_elementwise_or_passthrough_operator"
+            else:
+                unresolved.append(f"unknown_post_merge_semantics:{node['name']}:{op}")
+            visited.append(semantic)
+            queue.extend(node["outputs"])
+    return {
+        "status": "verified" if reached and not unresolved else "unresolved",
+        "reached_primary_outputs": sorted(reached),
+        "visited_nodes": visited,
+        "unresolved": unresolved,
+        "policy": "shape is supporting evidence only; unrecognized reshape/transpose/slice/gather/topk semantics remain unresolved",
+    }
 
 
 def audit_graph_mapping(graph: Any, model_label: str, accepted_model: dict[str, Any]) -> dict[str, Any]:
@@ -546,13 +858,19 @@ def audit_graph_mapping(graph: Any, model_label: str, accepted_model: dict[str, 
     source_mapping = accepted_model.get("active_convolution_mapping") or {}
     nodes, producers, consumers = graph_indices(graph)
     shapes = graph_tensor_shapes(graph)
+    inputs = graph_input_records(graph)
     outputs = graph_output_records(graph)
     output_names = {row["name"] for row in outputs}
     expected_output_shape = GRAPH_OUTPUT_SHAPES[model_label]
     primary_outputs = [row for row in outputs if row.get("shape") == expected_output_shape]
     errors: list[str] = []
-    if not primary_outputs:
-        errors.append(f"primary_output_shape_not_observed:{expected_output_shape}")
+    if len(inputs) != 1 or inputs[0].get("shape") != [1, 3, 640, 640] or inputs[0].get("dtype") not in ("float32", "torch.float32"):
+        errors.append("input_schema_mismatch:expected_one_float32_[1,3,640,640]")
+    if len(primary_outputs) != 1:
+        errors.append(f"primary_output_must_be_unique:{expected_output_shape}:{len(primary_outputs)}")
+    elif primary_outputs[0].get("dtype") not in ("float32", "torch.float32"):
+        errors.append("primary_output_dtype_mismatch:expected_float32")
+    primary_output_names = {row["name"] for row in primary_outputs}
 
     branch_targets: dict[str, set[str]] = {"bbox": set(), "classification": set()}
     branch_records: dict[str, Any] = {}
@@ -589,7 +907,7 @@ def audit_graph_mapping(graph: Any, model_label: str, accepted_model: dict[str, 
                 errors.append(f"{branch}:source_conv_match_count:{source_name}:{len(candidates)}")
                 continue
             node = candidates[0]
-            reachable_nodes, reachable_outputs = _forward(node["outputs"], consumers, output_names)
+            reachable_nodes, reachable_outputs = _forward(node["outputs"], consumers, primary_output_names)
             if not reachable_outputs:
                 errors.append(f"{branch}:unreachable_conv:{node['name']}")
             entry = {
@@ -646,10 +964,16 @@ def audit_graph_mapping(graph: Any, model_label: str, accepted_model: dict[str, 
         # while the decoded branch merge has four box coordinates.  Do not
         # mistake the debug representation for the exported primary layout.
         merge_shape = [boxes_shape[0], 4 + scores_shape[1], boxes_shape[2]]
-    merge = _find_branch_merge(nodes, producers, shapes, branch_targets, merge_shape or [1, 7, 8400])
+    merge = _find_branch_merge(nodes, producers, consumers, shapes, branch_targets, merge_shape or [1, 7, 8400], primary_output_names)
     if merge is None:
         errors.append("branch_owned_channel_merge_unresolved")
     else:
+        merge["downstream_semantic_audit"] = _downstream_semantic_audit(
+            merge["output"], primary_output_names, consumers, shapes,
+            graph.get("initializers", {}) if isinstance(graph, dict) else {},
+        )
+        if merge["downstream_semantic_audit"]["status"] != "verified":
+            errors.extend(merge["downstream_semantic_audit"]["unresolved"])
         spans = {row["owner"]: row["span"] for row in merge["input_spans"]}
         for branch, owner in (("bbox", "bbox"), ("classification", "classification")):
             for record in branch_records.values():
@@ -682,6 +1006,7 @@ def audit_graph_mapping(graph: Any, model_label: str, accepted_model: dict[str, 
         "model": model_label,
         "mapping_status": mapping_status,
         "errors": errors,
+        "graph_inputs": inputs,
         "graph_outputs": outputs,
         "expected_primary_output_shape": expected_output_shape,
         "primary_output_candidates": primary_outputs,
@@ -707,8 +1032,13 @@ def precision_target_sets(mapping: dict[str, Any], arm: str) -> dict[str, Any]:
         raise ValueError(f"Unknown precision arm: {arm}")
     bbox = list(mapping.get("branch_owned_target_sets", {}).get("bbox", []))
     classification = list(mapping.get("branch_owned_target_sets", {}).get("classification", []))
-    if not bbox or not classification or not mapping.get("branch_owned_target_sets", {}).get("disjoint"):
+    branch_sets = mapping.get("branch_owned_target_sets", {})
+    if mapping.get("status") != "verified" or mapping.get("mapping_status") != "verified":
         raise ValueError("Cannot create precision target sets from unresolved branch mapping")
+    if not bbox or not classification or not branch_sets.get("disjoint"):
+        raise ValueError("Cannot create precision target sets from unresolved branch mapping")
+    if set(bbox) & set(classification) or mapping.get("branch_merge", {}).get("downstream_semantic_audit", {}).get("status") != "verified":
+        raise ValueError("Cannot create precision target sets from internally inconsistent graph mapping")
     selected = {
         "baseline_int8": [],
         "bbox_fp32": bbox,
@@ -721,7 +1051,8 @@ def precision_target_sets(mapping: dict[str, Any], arm: str) -> dict[str, Any]:
         "classification_fp32_targets": classification if arm in ("classification_fp32", "both_fp32") else [],
         "target_layers": selected,
         "target_sets_disjoint": not bool(set(bbox) & set(classification)),
-        "baseline_non_target_protection": "all active branch convolutions remain INT8 unless explicitly listed by the locked arm",
+        "baseline_precision_constraints": "baseline has no active branch FP32 override; INT8 eligibility and all other precision constraints must be verified by the later builder/inspector",
+        "sigmoid_fp32_constraints": "locked baseline sigmoid FP32 protection is a separate builder constraint, not an intervention target",
         "effective_precision": "must be verified from builder/inspector in the later server build phase",
     }
 
@@ -740,13 +1071,20 @@ def _shape(value: Any) -> list[Any] | None:
 
 def _rows(value: Any) -> list[list[Any]] | None:
     if isinstance(value, list):
-        if value and isinstance(value[0], list):
-            return value
-        return None
-    tolist = getattr(value, "tolist", None)
-    if callable(tolist):
+        converted = value
+    else:
+        tolist = getattr(value, "tolist", None)
+        if not callable(tolist):
+            return None
         converted = tolist()
-        return converted if isinstance(converted, list) else None
+    if not isinstance(converted, list):
+        return None
+    if len(converted) == 1 and isinstance(converted[0], list) and converted[0] and isinstance(converted[0][0], list):
+        converted = converted[0]
+    if converted and isinstance(converted[0], list):
+        return converted
+    if converted == []:
+        return []
     return None
 
 
@@ -769,6 +1107,9 @@ def validate_native_output(model_label: str, output: Any, expected_contract: dic
     if model_label == "yolov8n":
         if expected_contract.get("end2end") is not False or expected_contract.get("nms") != "not_in_model_head_output":
             raise ValueError("YOLOv8n adapter was given an end2end contract")
+        required_keys = set(expected_contract.get("debug_paths", ("boxes", "scores", "feats")))
+        if not required_keys.issubset(head):
+            raise ValueError(f"YOLOv8n native output is missing debug head keys: {sorted(required_keys - set(head))}")
         return {
             "model": model_label,
             "representation": "tuple_tensor_plus_dict",
@@ -784,19 +1125,26 @@ def validate_native_output(model_label: str, output: Any, expected_contract: dic
     if model_label == "yolo26n":
         if expected_contract.get("end2end") is not True or expected_contract.get("nms") == "not_in_model_head_output":
             raise ValueError("YOLO26n adapter was given a non-end2end contract")
-        if not isinstance(head.get("one2one"), dict):
+        required_keys = set(expected_contract.get("debug_paths", ("one2many", "one2one")))
+        if not required_keys.issubset(head) or not isinstance(head.get("one2one"), dict):
             raise ValueError("YOLO26n native output is missing one2one head evidence")
         rows = _rows(primary)
-        if rows is not None:
-            for row in rows:
-                if len(row) != 6:
-                    raise ValueError("YOLO26n detections must use [x1,y1,x2,y2,score,class_id]")
-                if not all(isinstance(item, (int, float)) for item in row):
-                    raise ValueError("YOLO26n detection values must be numeric")
-                if not all(float(item) == float(item) for item in row):
-                    raise ValueError("YOLO26n detection values must be finite")
-                if not 0.0 <= float(row[4]) <= 1.0 or int(row[5]) not in (0, 1, 2):
-                    raise ValueError("YOLO26n score/class semantics are invalid")
+        if rows is None:
+            raise ValueError("YOLO26n primary detections must be numerically observable for native validation")
+        if len(rows) != 300:
+            raise ValueError("YOLO26n primary output must contain exactly 300 detection rows; empty output is not the declared contract")
+        for row in rows:
+            if len(row) != 6:
+                raise ValueError("YOLO26n detections must use [x1,y1,x2,y2,score,class_id]")
+            if not all(isinstance(item, (int, float)) and not isinstance(item, bool) for item in row):
+                raise ValueError("YOLO26n detection values must be numeric")
+            if not all(math.isfinite(float(item)) for item in row):
+                raise ValueError("YOLO26n detection values must be finite")
+            x1, y1, x2, y2, score, class_id = (float(item) for item in row)
+            if not (0.0 <= x1 <= x2 <= 640.0 and 0.0 <= y1 <= y2 <= 640.0):
+                raise ValueError("YOLO26n detection coordinates are out of range or unordered")
+            if not 0.0 <= score <= 1.0 or not class_id.is_integer() or int(class_id) not in (0, 1, 2):
+                raise ValueError("YOLO26n score/class semantics are invalid")
         return {
             "model": model_label,
             "representation": "tuple_tensor_plus_dict",
@@ -814,15 +1162,23 @@ def validate_native_output(model_label: str, output: Any, expected_contract: dic
 def adapter_contract(model_label: str, expected_contract: dict[str, Any]) -> dict[str, Any]:
     if model_label not in MODEL_CHOICES:
         raise ValueError(f"Unsupported adapter model: {model_label}")
-    output = validate_native_output(model_label, (type("ShapeOnly", (), {"shape": expected_contract["primary_output_shape"]})(), {} if model_label == "yolov8n" else {"one2one": {}}), expected_contract)
     return {
         "model": model_label,
         "primary_output_shape": expected_contract["primary_output_shape"],
         "output_kind": expected_contract["output_kind"],
         "postprocess": expected_contract["postprocess"],
         "nms": expected_contract["nms"],
-        "native_output_validation": output,
-        "scored_adapter_status": "deferred_until_real_TensorRT_forward_and_native_parser_validation",
+        "declared_contract": {
+            "primary_output_shape": expected_contract["primary_output_shape"],
+            "primary_output_dtype": expected_contract.get("primary_output_dtype"),
+            "output_kind": expected_contract["output_kind"],
+            "postprocess": expected_contract["postprocess"],
+            "nms": expected_contract["nms"],
+            "debug_paths": expected_contract.get("debug_paths", []),
+        },
+        "observed_native_numeric_validation": False,
+        "real_forward_validation": "deferred_to_server_TensorRT_or_producer_forward",
+        "scored_adapter_status": "deferred_declared_contract_only_until_real_TensorRT_forward_and_native_parser_validation",
         "double_nms_forbidden": True,
     }
 
@@ -841,25 +1197,55 @@ def validate_native_contract_evidence(
     for key in required:
         if native_evidence.get(key) != expected_contract.get(key):
             raise ValueError(f"Native contract evidence differs for {model_label}: {key}")
-    dummy_primary = type(
-        "ShapeOnly", (), {"shape": expected_contract["primary_output_shape"], "dtype": expected_contract.get("primary_output_dtype", "unknown")}
-    )()
-    dummy_head = {"one2one": {}} if model_label == "yolo26n" else {}
-    return validate_native_output(model_label, (dummy_primary, dummy_head), expected_contract)
+    return {
+        "model": model_label,
+        "status": "declared_contract_matches_cpu_probe; numeric_forward_deferred",
+        "declared_contract": {
+            key: expected_contract.get(key)
+            for key in required
+        },
+        "numeric_forward_observed": False,
+        "numeric_validation_prerequisite": "real producer/engine forward output with required debug keys and finite native rows",
+        "double_nms_forbidden": True,
+    }
 
 
 def calibration_recipe_evidence(repo: Path, config: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
     helper = repo_path(repo, Path(config["calibration_recipe"]["preprocessing_helper"]))
     recipe = dict(config["calibration_recipe"])
     recipe.update({
-        "status": "unresolved_pending_server_prepare",
+        "status": "graph_only_completed_recipe_unresolved",
         "helper_path": str(helper),
         "helper_sha256": sha256_file(helper),
         "materialization_checked": True,
         "materialized_tensor_file_created": False,
         "source_manifest_ids": [row["id"] for row in current["calibrations"]],
-        "file_order_binding": "canonical manifest file order; producer preprocessing must be resolved before cache creation",
-        "unresolved_until": "server preflight producer decoder/color/letterbox/pad/interpolation/layout/dtype/normalization/batch evidence",
+        "file_order_binding": "canonical manifest file order; selected calibration manifest rows are consumed in order",
+        "recipe_audit": {
+            "decoder": "Ultralytics YOLODataset.load_image pinned producer; image decode is BGR and source helper hash is recorded",
+            "color": "producer validation transform must record BGR-to-RGB conversion before model input; exact runtime observation is deferred",
+            "resize": "validation LetterBox target (640,640), scaleup=false, interpolation=cv2.INTER_LINEAR",
+            "padding": "LetterBox auto=false, center=true, padding_value=114; exact per-image pad audit is deferred",
+            "layout": "HWC uint8 producer image -> CHW uint8 collated batch",
+            "dtype": "calibration loader emits uint8 [0,255] before backend; no tensor file is materialized here",
+            "normalization": "uniform_build_repeat streams float32 image.astype(float32)/255.0 to the cache producer",
+            "batch_size": 1,
+            "workers": 0,
+            "drop_last": True,
+            "helper_source_hash": sha256_file(helper),
+            "producer_source_hashes_required": [
+                "Exporter.get_int8_calibration_dataloader",
+                "YOLODataset.load_image",
+                "YOLODataset.build_transforms",
+                "LetterBox.__init__",
+                "LetterBox.get_params",
+                "LetterBox.apply_image",
+                "Format.__init__",
+                "Format.__call__",
+            ],
+        },
+        "unresolved_prerequisite": "server child must record actual pinned Ultralytics source hashes and one-image decoder/color/resize/pad/layout/dtype/normalization trace before any calibration cache build",
+        "no_multi_gb_tensor_materialized": True,
     })
     return recipe
 
@@ -868,19 +1254,66 @@ def _load_onnx(path: Path) -> tuple[Any, dict[str, Any]]:
     onnx = importlib.import_module("onnx")
     model = onnx.load(str(path), load_external_data=True)
     onnx.checker.check_model(model)
+    model = onnx.shape_inference.infer_shapes(model)
+    onnx.checker.check_model(model)
     graph = model.graph
     nodes = graph_node_records(graph)
+    tensor_shapes = graph_tensor_shapes(graph)
+    tensor_dtypes = graph_tensor_dtypes(graph)
+    initializers: dict[str, Any] = {}
+    try:
+        numpy_helper = importlib.import_module("onnx.numpy_helper")
+        for initializer in graph.initializer:
+            size = 1
+            for dimension in initializer.dims:
+                size *= int(dimension)
+            if size <= 4096:
+                initializers[initializer.name] = numpy_helper.to_array(initializer).tolist()
+        for node in graph.node:
+            if node.op_type != "Constant":
+                continue
+            for attribute in node.attribute:
+                if int(getattr(attribute, "type", 0) or 0) == 4 and attribute.HasField("t"):
+                    size = 1
+                    for dimension in attribute.t.dims:
+                        size *= int(dimension)
+                    if size <= 4096 and node.output:
+                        initializers[node.output[0]] = numpy_helper.to_array(attribute.t).tolist()
+    except Exception as exc:
+        initializers["__audit_error__"] = f"{type(exc).__name__}:{exc}"
+    graph_doc = {
+        "nodes": nodes,
+        "inputs": graph_input_records(graph),
+        "outputs": graph_output_records(graph),
+        "value_info": [
+            {"name": row.name, "shape": _value_shape(row), "dtype": _value_dtype(row)}
+            for row in graph.value_info
+        ],
+        "tensor_shapes": tensor_shapes,
+        "tensor_dtypes": tensor_dtypes,
+        "initializers": initializers,
+    }
     schema = {
-        "inputs": [{"name": row.name, "shape": _value_shape(row)} for row in graph.input],
+        "inputs": graph_input_records(graph),
         "outputs": graph_output_records(graph),
         "value_info_count": len(graph.value_info),
         "node_count": len(graph.node),
         "op_types": sorted({node["op_type"] for node in nodes}),
         "quantization_nodes": [node["name"] for node in nodes if node["op_type"] in ("QuantizeLinear", "DequantizeLinear")],
+        "opset_imports": [{"domain": item.domain, "version": item.version} for item in model.opset_import],
+        "shape_inference": "onnx.shape_inference.infer_shapes_then_checker",
+        "effective_observations": {
+            "input_schema": graph_input_records(graph),
+            "output_schema": graph_output_records(graph),
+            "static_shapes": all(all(isinstance(dimension, int) for dimension in row.get("shape", [])) for row in graph_input_records(graph) + graph_output_records(graph)),
+            "dynamic_shape_observed": any(any(not isinstance(dimension, int) for dimension in (row.get("shape") or [])) for row in graph_input_records(graph) + graph_output_records(graph)),
+            "float_graph_expected": not any(node["op_type"] in ("QuantizeLinear", "DequantizeLinear") for node in nodes),
+            "opset": max((item.version for item in model.opset_import if item.domain in ("", "ai.onnx")), default=None),
+        },
     }
     if schema["quantization_nodes"]:
         raise ValueError("Prepare export contains Q/DQ; expected float ONNX")
-    return model, schema
+    return graph_doc, schema
 
 
 def producer_source_evidence() -> dict[str, Any]:
@@ -888,8 +1321,28 @@ def producer_source_evidence() -> dict[str, Any]:
     try:
         ultralytics = importlib.import_module("ultralytics")
         from ultralytics import YOLO  # imported only in the model child
+        from ultralytics.data.augment import Format, LetterBox
+        from ultralytics.data.build import build_yolo_dataset
+        from ultralytics.data.dataset import YOLODataset
+        from ultralytics.engine.exporter import Exporter
         evidence["ultralytics"]["YOLO_source_sha256"] = sha256_bytes(inspect.getsource(YOLO).encode("utf-8"))
         evidence["ultralytics"]["module_version"] = getattr(ultralytics, "__version__", None)
+        source_objects = {
+            "Exporter.get_int8_calibration_dataloader": Exporter.get_int8_calibration_dataloader,
+            "YOLODataset.__getitem__": YOLODataset.__getitem__,
+            "YOLODataset.load_image": YOLODataset.load_image,
+            "YOLODataset.build_transforms": YOLODataset.build_transforms,
+            "build_yolo_dataset": build_yolo_dataset,
+            "LetterBox.__init__": LetterBox.__init__,
+            "LetterBox.get_params": LetterBox.get_params,
+            "LetterBox.apply_image": LetterBox.apply_image,
+            "Format.__init__": Format.__init__,
+            "Format.__call__": Format.__call__,
+        }
+        evidence["ultralytics"]["implementation_source_sha256"] = {
+            name: sha256_bytes(inspect.getsource(obj).encode("utf-8"))
+            for name, obj in source_objects.items()
+        }
     except Exception as exc:
         evidence["ultralytics"]["source_error"] = f"{type(exc).__name__}:{exc}"
     return evidence
@@ -897,10 +1350,21 @@ def producer_source_evidence() -> dict[str, Any]:
 
 def default_exporter(staged_weights: Path, destination: Path) -> dict[str, Any]:
     """Export one frozen checkpoint from a private copy; never build an engine."""
+    os.environ.update(cpu_child_environment())
     from ultralytics import YOLO
 
     model = YOLO(str(staged_weights), task="detect")
+    model_core = getattr(model, "model", None)
+    layers = getattr(model_core, "model", None)
+    head = layers[-1] if layers and len(layers) else None
+    before_end2end = getattr(head, "end2end", None)
+    device_before = None
+    try:
+        device_before = str(next(model_core.parameters()).device)
+    except Exception:
+        device_before = "unobserved"
     reported = model.export(**EXPORT_ARGUMENTS)
+    after_end2end = getattr(head, "end2end", None)
     reported_path = Path(reported).resolve()
     private_root = staged_weights.parent.resolve()
     try:
@@ -915,7 +1379,13 @@ def default_exporter(staged_weights: Path, destination: Path) -> dict[str, Any]:
     return {
         "reported_path": str(reported_path),
         "destination": str(destination),
-        "effective_arguments": dict(EXPORT_ARGUMENTS),
+        "requested_arguments": dict(EXPORT_ARGUMENTS),
+        "effective_arguments": None,
+        "effective_arguments_status": "derived_from_loaded_ONNX_and_runtime_observation_after_export",
+        "head_end2end_before": before_end2end,
+        "head_end2end_after": after_end2end,
+        "model_device_before_export": device_before,
+        "auto_install_guard": {key: os.environ.get(key) for key in ("YOLO_AUTOINSTALL", "ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS", "PIP_NO_INDEX")},
     }
 
 
@@ -928,6 +1398,7 @@ def prepare_model(
     model_dir: Path,
     exporter: Callable[[Path, Path], dict[str, Any]] | None = None,
     graph_loader: Callable[[Path], tuple[Any, dict[str, Any]]] | None = None,
+    dependency_preflight: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     model_config = next(row for row in config["models"] if row["label"] == model_label)
     accepted_model = next(row for row in accepted["manifest"]["model_contracts"] if row["label"] == model_label)
@@ -942,10 +1413,18 @@ def prepare_model(
     if sha256_file(staged) != model_config["sha256"]:
         raise ValueError("Private frozen checkpoint copy hash mismatch")
 
+    dependencies = dependency_preflight or preflight_producer_dependencies(config)
+    if dependencies.get("status") != "verified":
+        raise ValueError(f"Producer dependency preflight unresolved: {dependencies.get('missing') or dependencies.get('mismatches')}")
     env = environment_evidence()
     env["git_commit"] = git_head(repo)
+    env["dependency_preflight"] = dependencies
+    readiness_environment = {
+        key: env.get(key)
+        for key in ("torch", "ultralytics", "numpy", "pycocotools")
+    }
     current_probe = readiness.inspect_frozen_model(
-        repo, model_config, probe=True, runtime_contract=config["runtime"], observed_environment=env
+        repo, model_config, probe=True, runtime_contract=config["runtime"], observed_environment=readiness_environment
     )
     if current_probe.get("status") != "verified":
         raise ValueError(f"Native frozen model recheck failed for {model_label}: {current_probe.get('errors')}")
@@ -962,10 +1441,24 @@ def prepare_model(
     export_record = (exporter or default_exporter)(staged, onnx_path)
     if not onnx_path.is_file():
         raise FileNotFoundError("Exporter did not leave the expected model.onnx")
+    expected_end2end = bool(model_config["expected_contract"]["end2end"])
+    for observation_key in ("head_end2end_before", "head_end2end_after"):
+        observed_end2end = export_record.get(observation_key)
+        if observed_end2end is not None and bool(observed_end2end) != expected_end2end:
+            raise ValueError(f"Exporter changed frozen end2end state at {observation_key}: {observed_end2end} != {expected_end2end}")
     loaded_object, schema = (graph_loader or _load_onnx)(onnx_path)
     # The real loader returns an ONNX ModelProto; tests may return a fixture
     # graph directly.  Resolve both forms without importing ONNX in the parent.
     loaded_graph = getattr(loaded_object, "graph", loaded_object)
+    export_record["effective_arguments"] = {
+        **dict(EXPORT_ARGUMENTS),
+        "actual_input_schema": schema.get("effective_observations", {}).get("input_schema", schema.get("inputs")),
+        "actual_output_schema": schema.get("effective_observations", {}).get("output_schema", schema.get("outputs")),
+        "actual_opset": schema.get("effective_observations", {}).get("opset"),
+        "actual_static_shapes": schema.get("effective_observations", {}).get("static_shapes"),
+        "actual_dynamic_shape_observed": schema.get("effective_observations", {}).get("dynamic_shape_observed"),
+    }
+    export_record["effective_arguments_status"] = "observed_from_exported_ONNX_schema; simplify_and_task_flags remain requested_only unless producer exposes them"
     mapping = audit_graph_mapping(loaded_graph, model_label, accepted_model)
     if mapping["status"] != "verified":
         raise ValueError(f"Graph mapping unresolved for {model_label}: {mapping['errors']}")
@@ -1011,7 +1504,7 @@ def prepare_model(
             "created_utc": datetime.now(timezone.utc).isoformat(),
         },
         "tensorrt_imported": False,
-        "cuda_touched": False,
+        "cuda_touched": "not_verified_not_instrumented",
         "build_performed": False,
         "capture_performed": False,
         "scored_run_authorized": False,
@@ -1083,7 +1576,7 @@ def _failure_payload(root: Path, stage: str, exc: BaseException) -> dict[str, An
         "no_silent_resume": True,
         "scored_run_authorized": False,
         "tensorrt_imported": False,
-        "cuda_touched": False,
+        "cuda_touched": "not_verified_not_instrumented",
     }
 
 
@@ -1097,6 +1590,7 @@ def child_command(repo: Path, model: str, readiness_root: Path, out_dir: Path) -
 
 
 def run_child(args: argparse.Namespace, repo: Path) -> int:
+    os.environ.update(cpu_child_environment())
     out_dir = repo_path(repo, args.out_dir)
     readiness_root = repo_path(repo, args.readiness_root)
     model_dir = out_dir / "models" / args.model
@@ -1105,7 +1599,10 @@ def run_child(args: argparse.Namespace, repo: Path) -> int:
         binding = validate_config_binding(repo, accepted)
         config = binding["config"]
         current = validate_current_bindings(repo, config, accepted, args.model)
-        record = prepare_model(repo, config, accepted, current, args.model, model_dir)
+        dependencies = preflight_producer_dependencies(config)
+        if dependencies.get("status") != "verified":
+            raise ValueError(f"Producer dependency preflight unresolved: {dependencies.get('missing') or dependencies.get('mismatches')}")
+        record = prepare_model(repo, config, accepted, current, args.model, model_dir, dependency_preflight=dependencies)
         print(f"DONE MODEL {args.model}: {model_dir / 'model_prepare.json'}", flush=True)
         return 0 if record["status"] == "completed" else 1
     except Exception as exc:
@@ -1135,7 +1632,9 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
         "current_bindings": {
             "checkpoint_bindings": current["checkpoint_bindings"],
             "selected_calibration_ids": current["selected_calibration_ids"],
-            "dataset_status": current["dataset"]["status"],
+            "dataset": current["dataset"],
+            "calibrations": current["calibrations"],
+            "accepted_snapshot_comparison": current.get("accepted_snapshot_comparison", {"status": "test_fixture"}),
         },
         "dispatch": "one isolated CPU child per selected frozen model; no build/capture dispatch",
         "scored_run_authorized": False,
@@ -1144,7 +1643,7 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
     for model_label in current["selected_models"]:
         completed = subprocess.run(
             child_command(repo, model_label, readiness_root, out_dir),
-            cwd=repo, capture_output=True, text=True, check=False,
+            cwd=repo, capture_output=True, text=True, check=False, env=cpu_child_environment(),
         )
         log_path = out_dir / "logs" / f"{model_label}.log"
         write_text_no_overwrite(log_path, (completed.stdout or "") + ("\n" + completed.stderr if completed.stderr else ""))
@@ -1174,7 +1673,9 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
         "current_bindings": {
             "checkpoint_bindings": current["checkpoint_bindings"],
             "calibration_ids": current["selected_calibration_ids"],
-            "dataset_status": current["dataset"]["status"],
+            "dataset": current["dataset"],
+            "calibrations": current["calibrations"],
+            "accepted_snapshot_comparison": current.get("accepted_snapshot_comparison", {"status": "test_fixture"}),
             "train_dev_overlap": current["dataset"].get("train_dev_overlap", []),
             "dev_test_overlap": current["dataset"].get("dev_test_overlap", []),
         },
@@ -1186,7 +1687,7 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
             "created_utc": datetime.now(timezone.utc).isoformat(),
         },
         "gpu_used": False,
-        "cuda_touched": False,
+        "cuda_touched": "not_verified_not_instrumented",
         "tensorrt_imported": False,
         "tensorrt_build_performed": False,
         "build_matrix_performed": False,

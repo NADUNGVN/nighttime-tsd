@@ -96,6 +96,7 @@ def graph_fixture(label: str, *, add_nonconv: bool = True, shared_downstream: bo
     })
     if shared_downstream:
         nodes.append({"name": "head/TopK", "op_type": "TopK", "inputs": [merged], "outputs": [output]})
+        nodes[-1]["attributes"] = {"axis": 2, "k": 300}
     else:
         nodes[-1]["outputs"] = [output]
     if label == "yolo26n":
@@ -105,14 +106,15 @@ def graph_fixture(label: str, *, add_nonconv: bool = True, shared_downstream: bo
         ])
     return {
         "nodes": nodes,
-        "inputs": [{"name": "features", "shape": [1, 64, 80, 80]}],
-        "outputs": [{"name": output, "shape": model["head_output_evidence"]["primary_output_shape"]}],
+        "inputs": [{"name": "images", "shape": [1, 3, 640, 640], "dtype": "float32"}],
+        "outputs": [{"name": output, "shape": model["head_output_evidence"]["primary_output_shape"], "dtype": "float32"}],
         "tensor_shapes": {
             bbox_tensor: [1, 4, 8400],
             class_tensor: [1, 3, 8400],
             merged: [1, 7, 8400],
             output: model["head_output_evidence"]["primary_output_shape"],
         },
+        "tensor_dtypes": {"images": "float32", output: "float32"},
     }, model
 
 
@@ -138,6 +140,55 @@ class PrecisionHeadGraphTests(unittest.TestCase):
         self.assertEqual(result["active_branch_audit"]["cv2"]["output_lineage"]["channel_span"], [0, 4])
         self.assertEqual(result["active_branch_audit"]["cv3"]["output_lineage"]["channel_span"], [4, 7])
         self.assertIn("model.22/cv2.0/act/Sigmoid", result["active_branch_audit"]["cv2"]["excluded_non_convolution_nodes"])
+
+    def test_graph_contract_rejects_reversed_spans_and_non_primary_or_ambiguous_outputs(self):
+        fixture, model = graph_fixture("yolov8n")
+        reversed_inputs = copy.deepcopy(fixture)
+        reversed_inputs["nodes"][3]["inputs"] = ["class_features", "bbox_features"]
+        result = graph.audit_graph_mapping(reversed_inputs, "yolov8n", model)
+        self.assertEqual(result["mapping_status"], "mapping_unresolved")
+        self.assertIn("branch_owned_channel_merge_unresolved", result["errors"])
+
+        debug_only = copy.deepcopy(fixture)
+        debug_only["nodes"][3]["outputs"] = ["debug_output"]
+        debug_only["outputs"] = [{"name": "output0", "shape": [1, 7, 8400], "dtype": "float32"}]
+        debug_only["tensor_shapes"]["debug_output"] = [1, 7, 8400]
+        debug_only["nodes"].append({"name": "unrelated", "op_type": "Identity", "inputs": ["unrelated_input"], "outputs": ["output0"]})
+        result = graph.audit_graph_mapping(debug_only, "yolov8n", model)
+        self.assertEqual(result["mapping_status"], "mapping_unresolved")
+        self.assertTrue(any("unreachable_conv" in error or "merge_unresolved" in error for error in result["errors"]))
+
+        multiple = copy.deepcopy(fixture)
+        multiple["outputs"].append({"name": "debug_same_shape", "shape": [1, 7, 8400], "dtype": "float32"})
+        multiple["tensor_shapes"]["debug_same_shape"] = [1, 7, 8400]
+        result = graph.audit_graph_mapping(multiple, "yolov8n", model)
+        self.assertEqual(result["mapping_status"], "mapping_unresolved")
+        self.assertIn("primary_output_must_be_unique", " ".join(result["errors"]))
+
+        wrong_input = copy.deepcopy(fixture)
+        wrong_input["inputs"][0] = {"name": "images", "shape": [1, 3, 320, 320], "dtype": "float16"}
+        result = graph.audit_graph_mapping(wrong_input, "yolov8n", model)
+        self.assertEqual(result["mapping_status"], "mapping_unresolved")
+        self.assertIn("input_schema_mismatch", " ".join(result["errors"]))
+
+    def test_precision_targets_require_verified_mapping_and_consistent_merge(self):
+        fixture, model = graph_fixture("yolov8n")
+        mapping = graph.audit_graph_mapping(fixture, "yolov8n", model)
+        unresolved = copy.deepcopy(mapping)
+        unresolved["status"] = "mapping_unresolved"
+        with self.assertRaises(ValueError):
+            graph.precision_target_sets(unresolved, "bbox_fp32")
+        inconsistent = copy.deepcopy(mapping)
+        inconsistent["branch_owned_target_sets"]["classification"] = inconsistent["branch_owned_target_sets"]["bbox"]
+        with self.assertRaises(ValueError):
+            graph.precision_target_sets(inconsistent, "both_fp32")
+
+    def test_unknown_post_merge_semantics_are_unresolved_even_with_matching_shape(self):
+        fixture, model = graph_fixture("yolov8n", shared_downstream=True)
+        fixture["nodes"][-1]["op_type"] = "MysterySelection"
+        result = graph.audit_graph_mapping(fixture, "yolov8n", model)
+        self.assertEqual(result["mapping_status"], "mapping_unresolved")
+        self.assertTrue(any("unknown_post_merge_semantics" in error for error in result["errors"]))
 
     def test_yolo26_keeps_inactive_branches_out_of_targets_and_allows_shared_output_ancestry(self):
         fixture, model = graph_fixture("yolo26n", shared_downstream=True)
@@ -198,24 +249,32 @@ class PrecisionHeadGraphTests(unittest.TestCase):
 
     def test_native_adapters_distinguish_raw_and_end2end_and_do_not_double_nms(self):
         v8 = expected_model("yolov8n")["head_output_evidence"]
-        v8_result = graph.validate_native_output("yolov8n", (TensorLike([1, 7, 8400]), {"boxes": object()}), v8)
+        v8_result = graph.validate_native_output("yolov8n", (TensorLike([1, 7, 8400]), {"boxes": object(), "scores": object(), "feats": object()}), v8)
         self.assertFalse(v8_result["nms_applied"])
         self.assertEqual(v8_result["box_channels"], [0, 4])
 
         v26 = expected_model("yolo26n")["head_output_evidence"]
         rows = [[10.0, 20.0, 30.0, 40.0, 0.5, 1.0] for _ in range(300)]
-        v26_result = graph.validate_native_output("yolo26n", (TensorLike([1, 300, 6], rows), {"one2one": {}}), v26)
+        v26_result = graph.validate_native_output("yolo26n", (TensorLike([1, 300, 6], rows), {"one2one": {}, "one2many": {}}), v26)
         self.assertFalse(v26_result["double_nms"])
         self.assertEqual(v26_result["detection_columns"]["class_id"], 5)
 
         with self.assertRaises(ValueError):
             graph.validate_native_output("yolov8n", [], v8)
         with self.assertRaises(ValueError):
-            graph.validate_native_output("yolo26n", (TensorLike([1, 300, 6], [[0, 0, 1, 1, 0.5, 3]] * 300), {"one2one": {}}), v26)
+            graph.validate_native_output("yolo26n", (TensorLike([1, 300, 6], [[0, 0, 1, 1, 0.5, 3]] * 300), {"one2one": {}, "one2many": {}}), v26)
+        with self.assertRaises(ValueError):
+            graph.validate_native_output("yolo26n", (TensorLike([1, 300, 6], [[0, 0, 1, 1, float("inf"), 1]] * 300), {"one2one": {}, "one2many": {}}), v26)
+        with self.assertRaises(ValueError):
+            graph.validate_native_output("yolo26n", (TensorLike([1, 300, 6], [[0, 0, 1, 1, 0.5, 1.5]] * 300), {"one2one": {}, "one2many": {}}), v26)
+        with self.assertRaises(ValueError):
+            graph.validate_native_output("yolo26n", (TensorLike([1, 300, 6], [[30, 20, 10, 40, 0.5, 1]] * 300), {"one2one": {}, "one2many": {}}), v26)
+        with self.assertRaises(ValueError):
+            graph.validate_native_output("yolo26n", (TensorLike([1, 300, 6], []), {"one2one": {}, "one2many": {}}), v26)
         wrong_contract = copy.deepcopy(v8)
         wrong_contract["end2end"] = True
         with self.assertRaises(ValueError):
-            graph.validate_native_output("yolov8n", (TensorLike([1, 7, 8400]), {}), wrong_contract)
+            graph.validate_native_output("yolov8n", (TensorLike([1, 7, 8400]), {"boxes": object(), "scores": object(), "feats": object()}), wrong_contract)
 
     def test_adapter_contract_is_deferred_until_real_parser_and_forward_evidence(self):
         for label in ("yolov8n", "yolo26n"):
@@ -223,6 +282,47 @@ class PrecisionHeadGraphTests(unittest.TestCase):
             adapter = graph.adapter_contract(label, contract)
             self.assertTrue(adapter["double_nms_forbidden"])
             self.assertTrue(adapter["scored_adapter_status"].startswith("deferred"))
+            self.assertFalse(adapter["observed_native_numeric_validation"])
+
+    def test_environment_schema_is_accepted_by_real_readiness_compatibility_boundary(self):
+        environment = graph.environment_evidence()
+        runtime = {"ultralytics": "8.4.102", "torch": None, "numpy": None, "pycocotools": None}
+        compatibility = readiness.runtime_compatibility_evidence(environment, runtime)
+        self.assertEqual(environment["ultralytics"], environment["producer_packages"]["ultralytics"]["version"])
+        self.assertEqual(compatibility["status"], "cpu_probe_supported", compatibility)
+        self.assertTrue(compatibility["native_head_probe_supported"])
+
+    def test_dependency_preflight_blocks_wrong_or_missing_locked_prerequisites(self):
+        def fake_version(name):
+            if name == "ultralytics":
+                return "wrong-version"
+            if name == "onnxruntime":
+                return "1.0.0"
+            raise graph.metadata.PackageNotFoundError(name)
+
+        with patch.object(graph.metadata, "version", side_effect=fake_version):
+            result = graph.preflight_producer_dependencies({"runtime": {"ultralytics": "8.4.102"}})
+        self.assertEqual(result["status"], "unresolved")
+        self.assertIn("onnx", result["missing"])
+        self.assertTrue(any(row["package"] == "ultralytics" for row in result["mismatches"]))
+        self.assertFalse(result["network_or_install_mutation"])
+
+    def test_accepted_binding_snapshot_rejects_same_shape_source_substitution(self):
+        dataset = {
+            "status": "verified", "dev_image_ids": ["a"],
+            "inventory": [{"image": "a.jpg", "image_sha256": "image-a", "label_sha256": "label-a"}],
+            "inventory_sha256": "inventory-a", "train_image_ids": ["train-a"],
+            "train_inventory": {"status": "verified", "image_ids_sha256": "train-a"},
+            "test_image_ids": ["test-a"], "test_exclusion_inventory": {"status": "verified"},
+            "train_dev_overlap": [], "dev_test_overlap": [],
+        }
+        calibrations = [{"id": "U42", "manifest_contract": {"status": "canonical"}, "selection_audit": {"selected_ids": ["train-a"], "source_bytes": [{"image_sha256": "source-a"}]}, "materialization": {"status": "complete", "image_bytes": [{"image_sha256": "material-a"}]}}]
+        self.assertEqual(graph.compare_current_to_accepted_snapshot(dataset, calibrations, copy.deepcopy(dataset), copy.deepcopy(calibrations))["status"], "matched")
+        changed = copy.deepcopy(calibrations)
+        changed[0]["materialization"]["image_bytes"][0]["image_sha256"] = "substituted"
+        comparison = graph.compare_current_to_accepted_snapshot(dataset, changed, dataset, calibrations)
+        self.assertEqual(comparison["status"], "mismatch")
+        self.assertTrue(any("calibrations.U42" in row["path"] for row in comparison["differences"]))
 
     def test_prepare_source_has_no_tensorRT_or_cuda_import_and_child_dispatch_is_scoped(self):
         source = inspect.getsource(graph)
@@ -234,6 +334,12 @@ class PrecisionHeadGraphTests(unittest.TestCase):
         self.assertIn("--model", command)
         self.assertNotIn("--checkpoint", command)
         self.assertNotIn("--engine", command)
+        child_env = graph.cpu_child_environment()
+        self.assertEqual(child_env["YOLO_AUTOINSTALL"], "0")
+        self.assertEqual(child_env["ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS"], "1")
+        self.assertEqual(child_env["CUDA_VISIBLE_DEVICES"], "-1")
+        self.assertEqual(child_env["OMP_NUM_THREADS"], "2")
+        self.assertEqual(child_env["MKL_NUM_THREADS"], "2")
 
     def test_parent_dispatches_one_isolated_child_per_model_without_importing_runtime(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -256,9 +362,11 @@ class PrecisionHeadGraphTests(unittest.TestCase):
             (root / "helper.py").write_text("helper", encoding="utf-8")
             args = SimpleNamespace(model="all", out_dir=output, readiness_root=root / "readiness")
             calls = []
+            child_envs = []
 
-            def fake_run(command, **_kwargs):
+            def fake_run(command, **kwargs):
                 calls.append(command)
+                child_envs.append(kwargs.get("env", {}))
                 model = command[command.index("--model") + 1]
                 model_dir = output / "models" / model
                 model_dir.mkdir(parents=True)
@@ -288,6 +396,8 @@ class PrecisionHeadGraphTests(unittest.TestCase):
             self.assertEqual(result, 0)
             self.assertEqual(len(calls), 2)
             self.assertEqual([cmd[cmd.index("--model") + 1] for cmd in calls], ["yolov8n", "yolo26n"])
+            self.assertEqual([env["CUDA_VISIBLE_DEVICES"] for env in child_envs], ["-1", "-1"])
+            self.assertEqual([env["YOLO_AUTOINSTALL"] for env in child_envs], ["0", "0"])
             self.assertTrue((output / "graph_preparation_manifest.json").is_file())
             self.assertTrue((output / "logs/yolov8n.log").is_file())
             self.assertTrue((output / "logs/yolo26n.log").is_file())
@@ -320,7 +430,7 @@ class PrecisionHeadGraphTests(unittest.TestCase):
                     "primary_output_representation": "tuple_tensor_plus_dict",
                 },
             }
-            config = {"models": [model_config], "runtime": {}, "export_contract": {}, "calibration_recipe": {"preprocessing_helper": "helper.py"}}
+            config = {"models": [model_config], "runtime": {"ultralytics": "8.4.102"}, "export_contract": {}, "calibration_recipe": {"preprocessing_helper": "helper.py"}}
             (root / "helper.py").write_text("helper", encoding="utf-8")
             accepted_model = expected_model("yolov8n")
             accepted_model["expected_sha256"] = model_config["sha256"]
@@ -333,18 +443,30 @@ class PrecisionHeadGraphTests(unittest.TestCase):
             onnx_file = root / "fake.onnx"
 
             def fake_exporter(_staged, destination):
+                export_calls.append(destination)
                 destination.write_bytes(b"onnx")
                 return {"effective_arguments": dict(graph.EXPORT_ARGUMENTS)}
 
             def fake_loader(_path):
                 return fixture, {"outputs": [{"name": "output0", "shape": [1, 7, 8400]}]}
 
-            probe = {"status": "verified", "head_output_evidence": accepted_model["head_output_evidence"]}
-            with patch.object(graph.readiness, "inspect_frozen_model", return_value=probe), \
-                 patch.object(graph, "environment_evidence", return_value={"git_commit": "test", "producer_packages": {}}), \
+            expected_probe = {"status": "verified", "head_output_evidence": accepted_model["head_output_evidence"]}
+            real_environment = graph.environment_evidence()
+
+            def real_boundary_probe(_repo, _model, *, probe, runtime_contract, observed_environment):
+                compatibility = readiness.runtime_compatibility_evidence(observed_environment, runtime_contract)
+                self.assertEqual(compatibility["status"], "cpu_probe_supported", compatibility)
+                return {**expected_probe, "head_output_evidence": accepted_model["head_output_evidence"]}
+
+            export_calls = []
+            with patch.object(graph.readiness, "inspect_frozen_model", side_effect=real_boundary_probe), \
+                 patch.object(graph, "environment_evidence", return_value=real_environment), \
                  patch.object(graph, "producer_source_evidence", return_value={}), \
                  patch.object(graph, "git_head", return_value="test-child-commit"):
-                record = graph.prepare_model(root, config, accepted, current, "yolov8n", model_dir, fake_exporter, fake_loader)
+                with self.assertRaises(ValueError):
+                    graph.prepare_model(root, config, accepted, current, "yolov8n", root / "output_fail" / "yolov8n", fake_exporter, fake_loader, {"status": "unresolved", "missing": ["onnx"]})
+                self.assertEqual(export_calls, [])
+                record = graph.prepare_model(root, config, accepted, current, "yolov8n", model_dir, fake_exporter, fake_loader, {"status": "verified"})
             self.assertEqual(record["status"], "completed")
             self.assertTrue((model_dir / "private/frozen_source.pt").is_file())
             self.assertTrue((model_dir / "model.onnx").is_file())

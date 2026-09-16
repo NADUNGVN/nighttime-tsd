@@ -27,6 +27,16 @@ dispatches one isolated child per selected model. The child is the only place
 that imports Ultralytics/ONNX and calls the ONNX exporter. A successful
 manifest still has `scored_run_authorized=false`.
 
+Before those imports each child enforces `YOLO_AUTOINSTALL=0`,
+`ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1`, `PIP_NO_INDEX=1`, and
+`PIP_DISABLE_PIP_VERSION_CHECK=1`. It also inherits
+`CUDA_VISIBLE_DEVICES=-1`, `OMP_NUM_THREADS=2`, and `MKL_NUM_THREADS=2`.
+The manifest records that CUDA API-query status is not instrumented; it does
+not claim that imported libraries made zero internal CUDA queries. Metadata-only
+checks require the locked Torch/Ultralytics/NumPy/pycocotools versions, `onnx`,
+`onnxslim`, and one ONNX Runtime distribution before the exporter is imported.
+No install or network mutation is attempted.
+
 ## Locked inputs
 
 The runner accepts only:
@@ -50,7 +60,9 @@ Before export the runner rechecks, for the selected model block:
 2. frozen checkpoint path, byte count and SHA256 against both config and
    accepted model contract;
 3. current dev/train/test-exclusion inventory, split intersections and all
-   U42/U43/U44 canonical manifests/materializations;
+   U42/U43/U44 canonical manifests/materializations, compared exactly with the
+   accepted snapshot, including IDs/order and recorded source/materialized byte
+   hashes;
 4. frozen PyTorch head flags, active branches, native output shape/meaning and
    model-specific adapter compatibility.
 
@@ -67,7 +79,8 @@ keeps partial output on failure. The reported exporter path must remain inside
 the private workspace before the ONNX is copied to the new model output.
 
 `onnx.checker.check_model` is required. The audit records all graph inputs and
-outputs, static shapes, node count/op types, Q/DQ nodes and the ONNX SHA256.
+outputs, input/output dtypes, static shapes, small constant initializers, node
+count/op types, Q/DQ nodes and the ONNX SHA256.
 Q/DQ is rejected for this float export. A graph output shape alone is not a
 mapping proof.
 
@@ -79,17 +92,25 @@ For every active source branch the audit:
   separator/terminal-`Conv` normalization;
 - records all prefix candidates and excludes `Sigmoid`, `Reshape`, `Concat`,
   and other non-convolution helpers from precision targets;
-- traces each matched node through consumers to actual graph outputs;
-- finds a branch-owned channel merge with explicit axis, input shapes and
-  bbox/classification channel spans;
+- traces each matched node through consumers to the unique relevant primary
+  output, not to a debug-only output;
+- finds exactly one output-linked branch-owned channel merge with explicit
+  axis, input shapes, order and locked spans `bbox=[0,4]`,
+  `classification=[4,7]`;
+- audits post-merge `Reshape`, `Transpose`, `Slice`, `Gather` and `TopK`
+  semantics from explicit attributes/constant evidence. Unknown semantics are
+  `mapping_unresolved`; shape alone is never treated as proof;
 - records source-to-export node names, reachability, downstream operations and
   a stable mapping payload.
 
 Missing, duplicate, renamed/fused-without-lineage, unreachable or ambiguous
 matches produce `mapping_unresolved`; the runner never guesses a layer name or
 forces YOLO11 counts. Bbox and classification target sets must be non-empty
-and disjoint by branch ownership. `baseline_int8` has no FP32 target layers;
-the three intervention sets are derived only from the verified ownership map.
+and disjoint by branch ownership, and target generation requires an internally
+consistent verified mapping. `baseline_int8` has no active branch FP32
+override; its INT8 eligibility and separate sigmoid-FP32 protection remain
+builder/inspector constraints, not claims about every other convolution. The
+three intervention sets are derived only from the verified ownership map.
 
 For YOLO26n, the active `one2one_cv2/one2one_cv3` branches own the pre/post-
 processing channel spans while later TopK/Gather nodes may share final-output
@@ -108,19 +129,26 @@ The native adapter is model-specific:
 
 The runner validates tuple-tensor-plus-dictionary representation, shape/dtype,
 CPU placement, output-specific head keys and coordinate/class semantics in
-synthetic tests. Empty/invalid output and a mismatched end2end contract fail
-closed. Real TensorRT parser/forward compatibility is deferred and must not be
-called `parser-ready-to-score` from shape evidence alone.
+numeric probes when such output is available. Finite coordinates in `[0,640]`,
+ordered corners, finite scores in `[0,1]`, and integer class IDs in `{0,1,2}`
+are required; invalid and empty paths are explicit tests. The prepare adapter
+records a declared contract only, with numeric forward validation deferred.
+Real TensorRT parser/forward compatibility must not be called
+`parser-ready-to-score` from shape evidence alone.
 
 ## Calibration recipe boundary
 
 The runner binds existing U42/U43/U44 manifests and materialized YAML/hash
 records and records the current SHA256 of `scripts/uniform_build_repeat.py`.
-It does not create a calibration tensor. Decoder/color/letterbox/pad,
-interpolation, layout, dtype, normalization, batch and deterministic file-order
-details remain `unresolved_pending_server_prepare` until the reviewed server
-preflight records the actual producer recipe. No official-test pixels or
-labels are read.
+It records the concrete locked helper-level recipe: Ultralytics validation
+decode, BGR source image, centered `LetterBox(640,640, scaleup=false,
+auto=false, padding=114, INTER_LINEAR)`, HWC-uint8 to CHW-uint8 batching,
+batch `1`, workers `0`, `drop_last=true`, manifest order, and float32
+`/255.0` streaming in the existing helper. Because the producer source and
+per-image trace are not executed in graph preparation, the status is accurately
+`graph_only_completed_recipe_unresolved`; a reviewed server child must bind the
+producer source hashes and one-image trace before any cache build. No tensor
+file or official-test pixels/labels are created/read here.
 
 ## Outputs and failure handling
 

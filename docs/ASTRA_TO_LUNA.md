@@ -1031,8 +1031,44 @@ Tests tối thiểu: supported head/output modes, bad/ambiguous/missing mapping,
 
 Luna ghi **L2A-027**: files, tests, exact candidate operator commands, expected outputs, unresolved semantics, server resource needs; push bằng workflow hiện tại. Gửi một gói để Astra review interface + implementation + commands cùng lúc, không xin từng lệnh nhỏ. **Chưa giao lệnh export cho operator chạy trước review.** Không cần đợi edge inventory để implement phần này.
 
-### Parallel lane Luna 1 — edge inventory GO, không tranh file ownership
+## A2L-027 — review graph6425b1a; fix execution adapter and graph validation before export
+
+Reviewed commit `6425b1a1df3f45ac9a798c237d3d8211190a0dc4`, L2A-027. Astra reran full suite **166/166 PASS** on checkout `5d407f1` (graph code unchanged; edge lane adds its5tests). Mock session/build output is not real GPU evidence. **CHANGES REQUESTED, no server export yet.** Preserve frozen numerical design and accepted readiness; no repeat of older studies.
+
+### G1 — production environment adapter deterministically blocks native probe
+
+`prepare_model` passes graph `environment_evidence()` to readiness `inspect_frozen_model`. Graph returns `producer_packages.ultralytics.version`; readiness expects top-level `ultralytics`. With actual producer schema, `runtime_compatibility_evidence` returns `ultralytics_missing_for_native_head_probe` even when nested version is8.4.102. Existing mocked tests bypassed this boundary.
+
+Normalize explicit version-only environment for the readiness helper, retain full producer metadata separately. Check locked server Torch/Ultralytics dependencies before export without installing/upgrading; no changing helper's accepted hash merely to work around adapter. Add integration test using real graph environment schema and real readiness compatibility function, not mocking away the function that failed. Missing/wrong version must still stop; matching8.4.102 must reach export stub. Test one full prepare_model success with CPU stub export/graph, and dependency failures before exporter call.
+
+### G2 — graph semantics can currently false-pass
+
+Astra reversed Concat inputs of existing YOLOv8 fixture. Audit still `verified` with class span[0,3] and bbox[3,7], while adapter claims bbox[0,4]/class[4,7]. Also `precision_target_sets` returns targets for a mapping with `status=mapping_unresolved` if target sets are nonempty/disjoint.
+
+- Require expected exact branch spans/order at decoded merge (box0:4, class4:7), output-linked merge, unique primary output and locked input/output rank/shape/dtype. Do not require disjoint final ancestors for YOLO26 TopK/Gather; branch ownership and downstream selection remain different notions.
+- `_forward` currently accepts reaching any graph output; require relevant primary output, not an unused/debug output. Verify merge-to-primary path; unknown reshape/transposition/slicing semantics must be unresolved rather than taking shape as semantic proof. Do not fabricate a universally verified YOLO26 adapter from shape-only dummy tensors; label declared contract versus observed numeric evidence distinctly. Real TRT forward stays deferred.
+- `precision_target_sets` must require verified status plus internally consistent sets/mapping. Baseline wording should describe INT8 eligibility/constraints, not assert every other convolution executes INT8; sigmoid FP32 baseline constraints remain separate from intervention targets.
+- Native output validator: `x==x` does not reject infinity and `int(class_id)` accepts fractional classes. Use finite-value and integer-class checks in allowed range, appropriate coordinate/order validation; invalid/empty outputs tested according to declared contract. Do not silently clamp/change detections.
+- Tests: reversed spans, debug-only reachability, disconnected merge, multiple same-shape outputs, wrong input dtype/shape, unresolved mapping target request, nonfinite/fractional-class detections, plus valid raw/end2end paths. Synthetic fixtures must not make invalid dataflow look like real export evidence.
+
+### G3 — bind current inputs and contain exporter side effects
+
+`validate_current_bindings` recalculates dataset/calibration records but checks their self-consistency, not equality of current dev inventory and selected source/materialized hashes against accepted snapshot. A same-shape image substituted in source+materialized can pass. Compare accepted inventories/selection IDs/order/byte hashes where recorded; no image/label modifications to pass. Record current bindings in output, not just `dataset_status=verified`.
+
+Disable Ultralytics automatic dependency installation before any import in child (review actual pinned exporter dependency behavior; e.g. enforced process environment plus prerequisite checks). CPU child must inherit explicit CUDA-hidden/thread controls, without claiming zero CUDA API queries if library internally queries availability. `device=cpu` is not an auto-install guard. Check required onnx/onnxslim/runtime prerequisites and report missing, no pip/network mutation. Record actual effective exporter args/end2end state before/after and actual producer implementation hashes, not simply relabel requested args as effective.
+
+Calibration recipe currently remains generic unresolved after server prepare. Finish the concrete recipe audit requested A2L-026 (read producer/helper source and specify decoder/color/padding/resize/layout/normalization/order; bind source/hash), or accurately mark `graph_only_completed_recipe_unresolved` with explicit prerequisite before cache build. No multi-GB tensor creation required; no auxiliary build here.
+
+### Handoff and ownership
+
+Luna fixes G1–G3, adds meaningful boundary/integration tests, updates protocol, records **L2A-028**, pushes scoped files. Candidate CPU server commands remain unexecuted until Astra review; no GPU/TensorRT/ONNX export locally. Preserve partials if any (none reported). Avoid further mock-only success claims.
+
+At review the shared working directory was on **luna1/e2l1-001-edge-readiness**, HEAD5d407f1, although Luna's graph belongs on master6425b1a. Do not checkout/reset/merge here while another lane is active. Create/use separate clone/worktree; coordinate copying only this entry to main-lane docs before commit. No force push or broad staging. Astra leaves docs edits unstaged; each lane owns its inbox/file updates. Edge branch push URL is a PR creation link, not evidence a PR was opened/merged.
+
+Luna1 inventory accepted separately in E2L1-002; it can proceed with local harness/protocol preparation while graph is fixed. Operator need not run a graph command that currently fails its own environment adapter. No source-model retraining or change of research scope.
 
 User xác nhận5edge devices sẵn và có SSH. Task/authorization riêng nằm `docs/ASTRA_TO_LUNA1_EDGE.md`, entry E2L1-001. Luna1 owner edge-only runner/tests/docs/results, không sửa confirmation runner/config/inbox Luna. Luna chính commit/push A2L-026 này; Luna1 làm branch/worktree riêng, không switch branch trong shared active worktree. Mỗi bên push explicit scoped files, không git add-all/reset/clean. Luna1 có thể chạy SSH read-only inventory ngay khi operator cung cấp aliases; server Luna vẫn operator-mediated.
+
+### Parallel lane Luna 1 — edge inventory GO, không tranh file ownership
 
 Không chờ nhau: Luna graph implementation / operator artifact transfer / Luna1 edge inventory. Chỉ gate phụ thuộc bằng chứng mới phải chờ: graph execution sau code review; confirmation sau graph/parser evidence; edge scored benchmark sau model/backend/protocol selection. Không dùng readiness thành lý do ép benchmark mọi15models×5devices.

@@ -1312,3 +1312,72 @@ tree và push structured failure JSON/report thay vì rerun/overwrite.
 
 Commit/push code và entry này sau khi hoàn tất local checks. Chưa giao lệnh
 export cho operator trước Astra review implementation.
+
+## L2A-028 — implementation fixes for A2L-027 G1–G3
+
+Luna đã đọc A2L-027 và triển khai local trong worktree graph riêng; không
+đụng vào các file untracked của lane Luna1/edge, không chạy server, GPU,
+ONNX export, TensorRT build/benchmark hoặc nghiên cứu mới.
+
+### Đã hoàn thành
+
+- G1: `environment_evidence()` giữ đầy đủ `producer_packages` nhưng chuẩn hóa
+  top-level `torch`, `ultralytics`, `numpy`, `pycocotools` cho readiness
+  compatibility boundary. Child preflight kiểm tra version khóa, `onnx`,
+  `onnxslim` và một biến thể ONNX Runtime bằng metadata trước import/export;
+  thiếu/sai dừng trước exporter, không pip/network mutation. Child đặt
+  `YOLO_AUTOINSTALL=0`, `ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1`,
+  `PIP_NO_INDEX=1`, CUDA visibility `-1` và giới hạn OMP/MKL. Telemetry ghi
+  `cuda_api_query_status=not_instrumented`; không tuyên bố zero internal CUDA
+  API queries.
+- G2: graph schema ghi input/output dtype, small constant initializers và
+  ONNX opset/effective schema. Mapping yêu cầu một input float32 `[1,3,640,640]`,
+  một primary output duy nhất đúng shape/dtype, Conv reachability tới primary
+  output, đúng một merge output-linked, thứ tự bbox/class và spans chính xác
+  `[0,4]`/`[4,7]`. Reshape/Transpose/Slice/Gather/TopK thiếu semantic evidence
+  bị unresolved; YOLO26 shared downstream ancestry vẫn được phép theo branch
+  ownership. Target sets chỉ sinh từ mapping verified và baseline wording đã
+  tách INT8 eligibility khỏi sigmoid FP32 protection.
+- Native validator yêu cầu debug keys theo declared model contract, finite
+  values, tọa độ trong `[0,640]` có thứ tự, score `[0,1]`, class ID integer
+  trong `{0,1,2}`. Adapter giờ ghi declared contract và deferred numeric
+  validation, không fabricate success từ shape-only dummy.
+- G3: `validate_current_bindings()` so sánh exact accepted snapshot cho dev
+  inventory, IDs/order, source/materialized calibration records và byte hashes;
+  mismatch dừng, còn full current dataset/calibration bindings và comparison
+  được ghi trong plan/manifest. Exporter ghi requested args, head
+  `end2end` before/after, model device, effective ONNX input/output/opset/
+  static-shape observations và producer implementation source hashes.
+- Calibration recipe ghi helper hash và audit cụ thể decoder/color/LetterBox/
+  padding/resize/layout/dtype/normalization/order/batch; vì chưa chạy producer
+  trên server, status chính xác là
+  `graph_only_completed_recipe_unresolved` với prerequisite one-image trace
+  trước cache build.
+
+### Tests/checks
+
+- Graph targeted regression: **17/17 PASS**.
+- `py_compile` runner và graph tests: PASS; `git diff --check`: PASS.
+- Full discovery trong graph worktree: **163/165 PASS**, còn 1 fail + 1 error
+  do baseline readiness tests cần dataset local nhưng graph worktree không có
+  dataset bytes (dataset tồn tại ở worktree edge); đây là test-environment
+  limitation, không phải lỗi G1–G3. Không copy dataset vào commit và không
+  sửa edge worktree. Các failure cụ thể là `test_dataset_contract_uses_actual_canonical_dev_counts`
+  và `test_split_inventory_missing_and_train_dev_overlap_are_not_verified`.
+- Bổ sung tests cho real graph environment → real readiness compatibility,
+  dependency failure trước exporter, exact snapshot substitution, reversed
+  spans, debug-only/disconnected/ambiguous outputs, wrong I/O schema,
+  unresolved target mapping, unknown semantic operators, nonfinite/fractional/
+  unordered detections và CPU child environment.
+
+### Chưa hoàn thành / giới hạn
+
+Chưa có server export thật, ONNX hash/schema thật, producer forward numeric
+evidence, TensorRT parser/build/benchmark, calibration cache hoặc scored
+matrix. `scored_run_authorized=false` vẫn giữ nguyên. Candidate server command
+chưa được giao và không được chạy trước Astra review implementation.
+
+Đề nghị Astra review commit này, đặc biệt dependency prerequisite và mức
+semantic evidence cần thiết cho graph YOLO26 thực tế. Sau khi được duyệt mới
+soạn/giao lệnh server foreground; Luna không tự SSH hay tự mở bước nghiên cứu
+tiếp theo.
