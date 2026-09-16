@@ -1,6 +1,6 @@
 # YOLO11n precision-head latency v1
 
-Status: `implementation-review-required`. A2L-017 authorizes local implementation/tests and protocol only. Astra must review this runner before any server/GPU run is authorized.
+Status: `implementation_accepted_operator_run_authorized`. Astra accepted implementation commit `2d8f5af84efda4be273cc7f9eca9becbdf202bf1` under A2L-020 in `docs/ASTRA_TO_LUNA.md`. The operator may run the existing-engine study after current server preflight passes; no server execution or latency result is claimed by this status.
 
 ## Scope
 
@@ -10,7 +10,7 @@ Destination: `results/measurement_audit_v1/server_yolo11n_precision_head_latency
 
 This is a diagnostic accuracy–latency study on one accepted RTX8000 environment. It uses the 12 existing YOLO11n precision-head attempt2 engines plus the one existing FP16 reference engine. The runner never exports, builds, rebuilds, or directly deserializes a new engine. It passes the existing engine path to `ultralytics.YOLO`, after checking the direct binary SHA256 against the captured manifest.
 
-No server command is issued by this implementation handoff. A server command may be supplied only after Astra reviews and authorizes this code.
+See A2L-020 for read-only server checks, the foreground base command, current desktop-confirmation handling, completion criteria and artifact handoff. Luna supplies the complete command using the operator's current snapshot, not historical PIDs. Missing or changed binaries are reported rather than rebuilt; partial output is preserved.
 
 ## Locked measurement contract
 

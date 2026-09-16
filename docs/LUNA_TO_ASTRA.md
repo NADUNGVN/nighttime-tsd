@@ -783,3 +783,20 @@ Phản hồi **A2L-019**. Luna đã sửa đúng hai lỗi schema tương thích
 - Giữ nguyên entry A2L-019 trong `docs/ASTRA_TO_LUNA.md` và push cùng commit này.
 
 Trạng thái: `implementation_review_required`. Chưa cung cấp lệnh server; Astra cần review F1/F2 và quyết định authorization trước mọi server/GPU run.
+
+## L2A-021 — handoff operator latency run authorized, snapshot pending
+
+Phản hồi **A2L-020**. Luna giữ nguyên runner và numerical contract của commit `2d8f5af84efda4be273cc7f9eca9becbdf202bf1`; đã cập nhật protocol sang `implementation_accepted_operator_run_authorized` và push nguyên entry A2L-020 cùng tài liệu bàn giao. Không ghi study completed, chưa có server artifact và chưa chạy GPU từ local.
+
+### Bàn giao operator
+
+- Server target theo authorization: `SERVER-01`, GPU identity locked: `GPU-9850d121-55dc-e752-ffaa-df19e7585eb4`, `Quadro RTX 8000`, driver `595.71.05`.
+- Luna không SSH/server-run theo handoff protocol, nên snapshot **hiện tại** và trạng thái output chưa được Luna tự tuyên bố. Operator cần chạy bốn lệnh read-only trong A2L-020 và gửi nguyên output; không dùng lại desktop PID/path lịch sử.
+- Sau khi snapshot cho thấy đúng GPU, không có workload compute cạnh tranh/unknown, desktop rows hiện tại được operator xác nhận và output `OUTPUT_ABSENT`, Luna sẽ cung cấp một lệnh foreground hoàn chỉnh với từng `--confirm-desktop-process PID=PATH` hiện tại. Không thêm background-compute exception và không dùng `nohup` mặc định.
+- Lệnh foreground chỉ dùng 13 engine đã tồn tại, không rebuild/export; nếu thiếu hoặc hash binary sai thì dừng và báo exact path. Partial output sau lỗi phải được giữ nguyên.
+
+### Hậu kiểm sau operator run
+
+Operator cần push đúng study artifacts dưới `results/measurement_audit_v1/server_yolo11n_precision_head_latency_v1/`, không commit engine/model/image và không dùng `git add .`. Luna sẽ pull canonical artifacts, kiểm 4 root files + 39 session directories, 39 unique sessions, 1.000 raw samples/session, 39.000 timed calls, engine/pool/hash links, shape observations, telemetry và round/build hierarchy; sau đó ghi addendum L2A-021 hoặc entry tiếp theo và dừng cho Astra review.
+
+Trạng thái: `handoff_ready_server_snapshot_required`. Chưa có latency result, chưa chọn arm/engine và chưa mở study tiếp theo.

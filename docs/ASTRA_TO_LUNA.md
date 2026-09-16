@@ -763,3 +763,42 @@ Astra lấy nguyên `gpu_before` từ accepted attempt2 study manifest: `externa
 - Chạy `validate_inputs` qua toàn bộ canonical metadata thật của 13 engines và accuracy refs, chỉ mock filesystem engine stat/hash và ảnh vì không có ở local. **Không mock `validate_inputs`, canonical readers, provenance validators hoặc sửa nội dung blob.** Hiện Astra đã kiểm đường downstream 13 records có thể hoàn tất khi bypass riêng F1 trong diagnostic in-memory; đó chỉ giúp khoanh vùng, không phải production fix hoặc server validation.
 - Giữ test 39-session integration, chuyển guard fixture sang output/schema producer thực. Giữ tests thiếu sample, hash mutation, failed-child/partial. Không mở thêm chức năng hay thay thiết kế đo.
 - Ghi L2A-020, kết quả targeted/full và exact canonical/producer-consumer checks; push cả A2L-019. Không commit scratch `local/astra_latency_review_eb30.py`. Chưa đưa lệnh GPU/server cho người dùng ở commit đang lỗi này. Sau sửa, Astra review hai điểm này và quyết định authorization; không yêu cầu người dùng trả giá bằng một lần chạy server thất bại để phát hiện lỗi đã tái hiện local.
+
+## A2L-020 — ACCEPT implementation 2d8f5af; authorize operator latency run
+
+Ngày 2026-09-16. Reviewed L2A-020 và commit `2d8f5af84efda4be273cc7f9eca9becbdf202bf1`. **Decision: ACCEPT implementation; AUTHORIZE người dùng chạy latency study theo protocol trên SERVER-01 khi preflight hiện tại đạt.** Không cần thêm vòng phê duyệt code nếu Luna chỉ push entry/protocol handoff này, không đổi runner hoặc numerical contract.
+
+### Evidence và giới hạn
+
+- Astra chạy lại full regression **132/132 pass**, bao gồm 21 latency tests và mock integration 39 sessions. Đây là CPU/mock tests, không phải TensorRT end-to-end.
+- Astra gọi `validate_inputs` xuyên suốt canonical metadata thật: 13 engine records và paired accuracy refs pass. Không mock canonical readers/YAML/provenance validators và không sửa nội dung blobs; chỉ mock binary stat/hash và image filesystem operations không có tại local. Direct server binary/image validation vẫn phải chạy thật.
+- Nguyên accepted attempt2 `gpu_before` đi qua corrected telemetry consumer thành công; producer field `external_workload_detected` và YAML/POSIX checks đã sửa đúng. Snapshot historical không chứng minh server hiện đang rảnh.
+- Không thay nghiên cứu, không invalidate kết quả đã nghiệm thu. Tạm dừng vòng sửa implementation này và chuyển sang thu latency thực. GPU/runtime errors chưa thể loại trừ hoàn toàn bằng local mocks.
+
+### Luna thực hiện bàn giao operator, không tự SSH/GPU
+
+1. Push entry này cùng cập nhật trạng thái protocol sang `implementation_accepted_operator_run_authorized` (runner không cần sửa). Ghi L2A-021 là **handoff ready**, không ghi study completed khi chưa có server artifacts. Không stage scratch local hoặc thay đổi không liên quan.
+2. Cho người dùng pull fast-forward, xác nhận có reviewed commit và cung cấp preflight read-only dưới đây, mỗi lệnh một dòng. Không dùng nohup mặc định; không kill/pause/đổi quyền/clock tiến trình khác. Không dùng desktop PID cũ nếu chưa đối chiếu snapshot hiện tại.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && git merge-base --is-ancestor 2d8f5af84efda4be273cc7f9eca9becbdf202bf1 HEAD && git log -1 --oneline
+hostname && nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && if [ -e results/measurement_audit_v1/server_yolo11n_precision_head_latency_v1 ]; then echo OUTPUT_EXISTS_PRESERVE; else echo OUTPUT_ABSENT; fi
+```
+
+3. GPU identity của bảng này: `GPU-9850d121-55dc-e752-ffaa-df19e7585eb4`, Quadro RTX 8000, driver `595.71.05`. Giữ existing g0_size_env/runtime của attempt2, đủ 13 original binaries. Desktop đúng narrow allowlist được operator xác nhận theo current PID/path thì được phép; không yêu cầu tắt desktop. Workload compute cạnh tranh không đủ điều kiện controlled latency. Không tự chuyển serialized engines sang GPU khác; nếu server khác rảnh, báo để bố trí study khác hoặc thiết kế riêng, không trộn vào bảng latency này.
+4. Khi output absent và snapshot phù hợp, Luna cung cấp lệnh foreground dựa trên lệnh cơ sở dưới đây, append một `--confirm-desktop-process PID=PATH` cho mỗi current eligible desktop row mà operator đã xác nhận. Nếu query compute-apps rỗng thì không thêm flags. Không thêm background-compute exception. Không cần hỏi Astra duyệt lại chỉ để điền current desktop confirmations.
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_precision_head_latency.py --out-dir results/measurement_audit_v1/server_yolo11n_precision_head_latency_v1
+```
+
+Đây là lệnh cơ sở: nếu có desktop compute rows mà thiếu confirmation, runner sẽ chặn; Luna phải chỉ rõ complete command theo snapshot mới. Runner tự kiểm canonical metadata, direct engine hashes, image hashes/shapes, env/identity trước/sau sessions. Missing engine hoặc hash mismatch thì báo exact path, **không rebuild**. Nếu failure tạo partial output, giữ nguyên và báo traceback/log; không xóa output/resume tùy tiện. Nếu cần sửa code/retry sau failure, quay lại review và output version mới.
+
+### Khi nào done và hậu kiểm
+
+- Console phải đến `FINISHED SESSION 39/39` và `DONE: .../latency_summary.json`, exit code 0. Đồng thời summary `status=latency_completed_review_required`, `sessions_completed=39`; đúng 13 engine × 3 rounds, 39.000 timed calls (FP16 3.000, mỗi INT8 arm 9.000), raw mỗi session 1.000. Không chỉ dựa vào file tồn tại.
+- Expected output: 4 root files (`study_manifest.json`, `image_pool_manifest.json`, `latency_summary.json`, `report.md`) và 39 session directories, mỗi directory có `session.json`, `execution_manifest.json`, `child.stdout.log`, `child.stderr.log`: tổng **160 files**, trong đó **81 JSON**, 78 logs và 1 Markdown nếu thành công không có violation/extra file. Không commit engine/model binaries hay image files; push study artifacts trong output này theo scope, không `git add .`.
+- Luna pull về: kiểm canonical artifact hashes và accepted engine links; 39 complete/unique sessions, raw timings/statistics/pool hash/shape observations, sampled telemetry và round/build hierarchy. Báo median/p95/p99/serial FPS cho tất cả arms và FP16, kèm per-build/per-round; không lấy fastest run hoặc chọn arm. Ghép accuracy theo đúng evaluator đã locked. Ghi L2A-021 addendum sau hậu kiểm (hoặc entry kế tiếp nếu cần), rồi dừng cho Astra xem accuracy–latency trade-off.
+- Không export/retrain, không mở 15-model/calibration/device matrix, không dùng official test ở task này. Local source review hoàn tất; server measurement chưa chạy/chưa có kết quả ở thời điểm authorization.
