@@ -1,0 +1,20 @@
+{
+  "schema_version": "e2l1-edge-telemetry-v1",
+  "target": "E1",
+  "run_id": "20260916T163312816579Z",
+  "artifacts": {
+    "telemetry.stdout": {
+      "sha256": "105926a7b51048e97077207940f05caa7acdb9f5c87be38d2e576ae39b2d844a",
+      "bytes": 3901
+    },
+    "telemetry.stderr": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "telemetry.json": {
+      "sha256": "57f876b2168980cbfdd2a81e057a59ef75ae24323dbfadc0b679cb87e5025423",
+      "bytes": 6742
+    }
+  },
+  "manifest_hash_note": "Hashes are computed from bytes after exclusive writes on Windows; manifest is not self-hashed."
+}

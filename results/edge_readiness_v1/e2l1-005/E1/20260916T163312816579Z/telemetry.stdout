@@ -1,0 +1,96 @@
+__E2L1_SOURCE__ command=source_inventory
+command:python3=/usr/bin/python3
+command:free=/usr/bin/free
+command:tegrastats=missing
+command:timeout=/usr/bin/timeout
+command:nvidia-smi=missing
+command:vcgencmd=/usr/bin/vcgencmd
+command:sensors=missing
+path:/sys/class/powercap=missing
+path:/sys/bus/iio/devices=missing
+path:/sys/class/thermal=present
+__E2L1_SAMPLE__ device_monotonic_ns=220878961961040
+__E2L1_SOURCE__ source=free_bytes
+               total        used        free      shared  buff/cache   available
+Mem:      8454012928   605929472   438927360    35799040  7603650560  7848083456
+Swap:     2147467264           0  2147467264
+__E2L1_SOURCE__ source=thermal_sysfs
+/sys/class/thermal/thermal_zone0/type: cpu-thermal
+/sys/class/thermal/thermal_zone0/temp: 49050
+__E2L1_SOURCE__ source=tegrastats
+unavailable: tegrastats or timeout is missing
+__E2L1_SOURCE__ source=nvidia_smi
+unavailable: nvidia-smi is missing
+__E2L1_SOURCE__ source=vcgencmd
+temp=49.4'C
+throttled=0x0
+__E2L1_SOURCE__ source=power_files
+unavailable: no readable power files found
+__E2L1_SAMPLE__ device_monotonic_ns=220879998860026
+__E2L1_SOURCE__ source=free_bytes
+               total        used        free      shared  buff/cache   available
+Mem:      8454012928   606715904   438140928    35799040  7603732480  7847297024
+Swap:     2147467264           0  2147467264
+__E2L1_SOURCE__ source=thermal_sysfs
+/sys/class/thermal/thermal_zone0/type: cpu-thermal
+/sys/class/thermal/thermal_zone0/temp: 48500
+__E2L1_SOURCE__ source=tegrastats
+unavailable: tegrastats or timeout is missing
+__E2L1_SOURCE__ source=nvidia_smi
+unavailable: nvidia-smi is missing
+__E2L1_SOURCE__ source=vcgencmd
+temp=49.4'C
+throttled=0x0
+__E2L1_SOURCE__ source=power_files
+unavailable: no readable power files found
+__E2L1_SAMPLE__ device_monotonic_ns=220881029482397
+__E2L1_SOURCE__ source=free_bytes
+               total        used        free      shared  buff/cache   available
+Mem:      8454012928   605569024   439205888    35799040  7603732480  7848443904
+Swap:     2147467264           0  2147467264
+__E2L1_SOURCE__ source=thermal_sysfs
+/sys/class/thermal/thermal_zone0/type: cpu-thermal
+/sys/class/thermal/thermal_zone0/temp: 49050
+__E2L1_SOURCE__ source=tegrastats
+unavailable: tegrastats or timeout is missing
+__E2L1_SOURCE__ source=nvidia_smi
+unavailable: nvidia-smi is missing
+__E2L1_SOURCE__ source=vcgencmd
+temp=49.4'C
+throttled=0x0
+__E2L1_SOURCE__ source=power_files
+unavailable: no readable power files found
+__E2L1_SAMPLE__ device_monotonic_ns=220882059838414
+__E2L1_SOURCE__ source=free_bytes
+               total        used        free      shared  buff/cache   available
+Mem:      8454012928   604372992   440401920    35799040  7603732480  7849639936
+Swap:     2147467264           0  2147467264
+__E2L1_SOURCE__ source=thermal_sysfs
+/sys/class/thermal/thermal_zone0/type: cpu-thermal
+/sys/class/thermal/thermal_zone0/temp: 49050
+__E2L1_SOURCE__ source=tegrastats
+unavailable: tegrastats or timeout is missing
+__E2L1_SOURCE__ source=nvidia_smi
+unavailable: nvidia-smi is missing
+__E2L1_SOURCE__ source=vcgencmd
+temp=49.4'C
+throttled=0x0
+__E2L1_SOURCE__ source=power_files
+unavailable: no readable power files found
+__E2L1_SAMPLE__ device_monotonic_ns=220883090435301
+__E2L1_SOURCE__ source=free_bytes
+               total        used        free      shared  buff/cache   available
+Mem:      8454012928   601440256   443334656    35799040  7603732480  7852572672
+Swap:     2147467264           0  2147467264
+__E2L1_SOURCE__ source=thermal_sysfs
+/sys/class/thermal/thermal_zone0/type: cpu-thermal
+/sys/class/thermal/thermal_zone0/temp: 49050
+__E2L1_SOURCE__ source=tegrastats
+unavailable: tegrastats or timeout is missing
+__E2L1_SOURCE__ source=nvidia_smi
+unavailable: nvidia-smi is missing
+__E2L1_SOURCE__ source=vcgencmd
+temp=49.4'C
+throttled=0x0
+__E2L1_SOURCE__ source=power_files
+unavailable: no readable power files found

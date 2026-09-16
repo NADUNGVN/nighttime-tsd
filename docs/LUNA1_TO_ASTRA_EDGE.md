@@ -316,3 +316,96 @@ only the mock backend and deterministic fixtures; no benchmark claim is made.
 **Git:** branch `luna1/e2l1-004-session-pool-clock` in worktree
 `D:/Research/paper-luna-edge-002`; commit and push recorded after the scoped
 handoff commit. Do not open or merge a PR automatically.
+
+## L1A-005 — bounded raw telemetry feasibility sample
+
+**Status:** GO raw read-only telemetry feasibility completed for the four
+authorized targets E1/E2/E3/E5; **NO-GO** for inference, model/runtime build,
+benchmark, measured inference energy/FPS/AP, installation or device-state change.
+The active GitHub account was `NADUNGVN`. No private endpoint or credential is
+included in these artifacts.
+
+### Capture scope and method
+
+The new
+[`collect_telemetry.py`](../scripts/edge_readiness/collect_telemetry.py) sends a
+fixed foreground shell script through SSH with `BatchMode=yes`,
+`ConnectTimeout=5` and `StrictHostKeyChecking=yes`. It performs five snapshots
+per canonical run, records device `time.monotonic_ns()` before each snapshot and
+records local receive monotonic timestamps separately. `tegrastats` is a child
+bounded to 2 seconds per snapshot; the full canonical sample windows were below
+30 seconds/device. Only `free -b`, readable thermal sysfs files,
+`tegrastats`, `nvidia-smi` query, `vcgencmd` reads and readable power-file probes
+were used. No load, model, inference, conversion, benchmark, package command,
+sudo, signal, mode/clock/fan change or process-stop action was sent.
+
+The parser preserves each raw sample block and source label. It reports memory,
+thermal, throttle and power observations without merging rails. Power values are
+not measured inference energy: no workload ran, source boundaries are not
+whole-device by default, and SSH receipt time is not treated as sensor time.
+
+### Canonical runs
+
+| Device | SSH alias | Run ID | SSH | Local duration | Samples / device timestamp gaps | Observed channels |
+|---|---|---|---|---:|---|---|
+| E1 | `pi5` | `20260916T163312816579Z` | 0 | 5.6 s | 5 / 1.030–1.037 s | `free -b` memory; thermal sysfs + `vcgencmd`; `vcgencmd get_throttled` |
+| E2 | `nx` | `20260916T163228269358Z` | 0 | 15.5 s | 5 / 3.165–3.173 s | `free -b` + `tegrastats` memory; thermal sysfs + `tegrastats` |
+| E3 | `agx` | `20260916T163249320243Z` | 0 | 15.9 s | 5 / 3.150–3.160 s | `free -b` + `tegrastats` memory; thermal sysfs + `tegrastats` |
+| E5 | `nano` | `20260916T163323031572Z` | 0 | 16.3 s | 5 / 3.084–3.086 s | `free -b` + `tegrastats` memory; `tegrastats` thermal and labelled rails |
+
+Feasibility observations from the raw samples:
+
+- E1: memory is available in bytes; `vcgencmd` reports approximately
+  49.4°C and `throttled=0x0`. No software/exposed power channel was available.
+- E2: `tegrastats` reports RAM approximately 1891–1892/6854 MB and thermal
+  labels around 30–30.5°C plus PMIC 50°C. `nvidia-smi`, vcgencmd and readable
+  power files were unavailable.
+- E3: `tegrastats` reports RAM approximately 2571–2574/14887 MB and thermal
+  labels around 30.5–35.25°C plus PMIC 50°C. `nvidia-smi`, vcgencmd and
+  readable power files were unavailable.
+- E5: `tegrastats` reports RAM approximately 2191–2196/7607 MB and thermal
+  labels approximately 49.5–51.7°C. It exposes separate `VDD_IN`,
+  `VDD_CPU_GPU_CV` and `VDD_SOC` values (roughly 4.600–4.672 W,
+  0.559–0.638 W and 1.397–1.437 W respectively); these remain labelled
+  source rails with `unknown_rail_boundary`, are not summed and are not called
+  whole-device power. `nvidia-smi` is present but returned `N/A` for queried
+  telemetry fields. Several E5 thermal sysfs reads returned `No data available`
+  and remain in captured stderr.
+
+### Artifact locations and hashes
+
+Each canonical directory contains `telemetry.stdout`, `telemetry.stderr`,
+`telemetry.json`, `parsed_channels.json` and manifests. Hashes below are SHA-256
+of the stored bytes; the per-run `manifest.json` contains all raw/summary file
+hashes and `parsed_manifest.json` contains the parsed artifact hash.
+
+| Device / run | Artifact directory | stdout SHA-256 | telemetry.json SHA-256 | parsed_channels.json SHA-256 |
+|---|---|---|---|---|
+| E1 / `20260916T163312816579Z` | [E1 run](../results/edge_readiness_v1/e2l1-005/E1/20260916T163312816579Z/) | `105926a7b51048e97077207940f05caa7acdb9f5c87be38d2e576ae39b2d844a` | `57f876b2168980cbfdd2a81e057a59ef75ae24323dbfadc0b679cb87e5025423` | `9a71e1c5dc10a4fbbc9a7250af2a77869fe665ec1569513f03f9a5cfaebaf7b9` |
+| E2 / `20260916T163228269358Z` | [E2 run](../results/edge_readiness_v1/e2l1-005/E2/20260916T163228269358Z/) | `dc9c9b419d72a40989f9d411393cac96d0a49dd99e0e681dfe6c80a35b4290e7` | `527117584767b18ac3fc07224ac49ceb2703d58a0ff9fd79575e3456031af3c3` | `d2a7d1a90446d2c4830bb85fd9feee78df0ad405025094cd5a5ebaf013571a77` |
+| E3 / `20260916T163249320243Z` | [E3 run](../results/edge_readiness_v1/e2l1-005/E3/20260916T163249320243Z/) | `c523fcb6d2e7dbc0f02f9f62eddf7e5589ea7227fadf92cffa27b13791a3977e` | `7f539a67f1f94ea6084ef31297c1a24634de79b29ae48d627bb38026d191c819` | `abf1028d77187374c9f8d517f2af63e60a31284c0633291a3f36bb14f2123d66` |
+| E5 / `20260916T163323031572Z` | [E5 run](../results/edge_readiness_v1/e2l1-005/E5/20260916T163323031572Z/) | `61ae2c6ad2917457b8ee2ce6c9d2fff71369c482b61a76dfbf139f593268367a` | `926af1f41b3c138a74ce3edb26080965e35868d2e410fb76fb28a3c1137e8fd9` | `93e636ed9f9452b9f7b725ce6a0ec825002fc308a3cf871307d4fd9830d69b52` |
+
+The first E2 attempt, retained as diagnostic evidence rather than canonical
+output, is [E2 retry-diagnostic](../results/edge_readiness_v1/e2l1-005/E2/20260916T163147328463Z/): it captured 5 samples in ~15.6 seconds but returned shell code 1 because the initial loop's final `&&` condition was false. The collector was corrected before the canonical E2 run. Thus E2 has two bounded attempts totaling approximately 31.1 seconds; this small cumulative deviation is recorded rather than hidden. No device state was changed in either attempt.
+
+### Local verification and limitations
+
+```text
+python -m unittest discover -s tests -p 'test_edge*.py' -v
+Ran 26 tests ... OK
+python -m py_compile scripts/edge_readiness/collect_inventory.py scripts/edge_readiness/collect_telemetry.py scripts/edge_readiness/measurement_harness.py
+```
+
+The parser tests include the captured-style `tegrastats` `RAM`/temperature/
+rail labels and `vcgencmd` temperature/throttle fields. These samples establish
+source/parser availability only. They do not establish controlled idle,
+steady-state, clock alignment accuracy, external-meter boundary, cooling or
+power-supply conditions; they must not feed `power_energy` or any inference
+energy/FPS/AP statistic. A future real adapter still needs device workload
+boundaries, synchronized source timestamps, actual content provenance and
+reviewed power measurement scope.
+
+**Git:** branch `luna1/e2l1-005-telemetry-feasibility` in worktree
+`D:/Research/paper-luna-edge-002`; commit/push follows after final local checks.
+No automatic PR or merge.

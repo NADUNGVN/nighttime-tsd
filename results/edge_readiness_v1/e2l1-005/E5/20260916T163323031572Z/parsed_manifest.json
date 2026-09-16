@@ -1,0 +1,8 @@
+{
+  "source_stdout_sha256": "61ae2c6ad2917457b8ee2ce6c9d2fff71369c482b61a76dfbf139f593268367a",
+  "parsed_channels": {
+    "sha256": "93e636ed9f9452b9f7b725ce6a0ec825002fc308a3cf871307d4fd9830d69b52",
+    "bytes": 29701
+  },
+  "manifest_hash_note": "Hash is computed from parsed_channels.json bytes after exclusive write; this manifest is not self-hashed."
+}

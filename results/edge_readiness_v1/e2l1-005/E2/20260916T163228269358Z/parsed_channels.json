@@ -1,0 +1,603 @@
+{
+  "schema_version": "e2l1-edge-telemetry-v1",
+  "source_stdout_sha256": "dc9c9b419d72a40989f9d411393cac96d0a49dd99e0e681dfe6c80a35b4290e7",
+  "parser_sha256": "73603b917aa3a40a4456cff3d066a814fe7408f8bb86aad4fbc2f33f4847856e",
+  "telemetry": {
+    "sample_count": 5,
+    "samples": [
+      {
+        "device_monotonic_ns": 477090297140046,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:     7187165184  1902170112  3417370624    69230592  1867624448  4911751168\nSwap:    3593576448    15466496  3578109952\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 31000\n/sys/class/thermal/thermal_zone1/temp: 30500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 30000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 30650\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:32:30 RAM 1891/6854MB (lfb 199x4MB) SWAP 15/3427MB (cached 0MB) CPU [1%@1190,2%@1190,5%@1190,4%@1190,3%@1190,20%@1190] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@30.5C thermal@30.3C AO@30C GPU@30.5C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 477093461894430,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:     7187165184  1901989888  3417546752    69234688  1867628544  4911927296\nSwap:    3593576448    15466496  3578109952\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 30500\n/sys/class/thermal/thermal_zone1/temp: 30500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 30000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 30500\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:32:33 RAM 1892/6854MB (lfb 199x4MB) SWAP 15/3427MB (cached 0MB) CPU [0%@1190,1%@1190,0%@1190,0%@1190,0%@1190,0%@1190] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@30.5C thermal@30.5C AO@30C GPU@30.5C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 477096635358835,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:     7187165184  1902243840  3417288704    69234688  1867632640  4911673344\nSwap:    3593576448    15466496  3578109952\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 30500\n/sys/class/thermal/thermal_zone1/temp: 30500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 30500\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 30300\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:32:36 RAM 1892/6854MB (lfb 199x4MB) SWAP 15/3427MB (cached 0MB) CPU [0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@30.5C thermal@30.3C AO@30C GPU@30.5C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 477099806218157,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:     7187165184  1902772224  3416760320    69234688  1867632640  4911144960\nSwap:    3593576448    15466496  3578109952\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 30500\n/sys/class/thermal/thermal_zone1/temp: 30500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 30000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 30500\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:32:40 RAM 1892/6854MB (lfb 199x4MB) SWAP 15/3427MB (cached 0MB) CPU [0%@1190,0%@1190,0%@1190,4%@1190,13%@1190,0%@1190] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@30.5C thermal@30.5C AO@30C GPU@30.5C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 477102979270562,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:     7187165184  1902678016  3416854528    69234688  1867632640  4911239168\nSwap:    3593576448    15466496  3578109952\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 30500\n/sys/class/thermal/thermal_zone1/temp: 30500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 30000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 30500\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:32:43 RAM 1892/6854MB (lfb 199x4MB) SWAP 15/3427MB (cached 0MB) CPU [0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@30.5C thermal@30.5C AO@30C GPU@30.5C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      }
+    ],
+    "source_markers": [
+      "__E2L1_SOURCE__ command=source_inventory",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files"
+    ],
+    "timestamp_origin": "device_monotonic_ns from device python3 time.monotonic_ns; raw source lines are unmodified",
+    "timestamp_status": "available",
+    "timestamp_order": "strictly_increasing",
+    "sample_gaps_ns": [
+      3164754384,
+      3173464405,
+      3170859322,
+      3173052405
+    ],
+    "max_gap_ns": 3173464405,
+    "channels": {
+      "memory": [
+        {
+          "sample_index": 0,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 7187165184,
+          "used": 1902170112,
+          "free": 3417370624,
+          "shared": 69230592,
+          "buff_cache": 1867624448,
+          "available": 4911751168
+        },
+        {
+          "sample_index": 0,
+          "source": "tegrastats",
+          "label": "RAM",
+          "used": 1891,
+          "total": 6854,
+          "unit": "MB"
+        },
+        {
+          "sample_index": 1,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 7187165184,
+          "used": 1901989888,
+          "free": 3417546752,
+          "shared": 69234688,
+          "buff_cache": 1867628544,
+          "available": 4911927296
+        },
+        {
+          "sample_index": 1,
+          "source": "tegrastats",
+          "label": "RAM",
+          "used": 1892,
+          "total": 6854,
+          "unit": "MB"
+        },
+        {
+          "sample_index": 2,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 7187165184,
+          "used": 1902243840,
+          "free": 3417288704,
+          "shared": 69234688,
+          "buff_cache": 1867632640,
+          "available": 4911673344
+        },
+        {
+          "sample_index": 2,
+          "source": "tegrastats",
+          "label": "RAM",
+          "used": 1892,
+          "total": 6854,
+          "unit": "MB"
+        },
+        {
+          "sample_index": 3,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 7187165184,
+          "used": 1902772224,
+          "free": 3416760320,
+          "shared": 69234688,
+          "buff_cache": 1867632640,
+          "available": 4911144960
+        },
+        {
+          "sample_index": 3,
+          "source": "tegrastats",
+          "label": "RAM",
+          "used": 1892,
+          "total": 6854,
+          "unit": "MB"
+        },
+        {
+          "sample_index": 4,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 7187165184,
+          "used": 1902678016,
+          "free": 3416854528,
+          "shared": 69234688,
+          "buff_cache": 1867632640,
+          "available": 4911239168
+        },
+        {
+          "sample_index": 4,
+          "source": "tegrastats",
+          "label": "RAM",
+          "used": 1892,
+          "total": 6854,
+          "unit": "MB"
+        }
+      ],
+      "thermal": [
+        {
+          "sample_index": 0,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 31000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 0,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone1/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 0,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone2/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 0,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone3/temp",
+          "value_millidegrees_c": 30000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 0,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone4/temp",
+          "value_millidegrees_c": 50000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 0,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone5/temp",
+          "value_millidegrees_c": 30650,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 0,
+          "source": "tegrastats",
+          "label": "AUX",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 0,
+          "source": "tegrastats",
+          "label": "CPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 0,
+          "source": "tegrastats",
+          "label": "thermal",
+          "value_c": 30.3,
+          "unit": "C"
+        },
+        {
+          "sample_index": 0,
+          "source": "tegrastats",
+          "label": "AO",
+          "value_c": 30.0,
+          "unit": "C"
+        },
+        {
+          "sample_index": 0,
+          "source": "tegrastats",
+          "label": "GPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 0,
+          "source": "tegrastats",
+          "label": "PMIC",
+          "value_c": 50.0,
+          "unit": "C"
+        },
+        {
+          "sample_index": 1,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 1,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone1/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 1,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone2/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 1,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone3/temp",
+          "value_millidegrees_c": 30000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 1,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone4/temp",
+          "value_millidegrees_c": 50000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 1,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone5/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 1,
+          "source": "tegrastats",
+          "label": "AUX",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 1,
+          "source": "tegrastats",
+          "label": "CPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 1,
+          "source": "tegrastats",
+          "label": "thermal",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 1,
+          "source": "tegrastats",
+          "label": "AO",
+          "value_c": 30.0,
+          "unit": "C"
+        },
+        {
+          "sample_index": 1,
+          "source": "tegrastats",
+          "label": "GPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 1,
+          "source": "tegrastats",
+          "label": "PMIC",
+          "value_c": 50.0,
+          "unit": "C"
+        },
+        {
+          "sample_index": 2,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 2,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone1/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 2,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone2/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 2,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone3/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 2,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone4/temp",
+          "value_millidegrees_c": 50000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 2,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone5/temp",
+          "value_millidegrees_c": 30300,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 2,
+          "source": "tegrastats",
+          "label": "AUX",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 2,
+          "source": "tegrastats",
+          "label": "CPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 2,
+          "source": "tegrastats",
+          "label": "thermal",
+          "value_c": 30.3,
+          "unit": "C"
+        },
+        {
+          "sample_index": 2,
+          "source": "tegrastats",
+          "label": "AO",
+          "value_c": 30.0,
+          "unit": "C"
+        },
+        {
+          "sample_index": 2,
+          "source": "tegrastats",
+          "label": "GPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 2,
+          "source": "tegrastats",
+          "label": "PMIC",
+          "value_c": 50.0,
+          "unit": "C"
+        },
+        {
+          "sample_index": 3,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 3,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone1/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 3,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone2/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 3,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone3/temp",
+          "value_millidegrees_c": 30000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 3,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone4/temp",
+          "value_millidegrees_c": 50000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 3,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone5/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 3,
+          "source": "tegrastats",
+          "label": "AUX",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 3,
+          "source": "tegrastats",
+          "label": "CPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 3,
+          "source": "tegrastats",
+          "label": "thermal",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 3,
+          "source": "tegrastats",
+          "label": "AO",
+          "value_c": 30.0,
+          "unit": "C"
+        },
+        {
+          "sample_index": 3,
+          "source": "tegrastats",
+          "label": "GPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 3,
+          "source": "tegrastats",
+          "label": "PMIC",
+          "value_c": 50.0,
+          "unit": "C"
+        },
+        {
+          "sample_index": 4,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 4,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone1/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 4,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone2/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 4,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone3/temp",
+          "value_millidegrees_c": 30000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 4,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone4/temp",
+          "value_millidegrees_c": 50000,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 4,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone5/temp",
+          "value_millidegrees_c": 30500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 4,
+          "source": "tegrastats",
+          "label": "AUX",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 4,
+          "source": "tegrastats",
+          "label": "CPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 4,
+          "source": "tegrastats",
+          "label": "thermal",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 4,
+          "source": "tegrastats",
+          "label": "AO",
+          "value_c": 30.0,
+          "unit": "C"
+        },
+        {
+          "sample_index": 4,
+          "source": "tegrastats",
+          "label": "GPU",
+          "value_c": 30.5,
+          "unit": "C"
+        },
+        {
+          "sample_index": 4,
+          "source": "tegrastats",
+          "label": "PMIC",
+          "value_c": 50.0,
+          "unit": "C"
+        }
+      ],
+      "power": [],
+      "throttle": []
+    },
+    "available_channels": [
+      "memory",
+      "thermal"
+    ],
+    "power_boundary_note": "Original rail/source labels are preserved; rails are not summed and boundary is unknown unless separately established.",
+    "ssh_receive_timestamp_note": "SSH receipt timestamps are local transport times and are not sensor acquisition times"
+  },
+  "note": "Local post-capture parse; no SSH/device contact was made."
+}

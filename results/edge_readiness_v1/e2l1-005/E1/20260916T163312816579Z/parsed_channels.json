@@ -1,0 +1,245 @@
+{
+  "schema_version": "e2l1-edge-telemetry-v1",
+  "source_stdout_sha256": "105926a7b51048e97077207940f05caa7acdb9f5c87be38d2e576ae39b2d844a",
+  "parser_sha256": "73603b917aa3a40a4456cff3d066a814fe7408f8bb86aad4fbc2f33f4847856e",
+  "telemetry": {
+    "sample_count": 5,
+    "samples": [
+      {
+        "device_monotonic_ns": 220878961961040,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   605929472   438927360    35799040  7603650560  7848083456\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 49050\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 220879998860026,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   606715904   438140928    35799040  7603732480  7847297024\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 48500\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 220881029482397,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   605569024   439205888    35799040  7603732480  7848443904\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 49050\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 220882059838414,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   604372992   440401920    35799040  7603732480  7849639936\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 49050\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 220883090435301,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   601440256   443334656    35799040  7603732480  7852572672\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 49050\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      }
+    ],
+    "source_markers": [
+      "__E2L1_SOURCE__ command=source_inventory",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files"
+    ],
+    "timestamp_origin": "device_monotonic_ns from device python3 time.monotonic_ns; raw source lines are unmodified",
+    "timestamp_status": "available",
+    "timestamp_order": "strictly_increasing",
+    "sample_gaps_ns": [
+      1036898986,
+      1030622371,
+      1030356017,
+      1030596887
+    ],
+    "max_gap_ns": 1036898986,
+    "channels": {
+      "memory": [
+        {
+          "sample_index": 0,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 8454012928,
+          "used": 605929472,
+          "free": 438927360,
+          "shared": 35799040,
+          "buff_cache": 7603650560,
+          "available": 7848083456
+        },
+        {
+          "sample_index": 1,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 8454012928,
+          "used": 606715904,
+          "free": 438140928,
+          "shared": 35799040,
+          "buff_cache": 7603732480,
+          "available": 7847297024
+        },
+        {
+          "sample_index": 2,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 8454012928,
+          "used": 605569024,
+          "free": 439205888,
+          "shared": 35799040,
+          "buff_cache": 7603732480,
+          "available": 7848443904
+        },
+        {
+          "sample_index": 3,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 8454012928,
+          "used": 604372992,
+          "free": 440401920,
+          "shared": 35799040,
+          "buff_cache": 7603732480,
+          "available": 7849639936
+        },
+        {
+          "sample_index": 4,
+          "source": "free_bytes",
+          "unit": "bytes",
+          "total": 8454012928,
+          "used": 601440256,
+          "free": 443334656,
+          "shared": 35799040,
+          "buff_cache": 7603732480,
+          "available": 7852572672
+        }
+      ],
+      "thermal": [
+        {
+          "sample_index": 0,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 49050,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 0,
+          "source": "vcgencmd",
+          "label": "vcgencmd_temp",
+          "value_c": 49.4,
+          "unit": "C"
+        },
+        {
+          "sample_index": 1,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 48500,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 1,
+          "source": "vcgencmd",
+          "label": "vcgencmd_temp",
+          "value_c": 49.4,
+          "unit": "C"
+        },
+        {
+          "sample_index": 2,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 49050,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 2,
+          "source": "vcgencmd",
+          "label": "vcgencmd_temp",
+          "value_c": 49.4,
+          "unit": "C"
+        },
+        {
+          "sample_index": 3,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 49050,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 3,
+          "source": "vcgencmd",
+          "label": "vcgencmd_temp",
+          "value_c": 49.4,
+          "unit": "C"
+        },
+        {
+          "sample_index": 4,
+          "source": "thermal_sysfs",
+          "label": "/sys/class/thermal/thermal_zone0/temp",
+          "value_millidegrees_c": 49050,
+          "unit": "millidegrees_C"
+        },
+        {
+          "sample_index": 4,
+          "source": "vcgencmd",
+          "label": "vcgencmd_temp",
+          "value_c": 49.4,
+          "unit": "C"
+        }
+      ],
+      "power": [],
+      "throttle": [
+        {
+          "sample_index": 0,
+          "source": "vcgencmd",
+          "label": "vcgencmd_throttled",
+          "raw_value": "0x0"
+        },
+        {
+          "sample_index": 1,
+          "source": "vcgencmd",
+          "label": "vcgencmd_throttled",
+          "raw_value": "0x0"
+        },
+        {
+          "sample_index": 2,
+          "source": "vcgencmd",
+          "label": "vcgencmd_throttled",
+          "raw_value": "0x0"
+        },
+        {
+          "sample_index": 3,
+          "source": "vcgencmd",
+          "label": "vcgencmd_throttled",
+          "raw_value": "0x0"
+        },
+        {
+          "sample_index": 4,
+          "source": "vcgencmd",
+          "label": "vcgencmd_throttled",
+          "raw_value": "0x0"
+        }
+      ]
+    },
+    "available_channels": [
+      "memory",
+      "thermal",
+      "throttle"
+    ],
+    "power_boundary_note": "Original rail/source labels are preserved; rails are not summed and boundary is unknown unless separately established.",
+    "ssh_receive_timestamp_note": "SSH receipt timestamps are local transport times and are not sensor acquisition times"
+  },
+  "note": "Local post-capture parse; no SSH/device contact was made."
+}

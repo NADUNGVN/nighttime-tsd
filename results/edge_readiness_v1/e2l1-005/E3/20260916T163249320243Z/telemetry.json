@@ -1,0 +1,107 @@
+{
+  "schema_version": "e2l1-edge-telemetry-v1",
+  "created_utc": "2026-09-16T16:32:49.320243+00:00",
+  "target": "E3",
+  "ssh_alias": "agx",
+  "ssh_command": [
+    "ssh",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=5",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "agx",
+    "sh",
+    "-s"
+  ],
+  "collector_sha256": "f2766848d25cb5519eafc1a6447d41e162d63dfa295076891a55bc82f759d5f1",
+  "remote_script_sha256": "807c6bdb1c275643c0e0dc8ea66c2484d50deefc76b15ac4ca4bd0b873027d43",
+  "transport": {
+    "status": "ok",
+    "returncode": 0,
+    "timed_out": false,
+    "local_receive_start_monotonic_ns": 51849078000000,
+    "local_receive_end_monotonic_ns": 51865000000000,
+    "local_duration_ns": 15922000000
+  },
+  "scope": {
+    "read_only": true,
+    "max_device_sample_window_seconds": 30,
+    "sample_plan": "five foreground snapshots; tegrastats child bounded to 2 seconds per snapshot",
+    "workload_generated": false,
+    "model_loaded": false,
+    "configuration_changed": false
+  },
+  "telemetry": {
+    "sample_count": 5,
+    "samples": [
+      {
+        "device_monotonic_ns": 477585003662257,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:    15609872384  2529464320  9500737536    63246336  3579670528 12736663552\nSwap:    7804911616           0  7804911616\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: Tboard_tegra\n/sys/class/thermal/thermal_zone6/type: Tdiode_tegra\n/sys/class/thermal/thermal_zone7/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 32500\n/sys/class/thermal/thermal_zone1/temp: 32500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 31000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 32000\n/sys/class/thermal/thermal_zone6/temp: 35000\n/sys/class/thermal/thermal_zone7/temp: 31700\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:32:52 RAM 2571/14887MB (lfb 2047x4MB) SWAP 0/7443MB (cached 0MB) CPU [3%@2265,1%@2265,0%@2265,0%@2265,18%@2265,52%@2265,1%@2265,2%@2265] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@32C thermal@31.7C Tboard@32C AO@31C GPU@32C Tdiode@34.75C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 477588154077604,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:    15609872384  2538766336  9491271680    63315968  3579834368 12727291904\nSwap:    7804911616           0  7804911616\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: Tboard_tegra\n/sys/class/thermal/thermal_zone6/type: Tdiode_tegra\n/sys/class/thermal/thermal_zone7/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 31500\n/sys/class/thermal/thermal_zone1/temp: 31500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 31000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 32000\n/sys/class/thermal/thermal_zone6/temp: 34500\n/sys/class/thermal/thermal_zone7/temp: 31100\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:32:55 RAM 2572/14887MB (lfb 2047x4MB) SWAP 0/7443MB (cached 0MB) CPU [0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@31C thermal@30.8C Tboard@32C AO@31C GPU@31C Tdiode@34.75C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 477591310467866,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:    15609872384  2539008000  9491021824    63315968  3579842560 12727050240\nSwap:    7804911616           0  7804911616\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: Tboard_tegra\n/sys/class/thermal/thermal_zone6/type: Tdiode_tegra\n/sys/class/thermal/thermal_zone7/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 31500\n/sys/class/thermal/thermal_zone1/temp: 31500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 31000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 32000\n/sys/class/thermal/thermal_zone6/temp: 35250\n/sys/class/thermal/thermal_zone7/temp: 30800\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:32:58 RAM 2574/14887MB (lfb 2047x4MB) SWAP 0/7443MB (cached 0MB) CPU [0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@31C thermal@30.8C Tboard@32C AO@31C GPU@31C Tdiode@35C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 477594468501550,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:    15609872384  2540023808  9490006016    63315968  3579842560 12726034432\nSwap:    7804911616           0  7804911616\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: Tboard_tegra\n/sys/class/thermal/thermal_zone6/type: Tdiode_tegra\n/sys/class/thermal/thermal_zone7/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 31500\n/sys/class/thermal/thermal_zone1/temp: 31500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 31000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 32000\n/sys/class/thermal/thermal_zone6/temp: 34750\n/sys/class/thermal/thermal_zone7/temp: 30800\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:33:01 RAM 2574/14887MB (lfb 2047x4MB) SWAP 0/7443MB (cached 0MB) CPU [0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@31C thermal@30.8C Tboard@32C AO@31C GPU@31C Tdiode@35.25C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 477597628443914,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n              total        used        free      shared  buff/cache   available\nMem:    15609872384  2540298240  9489731584    63315968  3579842560 12725760000\nSwap:    7804911616           0  7804911616\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: CPU-therm\n/sys/class/thermal/thermal_zone1/type: GPU-therm\n/sys/class/thermal/thermal_zone2/type: AUX-therm\n/sys/class/thermal/thermal_zone3/type: AO-therm\n/sys/class/thermal/thermal_zone4/type: PMIC-Die\n/sys/class/thermal/thermal_zone5/type: Tboard_tegra\n/sys/class/thermal/thermal_zone6/type: Tdiode_tegra\n/sys/class/thermal/thermal_zone7/type: thermal_fan_est\n/sys/class/thermal/thermal_zone0/temp: 31500\n/sys/class/thermal/thermal_zone1/temp: 31500\n/sys/class/thermal/thermal_zone2/temp: 30500\n/sys/class/thermal/thermal_zone3/temp: 31000\n/sys/class/thermal/thermal_zone4/temp: 50000\n/sys/class/thermal/thermal_zone5/temp: 32000\n/sys/class/thermal/thermal_zone6/temp: 34750\n/sys/class/thermal/thermal_zone7/temp: 30800\n__E2L1_SOURCE__ source=tegrastats\n09-16-2026 23:33:04 RAM 2574/14887MB (lfb 2047x4MB) SWAP 0/7443MB (cached 0MB) CPU [0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190,0%@1190] EMC_FREQ 0% GR3D_FREQ 0% AUX@30.5C CPU@31C thermal@30.8C Tboard@32C AO@31C GPU@31C Tdiode@35.25C PMIC@50C\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\nunavailable: vcgencmd is missing\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      }
+    ],
+    "source_markers": [
+      "__E2L1_SOURCE__ command=source_inventory",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files"
+    ],
+    "timestamp_origin": "device_monotonic_ns from device python3 time.monotonic_ns; raw source lines are unmodified",
+    "timestamp_status": "available",
+    "timestamp_order": "strictly_increasing",
+    "sample_gaps_ns": [
+      3150415347,
+      3156390262,
+      3158033684,
+      3159942364
+    ],
+    "max_gap_ns": 3159942364,
+    "ssh_receive_timestamp_note": "SSH receipt timestamps are local transport times and are not sensor acquisition times"
+  },
+  "stderr_or_ssh_diagnostics": null
+}

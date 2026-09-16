@@ -1,0 +1,107 @@
+{
+  "schema_version": "e2l1-edge-telemetry-v1",
+  "created_utc": "2026-09-16T16:33:12.816579+00:00",
+  "target": "E1",
+  "ssh_alias": "pi5",
+  "ssh_command": [
+    "ssh",
+    "-T",
+    "-o",
+    "BatchMode=yes",
+    "-o",
+    "ConnectTimeout=5",
+    "-o",
+    "StrictHostKeyChecking=yes",
+    "pi5",
+    "sh",
+    "-s"
+  ],
+  "collector_sha256": "f2766848d25cb5519eafc1a6447d41e162d63dfa295076891a55bc82f759d5f1",
+  "remote_script_sha256": "807c6bdb1c275643c0e0dc8ea66c2484d50deefc76b15ac4ca4bd0b873027d43",
+  "transport": {
+    "status": "ok",
+    "returncode": 0,
+    "timed_out": false,
+    "local_receive_start_monotonic_ns": 51872578000000,
+    "local_receive_end_monotonic_ns": 51878140000000,
+    "local_duration_ns": 5562000000
+  },
+  "scope": {
+    "read_only": true,
+    "max_device_sample_window_seconds": 30,
+    "sample_plan": "five foreground snapshots; tegrastats child bounded to 2 seconds per snapshot",
+    "workload_generated": false,
+    "model_loaded": false,
+    "configuration_changed": false
+  },
+  "telemetry": {
+    "sample_count": 5,
+    "samples": [
+      {
+        "device_monotonic_ns": 220878961961040,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   605929472   438927360    35799040  7603650560  7848083456\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 49050\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 220879998860026,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   606715904   438140928    35799040  7603732480  7847297024\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 48500\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 220881029482397,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   605569024   439205888    35799040  7603732480  7848443904\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 49050\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 220882059838414,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   604372992   440401920    35799040  7603732480  7849639936\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 49050\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      },
+      {
+        "device_monotonic_ns": 220883090435301,
+        "raw": "__E2L1_SOURCE__ source=free_bytes\n               total        used        free      shared  buff/cache   available\nMem:      8454012928   601440256   443334656    35799040  7603732480  7852572672\nSwap:     2147467264           0  2147467264\n__E2L1_SOURCE__ source=thermal_sysfs\n/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 49050\n__E2L1_SOURCE__ source=tegrastats\nunavailable: tegrastats or timeout is missing\n__E2L1_SOURCE__ source=nvidia_smi\nunavailable: nvidia-smi is missing\n__E2L1_SOURCE__ source=vcgencmd\ntemp=49.4'C\nthrottled=0x0\n__E2L1_SOURCE__ source=power_files\nunavailable: no readable power files found"
+      }
+    ],
+    "source_markers": [
+      "__E2L1_SOURCE__ command=source_inventory",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files",
+      "__E2L1_SOURCE__ source=free_bytes",
+      "__E2L1_SOURCE__ source=thermal_sysfs",
+      "__E2L1_SOURCE__ source=tegrastats",
+      "__E2L1_SOURCE__ source=nvidia_smi",
+      "__E2L1_SOURCE__ source=vcgencmd",
+      "__E2L1_SOURCE__ source=power_files"
+    ],
+    "timestamp_origin": "device_monotonic_ns from device python3 time.monotonic_ns; raw source lines are unmodified",
+    "timestamp_status": "available",
+    "timestamp_order": "strictly_increasing",
+    "sample_gaps_ns": [
+      1036898986,
+      1030622371,
+      1030356017,
+      1030596887
+    ],
+    "max_gap_ns": 1036898986,
+    "ssh_receive_timestamp_note": "SSH receipt timestamps are local transport times and are not sensor acquisition times"
+  },
+  "stderr_or_ssh_diagnostics": null
+}
