@@ -1381,3 +1381,49 @@ chưa được giao và không được chạy trước Astra review implementat
 semantic evidence cần thiết cho graph YOLO26 thực tế. Sau khi được duyệt mới
 soạn/giao lệnh server foreground; Luna không tự SSH hay tự mở bước nghiên cứu
 tiếp theo.
+
+## L2A-029 — server graph diagnosis and explicit exporter-wrapper mapping fix
+
+Operator đã chạy đúng commit `ae638ccb6af1ccfea908d28f68e5730691b7cca2` trên
+SERVER-01. Luna không SSH và không chạy lại export. Log xác nhận:
+
+- dependency/runtime preflight đạt tới exporter: Python3.11.15, Torch
+  `2.5.1+cu121`, Ultralytics `8.4.102`, ONNX `1.21.0`, onnxslim `0.1.94`;
+- CPU export YOLOv8n thành công, input `[1,3,640,640]`, output `[1,7,8400]`;
+- ONNX đã tạo ở private workspace và bản `model.onnx` có SHA256
+  `c108e9b030b0a6226404e680f8a3886653d1dbfa69c539041e60899728b5fdb2`;
+- child dừng sau export tại graph mapping vì source readiness dùng tên module
+  PyTorch như `model.22.cv2.0.0.conv`, trong khi ONNX pinned exporter dùng
+  `/model.22/cv2.0/cv2.0.0/conv/Conv`. 18 source Conv bị báo match count 0.
+  YOLO26n chưa chạy do parent tuần tự dừng ở child YOLOv8n.
+
+Đây là lỗi tương thích tên container exporter trong implementation, không phải
+lỗi GPU, TensorRT, dependency, workload hay numerical contract. Partial tree
+được giữ nguyên: `model.onnx`, private `frozen_source.onnx`, private
+`frozen_source.pt`, `failure.json`, `logs/yolov8n.log`, `prepare_plan.json`.
+
+### Local correction
+
+Runner nay có `_exporter_wrapper_aliases()` cho đúng pattern đã quan sát và chỉ
+cho phép bốn branch token khóa (`cv2`, `cv3`, `one2one_cv2`, `one2one_cv3`) với
+numeric branch index. Alias được ghi rõ là
+`explicit_ultralytics_exporter_wrapper_alias`, vẫn phải match đúng một Conv,
+trace tới primary output và pass merge/span/semantic checks; không có prefix/
+shape fallback. Tests đã thêm cả YOLOv8 wrapper path và YOLO26 one2one wrapper
+path.
+
+### Verification
+
+- Graph targeted regression sau correction: **19/19 PASS**.
+- `py_compile`: PASS; `git diff --check`: PASS.
+- Không local export, GPU, TensorRT build/benchmark hoặc calibration run.
+
+### Next server action
+
+Fix này cần được pull trước khi chạy lại. Output cũ không được overwrite; nếu
+Astra/operator chấp thuận rerun bounded CPU preparation thì dùng output mới
+`results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/`.
+Rerun sau chẩn đoán này là một CPU ONNX preparation mới có cơ sở, không phải
+silent resume và không mở TensorRT/scored matrix. ONNX cũ không push; chỉ push
+JSON/report/log/schema sau khi Luna kiểm tra output thực tế. `scored_run_authorized`
+vẫn là `false`.

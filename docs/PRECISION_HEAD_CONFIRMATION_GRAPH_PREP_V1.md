@@ -92,6 +92,11 @@ For every active source branch the audit:
   separator/terminal-`Conv` normalization;
 - records all prefix candidates and excludes `Sigmoid`, `Reshape`, `Concat`,
   and other non-convolution helpers from precision targets;
+- accepts the pinned Ultralytics exporter’s explicit branch-container alias
+  (for example source `model.22.cv2.0.0.conv` and ONNX
+  `/model.22/cv2.0/cv2.0.0/conv/Conv`) only as a deterministic one-to-one
+  name mapping; arbitrary prefix, shape or renamed/fused matches remain
+  unresolved;
 - traces each matched node through consumers to the unique relevant primary
   output, not to a debug-only output;
 - finds exactly one output-linked branch-owned channel merge with explicit

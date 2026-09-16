@@ -659,6 +659,30 @@ def _branch_from_name(name: str) -> str | None:
     return None
 
 
+def _exporter_wrapper_aliases(source_name: str) -> set[str]:
+    """Return only the observed Ultralytics ONNX container alias for a source Conv.
+
+    The pinned producer names a branch container twice in ONNX, e.g.
+    ``model.22.cv2.0.0.conv`` becomes
+    ``model.22.cv2.0.cv2.0.0.conv``.  This is an explicit exporter naming
+    adapter, not a prefix/shape guess; it is usable only for the four locked
+    detection branch tokens and a numeric branch index.
+    """
+    normalized = normalize_module_name(source_name)
+    parts = normalized.split(".")
+    aliases: set[str] = set()
+    for branch in ("cv2", "cv3", "one2one_cv2", "one2one_cv3"):
+        try:
+            branch_index = parts.index(branch)
+        except ValueError:
+            continue
+        if branch_index + 1 >= len(parts) or not parts[branch_index + 1].isdigit():
+            continue
+        scale_index = parts[branch_index + 1]
+        aliases.add(".".join(parts[: branch_index + 1] + [scale_index, branch] + parts[branch_index + 1 :]))
+    return aliases
+
+
 def _ancestors(tensor: str, producers: dict[str, dict[str, Any]], memo: dict[str, set[str]]) -> set[str]:
     if tensor in memo:
         return memo[tensor]
@@ -902,7 +926,10 @@ def audit_graph_mapping(graph: Any, model_label: str, accepted_model: dict[str, 
         matched = []
         for source_conv in expected_convs:
             source_name = normalize_module_name(source_conv.get("name"))
-            candidates = [node for node in prefix_matches if node["op_type"] == "Conv" and node["normalized_name"] == source_name]
+            exact_candidates = [node for node in prefix_matches if node["op_type"] == "Conv" and node["normalized_name"] == source_name]
+            alias_names = _exporter_wrapper_aliases(source_name)
+            alias_candidates = [node for node in prefix_matches if node["op_type"] == "Conv" and node["normalized_name"] in alias_names]
+            candidates = exact_candidates + [node for node in alias_candidates if node not in exact_candidates]
             if len(candidates) != 1:
                 errors.append(f"{branch}:source_conv_match_count:{source_name}:{len(candidates)}")
                 continue
@@ -915,7 +942,9 @@ def audit_graph_mapping(graph: Any, model_label: str, accepted_model: dict[str, 
                 "source_module_type": source_conv.get("module_type"),
                 "export_node": node["name"],
                 "export_op_type": node["op_type"],
-                "match": "exact_normalized_module_name",
+                "match": "exact_normalized_module_name" if exact_candidates else "explicit_ultralytics_exporter_wrapper_alias",
+                "source_normalized_name": source_name,
+                "accepted_export_normalized_names": sorted({source_name, *alias_names}),
                 "output_tensors": node["outputs"],
                 "reachable_outputs": sorted(reachable_outputs),
                 "downstream_node_count": len(reachable_nodes),

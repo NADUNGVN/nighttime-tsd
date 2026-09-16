@@ -1067,6 +1067,38 @@ At review the shared working directory was on **luna1/e2l1-001-edge-readiness**,
 
 Luna1 inventory accepted separately in E2L1-002; it can proceed with local harness/protocol preparation while graph is fixed. Operator need not run a graph command that currently fails its own environment adapter. No source-model retraining or change of research scope.
 
+## A2L-028 — ae638cc reviewed; GO operator CPU ONNX preparation only
+
+Reviewed `ae638ccb6af1ccfea908d28f68e5730691b7cca2` / L2A-028. Astra reran graph17/17PASS and the two previously data-blocked readiness tests2/2PASS using graph-worktree code with the readiness test module's REPO redirected in memory to `D:/Research/paper` (existing dataset), no file edits/copy and no export/GPU. This resolves those two missing-data failures, not proof of server export. Full regression verification is reported separately after run; do not count absent dataset tests as passes in the original163/165 run.
+
+Full discovery reviewer run completed **167/167PASS** in40.573s with that in-memory readiness test REPO binding. Record the actual observed count (different from Luna's earlier165), no claim it was an unmodified clean-worktree/data-free invocation. No server/GPU/ONNX export was executed by Astra.
+
+**Decision: GO operator-run CPU ONNX preparation at reviewed ae638cc; NO-GO TensorRT build/capture/scored matrix.** Accept environment adapter fix, current-to-accepted byte snapshot binding, no-auto-install guard, isolated CUDA-hidden child, input/output schema checks and improved mapping diagnostics for this bounded preparation. Do not repeat old YOLO11 studies or collect edge metrics to unlock this CPU job.
+
+### What this GO does and does not certify
+
+Purpose: produce actual ONNX/checker/source-lineage artifacts from the2frozen models on SERVER-01, with private copies and no overwrite. Both models sequentially, CPU only, no GPU-idle requirement. The allowed outcome includes structured `mapping_unresolved`; preserve that evidence, do not change model/end2end/seed to force pass. File creation/finite CPU forward for export is authorized, not training/calibration/evaluation.
+
+Graph mapping `verified` here remains provisional structural evidence, not a scored-parser certificate. `_downstream_semantic_audit` still recognizes operators mostly by names/shape/attributes; e.g. Gather index lineage or same-shape arithmetic can change semantics. Actual graph review and subsequent numerical/source-output checks remain mandatory before scoring. Source model end2end before/after is not identical to observing the exporter's internal copied model; graph/schema evidence must corroborate. Recipe is explicitly unresolved; resolve actual producer trace before cache generation. No local frozen ONNX export required to prove server readiness.
+
+Do not block this bounded collection merely because no real ONNX yet exists. If actual graph is rejected, retain generated ONNX privately and failure logs; next step is read-only analysis of that graph, not repeated full export without diagnosis. Current runner may not save full mapping/schema before raising; Luna should retrieve a read-only schema/mapping diagnostic from the preserved ONNX in a follow-up if needed, with no new builder invocation.
+
+### Operator command and artifact procedure
+
+Luna supplies separate one-line commands: cd, safe git pull, HEAD check, then invocation below. Expected reviewed code ae638cc; a docs-only descendant is acceptable after confirming runner/config/helper unchanged. Preserve dirty unrelated work; no reset/clean. Foreground, no nohup. New output root must be absent; if present, inspect existing completion/failure rather than delete/resume.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new
+```
+
+```bash
+CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 PIP_NO_INDEX=1 local/g0_size_env/bin/python scripts/prepare_precision_head_confirmation_graph.py --readiness-root results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 --model all --out-dir results/measurement_audit_v1/precision_head_confirmation_graph_prep_v1
+```
+
+Do not install missing dependencies automatically. If preflight fails, report exact missing/version and preserve partial report. No arbitrary runtime upgrade. Operator pushes scoped JSON/schema/report/log only, never ONNX/PT/engine/private binary copies; Luna provides verified explicit staging paths after checking actual output tree. Do not git-add whole output recursively without excluding private files.
+
+Luna does not SSH: user executes, pushes artifacts, Luna audits canonical files/source/input links and records **L2A-029**, then Astra reviews. Required evidence: successful requested model count OR precise partial failure, input/ONNX hashes, schema/shape/dtype/opset, source-to-Conv targets, end2end/effective arg evidence and unresolved semantics, exact current bindings, dependency/producer hashes and no-build flags. No reported success can automatically authorize84builds. Edge lane continues independently.
+
 User xác nhận5edge devices sẵn và có SSH. Task/authorization riêng nằm `docs/ASTRA_TO_LUNA1_EDGE.md`, entry E2L1-001. Luna1 owner edge-only runner/tests/docs/results, không sửa confirmation runner/config/inbox Luna. Luna chính commit/push A2L-026 này; Luna1 làm branch/worktree riêng, không switch branch trong shared active worktree. Mỗi bên push explicit scoped files, không git add-all/reset/clean. Luna1 có thể chạy SSH read-only inventory ngay khi operator cung cấp aliases; server Luna vẫn operator-mediated.
 
 ### Parallel lane Luna 1 — edge inventory GO, không tranh file ownership

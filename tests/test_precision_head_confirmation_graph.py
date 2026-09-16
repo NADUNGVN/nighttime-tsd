@@ -171,6 +171,29 @@ class PrecisionHeadGraphTests(unittest.TestCase):
         self.assertEqual(result["mapping_status"], "mapping_unresolved")
         self.assertIn("input_schema_mismatch", " ".join(result["errors"]))
 
+    def test_pinned_ultralytics_wrapper_alias_maps_real_yolov8_conv_name(self):
+        fixture, model = graph_fixture("yolov8n")
+        model["active_convolution_mapping"]["cv2"] = [{"name": "model.22.cv2.0.0.conv", "module_type": "Conv2d"}]
+        model["active_convolution_mapping"]["cv3"] = [{"name": "model.22.cv3.0.0.conv", "module_type": "Conv2d"}]
+        fixture["nodes"][0]["name"] = "/model.22/cv2.0/cv2.0.0/conv/Conv"
+        fixture["nodes"][1]["name"] = "/model.22/cv3.0/cv3.0.0/conv/Conv"
+        result = graph.audit_graph_mapping(fixture, "yolov8n", model)
+        self.assertEqual(result["mapping_status"], "verified", result["errors"])
+        self.assertEqual(result["active_branch_audit"]["cv2"]["matched_convolutions"][0]["match"], "explicit_ultralytics_exporter_wrapper_alias")
+        self.assertEqual(result["active_branch_audit"]["cv3"]["matched_convolutions"][0]["match"], "explicit_ultralytics_exporter_wrapper_alias")
+        self.assertEqual(graph._exporter_wrapper_aliases("model.22.cv2.0.0.conv"), {"model.22.cv2.0.cv2.0.0.conv"})
+
+    def test_pinned_ultralytics_wrapper_alias_covers_yolo26_one2one_branches(self):
+        fixture, model = graph_fixture("yolo26n", shared_downstream=True)
+        model["active_convolution_mapping"]["one2one_cv2"] = [{"name": "model.23.one2one_cv2.0.0.conv", "module_type": "Conv2d"}]
+        model["active_convolution_mapping"]["one2one_cv3"] = [{"name": "model.23.one2one_cv3.0.0.0.conv", "module_type": "Conv2d"}]
+        fixture["nodes"][0]["name"] = "/model.23/one2one_cv2.0/one2one_cv2.0.0/conv/Conv"
+        fixture["nodes"][1]["name"] = "/model.23/one2one_cv3.0/one2one_cv3.0.0.0/conv/Conv"
+        result = graph.audit_graph_mapping(fixture, "yolo26n", model)
+        self.assertEqual(result["mapping_status"], "verified", result["errors"])
+        self.assertEqual(result["active_branch_audit"]["one2one_cv2"]["matched_convolutions"][0]["match"], "explicit_ultralytics_exporter_wrapper_alias")
+        self.assertEqual(result["active_branch_audit"]["one2one_cv3"]["matched_convolutions"][0]["match"], "explicit_ultralytics_exporter_wrapper_alias")
+
     def test_precision_targets_require_verified_mapping_and_consistent_merge(self):
         fixture, model = graph_fixture("yolov8n")
         mapping = graph.audit_graph_mapping(fixture, "yolov8n", model)
