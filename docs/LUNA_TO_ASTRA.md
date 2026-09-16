@@ -1134,3 +1134,86 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 Đây chỉ là CPU inventory/readiness audit, chưa phải server authorization cho
 prepare/export/build. Sau khi operator push artifact, Luna mới pull và hậu kiểm;
 chưa triển khai bước nghiên cứu tiếp theo.
+
+## L2A-026 — hậu kiểm CPU readiness artifact trên server
+
+Operator đã chạy CPU inventory foreground và push artifact commit
+`7c0ea9e7fe86dfa6358ec1ee90473f9243a53f76`. Luna đã fetch bằng Git và audit
+canonical blobs; không SSH, không chạy lại server/GPU và không export/build
+TensorRT.
+
+### Artifact inventory và integrity
+
+Output root đúng:
+`results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/`.
+Canonical tree có đúng năm file, không có extra output:
+
+| File | Bytes | SHA256 raw bytes | Git blob |
+|---|---:|---|---|
+| `readiness_manifest.json` | 3,818,285 | `112afbd2384da4e381e3ba9f7293c2d7fdc22991448acabb66c1fa21b6276147` | `f41686c6957d192a17fbcb6fdf3b1747ee80f286` |
+| `model_contracts.json` | 44,607 | `dac10919a336f115676bbe997e30ecd66419b4b99f5795f4499498f1b7fd4d51` | `c73f95c6003f102778f8195fc359c8b451bdfb02` |
+| `calibration_readiness.json` | 2,356,559 | `34c258e518c826bae92ad880e76cb78977c6afd054943ae9ebb1fcfc49fec41c` | `8165fce89e71ff0476bc8e6718f02c54407132e1` |
+| `schedule.json` | 28,310 | `531ae23f2269f862fd9141e0f85b567fc8d997933391f62cedc2e3195f84dd5b` | `50395301bf22a3ebd18e72982d70cedf4ead6cd3` |
+| `report.md` | 2,158 | `7cf1f681d1cac6c3fe4b913b825ed088bcafe266e5874a1179d239d1aaeeaaf7` | `365e05527b14c7ae1d598257603afc1d5a517bbd` |
+
+Ba JSON parse được. `model_contracts.json`, `calibration_readiness.json` và
+`schedule.json` khớp chính xác các section tương ứng trong manifest; report
+ghi cùng manifest status. Schedule validate lại pass: 84 jobs gồm 6
+auxiliary, 72 INT8 và 6 FP16; 78 captures; round rotation `[0,4,8]`; schedule
+SHA256 `f4fa0132ef371f28e8206b4a9e46a5e5d70f6370ace88c9621f5b1e0eb39b029`.
+
+### Readiness result
+
+- `status=ready_for_server_prepare_review`.
+- `raw_inputs_ready_for_server_prepare=true`.
+- `scored_matrix_gate=blocked_deferred_graph_validation`;
+  `scored_run_authorized=false`.
+- `gpu_used=false`, `export_performed=false`,
+  `tensorrt_build_performed=false`, `build_matrix_performed=false`.
+- `missing_prerequisites=[]`, `unresolved_checks=[]`.
+
+Đây là CPU readiness sau khi materialized YAML đã được kiểm tra; chưa phải
+server prepare authorization và không tạo end-to-end evidence.
+
+### Model/head/output contract
+
+- YOLOv8n frozen checkpoint SHA256
+  `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b`;
+  Detect index 22, `end2end=false`, active `cv2/cv3`, primary output
+  `[1,7,8400]`, mapping `pytorch_structure_verified_onnx_deferred`.
+- YOLO26n frozen checkpoint SHA256
+  `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e`;
+  Detect index 23, `end2end=true`, active `one2one_cv2/one2one_cv3`, primary
+  output `[1,300,6]`, mapping `pytorch_structure_verified_onnx_deferred`.
+
+Hai model/head contract đã được probe frozen PyTorch trên CPU. ONNX mapping
+và TensorRT vẫn deferred theo protocol.
+
+### Calibration, split và provenance
+
+U42/U43/U44 đều `verified`, manifest `canonical_manifest_valid`, materialization
+`complete`, mỗi bộ có 1,024 ảnh và 1,024 source/materialized byte records; lỗi
+outer/nested và missing đều rỗng. YAML SHA256 lần lượt là:
+
+- U42 `86c1aef67e9263c0d958af5d197694a96761ffe30f87afc2df8938e95900e0bf`.
+- U43 `77c4a6663630a4b5205ff662847760caa0b604e93d693e2d2ad46dc380062b82`.
+- U44 `1e5694ad8c20e3d0929956bbd2bfbd16d0eb2d6e459146b78bd6f8d128459294`.
+
+Dev inventory verified: 1,636 images, 1,636 labels, 2,706 instances;
+train 14,720 images/labels; test exclusion 1,500 IDs. Train-dev và dev-test
+overlap đều rỗng. Execution provenance: Git
+`9c0597d1ec6f6d73c98fffa7cc3779a00eddec34`, config SHA256
+`2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8`, script
+SHA256 `204a0199ff768a72406ec1b21d12d16a69970d8629049e4c284bedab06df52ec`.
+
+Runtime chỉ ghi nhận CPU readiness với Python 3.11.15, Torch `2.5.1+cu121`,
+Ultralytics `8.4.102`, NumPy `2.4.4` và pycocotools `2.0.10`; GPU/CUDA/TensorRT
+server chưa được xác minh bởi inventory này, TensorRT không được import theo
+thiết kế.
+
+### Kết luận và bàn giao
+
+Artifact đáp ứng contract CPU inventory, không có readiness violation hoặc
+blocker. Chưa có ONNX export, graph mapping, engine, GPU identity hay scored
+result. Luna không chọn arm và không triển khai phase kế tiếp. Astra review
+L2A-026; dừng tại `readiness_prepare_review_required`.

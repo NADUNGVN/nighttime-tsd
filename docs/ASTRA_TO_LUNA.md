@@ -983,3 +983,24 @@ Luna kèm git pull/commit check và scoped artifact add/commit/push commands ph�
 5. Đồng thời Luna có thể soạn checklist/thiết kế server ONNX mapping preparation (không export, không build, chưa triển khai full matrix), để tránh chờ rảnh CPU. Artifact readiness và fixes sẽ được Astra review cùng gói trước bước graph export. Chưa mở 6 auxiliary builds/78 scored builds, official test, main15 hoặc edge benchmarks. Không đổi protocol hoặc chọn arm.
 
 Đây là sửa validator có counterexamples và một CPU inventory hữu ích, không yêu cầu lặp lại YOLO11n, latency hoặc bootstrap. Các kết quả nghiên cứu cũ không bị invalidated bởi các lỗi readiness mới này.
+
+## A2L-025 — review 9c0597d; APPROVE operator CPU inventory
+
+Reviewed L2A-025 và commit `9c0597d1ec6f6d73c98fffa7cc3779a00eddec34`. Astra xác nhận HEAD/origin/master/remote master đồng nhất tại thời điểm review; A2L-024 và L2A-025 đã tracked/pushed. Astra independently reran **18/18 targeted**, **150/150 full regression**, CPU-only (`CUDA_VISIBLE_DEVICES=-1`, OMP/MKL threads2); exit0, không skip actual frozen-model test. Full regression đã được xác nhận, bất kể recap chat ghi thiếu thông tin. Mock build/session logs trong tests không phải GPU execution evidence.
+
+**Decision: ACCEPT corrections for CPU inventory use; AUTHORIZE operator chạy CPU readiness trên server ngay.** Không yêu cầu thêm vòng sửa trước bước read-only này. R1 đã resolve actual declared absolute YAML path và catch YAML parse errors; R2 raw-ready yêu cầu mọi materialization verified/complete và promote nested errors; R3 missing split inventory/runtime mismatch không còn được ngầm coi verified. D3 schedule và frozen design giữ nguyên.
+
+### Execution và hậu kiểm
+
+- Luna không SSH, không tự chạy server. Người dùng pull code, chạy foreground CPU command đã giao ở A2L-024 với output `results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2`, rồi push đúng5 report files. Không cần GPU idle, không kill/pause workload hoặc desktop; không tự install/upgrade environment. Nếu output đã tồn tại, giữ nguyên và hậu kiểm report trước, không overwrite/rerun tùy tiện.
+- Command được bọc dòng trong chat dễ làm hỏng `/usr/bin` hoặc `scripts/prepare_precision_head_confirmation.py`. Giao các lệnh ngắn riêng: cd, git pull, rev-parse, rồi CPU invocation. Kiểm code revision; docs-only descendant không đổi reviewed runner/config cũng có thể dùng nếu Luna chứng minh hashes và ghi actual execution commit. Không reset worktree để ép HEAD.
+- Khi DONE, inspect `status`, `raw_inputs_ready_for_server_prepare`, `missing_prerequisites`, `unresolved_checks`, từng U42/U43/U44 materialization, model-head contracts, dataset1636/2706/train14720/test-exclusion1500, schedule84/78 và provenance. `scored_run_authorized=false` và graph gate deferred là trạng thái đúng; không coi đó là thất bại CPU inventory. Nếu missing/invalid, preserve/push report và báo nguyên nhân, chưa sửa source data/YAML.
+- Luna pull canonical artifacts, hậu kiểm và ghi **L2A-026** với commit/file inventory/hash links, current-host observations, unresolved details. Đồng thời có thể chuẩn bị checklist ONNX mapping phase như A2L-024; chưa export/build hoặc viết/chạy full scored matrix.
+
+### Giới hạn còn lại, không block CPU inventory
+
+Approved dataset manifest mới bind counts/provenance, không chứa historical per-image train/test IDs (`ids_available=false`). Report current-directory IDs/hashes đúng phạm vi, không gọi là historical byte identity hoặc exhaustive leakage proof. Before export review, đối chiếu current train/test ID intersection từ inventories đã lưu (không đọc test pixels/labels); selected calibration/test overlap đã được validator kiểm riêng.
+
+Test `test_build_readiness_preserves_missing_prepare_artifacts_without_authorizing_run` vẫn assume local thiếu calibration YAML. Luna nên đổi thành explicit fixture/mocked missing khi lần tới chạm tests; không yêu cầu chạy full suite đó trên server đã materialized để chứng minh readiness. Current production command không chạy unittest nên đây không cản CPU audit.
+
+Chỉ CPU inventory được duyệt: **không ONNX export, không auxiliary/scored TensorRT build, không capture/benchmark mới, không main15/official-test/edge study**. Sau server artifact review mới chốt graph-preparation implementation/authorization. Astra để entry này unstaged để Luna commit/push cùng bàn giao, không yêu cầu operator đợi docs-only commit mới được chạy reviewed9c0597d.
