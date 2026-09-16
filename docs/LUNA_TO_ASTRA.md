@@ -1055,3 +1055,82 @@ cho calibration materialization và immutable config identity, (3) schedule v2
 interleaving/dependency/hash. Chưa có server command hoặc authorization cho
 prepare/build/capture. Luna dừng ở `readiness_review_required` và không tự
 triển khai bước nghiên cứu tiếp theo.
+
+## L2A-025 — đã sửa R1–R3 theo A2L-024
+
+Luna đã đọc **A2L-024** và triển khai các sửa đổi R1–R3 trên local. Không sửa
+weights, frozen checkpoints, native head/output contracts, arms, selections,
+seeds, numerical settings hoặc accounting. Không export ONNX, không import/build
+TensorRT, không dùng GPU/server và không mở matrix.
+
+### R1 — YAML materialization fail-closed
+
+- `parse_materialized_calibration_yaml` nay resolve `path` tuyệt đối do producer
+  khai báo và so sánh chính xác với intended selection directory; không còn dùng
+  `.name` hoặc tự gán lại `expected_dir`.
+- Relative path, traversal, same-basename khác parent, stale/foreign root và
+  symlink path bị reject. Exact directory và từng materialized image vẫn được
+  kiểm qua intended roots và byte SHA256.
+- `yaml.YAMLError` được bắt và ghi thành `status=invalid` với reason có cấu
+  trúc; không crash trước khi tạo audit record.
+- Tests có correct producer path, same-basename/wrong-parent, malformed YAML,
+  substituted bytes và extra image inventory.
+
+### R2 — nested status không thể làm false-ready
+
+- `build_readiness` nay promote nested materialization status/errors/missing
+  theo từng selection ID. Mỗi selection bắt buộc outer `verified` và nested
+  `complete` trước khi `raw_inputs_ready_for_server_prepare=true`.
+- Đã test ba nhánh integration: all-complete positive, invalid nested bytes/
+  status và missing YAML; cả raw flag lẫn overall status đều fail-closed.
+- Local checkout vẫn thiếu materialized YAML U42/U43/U44 nên readiness thực tế
+  vẫn là `readiness_complete_scored_matrix_blocked`; đây là missing prerequisite,
+  không phải lỗi parser và không được tự sửa.
+
+### R3 — split inventory và runtime compatibility
+
+- Thêm binding tới approved dataset manifest commit
+  `3154b7ad2308ff8802ea1c15532951c86ed66a96`, SHA256
+  `5d1b6f1c6df475efe14c8bc6e41c6312b5121dcb828041ec81bbcb2733ac0a2e`, với
+  counts 14,720 train / 1,636 dev / 1,500 positive-test exclusion.
+- Current train image/label và test image directories được kiểm existence,
+  non-empty, expected count, unique stems, symlink entry/root và image-label
+  stem match. Ghi rõ `train_dev_overlap` và `dev_test_overlap`; thiếu inventory
+  là `missing`/`unresolved`, không suy ra zero overlap. Test labels/pixels không
+  được đọc.
+- Ghi `runtime_compatibility` riêng: Ultralytics thiếu hoặc khác `8.4.102`
+  làm native-head probe `unresolved`; Torch/NumPy/pycocotools khác được ghi
+  observation. Không suy ra server CUDA/TensorRT/GPU compatibility từ CPU.
+
+### Tests và readiness evidence
+
+- Targeted readiness: **18/18 pass**.
+- Full local regression: **150/150 pass**.
+- `py_compile` readiness runner/tests và `git diff --check`: pass.
+- CPU-only readiness CLI chạy với `CUDA_VISIBLE_DEVICES=-1`,
+  `OMP_NUM_THREADS=2`, `MKL_NUM_THREADS=2`; không gọi TensorRT/CUDA/export/
+  build/benchmark.
+- Manifest mới tại
+  `results/measurement_audit_v1/precision_head_confirmation_readiness_r1r3_v2/readiness_manifest.json`
+  ghi `status=readiness_complete_scored_matrix_blocked`,
+  `scored_matrix_gate=blocked_deferred_graph_validation`,
+  `raw_inputs_ready_for_server_prepare=false`,
+  `scored_run_authorized=false`, runtime `cpu_probe_supported`, dev
+  `1636/1636/2706`, train `14720`, test exclusion `1500`, schedule `84/78`
+  và rotation `[0,4,8]`. Manifest output bị ignore và không được coi là artifact
+  đã push; nó là local evidence của implementation check.
+
+### Bàn giao CPU inventory cho operator
+
+Commit code/docs được Luna push sau khi hoàn tất kiểm tra. Operator có thể
+chạy đúng lệnh CPU-only foreground dưới đây sau `git pull`; lệnh không export,
+không build, không capture, không benchmark, giới hạn CPU threads và dùng
+output mới nên không overwrite output cũ:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 local/g0_size_env/bin/python scripts/prepare_precision_head_confirmation.py --config configs/precision_head_confirmation_v1.json --out-dir results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2
+```
+
+Đây chỉ là CPU inventory/readiness audit, chưa phải server authorization cho
+prepare/export/build. Sau khi operator push artifact, Luna mới pull và hậu kiểm;
+chưa triển khai bước nghiên cứu tiếp theo.

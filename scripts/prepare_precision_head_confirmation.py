@@ -47,6 +47,7 @@ LOCKED_SECTION_SHA256 = {
     "decision_rules": "f514aef9ee7de1fc9fba9343293199326a4538ef87efc905d91c9798f4049e0f",
     "dev_contract": "21ea84e81bf91a0b5b0f6acf35dd1dbe14da36ae7fd92af1d72d5e99196d5c87",
     "canonical_dev_reference": "e9ad2e8ccc2fa21c74d300865db73d269ff7caec8298621da1ab8dbbb2bf84be",
+    "dataset_inventory_reference": "b3daca50e439902c7a3d9575abd357b567fe6ba62af45c60587415feeddafcf8",
 }
 LOCKED_CONFIG_SECTIONS = tuple(LOCKED_SECTION_SHA256)
 
@@ -314,6 +315,30 @@ def _canonical_dev_reference(repo: Path, config: dict[str, Any]) -> dict[str, An
     }
 
 
+def resolve_declared_calibration_directory(declared: Any, expected_dir: Path) -> Path:
+    """Resolve a producer's absolute POSIX path without silently rebasing it."""
+    if not isinstance(declared, str) or not declared or "\\" in declared:
+        raise ValueError("calibration YAML path must be a non-empty absolute POSIX path")
+    declared_posix = PurePosixPath(declared)
+    if ".." in declared_posix.parts:
+        raise ValueError("calibration YAML path contains traversal")
+    declared_path = Path(declared)
+    # Windows local tests may represent the same path as ``C:/...``; the
+    # server contract remains an absolute POSIX path because the runner is
+    # executed on Linux.  In both cases the native Path must be absolute.
+    if not declared_path.is_absolute():
+        raise ValueError("calibration YAML path must be absolute")
+    if declared_path.is_symlink():
+        raise ValueError("calibration YAML path must not be a symlink")
+    resolved_declared = declared_path.resolve(strict=False)
+    resolved_expected = expected_dir.resolve(strict=False)
+    if resolved_declared != resolved_expected:
+        raise ValueError(
+            f"calibration YAML path resolves to {resolved_declared}, expected {resolved_expected}"
+        )
+    return resolved_declared
+
+
 def parse_materialized_calibration_yaml(
     yaml_path: Path,
     expected_dir: Path,
@@ -331,6 +356,15 @@ def parse_materialized_calibration_yaml(
         }
     try:
         import yaml
+    except ImportError as exc:
+        return {
+            "status": "invalid",
+            "yaml": str(yaml_path),
+            "yaml_exists": True,
+            "missing": [],
+            "errors": [f"ImportError:{exc}"],
+        }
+    try:
         document = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
         if not isinstance(document, dict):
             raise ValueError("calibration YAML is not a mapping")
@@ -346,14 +380,7 @@ def parse_materialized_calibration_yaml(
             names = {index: value for index, value in enumerate(names)}
         if names != expected_names:
             raise ValueError("calibration YAML class names differ from locked CCTSDB names")
-        declared = document.get("path")
-        if not isinstance(declared, str) or "\\" in declared:
-            raise ValueError("calibration YAML path must be a POSIX path")
-        declared_posix = PurePosixPath(declared)
-        expected_name = expected_dir.name
-        if declared_posix.name != expected_name:
-            raise ValueError("calibration YAML path does not identify the selected calibration directory")
-        materialized_dir = expected_dir
+        materialized_dir = resolve_declared_calibration_directory(document.get("path"), expected_dir)
         image_dir = materialized_dir / "images"
         materialized_names = sorted(path.name for path in image_dir.glob("*") if path.is_file()) if image_dir.is_dir() else []
         expected_names = sorted(Path(row["source_image"]).name for row in rows)
@@ -380,7 +407,15 @@ def parse_materialized_calibration_yaml(
             "missing": [],
             "errors": [],
         }
-    except (OSError, ValueError, ImportError, UnicodeError) as exc:
+    except yaml.YAMLError as exc:
+        return {
+            "status": "invalid",
+            "yaml": str(yaml_path),
+            "yaml_exists": True,
+            "missing": [],
+            "errors": [f"YAMLError:{exc}"],
+        }
+    except (OSError, ValueError, UnicodeError) as exc:
         return {
             "status": "invalid",
             "yaml": str(yaml_path),
@@ -418,7 +453,12 @@ def validate_calibration_manifest(
     dev_ids = set(dataset_contract.get("dev_image_ids", ())) if dataset_contract else set()
     test_ids = set(dataset_contract.get("test_image_ids", ())) if dataset_contract else set()
     selected_ids = {Path(row["source_image"]).stem for row in rows}
-    selected_missing = sorted(selected_ids - train_image_ids) if train_image_ids else []
+    if dataset_contract is None:
+        selected_missing = []
+    elif dataset_contract.get("train_inventory", {}).get("status") != "verified":
+        selected_missing = sorted(selected_ids)
+    else:
+        selected_missing = sorted(selected_ids - train_image_ids)
     overlap_dev = sorted(selected_ids & dev_ids)
     overlap_test = sorted(selected_ids & test_ids)
     if selected_missing:
@@ -542,7 +582,13 @@ def validate_model_contract(observed: dict[str, Any], expected: dict[str, Any]) 
     return errors
 
 
-def inspect_frozen_model(repo: Path, model_config: dict[str, Any], probe: bool = True) -> dict[str, Any]:
+def inspect_frozen_model(
+    repo: Path,
+    model_config: dict[str, Any],
+    probe: bool = True,
+    runtime_contract: dict[str, Any] | None = None,
+    observed_environment: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     checkpoint = (repo / model_config["checkpoint"]).resolve()
     result: dict[str, Any] = {
         "label": model_config["label"],
@@ -569,6 +615,20 @@ def inspect_frozen_model(repo: Path, model_config: dict[str, Any], probe: bool =
         result["errors"] = errors or ["model_probe_not_run"]
         result["probe_status"] = "not_run" if not probe else "blocked_by_checkpoint_error"
         return result
+
+    if runtime_contract is not None:
+        compatibility = runtime_compatibility_evidence(
+            observed_environment or environment_evidence(), runtime_contract
+        )
+        result["runtime_compatibility"] = compatibility
+        if compatibility["blocking_errors"]:
+            result.update({
+                "status": "unresolved",
+                "errors": compatibility["blocking_errors"],
+                "probe_status": "blocked_by_unsupported_runtime",
+                "mapping_status": "unresolved",
+            })
+            return result
 
     try:
         import torch
@@ -671,10 +731,73 @@ def inspect_frozen_model(repo: Path, model_config: dict[str, Any], probe: bool =
     return result
 
 
-def _directory_ids(directory: Path, extensions: set[str]) -> list[str]:
+def _directory_ids(directory: Path, extensions: set[str]) -> list[str] | None:
+    if not directory.is_dir():
+        return None
+    return sorted(path.name for path in directory.iterdir() if path.is_file() and path.suffix.lower() in extensions)
+
+
+def _directory_symlinks(directory: Path) -> list[str]:
     if not directory.is_dir():
         return []
-    return sorted(path.name for path in directory.iterdir() if path.is_file() and path.suffix.lower() in extensions)
+    return sorted(path.name for path in directory.iterdir() if path.is_symlink())
+
+
+def _canonical_dataset_inventory(repo: Path, config: dict[str, Any]) -> dict[str, Any]:
+    """Read the approved split-count manifest pinned by the readiness config."""
+    reference = config["dataset_inventory_reference"]
+    path = repo / reference["manifest"]
+    blob = git_blob(repo, reference["commit"], path)
+    observed_sha = sha256_bytes(blob)
+    if observed_sha != reference["sha256"]:
+        raise ValueError(
+            f"approved dataset inventory hash mismatch: {observed_sha} != {reference['sha256']}"
+        )
+    payload = json.loads(blob.decode("utf-8"))
+    images = payload.get("images") if isinstance(payload, dict) else None
+    expected_counts = {
+        "train": reference["train_images"],
+        "dev": reference["dev_images"],
+        "official_test": reference["positive_test_exclusion_images"],
+    }
+    if not isinstance(images, dict) or images != expected_counts:
+        raise ValueError(f"approved dataset inventory counts differ: {images!r}")
+    return {
+        "status": "verified",
+        "commit": reference["commit"],
+        "manifest": reference["manifest"],
+        "sha256": observed_sha,
+        "images": expected_counts,
+        "ids_available": bool(reference.get("ids_available", False)),
+        "scope": reference["scope"],
+    }
+
+
+def _audit_split_directory(
+    directory: Path,
+    extensions: set[str],
+    expected_count: int,
+    label: str,
+) -> tuple[list[str], str, list[str]]:
+    """Return names, status and errors without reading file contents."""
+    if directory.is_symlink():
+        return [], "invalid", [f"{label}_inventory_root_symlink"]
+    names = _directory_ids(directory, extensions)
+    errors: list[str] = []
+    if names is None:
+        return [], "missing", [f"{label}_inventory_missing"]
+    symlinks = _directory_symlinks(directory)
+    if symlinks:
+        errors.append(f"{label}_inventory_symlinks:{len(symlinks)}")
+    if not names:
+        errors.append(f"{label}_inventory_empty")
+    if len(names) != expected_count:
+        errors.append(f"{label}_inventory_count:{len(names)}!={expected_count}")
+    stems = [Path(name).stem for name in names]
+    if len(stems) != len(set(stems)):
+        errors.append(f"{label}_inventory_duplicate_stems")
+    status = "verified" if not errors else ("missing" if names is None or not names else "invalid")
+    return names, status, errors
 
 
 def _ids_hash(values: list[str]) -> str:
@@ -725,6 +848,21 @@ def validate_dataset_contract(repo: Path, config: dict[str, Any]) -> dict[str, A
             "errors": [f"canonical_dev_reference:{type(exc).__name__}:{exc}"],
             "yaml_reference": expected["yaml_reference"],
             "canonical_reference": {"status": "unresolved"},
+        }
+    try:
+        split_inventory = _canonical_dataset_inventory(repo, config)
+    except (OSError, ValueError, UnicodeError, json.JSONDecodeError) as exc:
+        return {
+            "status": "unresolved",
+            "split": expected["split"],
+            "images_observed": 0,
+            "labels_observed": 0,
+            "instances_observed": 0,
+            "expected": expected,
+            "errors": [f"approved_split_inventory:{type(exc).__name__}:{exc}"],
+            "yaml_reference": expected["yaml_reference"],
+            "canonical_reference": reference,
+            "split_inventory_reference": {"status": "unresolved"},
         }
 
     root = repo / "data/processed/cctsdb2021_clean"
@@ -787,13 +925,26 @@ def validate_dataset_contract(repo: Path, config: dict[str, Any]) -> dict[str, A
     if instances != expected["instances"]:
         errors.append(f"dev_instance_count:{instances}!={expected['instances']}")
 
-    train_image_ids = [Path(name).stem for name in _directory_ids(train_images_dir, DEV_IMAGE_EXTENSIONS)]
-    train_label_ids = [Path(name).stem for name in _directory_ids(train_labels_dir, {".txt"})]
-    test_image_ids = [Path(name).stem for name in _directory_ids(test_images_dir, DEV_IMAGE_EXTENSIONS)]
+    train_image_names, train_image_status, train_image_errors = _audit_split_directory(
+        train_images_dir, DEV_IMAGE_EXTENSIONS, split_inventory["images"]["train"], "train_image"
+    )
+    train_label_names, train_label_status, train_label_errors = _audit_split_directory(
+        train_labels_dir, {".txt"}, split_inventory["images"]["train"], "train_label"
+    )
+    test_image_names, test_image_status, test_image_errors = _audit_split_directory(
+        test_images_dir, DEV_IMAGE_EXTENSIONS, split_inventory["images"]["official_test"], "test_exclusion_image"
+    )
+    errors.extend(train_image_errors + train_label_errors + test_image_errors)
+    train_image_ids = [Path(name).stem for name in train_image_names]
+    train_label_ids = [Path(name).stem for name in train_label_names]
+    test_image_ids = [Path(name).stem for name in test_image_names]
     if set(train_image_ids) != set(train_label_ids):
         errors.append("train_image_label_stem_set_mismatch")
     dev_ids = set(current_image_stems)
+    train_ids = set(train_image_ids)
     test_ids = set(test_image_ids)
+    if dev_ids & train_ids:
+        errors.append(f"train_dev_id_overlap:{len(dev_ids & train_ids)}")
     if dev_ids & test_ids:
         errors.append(f"dev_test_id_overlap:{len(dev_ids & test_ids)}")
     inventory_hash = sha256_bytes(canonical_json(inventory))
@@ -814,16 +965,22 @@ def validate_dataset_contract(repo: Path, config: dict[str, Any]) -> dict[str, A
         "train_image_ids": train_image_ids,
         "test_image_ids": test_image_ids,
         "train_inventory": {
+            "status": "verified" if train_image_status == "verified" and train_label_status == "verified" and set(train_image_ids) == set(train_label_ids) else "unresolved",
             "images": len(train_image_ids),
             "labels": len(train_label_ids),
             "image_ids_sha256": _ids_hash(train_image_ids),
             "label_ids_sha256": _ids_hash(train_label_ids),
+            "ids_source": "current checkout directory entries; approved manifest provides counts/provenance only",
         },
         "test_exclusion_inventory": {
+            "status": test_image_status,
             "images": len(test_image_ids),
             "image_ids_sha256": _ids_hash(test_image_ids),
+            "ids_source": "current checkout image directory entries; approved manifest provides count/provenance only",
             "read_mode": "IDs only; no test pixels or labels read",
         },
+        "split_inventory_reference": split_inventory,
+        "train_dev_overlap": sorted(train_ids & dev_ids),
         "dev_test_overlap": sorted(dev_ids & test_ids),
     }
 
@@ -935,6 +1092,40 @@ def environment_evidence() -> dict[str, Any]:
     return values
 
 
+def runtime_compatibility_evidence(observed: dict[str, Any], runtime: dict[str, Any]) -> dict[str, Any]:
+    """Compare observed packages while keeping server/GPU verification separate."""
+    package_keys = ("torch", "ultralytics", "numpy", "pycocotools")
+    mismatches = []
+    missing = []
+    for key in package_keys:
+        actual = observed.get(key)
+        expected = runtime.get(key)
+        if actual in (None, "unknown"):
+            missing.append(key)
+        elif expected is not None and actual != expected:
+            mismatches.append({"package": key, "expected": expected, "observed": actual})
+    blocking_errors = []
+    if observed.get("ultralytics") in (None, "unknown"):
+        blocking_errors.append("ultralytics_missing_for_native_head_probe")
+    elif observed.get("ultralytics") != runtime.get("ultralytics"):
+        blocking_errors.append(
+            f"ultralytics_unsupported_for_native_head_probe:{observed.get('ultralytics')}!={runtime.get('ultralytics')}"
+        )
+    return {
+        "status": "cpu_probe_supported" if not blocking_errors else "unresolved",
+        "native_head_probe_supported": not blocking_errors,
+        "supported_ultralytics": runtime.get("ultralytics"),
+        "observed_cpu_packages": {key: observed.get(key) for key in package_keys},
+        "expected_server_packages": {key: runtime.get(key) for key in package_keys},
+        "package_mismatches": mismatches,
+        "missing_packages": missing,
+        "blocking_errors": blocking_errors,
+        "server_runtime_status": "not_verified_by_cpu_readiness",
+        "server_gpu_cuda_tensorrt_observed": False,
+        "server_runtime_note": "Torch/NumPy/package differences are recorded separately; no CUDA or TensorRT verification is inferred here.",
+    }
+
+
 def git_head(repo: Path) -> str:
     result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=False)
     return result.stdout.strip() if result.returncode == 0 else "unknown"
@@ -952,7 +1143,17 @@ def build_readiness(
 ) -> dict[str, Any]:
     config_path = (config_path or repo / DEFAULT_CONFIG).resolve()
     environment = environment_evidence()
-    model_records = [inspect_frozen_model(repo, model, probe=probe_models) for model in config["models"]]
+    runtime_compatibility = runtime_compatibility_evidence(environment, config["runtime"])
+    model_records = [
+        inspect_frozen_model(
+            repo,
+            model,
+            probe=probe_models,
+            runtime_contract=config["runtime"],
+            observed_environment=environment,
+        )
+        for model in config["models"]
+    ]
     dataset = validate_dataset_contract(repo, config)
     calibration_records = [
         validate_calibration_manifest(repo, config["canonical_input_commit"], selection, dataset)
@@ -960,11 +1161,7 @@ def build_readiness(
     ]
     schedule = generate_schedule(config)
     schedule_evidence = validate_schedule(schedule, config)
-    missing = [
-        missing_item
-        for record in calibration_records
-        for missing_item in record.get("materialization", {}).get("missing", [])
-    ]
+    missing: list[str] = []
     unresolved = [
         f"{record['label']}:{error}"
         for record in model_records
@@ -975,9 +1172,37 @@ def build_readiness(
         for record in calibration_records
         for error in record.get("errors", [])
     ]
+    unresolved += [f"runtime:{error}" for error in runtime_compatibility["blocking_errors"]]
+    for record in calibration_records:
+        materialization = record.get("materialization") or {}
+        materialization_status = materialization.get("status")
+        if materialization_status == "missing_materialization":
+            missing.extend(
+                f"{record['id']}:{item}" for item in materialization.get("missing", [])
+            )
+        elif materialization_status != "complete":
+            unresolved.append(
+                f"{record['id']}:materialization_status:{materialization_status or 'unknown'}"
+            )
+        unresolved.extend(
+            f"{record['id']}:materialization_error:{error}"
+            for error in materialization.get("errors", [])
+        )
     contracts_verified = all(record.get("status") == "verified" for record in model_records)
     canonical_inputs_verified = all(record["manifest_contract"]["status"] == "canonical_manifest_valid" for record in calibration_records)
-    raw_inputs_ready = contracts_verified and canonical_inputs_verified and dataset["status"] == "verified" and not missing and not unresolved
+    calibrations_verified = all(
+        record.get("status") == "verified"
+        and (record.get("materialization") or {}).get("status") == "complete"
+        for record in calibration_records
+    )
+    raw_inputs_ready = (
+        contracts_verified
+        and canonical_inputs_verified
+        and calibrations_verified
+        and dataset["status"] == "verified"
+        and not missing
+        and not unresolved
+    )
     if unresolved:
         overall_status = "unresolved"
     elif missing:
@@ -1011,6 +1236,7 @@ def build_readiness(
         },
         "config": str(config_path),
         "environment_observed_before_model_probe": environment,
+        "runtime_compatibility": runtime_compatibility,
         "model_contracts": model_records,
         "calibration_readiness": {
             "selections": calibration_records,
@@ -1080,6 +1306,11 @@ def readiness_report(manifest: dict[str, Any]) -> str:
     lines += [
         "- ONNX export, graph-level mapping, TensorRT/GPU identity and all auxiliary/scored execution remain deferred to a separately reviewed server prepare/run phase.",
         "- `scored_run_authorized` is `false`; this report is not TensorRT end-to-end evidence.",
+        "",
+        "## Runtime compatibility",
+        "",
+        f"- Native CPU head probe compatibility: `{manifest.get('runtime_compatibility', {}).get('status', 'unknown')}`; supported Ultralytics: `{manifest.get('runtime_compatibility', {}).get('supported_ultralytics', 'unknown')}`.",
+        "- Server CUDA/TensorRT/GPU identity remains `not_verified_by_cpu_readiness`; local Torch/NumPy differences are recorded as package observations, not silently treated as server verification.",
         "",
         "## Statistics protocol",
         "",

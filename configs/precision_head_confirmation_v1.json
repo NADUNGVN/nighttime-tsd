@@ -12,6 +12,16 @@
     "instances": 2706,
     "predictions_sha256": "5c23d0fa7d4bbf09858b2f1a4dbf45c35650c474aaedebe40d845e3c9acc410a"
   },
+  "dataset_inventory_reference": {
+    "commit": "3154b7ad2308ff8802ea1c15532951c86ed66a96",
+    "manifest": "results/paper_artifacts/v1/metadata/dataset_manifest.json",
+    "sha256": "5d1b6f1c6df475efe14c8bc6e41c6312b5121dcb828041ec81bbcb2733ac0a2e",
+    "train_images": 14720,
+    "dev_images": 1636,
+    "positive_test_exclusion_images": 1500,
+    "ids_available": false,
+    "scope": "approved split counts and provenance; current checkout binds per-directory IDs"
+  },
   "models": [
     {
       "label": "yolov8n",

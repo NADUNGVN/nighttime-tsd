@@ -434,3 +434,52 @@ phase, cache, capture, timing-policy, dependency, and sequence field. Missing,
 extra, wrong-selection, wrong-repeat, or malformed jobs are rejected even when
 aggregate counts happen to match. The schedule hash is new and supersedes the
 unrun grouped schedule; no historical result is rewritten.
+
+## Appendix B. R1–R3 readiness correction (A2L-024)
+
+The following corrections are mandatory for the CPU inventory and remain
+preparation-only. They do not authorize ONNX export, TensorRT import/build,
+GPU execution, or scored matrix work.
+
+### R1. Materialized YAML path and parser failures
+
+The producer writes an absolute POSIX `path`. Readiness resolves that declared
+path on the host and compares the resolved directory exactly with the intended
+selection directory. It rejects same-basename/different-parent paths,
+relative paths, traversal, foreign/stale roots, and symlink escapes; it does
+not silently rebase a YAML onto the expected directory. YAML syntax errors,
+including `yaml.YAMLError`, are returned as structured `invalid` materialization
+evidence rather than escaping before the audit report is written. A valid YAML
+still requires exact 1,024 selected images and byte equality with train source
+files.
+
+### R2. Nested status aggregation
+
+Every calibration selection must have outer status `verified` and nested
+materialization status `complete` before
+`raw_inputs_ready_for_server_prepare` can be true. Nested invalid, unknown, or
+missing status, nested errors, and nested missing items are promoted to the
+overall readiness result with the selection ID. The positive all-complete path,
+invalid YAML, substituted bytes, unknown status, missing YAML, and disabled
+model probe are covered by integration fixtures. The scored matrix gate and
+`scored_run_authorized=false` remain unchanged.
+
+### R3. Split inventory and runtime compatibility
+
+The approved dataset manifest pinned at commit
+`3154b7ad2308ff8802ea1c15532951c86ed66a96` and SHA256
+`5d1b6f1c6df475efe14c8bc6e41c6312b5121dcb828041ec81bbcb2733ac0a2e` binds
+the expected counts: 14,720 train images, 1,636 dev images, and 1,500
+positive-test exclusion images. Readiness verifies current train image/label
+directories and test image directory are present, non-empty, count-matched,
+unique by stem, and free of directory-entry symlinks; it checks image/label
+stems and records train/dev and dev/test membership overlaps. The approved
+manifest provides counts/provenance only; current checkout IDs are recorded
+separately. Missing inventory is `missing`/`unresolved`, never evidence of
+zero overlap. Test labels and pixels are not read for this exclusion check.
+
+Observed CPU package versions are recorded before model probing. Native head
+probe support is unresolved when Ultralytics is missing or differs from locked
+`8.4.102`; Torch/NumPy/pycocotools differences are retained as explicit
+observations. Server CUDA, TensorRT, GPU identity and runtime compatibility are
+not inferred from this local CPU report.

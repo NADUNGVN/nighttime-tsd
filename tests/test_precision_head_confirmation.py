@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import sys
 
@@ -157,6 +158,18 @@ class PrecisionHeadConfirmationTests(unittest.TestCase):
             yaml_path.write_text("path: wrong\ntrain: images\nval: images\nnc: 3\n", encoding="utf-8")
             invalid_yaml = readiness.parse_materialized_calibration_yaml(yaml_path, expected_dir, rows, source_root)
             self.assertEqual(invalid_yaml["status"], "invalid")
+            same_basename_parent = root / "wrong-parent" / expected_dir.name
+            yaml_path.write_text(
+                f"path: {str(same_basename_parent).replace(chr(92), '/') }\ntrain: images\nval: images\nnames:\n  0: prohibitory\n  1: mandatory\n  2: warning\nnc: 3\n",
+                encoding="utf-8",
+            )
+            invalid_parent = readiness.parse_materialized_calibration_yaml(yaml_path, expected_dir, rows, source_root)
+            self.assertEqual(invalid_parent["status"], "invalid")
+            self.assertTrue(any("expected" in error for error in invalid_parent["errors"]))
+            yaml_path.write_text("path: [unterminated\n", encoding="utf-8")
+            malformed = readiness.parse_materialized_calibration_yaml(yaml_path, expected_dir, rows, source_root)
+            self.assertEqual(malformed["status"], "invalid")
+            self.assertTrue(any(error.startswith("YAMLError:") for error in malformed["errors"]))
 
     def test_head_contract_rejects_ambiguous_branch_and_wrong_representation(self):
         self.assertEqual(readiness.derive_active_branches(False, ["cv2", "cv3"]), (["cv2", "cv3"], []))
@@ -248,6 +261,120 @@ class PrecisionHeadConfirmationTests(unittest.TestCase):
         self.assertIn("script_sha256", manifest["execution_provenance"])
         self.assertEqual(manifest["accounting"]["total_builder_invocations"], 84)
         self.assertTrue(any("materialized_calibration_yaml" in item for item in manifest["missing_prerequisites"]))
+
+    def test_nested_materialization_status_controls_raw_readiness(self):
+        model_records = [
+            {"label": model["label"], "status": "verified", "errors": []}
+            for model in self.config["models"]
+        ]
+        dataset = {
+            "status": "verified",
+            "errors": [],
+            "train_image_ids": ["train"],
+            "dev_image_ids": ["dev"],
+            "test_image_ids": ["test"],
+            "train_inventory": {"status": "verified"},
+        }
+        complete = [
+            {
+                "id": selection["id"],
+                "status": "verified",
+                "errors": [],
+                "manifest_contract": {"status": "canonical_manifest_valid", "image_ids": []},
+                "materialization": {"status": "complete", "missing": [], "errors": []},
+            }
+            for selection in self.config["calibration_selections"]
+        ]
+        with patch.object(readiness, "inspect_frozen_model", side_effect=model_records), \
+             patch.object(readiness, "validate_dataset_contract", return_value=dataset), \
+             patch.object(readiness, "validate_calibration_manifest", side_effect=complete):
+            positive = readiness.build_readiness(REPO, self.config, probe_models=True)
+        self.assertTrue(positive["raw_inputs_ready_for_server_prepare"])
+        self.assertEqual(positive["status"], "ready_for_server_prepare_review")
+
+        invalid = copy.deepcopy(complete)
+        invalid[1]["status"] = "invalid"
+        invalid[1]["materialization"] = {"status": "invalid", "missing": [], "errors": ["image bytes mismatch"]}
+        with patch.object(readiness, "inspect_frozen_model", side_effect=model_records), \
+             patch.object(readiness, "validate_dataset_contract", return_value=dataset), \
+             patch.object(readiness, "validate_calibration_manifest", side_effect=invalid):
+            negative = readiness.build_readiness(REPO, self.config, probe_models=True)
+        self.assertFalse(negative["raw_inputs_ready_for_server_prepare"])
+        self.assertEqual(negative["status"], "unresolved")
+        self.assertIn("U43:materialization_status:invalid", negative["unresolved_checks"])
+        self.assertIn("U43:materialization_error:image bytes mismatch", negative["unresolved_checks"])
+
+        missing = copy.deepcopy(complete)
+        missing[0]["status"] = "missing"
+        missing[0]["materialization"] = {
+            "status": "missing_materialization",
+            "missing": ["materialized_calibration_yaml"],
+            "errors": [],
+        }
+        with patch.object(readiness, "inspect_frozen_model", side_effect=model_records), \
+             patch.object(readiness, "validate_dataset_contract", return_value=dataset), \
+             patch.object(readiness, "validate_calibration_manifest", side_effect=missing):
+            missing_manifest = readiness.build_readiness(REPO, self.config, probe_models=True)
+        self.assertFalse(missing_manifest["raw_inputs_ready_for_server_prepare"])
+        self.assertEqual(missing_manifest["status"], "readiness_complete_scored_matrix_blocked")
+        self.assertIn("U42:materialized_calibration_yaml", missing_manifest["missing_prerequisites"])
+
+    def test_split_inventory_missing_and_train_dev_overlap_are_not_verified(self):
+        source_image = next((REPO / "data/processed/cctsdb2021_clean/dev/images").glob("*.jpg"))
+        source_label = REPO / "data/processed/cctsdb2021_clean/dev/labels" / f"{source_image.stem}.txt"
+        from PIL import Image
+        with Image.open(source_image) as image:
+            shape = [image.height, image.width]
+        config = copy.deepcopy(self.config)
+        config["dev_contract"] = copy.deepcopy(config["dev_contract"])
+        config["dev_contract"].update({"images": 1, "instances": len(source_label.read_text(encoding="utf-8").splitlines())})
+        canonical = [{"image": source_image.name, "stem": source_image.stem, "orig_shape": shape}]
+        split_inventory = {
+            "status": "verified",
+            "images": {"train": 1, "dev": 1, "official_test": 1},
+            "scope": "fixture",
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            dev_images = root / "data/processed/cctsdb2021_clean/dev/images"
+            dev_labels = root / "data/processed/cctsdb2021_clean/dev/labels"
+            dev_images.mkdir(parents=True)
+            dev_labels.mkdir(parents=True)
+            (dev_images / source_image.name).write_bytes(source_image.read_bytes())
+            (dev_labels / source_label.name).write_bytes(source_label.read_bytes())
+            with patch.object(readiness, "_canonical_dev_reference", return_value={"records": canonical}), \
+                 patch.object(readiness, "_canonical_dataset_inventory", return_value=split_inventory):
+                missing = readiness.validate_dataset_contract(root, config)
+            self.assertEqual(missing["status"], "unresolved")
+            self.assertIn("train_image_inventory_missing", missing["errors"])
+            self.assertIn("test_exclusion_image_inventory_missing", missing["errors"])
+            self.assertEqual(missing["test_exclusion_inventory"]["status"], "missing")
+
+            train_images = root / "data/processed/cctsdb2021_clean/train/images"
+            train_labels = root / "data/processed/cctsdb2021_clean/train/labels"
+            test_images = root / "data/processed/cctsdb2021_clean/test/images"
+            train_images.mkdir(parents=True)
+            train_labels.mkdir(parents=True)
+            test_images.mkdir(parents=True)
+            (train_images / source_image.name).write_bytes(source_image.read_bytes())
+            (train_labels / source_label.name).write_bytes(source_label.read_bytes())
+            (test_images / source_image.name).write_bytes(source_image.read_bytes())
+            with patch.object(readiness, "_canonical_dev_reference", return_value={"records": canonical}), \
+                 patch.object(readiness, "_canonical_dataset_inventory", return_value=split_inventory):
+                overlap = readiness.validate_dataset_contract(root, config)
+            self.assertIn("train_dev_id_overlap:1", overlap["errors"])
+            self.assertIn("dev_test_id_overlap:1", overlap["errors"])
+            self.assertEqual(overlap["train_inventory"]["status"], "verified")
+            self.assertEqual(overlap["test_exclusion_inventory"]["status"], "verified")
+
+    def test_unsupported_ultralytics_is_unresolved_but_other_package_diffs_are_recorded(self):
+        observed = {"torch": "2.8.0+cu129", "ultralytics": "8.4.101", "numpy": "2.4.2", "pycocotools": "2.0.9"}
+        evidence = readiness.runtime_compatibility_evidence(observed, self.config["runtime"])
+        self.assertEqual(evidence["status"], "unresolved")
+        self.assertFalse(evidence["native_head_probe_supported"])
+        self.assertTrue(any("ultralytics_unsupported" in error for error in evidence["blocking_errors"]))
+        self.assertEqual(len(evidence["package_mismatches"]), 4)
+        self.assertEqual(evidence["server_runtime_status"], "not_verified_by_cpu_readiness")
 
 
 if __name__ == "__main__":

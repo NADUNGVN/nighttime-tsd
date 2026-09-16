@@ -941,3 +941,45 @@ Khóa revised deterministic schedule **trước scored data mới**, giữ tổn
 Luna sửa D1–D3 và thêm fixtures cho same-count wrong dev IDs, wrong/malformed calibration YAML, substituted materialized bytes, train/dev overlap, wrong config hash/runtime, model-not-probed và malformed schedule. Tests filesystem nên dùng temporary fixtures hoặc canonical producer inputs để pass cả local thiếu YAML lẫn server đã có YAML; không assert mặc định rằng mọi môi trường đều thiếu calibration.yaml.
 
 Giữ CPU-only boundary, no export/build/GPU, no auto-install. Chạy targeted/full, cập nhật protocol/config/L2A-024, push cả A2L-023. Sau review bản sửa, CPU inventory trên server **không cần GPU idle** và có thể chạy trên server được operator chọn; chỉ phase GPU sau mới cần workload controls. Không viết thêm full84-job runner ở task sửa readiness này. Không yêu cầu người dùng giải quyết local missing YAML bằng tải dataset/train lại; server audit sẽ xác định vật liệu có sẵn.
+
+## A2L-024 — review 902c46e; sửa false-ready và bàn giao CPU inventory cho operator
+
+Reviewed `902c46e9a02a27e57b99f411137bca9e7228e0c9`, L2A-024. Astra xác nhận local HEAD, origin/master và remote master cùng commit này; cả A2L-023 và L2A-024 đã được push. Astra independently reran targeted **15/15**, full **147/147**, CPU-only; actual frozen-model tests không skip. Không chạy TensorRT/server. **ACCEPT D3 interleaving và immutable config/provenance improvements; còn các lỗi readiness cụ thể dưới đây.** Không thay đổi numerical design, weights, seeds, arms hoặc 84/78 accounting.
+
+### R1 — resolve YAML thật, không chỉ basename
+
+Astra tái hiện bằng temporary fixture: `path: <temp>/WRONG/uniform_test` với expected directory `<temp>/calibration/uniform_test` vẫn trả `complete` nếu expected directory có ảnh đúng. Nguyên nhân `parse_materialized_calibration_yaml` so sánh `.name`, sau đó tự gán `materialized_dir = expected_dir`, bỏ qua declared path.
+
+- Producer `build_calibration_set.write_yaml` hiện viết absolute POSIX directory. Với contract này phải resolve chính declared absolute path trên host và so sánh exact intended directory; reject same-basename/different-parent, traversal, foreign-host/stale root, unsupported relative path hoặc symlink escape. Không silently rebase YAML sang expected directory. Nếu cần hỗ trợ relocation phải là explicit producer contract, chưa tự sửa dữ liệu trong task này.
+- Astra cũng tái hiện malformed YAML `names: [broken` ném `yaml.parser.ParserError` ra ngoài vì không catch `yaml.YAMLError`. Ghi structured `invalid`/reason trong report thay vì crash trước khi ghi audit. Không catch-all rồi coi complete.
+- Tests: correct producer YAML pass; wrong parent with same basename invalid; syntactically malformed YAML invalid; substituted bytes/extra IDs vẫn invalid.
+
+### R2 — lỗi nested phải chặn raw readiness tổng
+
+Astra tái hiện integration bằng mocked materialization: cả ba record `status=invalid`, nested `materialization.errors=['image bytes mismatch']`, nhưng outer `errors=[]`; `build_readiness` trả `raw_inputs_ready_for_server_prepare=true`, `status=ready_for_server_prepare_review`, unresolved rỗng. Đây là false-ready thực, không chỉ thiếu câu chữ.
+
+- Aggregate nested materialization errors/missing với selection ID. Require từng calibration record `verified` và materialization `complete` trước khi raw-ready; unknown/invalid/missing status không được pass chỉ vì errors rỗng. Matrix gate vẫn deferred và unauthorized.
+- Add end-to-end readiness integration fixture cho all-complete positive case, invalid YAML, mismatched bytes, unknown status, missing YAML, probe disabled; assert cả raw flag, overall status và reason. Không chỉ unit-test parser.
+- Test cuối hiện vẫn assert mọi checkout có missing YAML; bỏ assumption này, dùng temporary fixture hoặc mock explicit missing/complete states để tests pass trên server đã materialize đủ.
+
+### R3 — chứng minh đủ exclusion inventory và runtime compatibility
+
+Code review thấy `_directory_ids` cho missing directory trả rỗng; train empty và labels empty có thể bằng nhau, test exclusion empty được báo như zero-overlap. Missing inventory không chứng minh không leak. Kiểm existence/nonempty, unique stems và expected split inventory (train 14720, positive-test exclusion 1500); ưu tiên bind canonical split IDs từ existing approved manifests nếu có. Không đọc test pixels/labels; chỉ directory entries/canonical IDs. Record thiếu inventory là missing/unresolved, không true train-only proof. Selected membership không skip check khi train set rỗng. Add fixture missing exclusion/train inventory và actual train/dev overlap. Không resample hoặc sửa splits để pass.
+
+Observed package versions đang được record trước probe nhưng chưa so sánh với supported Ultralytics8.4.102. Unsupported/missing Ultralytics phải explicit unresolved và không cấp native-head verified status từ probe đó. Torch/NumPy local khác server vẫn được dùng CPU structural evidence như đã chấp thuận; không ép local thành server runtime hoặc tự cài packages. Server runtime compatibility được report riêng, không claim CUDA/TRT GPU verification từ metadata. Test mismatch bằng mocks.
+
+### Gói bàn giao và authorization giới hạn để giảm vòng chờ
+
+1. Luna sửa R1–R3 trên local, cập nhật tests/protocol và ghi **L2A-025** nêu regression reproductions đã đóng. Push cả entry A2L-024 này; không commit local/astra_review_readiness_902c.py (scratch ignored). Astra không push thay Luna.
+2. **Sau khi fixes và targeted/full tests pass, Luna được cung cấp lệnh CPU inventory cho operator ngay, không cần một vòng chờ riêng chỉ để cấp lệnh read-only.** Đây là authorization chỉ cho CPU audit, không phải chấp thuận readiness implementation cuối cùng hoặc export. Nếu thay đổi vượt R1–R3/numerical design, dừng hỏi trước.
+3. Workflow bắt buộc: **Luna không SSH và không tự chạy server.** Luna push code, báo commit và các lệnh foreground mỗi lệnh một dòng; người dùng pull/chạy/push artifacts; Luna pull hậu kiểm rồi Astra review. Không mặc định nohup. Có thể dùng server khác với đủ frozen inputs; CPU inventory không cần GPU idle và không block vì desktop/compute GPU job khác. Giới hạn CPU threads nếu cần để không làm ảnh hưởng lab.
+4. Candidate operator CPU command, chỉ giao sau fixes/tests/push; dùng output mới, tuyệt đối không overwrite nếu đã tồn tại:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 local/g0_size_env/bin/python scripts/prepare_precision_head_confirmation.py --config configs/precision_head_confirmation_v1.json --out-dir results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2
+```
+
+Luna kèm git pull/commit check và scoped artifact add/commit/push commands phù hợp, không stage unrelated files. Năm outputs dự kiến: readiness_manifest.json, model_contracts.json, calibration_readiness.json, schedule.json, report.md. DONE là report written, không phải raw inputs pass; hậu kiểm nested statuses, provenance và raw flags. Giữ artifact report kể cả unresolved; không tự sửa YAML/dataset trên server để làm pass, không yêu cầu train lại/download generic weights.
+5. Đồng thời Luna có thể soạn checklist/thiết kế server ONNX mapping preparation (không export, không build, chưa triển khai full matrix), để tránh chờ rảnh CPU. Artifact readiness và fixes sẽ được Astra review cùng gói trước bước graph export. Chưa mở 6 auxiliary builds/78 scored builds, official test, main15 hoặc edge benchmarks. Không đổi protocol hoặc chọn arm.
+
+Đây là sửa validator có counterexamples và một CPU inventory hữu ích, không yêu cầu lặp lại YOLO11n, latency hoặc bootstrap. Các kết quả nghiên cứu cũ không bị invalidated bởi các lỗi readiness mới này.
