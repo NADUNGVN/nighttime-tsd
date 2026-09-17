@@ -467,3 +467,83 @@ this package, and no official-test/AP result is implied.
 
 **Git:** branch `luna1/e2l1-006-jetson-adapter-smoke`; scoped commit/push follows
 after final checks. No PR or merge.
+
+## L1A-007 — adapter ownership repair and executable CPU/mock smoke
+
+**Status:** J1–J3 complete locally; **NO-GO** for SSH, model transfer,
+target-native export/build, device inference, benchmark, installation, or
+device configuration changes. The E2L1-007 inbox entry is committed unchanged
+alongside this report.
+
+### J1 — coherent buffer ownership
+
+`scripts/edge_readiness/jetson_adapter.py` no longer invents device pointers.
+The injected buffer manager supplies exactly one validated allocation per
+binding, with positive unique pointer, owner, lifetime ID, shape/dtype/byte
+count, host staging, and copy-stream handle. The same allocation map is used
+for H2D, E2 binding-list v2, E5 named-address v3, and D2H. Host output payloads
+are returned only after `after_output_copy` synchronization and an explicit
+`mark_outputs_ready` boundary. Host-location bindings, missing/duplicate
+pointers, ownership/lifetime omissions, wrong stream, copy failure, enqueue
+failure, and named-address failure produce structured errors.
+
+### J2 — harness integration and model contract
+
+`AdapterHarnessBridge` runs through the accepted `run_session` contract for
+both `inference_only` and `decoded_image_to_detections`. Tests verify warmup
+exclusion, measured image sequence, both timing boundaries, final-copy
+completion, synchronous postprocess, backend/synchronization metadata, and
+failure propagation. The three generated 4x4 PPMs are now labelled
+`synthetic_mock_fixture`; they are not CCTSDB train evidence. The proposed real
+smoke requires the first three U42 CCTSDB train images in canonical order with
+accepted source content hashes; that material is not currently present and is
+recorded as a prerequisite rather than fabricated.
+
+The YOLO11n no-NMS engineering validator freezes one native output `output0`
+with shape `[1,7,8400]`, explicit source-to-engine mapping, raw comparison
+before decode/NMS, and one later NMS owner. The former generic `[1,84,8400]`
+fixture is rejected. Tolerance policy remains pre-observation and distinguishes
+FP16/FP32 output domains; it is an engineering smoke threshold, not an
+accuracy or precision claim.
+
+### J3 — executable local orchestration
+
+`scripts/edge_readiness/jetson_adapter_smoke.py` is an executable CPU/mock
+dry-run only. It exercises the adapter through the accepted harness for both
+timing boundaries and writes `manifest.json`, fixture/output contract files,
+per-boundary session/event files, and a structured `failure.json` on mock
+orchestration failure. It does not load a model, perform a forward pass, read
+SSH, or enter a device mode. The future real target entry point is intentionally
+not implemented at this gate. Remote collector lifecycle and per-source
+clock/error persistence are explicitly listed as unimplemented real-session
+prerequisites; no telemetry result is fabricated.
+
+Power boundary or clock alignment is no longer an unconditional correctness
+stop: those omissions make energy unavailable. Missing final synchronization,
+wrong runtime/binding/model output, or missing accepted CCTSDB fixture remains a
+correctness-smoke stop.
+
+### Verification
+
+    python -m unittest discover -s tests -p 'test_edge*.py' -v
+    Ran 39 tests ... OK
+    python -m py_compile scripts/edge_readiness/collect_inventory.py scripts/edge_readiness/collect_telemetry.py scripts/edge_readiness/measurement_harness.py scripts/edge_readiness/jetson_adapter.py scripts/edge_readiness/jetson_adapter_smoke.py tests/test_jetson_adapter.py tests/test_edge_jetson_adapter.py
+    git diff --check
+    python scripts/edge_readiness/jetson_adapter_smoke.py --target E2 --out-dir <temporary-dir> --dry-run
+    exit 0; manifest status completed_mock_dry_run; real_device_execution false
+
+No GPU runtime was imported and no edge command was executed. Previous
+E2L1-005 telemetry artifacts and prior mock artifacts remain immutable.
+
+### Remaining prerequisites and handoff
+
+Before a real E2 smoke, Astra must authorize target-local runtime/API checks,
+the target-native engine provenance, accepted U42 fixture materialization,
+binding/output manifest, explicit stream/event completion, and bounded output
+comparison. Future real telemetry also needs bounded remote child lifecycle,
+per-source status/error records, and clock conversion evidence. Missing power
+or clock alignment remains `energy: unavailable`, not a reason to recollect
+telemetry or block a separately labelled correctness/latency smoke.
+
+**Git:** branch `luna1/e2l1-006-jetson-adapter-smoke`; commit/push follows after
+final checks using the established `NADUNGVN` account. No PR or merge.
