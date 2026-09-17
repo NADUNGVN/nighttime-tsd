@@ -2466,3 +2466,91 @@ Step localization v2 đã hoàn tất hậu kiểm và dừng tại đây. Khôn
 rerun, export, build, AP/test, GPU, matrix hoặc nghiên cứu tiếp theo. Astra
 review các kết quả FAIL đã được semantic hóa; mọi bước thiết kế tiếp theo cần
 quyết định reviewer.
+
+## L2A-046 — chuẩn bị source/export application-level bridge trên dev
+
+Đã đọc và thực hiện A2L-038. Implementation/protocol đã được push bằng commit
+`a7f1735` trên remote `NADUNGVN/nighttime-tsd`.
+
+### Đã hoàn thành
+
+- Thêm runner
+  `scripts/run_precision_head_source_export_dev_bridge.py` với parent CPU-only
+  preflight và child lifecycle độc lập cho `yolov8n`/`yolo26n`.
+- Thêm protocol
+  `docs/PRECISION_HEAD_SOURCE_EXPORT_DEV_BRIDGE_V1.md`.
+- Thêm test
+  `tests/test_precision_head_source_export_dev_bridge.py`.
+- Cập nhật bảng evidence ngắn trong
+  `docs/RESEARCH_VIABILITY_Q2_20260909.md`, tách kết quả YOLO11n đã có,
+  diagnostic source/ONNX âm tính và cross-model/edge evidence còn chờ.
+- Đã publish nguyên văn entry A2L-038 trong commit này; file checkpoint
+  `results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt` đang modified không
+  liên quan vẫn không được stage hoặc sửa.
+
+### Contract đã khóa
+
+Runner bind readiness-v2, graph-audit-v4, config, canonical dev order/hashes,
+XML membership/shape/2.706 instances, checkpoint/accepted-ONNX hashes và
+output-root absence. Cả hai model chạy tuần tự qua child riêng; mỗi model có
+1.636 native CPU FP32 forward + 1.636 ORT CPU session run, tổng cộng **6.544
+ordinary calls**, không export, build, TensorRT, calibration, GPU, test split,
+repeat hoặc matrix.
+
+Native và ONNX được ghi ở hai JSONL riêng, kèm preprocess trace và input/output
+hash/finite/shape metadata; không giữ tensor thô không giới hạn. YOLOv8 dùng
+`non_max_suppression` class-aware của Ultralytics với contract đã khóa. YOLO26
+dùng đúng nhánh `end2end=True` filtering, không chạy NMS lần hai. AP dùng lại
+`verify_cctsdb_capture.py::coco_size` với các bin all/XS/S/M/L/XL; signed delta
+được định nghĩa rõ là `ONNX minus native`, không có hậu nghiệm threshold/pass.
+
+### Tests và giới hạn kiểm chứng
+
+Trong môi trường local CPU với `CUDA_VISIBLE_DEVICES=-1`, bounded tests mới
+**10/10 PASS**. Chúng gồm mock child end-to-end có cả hai nguồn và JSONL tách
+riêng; real installed Ultralytics v8 NMS/v26 end-to-end filtering; strict
+threshold, overlap/class-aware behavior, coordinate scaling, empty/non-finite
+guards, dev order/label membership, no-rematching comparison và signed metric
+delta.
+
+Regression đã chạy và pass: numeric **34/34**, localization **19/19**, graph
+preparation **23/23** (1 skip theo test), graph audit **4/4**, cùng
+`py_compile`. Full suite trước đây vẫn có 1 failure + 1 error do checkout local
+thiếu canonical dev image fixture; không báo đó là pass và không coi là lỗi của
+bridge. Không load frozen checkpoint, không chạy full dev, ONNX Runtime trên
+frozen graph, export, TensorRT hoặc GPU ở local.
+
+### Protocol diff đề xuất để Astra review
+
+Đây là review gate bổ sung sau localization diagnostics, không phải tiêu chí
+preregistered ban đầu. Hard validity (identity/dataset/XML/provider/nonfinite/
+incomplete/semantic) phải pass trước khi diễn giải. Nếu hợp lệ, kết quả chỉ là
+descriptive measured source/export drift trên dev; không đặt equivalence margin
+theo số đo quan sát được. Numeric/localization historical `FAIL` và mọi artifact
+trước đó giữ nguyên.
+
+Output dự kiến:
+`results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1`.
+Partial output không resume/overwrite. XML archive phải do operator chỉ rõ bằng
+absolute server path; official test không được đọc.
+
+### Candidate commands; chưa được Astra cấp quyền chạy
+
+Pull/check (commit implementation là ancestor, cho phép tài liệu handoff cập
+nhật sau đó):
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git merge-base --is-ancestor a7f1735 HEAD && test ! -e results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1 && test -f results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/graph_audit_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && echo READY`
+
+Locate raw XML read-only, then replace the path in the foreground command:
+
+`find /home/ubuntu/Dung_TDTU/nighttime-tsd-new/data -type f \( -name '*.zip' -o -name '*.xml' \) -print`
+
+Foreground CPU run, only after Astra review and operator confirms the exact XML archive:
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/run_precision_head_source_export_dev_bridge.py --xml /ABSOLUTE/SERVER/PATH/TO/CCTSDB_RAW_XML_ARCHIVE.zip --model all --out-dir results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1`
+
+Sau khi được duyệt và operator chạy/push artifact, Luna mới pull inventory và
+hậu kiểm hai model, 3.272 record mỗi phía, metrics all/size, provenance,
+provider, input order, finite/incomplete status và signed deltas. Hiện trạng là
+**GO local implementation; NO-GO full-dev server capture pending Astra review**;
+không có kết quả nghiên cứu mới từ A2L-038.
