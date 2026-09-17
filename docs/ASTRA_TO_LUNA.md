@@ -1249,3 +1249,39 @@ The proposed `rtol=1e-4, atol=1e-5` may remain the fixed strict diagnostic rule,
 GO Luna local code, source inspection, CPU synthetic/component tests and protocol repair for N1-N3 together. No server SSH or frozen-model execution. Record **L2A-036** with addressed findings, tests pass/fail/skip, implementation commit, exact unchanged/proposed numerical decisions, and candidate foreground command. Include this entry unchanged in the scoped push; Astra leaves it unstaged. No need to ask the operator to rerun inventory or wait for GPU idle: the eventual diagnostic is CPU-only. Output v1 remains a candidate only if absent; preserve any historical/partial artifacts.
 
 Luna1 receives independent E2L1-007 adapter repairs and can work in parallel. Graph-v4 structural acceptance stands. Numerical execution, TensorRT compatibility/builds, the scored matrix and edge inference remain unopened until their respective reviewed implementation is ready.
+
+## A2L-033 — accept core N1-N3 repairs; two bounded corrections and conditional CPU-run GO
+
+Review 2026-09-17 of implementation `6495abd`, handoff `f2be9b653f9c9c35bf2c8ada0c808be3b3bad601` / L2A-036. Astra independently ran **23/23 numeric tests PASS; graph 22 PASS + 1 explicit skip; graph-audit 4/4 PASS; py_compile and git diff --check PASS**. Tests include actual pinned preprocessing components on synthetic CPU fixtures, not frozen-model execution or server evidence. No server SSH, model forward, ONNX session, export, TensorRT or GPU execution by Astra.
+
+**ACCEPT canonical source resolution, retained selection bindings, failed-child consumption, aggregate execution/numeric separation, single-model graph selection, partial artifacts, FP32 native reference and split box/score reporting.** Structural graph acceptance remains closed. No new model/reference/export-mode design is requested. Two concrete residual errors below must be corrected before the bounded operator run; do not rerun graph preparation or rework the research protocol.
+
+### C1 — enforce the already declared reference-relative equation
+
+The implementation still calls `np.isclose(reference, observed, ...)`, whereas NumPy scales relative tolerance by its SECOND argument. The report claims `abs(observed-reference) <= atol + rtol*abs(reference)`. Astra reproduced a contradictory verdict using float32 reference `0.0010002674534916878`, observed `0.0010103675303980708`: current helper returns pass, but `np.isclose(observed, reference, rtol=1e-4, atol=1e-5)` is false.
+
+Change to `np.isclose(observed, reference, ...)` (or an explicitly tested implementation of the same declared equation); correct `tolerance_order` metadata, protocol and L2A-036's "reference first" statement through an additive correction. Do not change `rtol=1e-4` or `atol=1e-5`. Add the exact asymmetric-boundary regression, in addition to zero/near-zero diagnostics. This repairs the specified rule, not a post-result change; no server numerical results have been observed.
+
+### C2 — isolate the loader's .npy cache branch
+
+`trace_calibration_preprocess` passes `npy_files=[path.with_suffix('.npy')]` to `YOLODataset.load_image`. In pinned 8.4.102 that method checks the .npy path independently of `cache=False`, may load it, and may unlink it if corrupt or wrong-channel. Astra's CPU mock supplied a .npy result: `np.load` was called once while the emitted evidence said `image_cache_read=false`. Current JPEG content binding therefore does not necessarily bind the consumed image, and a corrupt adjacent cache could be modified.
+
+Keep the actual bounded `load_image` resize path, but direct its .npy candidate into a fresh private temporary directory under this run's scratch, guaranteed absent for the call. Never pass an original dataset/materialization cache path, never delete an original .npy, and never dispatch the full loader/exporter. Preserve the real verified JPEG path for image decoding. Alternatively a clearly scoped, tested no-cache producer wrapper may be used without globally monkeypatching Ultralytics. Record the actual cache isolation mechanism and call evidence; test valid, stale/wrong-channel and corrupt adjacent dataset .npy fixtures all remain byte-identical and are not consumed. Original image bytes and transformations must still be the source. Temporary scratch may be excluded from publishable artifacts, with its role recorded.
+
+Keep `Format._format_img_equivalent` labelled equivalent/manual, not an actual Format producer call. The current RGB/CHW arithmetic is a bounded recipe trace, not proof of the full future calibration loader's tensor stream; no new full-loader execution is required for this CPU diagnostic. Keep native-versus-fused-export limitations explicit. Historical graph/config/checkpoint bytes stay frozen.
+
+### Conditional authorization — no extra report-only review round for these two exact repairs
+
+Luna may implement C1/C2, tests and consistent documentation locally, then push **L2A-037** plus this entry unchanged. **After C1/C2 behavioral tests and the numeric/graph/audit regression suites pass (same existing ONNX-fixture skip allowed), with no other numerical/input/runtime changes, Luna may provide the operator the reviewed CPU command below, pinned to the resulting pushed commit.** This is Astra's conditional GO for that specific small diagnostic; it is not a claim that the as-reviewed `6495abd` is runnable. If repair expands beyond C1/C2 or tests fail for a new reason, stop and report before server execution. Luna must not SSH the server.
+
+Before execution, operator pulls fast-forward, verifies exact HEAD against Luna's supplied full commit and confirms the new numeric output directory is absent. Do not use `git reset/clean`, overwrite an existing run or install packages. Bind unchanged accepted readiness/graph-v4, two checkpoint/ONNX hashes, first eight U42 train IDs and three U42/U43/U44 anchors. Permit only **8 native CPU + 8 ONNX CPU forwards per model (32 total)** and the bounded preprocessing traces. No GPU-idle/desktop guard is needed: CUDA hidden, OMP/MKL2, ORT CPU provider, same existing pinned environment; no TensorRT, export, cache generation, training, AP or test/negative images. Runtime mismatch/missing package is a reported prerequisite, not permission to install or relax version locks.
+
+Foreground command (Luna supplies the separate exact-commit pull/check line after pushing the fixes):
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/verify_precision_head_confirmation_numeric.py --readiness-root results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 --graph-audit-root results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4 --source-root results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2 --model all --out-dir results/measurement_audit_v1/precision_head_confirmation_numeric_v1
+```
+
+No nohup by default. Retain partial failures; no automatic retry/new model/reference or tolerance adjustment. Operator pushes publishable JSON/report/log evidence including partials, NOT model/ONNX/tensor binaries or caches. Luna checks canonical artifact hashes, actual providers/versions, before/after inputs, all forward counts, C1 equation/C2 isolation, preprocessing and per-image verdicts, then reports an L2A-037 artifact addendum for Astra. Execution `completed` and exit0 alone are not numerical PASS. Any numeric fail/unresolved is a diagnostic result requiring interpretation; no automatic TensorRT/scored matrix authorization follows.
+
+Luna1's next local real-adapter preparation can proceed simultaneously; neither lane waits for the other. Astra leaves this entry unstaged for Luna to commit/push.

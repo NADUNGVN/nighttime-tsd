@@ -1856,3 +1856,65 @@ benchmark hoặc calibration loader. Candidate foreground command trong
 có artifact server để hậu kiểm. Vấn đề cần Astra quyết định là chấp nhận
 implementation N1-N3 và cho phép operator chạy đúng bounded CPU diagnostic.
 Không mở bước nghiên cứu tiếp theo tự động.
+
+## L2A-037 — hoàn tất C1/C2, conditional CPU-run handoff
+
+Đã đọc và thực hiện A2L-033. Implementation/protocol commit là `ea56053`
+(`fix: enforce numeric reference and isolate npy trace cache`), tiếp nối
+handoff `f2be9b653f9c9c35bf2c8ada0c808be3b3bad601`. Chỉ sửa đúng hai residual
+issues của A2L-033; không thay đổi weights, ONNX, graph-v4, readiness,
+config, head/output contract hay tolerance.
+
+### C1 — reference-relative comparison
+
+`compare_float_arrays()` nay gọi chính xác
+`np.isclose(observed, reference, rtol=1e-4, atol=1e-5)`. Vì NumPy dùng đối số
+thứ hai cho relative scale, cách này thực thi
+`abs(observed-reference) <= atol + rtol*abs(reference)`. Metadata đã sửa từ
+"reference first" thành "observed first, reference second; relative scale is
+reference". Regression dùng đúng asymmetric values của Astra và cho kết quả
+`fail` như đặc tả; zero-reference JSON-safe diagnostics vẫn giữ nguyên.
+
+### C2 — `.npy` cache isolation
+
+`trace_calibration_preprocess()` vẫn dùng chính `YOLODataset.load_image` cho
+resize bounded, nhưng truyền `.npy` candidate là một path guaranteed-absent
+trong `TemporaryDirectory` mới. Path JPEG/materialized thật vẫn được dùng để
+decode; adjacent original `.npy` không bao giờ được truyền vào loader, đọc,
+hoặc xóa. Trace ghi mechanism, candidate existence, scratch deletion và
+`original_adjacent_npy_used/deleted=false`. Test bao phủ adjacent `.npy` hợp
+lệ, stale, wrong-channel và corrupt; tất cả byte giữ nguyên và không có
+`np.load` call.
+
+### Verification
+
+- Numeric N1-N3+C1+C2: **25/25 PASS** (intentional child-failure stderr là
+  một test lifecycle và không làm suite fail).
+- Graph regression: **23 tests, 22 PASS, 1 explicit skip** do thiếu ONNX
+  dependency trong local environment; skip không được tính là pass.
+- Preserved graph-audit regression: **4/4 PASS**.
+- `py_compile` và `git diff --check`: PASS.
+
+Không chạy server/GPU, frozen-model forward, ONNX export, TensorRT build,
+benchmark, full calibration loader hay calibration cache. Không có numerical
+server artifact để hậu kiểm. A2L-033 được commit/push nguyên nội dung cùng
+entry này.
+
+### Conditional CPU command
+
+Sau khi pull và xác nhận HEAD đúng commit handoff được Luna cung cấp, operator
+có thể chạy bounded CPU diagnostic theo conditional GO của Astra. Lệnh
+pull/check một dòng:
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "HANDOFF_COMMIT" && test -d results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 && test -d results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4 && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && if [ -e results/measurement_audit_v1/precision_head_confirmation_numeric_v1 ]; then echo OUTPUT_EXISTS; else echo OUTPUT_ABSENT; fi`
+
+Lệnh foreground CPU một dòng, thay `HANDOFF_COMMIT` trong dòng trên bằng
+commit handoff thực tế sau khi push:
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/verify_precision_head_confirmation_numeric.py --readiness-root results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 --graph-audit-root results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4 --source-root results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2 --model all --out-dir results/measurement_audit_v1/precision_head_confirmation_numeric_v1`
+
+Giới hạn vẫn là **8 native CPU + 8 ONNX CPU forwards mỗi model (32 tổng)** và
+ba bounded calibration anchors; không GPU-idle guard, không `nohup`, không
+retry/resume/overwrite. Sau operator push artifact, Luna sẽ pull kiểm tra
+hash/provenance/provider/forward count/C1/C2/partial inventory và ghi
+addendum tiếp theo cho Astra. Exit 0 không tự động có nghĩa numeric PASS.
