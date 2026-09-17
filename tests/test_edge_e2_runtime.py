@@ -42,6 +42,7 @@ from edge_readiness.cuda_runtime_owner import (  # noqa: E402
 )
 from edge_readiness.e2_cuda_allocation_smoke import (  # noqa: E402
     build_plan,
+    main as main_smoke,
     run_roundtrip,
 )
 
@@ -219,17 +220,23 @@ class FakeCudaLibrary:
         count = self._value(size)
         if self._value(kind) == 1:
             self.device_memory[int(destination.value)][:count] = ctypes.string_at(source, count)
-        elif int(kind) == 2:
+        elif self._value(kind) == 2:
             ctypes.memmove(destination, bytes(self.device_memory[int(source.value)][:count]), count)
         else:
             return 9
         return 0
 
     def _cuda_stream_create(self, output):
+        failure = self._maybe_fail("cudaStreamCreate")
+        if failure:
+            return failure
         output._obj.value = 0x7000
         return 0
 
     def _cuda_stream_destroy(self, stream):
+        failure = self._maybe_fail("cudaStreamDestroy")
+        if failure:
+            return failure
         self.destroyed_streams.append(int(stream.value))
         return 0
 
@@ -433,10 +440,90 @@ class ConcreteCudaOwnerTests(unittest.TestCase):
                 with self.assertRaisesRegex(AdapterError, expected):
                     owner.free_device(pointer)
             else:
-                with self.assertRaisesRegex(AdapterError, expected):
+                with self.assertRaises(AdapterError) as context:
                     run_roundtrip(owner, stream)
+                error = context.exception
+                if operation == "cudaStreamSynchronize":
+                    self.assertEqual(error.code, "SMOKE_CLEANUP_FAILED")
+                    self.assertEqual(error.details["primary"]["code"], expected)
+                else:
+                    self.assertEqual(error.code, expected)
             stream.close()
             runtime.close()
+
+    def test_ctypes_owner_frees_reused_address_as_two_allocation_generations(self):
+        class ReusingCudaLibrary(FakeCudaLibrary):
+            def _cuda_free(self, pointer):
+                result = super()._cuda_free(pointer)
+                self.next_pointer = int(pointer.value)
+                return result
+
+        library = ReusingCudaLibrary()
+        runtime = CudaRuntime(library_loader=lambda _candidate: library, library_candidates=("fake-libcudart",))
+        runtime.open()
+        stream = runtime.create_stream()
+        owner = CudaRuntimeMemoryOwner(runtime, stream)
+        first = owner.allocate_device(64, "first")
+        owner.free_device(first)
+        second = owner.allocate_device(64, "second")
+        self.assertEqual(first, second)
+        owner.free_device(second)
+        self.assertEqual(library.freed, [first, second])
+        stream.close()
+        runtime.close()
+
+    def test_cli_lifecycle_writes_success_only_after_fake_cleanup(self):
+        library = FakeCudaLibrary()
+        runtime = CudaRuntime(library_loader=lambda _candidate: library, library_candidates=("fake-libcudart",))
+        with tempfile.TemporaryDirectory() as temp:
+            out_dir = Path(temp) / "e2l1-011-allocation-v1"
+            code = main_smoke(["--target", "E2", "--execute-real-device", "--out-dir", str(out_dir)], runtime_factory=lambda: runtime)
+            self.assertEqual(code, 0)
+            manifest = json.loads((out_dir / "manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "executed_allocation_only")
+            self.assertEqual(manifest["cleanup"], {"stream_close": "ok", "runtime_close": "ok"})
+            self.assertEqual(manifest["roundtrip"]["nbytes"], 4096)
+
+    def test_cli_load_and_stream_create_failures_are_recorded_before_any_cuda_use(self):
+        for factory, expected_code in (
+            (lambda: CudaRuntime(library_loader=lambda _candidate: (_ for _ in ()).throw(OSError("missing")), library_candidates=("fake-libcudart",)), "CUDA_LIBRARY_UNAVAILABLE"),
+            (lambda: CudaRuntime(library_loader=lambda _candidate: FakeCudaLibrary(fail_operation="cudaStreamCreate"), library_candidates=("fake-libcudart",)), "CUDA_CALL_FAILED"),
+        ):
+            with tempfile.TemporaryDirectory() as temp:
+                out_dir = Path(temp) / "e2l1-011-allocation-v1"
+                code = main_smoke(["--target", "E2", "--execute-real-device", "--out-dir", str(out_dir)], runtime_factory=factory)
+                self.assertEqual(code, 2)
+                failure = json.loads((out_dir / "failure.json").read_text(encoding="utf-8"))
+                self.assertEqual(failure["error"]["code"], expected_code)
+
+    def test_cli_success_followed_by_destroy_failure_is_not_reported_as_pass(self):
+        library = FakeCudaLibrary(fail_operation="cudaStreamDestroy")
+        runtime = CudaRuntime(library_loader=lambda _candidate: library, library_candidates=("fake-libcudart",))
+        with tempfile.TemporaryDirectory() as temp:
+            out_dir = Path(temp) / "e2l1-011-allocation-v1"
+            code = main_smoke(["--target", "E2", "--execute-real-device", "--out-dir", str(out_dir)], runtime_factory=lambda: runtime)
+            self.assertEqual(code, 2)
+            failure = json.loads((out_dir / "failure.json").read_text(encoding="utf-8"))
+            self.assertEqual(failure["status"], "failed_allocation_only")
+            self.assertEqual(failure["error"]["code"], "SMOKE_CLEANUP_FAILED")
+            self.assertEqual({item["operation"] for item in failure["error"]["details"]["cleanup"]}, {"stream_close", "runtime_close"})
+
+    def test_cli_refuses_existing_root_before_runtime_factory_and_preserves_it(self):
+        with tempfile.TemporaryDirectory() as temp:
+            out_dir = Path(temp) / "e2l1-011-allocation-v1"
+            out_dir.mkdir()
+            marker = out_dir / "marker.txt"
+            marker.write_text("preserve", encoding="utf-8")
+            calls = []
+
+            def factory():
+                calls.append("runtime")
+                return CudaRuntime()
+
+            with self.assertRaises(FileExistsError):
+                main_smoke(["--target", "E2", "--execute-real-device", "--out-dir", str(out_dir)], runtime_factory=factory)
+            self.assertEqual(calls, [])
+            self.assertEqual(marker.read_text(encoding="utf-8"), "preserve")
 
     def test_owned_buffers_attempts_sync_and_every_free_even_when_cleanup_fails(self):
         descriptor = FakeEngineDescriptor()

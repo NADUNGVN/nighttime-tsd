@@ -12,6 +12,8 @@ import json
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from edge_readiness.edge_errors import AdapterError
+
 INPUT_SHAPE = (1, 3, 640, 640)
 YOLO11N_MODEL_ID = "yolo11n_cctsdb_clean_s42_v2"
 YOLO11N_CHECKPOINT_PATH = "results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt"
@@ -19,17 +21,6 @@ YOLO11N_CHECKPOINT_SHA256 = "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b
 YOLO11N_NATIVE_OUTPUT_SHAPE = (1, 7, 8400)
 YOLO11N_NATIVE_OUTPUT_NAME = "output0"
 DTYPE_ITEMSIZE = {"float16": 2, "float32": 4}
-
-
-class AdapterError(ValueError):
-    """Stable machine-readable boundary error."""
-
-    def __init__(self, code: str, message: str, details: dict[str, Any] | None = None):
-        super().__init__(f"{code}: {message}")
-        self.code, self.message, self.details = code, message, details or {}
-
-    def as_dict(self) -> dict[str, Any]:
-        return {"status": "error", "error": {"code": self.code, "message": self.message, "details": self.details}}
 
 
 @dataclass(frozen=True)

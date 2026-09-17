@@ -11,9 +11,9 @@ from __future__ import annotations
 
 import ctypes
 from dataclasses import dataclass
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, List, Optional, Protocol, Set, Tuple
 
-from edge_readiness.jetson_adapter import AdapterError
+from edge_readiness.edge_errors import AdapterError
 
 CUDA_SUCCESS = 0
 CUDA_MEMCPY_HOST_TO_DEVICE = 1
@@ -36,12 +36,12 @@ class StreamLike(Protocol):
 class CudaRuntime:
     """Lazy libcudart loader with explicit symbol and return-code checks."""
 
-    def __init__(self, *, library_loader: Callable[[str], Any] | None = None, library_candidates: tuple[str, ...] = DEFAULT_LIBRARY_CANDIDATES):
+    def __init__(self, *, library_loader: Optional[Callable[[str], Any]] = None, library_candidates: Tuple[str, ...] = DEFAULT_LIBRARY_CANDIDATES):
         self._library_loader = library_loader or ctypes.CDLL
         self.library_candidates = library_candidates
         self.library: Any = None
-        self.library_path: str | None = None
-        self._streams: set[int] = set()
+        self.library_path: Optional[str] = None
+        self._streams: Set[int] = set()
 
     @property
     def loaded(self) -> bool:
@@ -50,7 +50,7 @@ class CudaRuntime:
     def open(self) -> "CudaRuntime":
         if self.loaded:
             return self
-        failures: list[str] = []
+        failures: List[str] = []
         for candidate in self.library_candidates:
             try:
                 library = self._library_loader(candidate)
@@ -190,18 +190,29 @@ class CudaRuntimeMemoryOwner:
     def __post_init__(self) -> None:
         if self.stream.runtime is not self.runtime:
             raise AdapterError("CUDA_RUNTIME_STREAM_MISMATCH", "stream belongs to a different CUDA runtime")
-        self._freed: set[int] = set()
+        # Addresses can be reused by CUDA. Keep only live generations plus a
+        # short-lived idempotency set; allocation of a reused address starts a
+        # fresh generation and removes it from the released set.
+        self._live_allocations: Set[int] = set()
+        self._released_allocations: Set[int] = set()
 
     def allocate_device(self, nbytes: int, name: str) -> int:
         del name
-        return self.runtime.allocate_device(nbytes)
+        pointer = self.runtime.allocate_device(nbytes)
+        if pointer in self._live_allocations:
+            raise AdapterError("CUDA_POINTER_REUSED_LIVE", "CUDA returned an address already live in this owner", {"pointer": pointer})
+        self._live_allocations.add(pointer)
+        self._released_allocations.discard(pointer)
+        return pointer
 
     def copy_host_to_device(self, payload: bytes, device_pointer: int, stream_handle: int) -> None:
         self._check_stream(stream_handle)
+        self._require_live(device_pointer)
         self.runtime.copy_host_to_device(payload, device_pointer, len(payload))
 
     def copy_device_to_host(self, device_pointer: int, destination: bytearray, stream_handle: int) -> None:
         self._check_stream(stream_handle)
+        self._require_live(device_pointer)
         self.runtime.copy_device_to_host(device_pointer, destination, len(destination))
 
     def synchronize(self, stream_handle: int) -> None:
@@ -209,17 +220,23 @@ class CudaRuntimeMemoryOwner:
         self.stream.synchronize("owner_cleanup")
 
     def free_device(self, device_pointer: int) -> None:
-        if device_pointer in self._freed:
+        if device_pointer in self._released_allocations:
             return
+        self._require_live(device_pointer)
         self.runtime.free_device(device_pointer)
-        self._freed.add(device_pointer)
+        self._live_allocations.remove(device_pointer)
+        self._released_allocations.add(device_pointer)
+
+    def _require_live(self, device_pointer: int) -> None:
+        if device_pointer not in self._live_allocations:
+            raise AdapterError("CUDA_POINTER_NOT_OWNED", "CUDA pointer is not live in this owner", {"pointer": device_pointer})
 
     def _check_stream(self, stream_handle: int) -> None:
         if stream_handle != self.stream.handle:
             raise AdapterError("COPY_STREAM_MISMATCH", "CUDA owner received a non-owned stream", {"expected": self.stream.handle, "observed": stream_handle})
 
 
-def _validate_size(nbytes: int, *, max_bytes: int | None = None) -> None:
+def _validate_size(nbytes: int, *, max_bytes: Optional[int] = None) -> None:
     if isinstance(nbytes, bool) or not isinstance(nbytes, int) or nbytes <= 0 or (max_bytes is not None and nbytes > max_bytes):
         limit = max_bytes if max_bytes is not None else "unbounded-by-smoke"
         raise AdapterError("CUDA_ALLOCATION_LIMIT", "size must be a positive integer within the configured limit", {"nbytes": nbytes, "max": limit})
