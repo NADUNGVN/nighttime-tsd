@@ -1948,3 +1948,57 @@ trước đó không tạo numeric artifact vì dừng ở fixture planning.
 Đây là sửa lỗi implementation cần thiết trước bounded CPU run, không phải
 thay đổi numerical/input design. Operator chỉ được chạy lại sau khi pull
 commit mới và xác nhận output root vẫn absent; không rerun graph preparation.
+
+## L2A-039 — hậu kiểm bounded CPU numeric diagnostic
+
+Đã pull commit kết quả server `22c67a910b4d82ef7482ec3ed752723406856057`
+(`results: precision head CPU numeric confirmation`) vào worktree review.
+Artifact inventory đúng bảy file publishable:
+
+- `numeric_plan.json`, `numeric_manifest.json`, `report.md`;
+- `logs/yolov8n.log`, `logs/yolo26n.log`;
+- `models/yolov8n/failure.json`, `models/yolo26n/failure.json`.
+
+Không có checkpoint, ONNX, tensor binary hay cache mới trong artifact commit.
+`numeric_plan.json` ghi `repo_head=e8918de783d575116398b632e2b25d07f9d47f12`,
+đúng code được Astra duyệt; readiness và graph-v4 bindings giữ nguyên các
+accepted hashes. Fixture plan cũng khớp tám ID canonical:
+`00006,00009,00028,00036,00054,00061,00098,00104`, với anchors U42=`00006`,
+U43=`00029`, U44=`00000`.
+
+### Kết quả thực tế
+
+Run không đạt đến preprocessing hay forward. `numeric_manifest.json` ghi:
+`status=failed`, `execution_status=failed`, numeric verdict `not_observed`,
+counts `pass=0, fail=0, unresolved=0, not_observed=2`. Cả hai child đều
+dừng với `NumericUnresolved: Native head identity differs for <model>`;
+forward counts của cả hai là `{}`. Vì vậy đây không phải fail số học và không
+phải bằng chứng native/ONNX mismatch.
+
+Đối chiếu plan với producer contract chỉ ra lỗi implementation mới: readiness
+contract canonical lưu identity trong `accepted_contract.head` với keys
+`type/index/end2end`, nhưng `validate_native_head()` đọc
+`accepted_contract.expected_contract`. Key này không tồn tại trong contract
+được truyền, nên expected values thành rỗng và guard fail deterministic cho
+cả YOLOv8n (`Detect`, index 22, end2end false) lẫn YOLO26n (`Detect`, index
+23, end2end true), trước model forward.
+
+`yolo26n/failure.json` còn chứa partial list gồm log/failure của YOLOv8n;
+đây là dấu hiệu cần kiểm tra thêm về isolation/provenance của parent-child
+failure inventory, dù artifact commit vẫn giữ nguyên và không có overwrite.
+
+### Verification và quyết định
+
+Artifact files đã được kiểm tra hash sau pull; manifest/report/failure/log
+bytes khớp commit `22c67a9`. Các audit flags đều giữ:
+`export_performed=false`, `build_performed=false`,
+`calibration_loader_called=false`, `gpu_used=false`,
+`scored_run_authorized=false`. Không có GPU/TensorRT/export/matrix nào được
+chạy trong run này.
+
+Kết luận: **Step CPU diagnostic chưa có kết quả numeric; run cần review ở
+implementation gate**. Không sửa artifact, không rerun, không nới tolerance,
+không đổi reference/head contract và không mở TensorRT/matrix. Hai điểm cần
+Astra quyết định trước lần chạy khác là sửa mapping key của native head guard
+và xác minh failure inventory không trộn artifact giữa các child. L2A-039
+dừng tại đây để Astra review.

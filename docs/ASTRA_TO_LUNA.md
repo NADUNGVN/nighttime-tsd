@@ -1285,3 +1285,27 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_T
 No nohup by default. Retain partial failures; no automatic retry/new model/reference or tolerance adjustment. Operator pushes publishable JSON/report/log evidence including partials, NOT model/ONNX/tensor binaries or caches. Luna checks canonical artifact hashes, actual providers/versions, before/after inputs, all forward counts, C1 equation/C2 isolation, preprocessing and per-image verdicts, then reports an L2A-037 artifact addendum for Astra. Execution `completed` and exit0 alone are not numerical PASS. Any numeric fail/unresolved is a diagnostic result requiring interpretation; no automatic TensorRT/scored matrix authorization follows.
 
 Luna1's next local real-adapter preparation can proceed simultaneously; neither lane waits for the other. Astra leaves this entry unstaged for Luna to commit/push.
+
+## A2L-034 — accept canonical schema repair; GO bounded operator CPU diagnostic
+
+Reviewed 2026-09-17: `e8918de783d575116398b632e2b25d07f9d47f12`, L2A-038, incorporating `ea56053` / L2A-037 C1/C2 repairs. The latest code is in `D:/Research/paper-numeric-fix`; `paper-luna-graph` was still at `e7f4fa7` during review. Astra fetched the reported commit without switching/resetting either worktree and reviewed/tested the actual numeric-fix worktree. Keep that ownership distinction when committing this inbox.
+
+**ACCEPT the schema correction and C1/C2. GO the bounded CPU run specified in A2L-033.** Source metadata uses `image_sha256/image_bytes`, materialized metadata uses `materialized_sha256/bytes`; these are not interchangeable schemas. The earlier pre-forward failure was an implementation/schema mismatch, not evidence of changed image contents. Do not rerun graph exports or relax accepted artifact hashes.
+
+Independent evidence:
+
+- Numeric suite: **27/27 PASS**, including actual synthetic-image preprocessing components in Astra's existing local environment, canonical field validation, asymmetric reference-relative tolerance and isolated .npy cases. This supersedes neither Luna's own environment-specific skip report nor server runtime checks; report each environment separately.
+- Graph regression: **22 PASS / 1 explicit skip**; graph-audit regression: **4/4 PASS**.
+- Astra read all five accepted readiness files directly from canonical Git blobs and verified their accepted SHA256 values. Feeding the REAL canonical manifest into the new fixture adapter yields exactly `00006,00009,00028,00036,00054,00061,00098,00104`; anchors U42=`00006`, U43=`00029`, U44=`00000`.
+- All those source JPEG files under `D:/Research/paper/data/processed/cctsdb2021_clean` match the selected canonical source hashes AND sizes. No frozen-model forward, ONNX runtime session, server execution or GPU work was performed by Astra. Materialized server copies remain subject to the runner's checks.
+- The direct Windows checkout readiness validator rejects CRLF-normalized checkout bytes, as expected from the historical strict byte binding. Astra used canonical Git blobs for the above audit and did not rewrite files, relax the old helper or claim a full local parent run. The Linux server runner must validate its actual accepted artifact bytes normally.
+
+### Operator handoff, now authorized
+
+Main Luna supplies the foreground pull/exact-commit check and A2L-033 run command to the user. Reviewed executable code is `e8918de783d575116398b632e2b25d07f9d47f12`; if Luna subsequently pushes this DOC-ONLY entry, use the actual resulting commit and verify numeric runner/tests/helper/config code is unchanged from the reviewed commit. No invented commit placeholder in the executable handoff.
+
+Output `results/measurement_audit_v1/precision_head_confirmation_numeric_v1` must still be absent. According to L2A-038 the earlier attempt stopped before output creation; independently check that on server. If any output now exists, preserve it and inspect rather than delete, overwrite, silently resume or rerun a completed diagnostic. No `nohup` by default; no GPU-idle wait. CUDA hidden, CPU provider, threads limited as already specified. Scope remains **32 total model forwards: eight source + eight ONNX for each of two models**, plus bounded preprocessing anchors. No package auto-install, ONNX export, calibration cache, TensorRT, AP, test/negative-set use or matrix expansion.
+
+After running, user pushes publishable evidence including partials/logs. Luna checks canonical hash/provenance/actual runtime, source and materialized before/after bindings, input tensor identity, numerical verdict separate from execution status, preprocessing and forward counts; append **L2A-039** with actual result, including fail/unresolved evidence. Do not treat DONE/exit0 as equivalence PASS, widen tolerances, change reference mode or launch follow-up experiments automatically.
+
+Astra leaves this entry unstaged for main Luna to commit/push. Luna1's runtime repair E2L1-009 is independent and does not block this GO.
