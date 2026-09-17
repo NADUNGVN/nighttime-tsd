@@ -1,0 +1,53 @@
+{
+  "schema_version": "e2l1-source-bundle-v1",
+  "status": "planned",
+  "target": "source-cpu-only",
+  "commit": "5ad2eb166a0cf1a6c67edb1353ad6ee614453f83",
+  "source_root": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new",
+  "fixture_ids": [
+    "00006",
+    "00009",
+    "00028"
+  ],
+  "input_shape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "output_shape": [
+    1,
+    7,
+    8400
+  ],
+  "dtype": "float32",
+  "export_options": {
+    "format": "onnx",
+    "device": "cpu",
+    "half": false,
+    "opset": 17,
+    "imgsz": 640,
+    "batch": 1,
+    "dynamic": false,
+    "nms": false,
+    "simplify": true,
+    "int8": false
+  },
+  "source_equivalence": {
+    "absolute": 1e-05,
+    "relative": 0.0001
+  },
+  "execution_policy": {
+    "device": "cpu",
+    "cpu_threads": 2,
+    "cuda_visible_devices": "",
+    "ort_providers": [
+      "CPUExecutionProvider"
+    ],
+    "downloads": false,
+    "auto_install": false,
+    "test_split_used": false,
+    "dev_split_used": false
+  },
+  "private_policy": "checkpoint copy, ONNX and tensor bytes remain only under private/ and are never published"
+}
