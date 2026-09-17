@@ -1657,3 +1657,54 @@ Chỉ khi audit in `DONE`, operator kiểm tra inventory rồi push đúng năm 
 `models/yolov8n/graph_audit.json`, `models/yolo26n/graph_audit.json`.
 Không push ONNX/PT/engine/cache/private binary. Kết quả v4 tiếp tục là
 evidence-only; chưa mở full export, TRT build hay scored matrix.
+
+## L2A-034 — G6 audit-v4 addendum
+
+Operator đã chạy đúng bounded CPU audit trên ONNX v2 hiện có và push commit
+`6780b813c5f1cb2d915b72832eedd79525eaecbd` (`results: publish initializer
+metadata graph audit`). Luna đã pull và kiểm tra commit chỉ chứa đúng năm
+artifact v4, không có ONNX/PT/engine/cache/private binary.
+
+### Audit result
+
+- Manifest: `audit_only_completed`; `audit_only=true`,
+  `export_performed=false`, `build_performed=false`,
+  `capture_performed=false`, `scored_run_authorized=false`.
+- `yolov8n`: mapping `verified`, 0 lỗi; ONNX expected/before/after hash
+  `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603`,
+  12,266,841 bytes, unchanged.
+- `yolo26n`: mapping `verified`, 0 lỗi; ONNX expected/before/after hash
+  `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc`,
+  9,806,783 bytes, unchanged.
+- Metadata conflicts: 0; initializer metadata records: v8 `144`, v26
+  `228`. YOLO26 `/model.23/Mod` now records input `[1,300]`/`int64`, divisor
+  value `3` with explicit scalar shape `[]`/`int64`, output `[1,300]`/`int64`,
+  `fmod=0`, expected class count `3`, and explicit input-divisor-output
+  lineage. The prior `mod_semantics_unresolved` error is gone.
+
+ONNX checker and shape inference completed in the operator's audit-only
+environment. No producer forward, TensorRT parser/build, calibration loader,
+export, capture or scored execution was called. Mapping remains structural
+evidence; native numeric output equivalence, preprocessing recipe and TensorRT
+compatibility are still deferred.
+
+### Artifact hashes
+
+The following are canonical Git blob-byte SHA256 values for commit
+`6780b813`; local Windows checkout CRLF hashes are intentionally not substituted
+for them:
+
+| Relative file | Canonical Git blob SHA256 |
+|---|---|
+| `audit_plan.json` | `cfe5333e5caf816511060eb81b3575d8390e8adbac3acb19278120a87fa5c65a` |
+| `graph_audit_manifest.json` | `c5f538aa5cb390d68e272cec9fad22a455ac8397fdb351f5c93c1e79e4382d65` |
+| `models/yolov8n/graph_audit.json` | `5cf9d9b7c39c8d7607352492ee2e89276915104bee93ce661876864a5fb97ccb` |
+| `models/yolo26n/graph_audit.json` | `2c8d97c10d12323862831a2e58c6aa7a3c79e2fe9bc424560db206fc707b14cb` |
+| `report.md` | `71489f4c12607321c61cd18e4363a7d037cd318aaaa3823a7271e3ede5c33a2e` |
+
+### Boundary
+
+G6/G5 bounded audit is complete and the scalar metadata defect is repaired.
+This does not authorize full export retry, calibration-cache generation,
+TensorRT build, benchmark or the 78-session matrix. Await Astra's next
+reviewed protocol before any numerical work.
