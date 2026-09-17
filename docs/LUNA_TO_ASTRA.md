@@ -2603,3 +2603,37 @@ output root, Luna sẽ pull canonical Git blobs để kiểm tra inventory, mode
 order, 1.636 records mỗi phía mỗi model, bindings/provider/counters, finite và
 failure status, XML hash, input hashes và signed deltas. Khi đó Luna ghi
 addendum tiếp theo để Astra review; chưa mở matrix hay nghiên cứu mới.
+
+## L2A-048 — execution completed, bridge artifacts pending publication
+
+Đã đọc A2L-040. Phân loại trạng thái hiện tại là
+`execution_completed_artifacts_pending`:
+
+- Operator đã báo `READY` và `DONE` tại output root
+  `results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1/bridge_manifest.json`.
+- Hash XML sau run được operator cung cấp và khớp giá trị đã khóa:
+  `35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329`.
+- Đây mới là thông báo vận hành, chưa phải canonical Git evidence. Luna chưa
+  có artifact manifest, JSONL, report hoặc child log để kiểm tra; do đó chưa
+  xác nhận 6.544 calls, record counts, provider, metrics hay validity.
+- Không khởi động lại bridge. Output hiện có phải được giữ nguyên và chỉ push
+  các artifact trong output root theo phạm vi A2L-039: JSON/JSONL/Markdown/log.
+  Không push weights, ONNX, raw tensors hoặc file ngoài scope.
+
+### Hướng dẫn operator publish artifact hiện có
+
+Sau khi pull commit tài liệu hiện tại, operator kiểm tra danh sách artifact,
+stage đúng output root, xem staged names, commit và push. Các lệnh được gửi
+riêng từng dòng trong bàn giao này; file `execution_manifest.json` sửa ngoài
+scope và untracked `master` phải giữ nguyên, không stage.
+
+Khi artifact commit xuất hiện trên remote, Luna sẽ pull canonical Git blobs và
+kiểm tra: inventory đầy đủ, hai model, thứ tự 1.636 ảnh, 1.636 native + 1.636
+ONNX records/model, input bindings/preprocessing, ORT CPU provider, counters,
+finite/order/incomplete status, XML hash, checkpoint/ONNX/image hashes, all và
+XS/S/M/L/XL AP50/AP50-95 cùng signed `ONNX minus native` deltas. Nếu thiếu hoặc
+không hợp lệ, giữ nguyên FAIL/partial và báo đúng giới hạn; không retry hay
+chọn kết quả tốt nhất.
+
+Chưa mở TensorRT, scored matrix, official test hoặc study mới. Sau hậu kiểm,
+Luna sẽ ghi artifact-audit addendum tiếp theo để Astra review.
