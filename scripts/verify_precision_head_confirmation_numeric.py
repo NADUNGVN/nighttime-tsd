@@ -40,6 +40,8 @@ DEFAULT_READINESS_ROOT = Path("results/measurement_audit_v1") / READINESS_ROOT_N
 DEFAULT_GRAPH_AUDIT_ROOT = Path("results/measurement_audit_v1") / GRAPH_AUDIT_ROOT_NAME
 DEFAULT_SOURCE_ROOT = Path("results/measurement_audit_v1") / "precision_head_confirmation_graph_prep_v2"
 DEFAULT_OUTPUT = Path("results/measurement_audit_v1") / STUDY
+PRESERVED_V1_OUTPUT = Path("results/measurement_audit_v1") / STUDY
+V2_OUTPUT_NAME = "precision_head_confirmation_numeric_v2"
 GRAPH_AUDIT_COMMIT = "6780b813c5f1cb2d915b72832eedd79525eaecbd"
 GRAPH_AUDIT_FILES = {
     "audit_plan.json": "cfe5333e5caf816511060eb81b3575d8390e8adbac3acb19278120a87fa5c65a",
@@ -53,6 +55,10 @@ EXPECTED_ONNX_SHA256 = {
     "yolo26n": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc",
 }
 EXPECTED_OUTPUT_SHAPES = {"yolov8n": [1, 7, 8400], "yolo26n": [1, 300, 6]}
+EXPECTED_HEAD_IDENTITIES = {
+    "yolov8n": {"head_type": "Detect", "head_index": 22, "end2end": False},
+    "yolo26n": {"head_type": "Detect", "head_index": 23, "end2end": True},
+}
 EXPECTED_CHECKPOINTS = {
     "yolov8n": {
         "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
@@ -362,13 +368,13 @@ def resolve_bound_materialized_image(repo: Path, row: dict[str, Any]) -> Path:
     return repo_path(repo, root / parsed.name)
 
 
-def verify_bound_image(repo: Path, row: dict[str, Any]) -> dict[str, Any]:
+def verify_bound_image(repo: Path, row: dict[str, Any], evidence_fn=file_evidence) -> dict[str, Any]:
     source = resolve_bound_source_image(repo, row)
     materialized = resolve_bound_materialized_image(repo, row)
     if source.is_symlink() or not source.is_file() or materialized.is_symlink() or not materialized.is_file():
         raise FileNotFoundError(f"Bound source/materialized image missing: {row['image']}")
-    source_record = file_evidence(repo, source)
-    materialized_record = file_evidence(repo, materialized)
+    source_record = evidence_fn(repo, source)
+    materialized_record = evidence_fn(repo, materialized)
     if source_record.get("sha256") != row["expected_sha256"] or source_record.get("bytes") != row["expected_bytes"]:
         raise ValueError(f"Current source image binding differs for {row['image']}")
     if materialized_record.get("sha256") != row["materialized_expected_sha256"] or materialized_record.get("bytes") != row["expected_bytes"]:
@@ -376,11 +382,11 @@ def verify_bound_image(repo: Path, row: dict[str, Any]) -> dict[str, Any]:
     return {"source": source_record, "materialized": materialized_record}
 
 
-def verify_fixture_files(repo: Path, fixture: dict[str, Any]) -> dict[str, Any]:
+def verify_fixture_files(repo: Path, fixture: dict[str, Any], evidence_fn=file_evidence) -> dict[str, Any]:
     rows = fixture["forward_images"] + fixture["preprocess_trace_images"]
     unique = {}
     for row in rows:
-        evidence = verify_bound_image(repo, row)
+        evidence = verify_bound_image(repo, row, evidence_fn)
         image = row["image"]
         if image not in unique:
             unique[image] = {"source": evidence["source"], "materialized": evidence["materialized"], "materialized_by_selection": {}, "selection_bindings": []}
@@ -819,12 +825,51 @@ def trace_calibration_preprocess(path: Path, runtime: dict[str, Any], stride: in
     }
 
 
+def canonical_head_contract(accepted_contract: dict[str, Any], model: str) -> dict[str, Any]:
+    expected_model = EXPECTED_HEAD_IDENTITIES.get(model)
+    if expected_model is None:
+        raise ValueError(f"Unsupported model for canonical head contract: {model}")
+    observed_head = accepted_contract.get("head") if isinstance(accepted_contract, dict) else None
+    required = ("type", "index", "end2end")
+    if not isinstance(observed_head, dict) or any(key not in observed_head for key in required):
+        raise ValueError(
+            f"Accepted canonical head schema invalid for {model}: "
+            f"expected fields={list(required)}, observed={observed_head!r}"
+        )
+    if (
+        type(observed_head["type"]) is not str
+        or type(observed_head["index"]) is not int
+        or isinstance(observed_head["index"], bool)
+        or type(observed_head["end2end"]) is not bool
+    ):
+        raise ValueError(
+            f"Accepted canonical head schema types invalid for {model}: "
+            f"expected={{'type': 'str', 'index': 'int', 'end2end': 'bool'}}, observed={observed_head!r}"
+        )
+    normalized = {
+        "head_type": observed_head["type"],
+        "head_index": observed_head["index"],
+        "end2end": observed_head["end2end"],
+    }
+    if accepted_contract.get("label") != model or normalized != expected_model:
+        raise ValueError(
+            f"Accepted canonical head contract model association differs for {model}: "
+            f"expected={{'label': {model!r}, **{expected_model!r}}}, "
+            f"observed={{'label': {accepted_contract.get('label')!r}, **{normalized!r}}}"
+        )
+    return normalized
+
+
 def validate_native_head(network: Any, model: str, accepted_contract: dict[str, Any]) -> dict[str, Any]:
     network = network.to("cpu").eval()
     head = network.model[-1]
-    expected = accepted_contract.get("expected_contract", {})
-    if type(head).__name__ != expected.get("head_type") or int(getattr(head, "i")) != expected.get("head_index") or bool(getattr(head, "end2end")) != expected.get("end2end"):
-        raise NumericUnresolved(f"Native head identity differs for {model}")
+    expected = canonical_head_contract(accepted_contract, model)
+    try:
+        observed = {"head_type": type(head).__name__, "head_index": int(getattr(head, "i")), "end2end": bool(getattr(head, "end2end"))}
+    except (AttributeError, TypeError, ValueError) as exc:
+        raise NumericUnresolved(f"Native head identity could not be observed for {model}: {exc}") from exc
+    if observed != expected:
+        raise NumericUnresolved(f"Native head identity differs for {model}: expected={expected}, observed={observed}")
     if any(getattr(parameter, "device", None).type != "cpu" for parameter in network.parameters()):
         raise NumericUnresolved(f"Native parameters are not on CPU for {model}")
     parameter_dtypes = {str(getattr(parameter, "dtype", None)) for parameter in network.parameters()}
@@ -868,25 +913,109 @@ def run_onnx_session(onnx_path: Path, model: str, runtime: dict[str, Any]) -> tu
     }
 
 
-def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path) -> dict[str, Any]:
+def new_child_state(model: str) -> dict[str, Any]:
+    return {
+        "model": model,
+        "status": "running",
+        "stage": "not_started",
+        "stage_history": [],
+        "forward_counts": {
+            "source_cpu_fp32": {"attempted": 0, "completed": 0},
+            "onnx_cpu": {"attempted": 0, "completed": 0},
+        },
+    }
+
+
+def record_child_stage(state: dict[str, Any], stage: str, **details: Any) -> None:
+    event = {"sequence": len(state["stage_history"]), "stage": stage}
+    event.update(details)
+    state["stage"] = stage
+    state["stage_history"].append(event)
+
+
+def child_lifecycle_snapshot(state: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "status": state["status"],
+        "stage": state["stage"],
+        "stage_history": list(state["stage_history"]),
+        "forward_counts": {key: dict(value) for key, value in state["forward_counts"].items()},
+    }
+
+
+def child_owned_files(output_root: Path, model: str) -> list[str]:
+    model_root = output_root / "models" / model
+    if not model_root.is_dir():
+        return []
+    return sorted(path.relative_to(output_root).as_posix() for path in model_root.rglob("*") if path.is_file())
+
+
+def preserved_v1_evidence(repo: Path, output_root: Path) -> dict[str, Any] | None:
+    if output_root.name != V2_OUTPUT_NAME:
+        return None
+    prior = repo_path(repo, PRESERVED_V1_OUTPUT)
+    if not prior.is_dir():
+        raise FileNotFoundError(f"Preserved v1 output is required for v2: {prior}")
+    manifest = prior / "numeric_manifest.json"
+    if not manifest.is_file():
+        raise FileNotFoundError(f"Preserved v1 manifest is missing: {manifest}")
+    return {
+        "path": str(prior.relative_to(repo.resolve()).as_posix()),
+        "status": "preserved_not_overwritten",
+        "manifest": file_evidence(repo, manifest),
+        "artifact_inventory": publishable_artifact_inventory(prior),
+    }
+
+
+def parent_run_inventory(output_root: Path, models: list[str], inventory: list[str]) -> dict[str, Any]:
+    return {
+        "owner": "parent",
+        "scope": "whole_output_root_publishable",
+        "files": inventory,
+        "shared_files": [path for path in inventory if not path.startswith("models/") and not path.startswith("logs/")],
+        "model_files": {model: [path for path in inventory if path.startswith(f"models/{model}/")] for model in models},
+        "log_files": [path for path in inventory if path.startswith("logs/")],
+    }
+
+
+def run_model_child(
+    repo: Path,
+    plan: dict[str, Any],
+    model: str,
+    out_dir: Path,
+    *,
+    runtime_loader=load_child_runtime,
+    source_evidence_fn=runtime_source_evidence,
+    file_evidence_fn=file_evidence,
+    state: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    state = state or new_child_state(model)
+    record_child_stage(state, "child_started")
     set_cpu_environment()
     out_dir.mkdir(parents=True, exist_ok=True)
     partial_dir = out_dir / "partial"
     partial_dir.mkdir(parents=True, exist_ok=True)
+    record_child_stage(state, "runtime_loading")
     config = read_json(repo_path(repo, Path(plan["config_path"])))
-    runtime = load_child_runtime(config)
+    runtime = runtime_loader(config)
+    record_child_stage(state, "runtime_loaded")
     model_plan = plan["models"][model]
     checkpoint_path = repo_path(repo, Path(model_plan["checkpoint"]["expected"]["path"]))
     onnx_path = repo_path(repo, Path(model_plan["onnx"]["path"]))
-    checkpoint_before = file_evidence(repo, checkpoint_path)
-    onnx_before = file_evidence(repo, onnx_path)
+    record_child_stage(state, "binary_binding")
+    checkpoint_before = file_evidence_fn(repo, checkpoint_path)
+    onnx_before = file_evidence_fn(repo, onnx_path)
     if checkpoint_before.get("sha256") != model_plan["checkpoint"]["expected"]["sha256"] or onnx_before.get("sha256") != EXPECTED_ONNX_SHA256[model]:
         raise ValueError(f"Child binary binding differs before forward for {model}")
-    fixture_binding = verify_fixture_files(repo, plan["fixture"])
-    source_evidence = runtime_source_evidence()
+    record_child_stage(state, "fixture_binding")
+    fixture_binding = verify_fixture_files(repo, plan["fixture"], file_evidence_fn)
+    record_child_stage(state, "source_evidence")
+    source_evidence = source_evidence_fn()
+    record_child_stage(state, "model_loading")
     model_loader = runtime["YOLO"](str(checkpoint_path), task="detect")
     network = model_loader.model.to("cpu").float().eval()
+    record_child_stage(state, "head_validation")
     native_head_contract = validate_native_head(network, model, model_plan["accepted_contract"])
+    record_child_stage(state, "head_validation_complete", head=native_head_contract["head"])
     raw_stride = getattr(network, "stride", 32)
     try:
         model_stride = int(raw_stride.max().item())
@@ -900,36 +1029,51 @@ def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path)
     tensors = {}
     for image, bound_rows in unique_rows.items():
         row = bound_rows[0]
+        record_child_stage(state, "preprocess", image=image)
         source_path = resolve_bound_source_image(repo, row)
         tensor, trace = trace_preprocess(source_path, runtime, stride=model_stride)
         trace.update({"selection": row["selection"], "image_id": row["image_id"], "expected_source_sha256": row["expected_sha256"], "selection_bindings": [{"selection": item["selection"], "manifest_order": item["manifest_order"], "image_id": item["image_id"], "expected_source_sha256": item["expected_sha256"]} for item in bound_rows]})
         traces[image] = trace
         tensors[image] = tensor
         write_json_no_overwrite(partial_dir / f"inference_trace_{row['selection']}_{row['image_id']}.json", trace)
+        record_child_stage(state, "preprocess_complete", image=image)
     for row in plan["fixture"]["preprocess_trace_images"]:
         image = row["image"]
+        record_child_stage(state, "calibration_trace", image=image)
         materialized_path = resolve_bound_materialized_image(repo, row)
         calibration_trace = trace_calibration_preprocess(materialized_path, runtime, stride=model_stride)
         calibration_trace.update({"selection": row["selection"], "image_id": row["image_id"], "image": image, "expected_source_sha256": row["expected_sha256"], "materialized_expected_sha256": row["materialized_expected_sha256"]})
         calibration_traces[f"{row['selection']}::{image}"] = calibration_trace
         write_json_no_overwrite(partial_dir / f"calibration_trace_{row['selection']}_{row['image_id']}.json", calibration_trace)
+        record_child_stage(state, "calibration_trace_complete", image=image)
 
+    record_child_stage(state, "onnx_session_setup")
     session, onnx_contract = run_onnx_session(onnx_path, model, runtime)
+    record_child_stage(state, "onnx_session_ready")
     comparisons = []
     native_contract = None
-    for row in plan["fixture"]["forward_images"]:
+    for index, row in enumerate(plan["fixture"]["forward_images"]):
         image = row["image"]
         tensor = tensors[image]
         input_np = runtime["np"].ascontiguousarray(tensor.detach().cpu().numpy())
+        record_child_stage(state, "source_forward", image=image, index=index)
+        state["forward_counts"]["source_cpu_fp32"]["attempted"] += 1
         with runtime["torch"].no_grad():
             native_output = network(tensor)
+        state["forward_counts"]["source_cpu_fp32"]["completed"] += 1
         native_primary, native_contract_row = extract_native_primary(native_output, model, runtime["np"])
         if native_contract is None:
             native_contract = native_contract_row
+        record_child_stage(state, "source_forward_complete", image=image, index=index)
+        record_child_stage(state, "onnx_forward", image=image, index=index)
+        state["forward_counts"]["onnx_cpu"]["attempted"] += 1
         onnx_outputs = session.run(["output0"], {"images": input_np})
         if len(onnx_outputs) != 1:
             raise NumericUnresolved(f"ONNX returned an unexpected output count for {model}")
+        state["forward_counts"]["onnx_cpu"]["completed"] += 1
+        record_child_stage(state, "onnx_forward_complete", image=image, index=index)
         onnx_primary = runtime["np"].ascontiguousarray(onnx_outputs[0])
+        record_child_stage(state, "comparison", image=image, index=index)
         comparison = compare_primary(model, native_primary, onnx_primary, runtime["np"])
         comparison_record = {
             "selection": row["selection"],
@@ -944,15 +1088,19 @@ def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path)
         }
         comparisons.append(comparison_record)
         write_json_no_overwrite(partial_dir / f"comparison_{row['selection']}_{row['image_id']}.json", comparison_record)
-    checkpoint_after = file_evidence(repo, checkpoint_path)
-    onnx_after = file_evidence(repo, onnx_path)
+        record_child_stage(state, "comparison_complete", image=image, index=index)
+    record_child_stage(state, "post_forward_verification")
+    checkpoint_after = file_evidence_fn(repo, checkpoint_path)
+    onnx_after = file_evidence_fn(repo, onnx_path)
     if checkpoint_before != checkpoint_after or onnx_before != onnx_after:
         raise ValueError(f"Input binary changed during numeric verification for {model}")
-    fixture_binding_after = verify_fixture_files(repo, plan["fixture"])
+    fixture_binding_after = verify_fixture_files(repo, plan["fixture"], file_evidence_fn)
     if fixture_binding != fixture_binding_after:
         raise ValueError(f"Bound source/materialized image bytes changed during numeric verification for {model}")
     statuses = [row["comparison"]["status"] for row in comparisons]
     overall = "pass" if statuses and all(status == "pass" for status in statuses) else ("fail" if any(status == "fail" for status in statuses) else "unresolved")
+    state["status"] = "completed"
+    record_child_stage(state, "completed")
     return {
         "schema_version": 1,
         "study": STUDY,
@@ -974,7 +1122,8 @@ def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path)
         "model_stride": model_stride,
         "native_output_contract": native_contract,
         "comparisons": comparisons,
-        "forward_counts": {"source_cpu_fp32": len(comparisons), "onnx_cpu": len(comparisons)},
+        "forward_counts": {key: dict(value) for key, value in state["forward_counts"].items()},
+        "lifecycle": child_lifecycle_snapshot(state),
         "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "calibration_component_called": True, "gpu_used": False, "scored_run_authorized": False},
         "created_utc": datetime.now(timezone.utc).isoformat(),
     }
@@ -994,7 +1143,7 @@ def build_reference_semantics(model: str, graph_doc: dict[str, Any], accepted_co
         "native_reference": {
             "mode": "frozen PyTorch model.model.to(cpu).float().eval() under torch.no_grad",
             "dtype": "explicit float32 primary output",
-            "head_contract": accepted_contract.get("expected_contract", {}),
+            "head_contract": canonical_head_contract(accepted_contract, model),
             "forward_counts": {"native_primary": 0, "export_reference": 0},
             "fusion": "not_reproduced_in_native_reference; any historical exporter fusion belongs to the ONNX artifact and is not inferred from numeric agreement",
         },
@@ -1082,7 +1231,7 @@ def _final_report(manifest: dict[str, Any]) -> str:
         "",
     ]
     for row in manifest.get("models", []):
-        lines.append(f"- `{row.get('model')}`: execution `{row.get('status')}`, numeric status `{row.get('numeric_status', 'not_observed')}`, forward counts `{row.get('forward_counts', {})}`.")
+        lines.append(f"- `{row.get('model')}`: execution `{row.get('status')}`, numeric status `{row.get('numeric_status', 'not_observed')}`, stage `{row.get('stage', row.get('lifecycle', {}).get('stage', 'unknown'))}`, forward counts `{row.get('forward_counts', row.get('lifecycle', {}).get('forward_counts', {}))}`.")
     lines += [
         "",
         "## Boundary",
@@ -1155,6 +1304,7 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
         "config_path": str(config_path.relative_to(repo.resolve()).as_posix()),
         "source_root": str(source_root.relative_to(repo.resolve()).as_posix()),
         "selected_models": models,
+        "previous_attempt": preserved_v1_evidence(repo, output_root),
         "readiness": {"root": str(readiness_root.relative_to(repo.resolve()).as_posix()), "accepted_git_commit": accepted["accepted_git_commit"], "accepted_execution_commit": accepted["accepted_execution_commit"], "files": accepted["files"]},
         "graph_audit": {"root": str(graph_root.relative_to(repo.resolve()).as_posix()), "commit": GRAPH_AUDIT_COMMIT, "files": graph_audit["files"]},
         "config_binding": {key: value for key, value in binding.items() if key != "config"},
@@ -1193,7 +1343,26 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
                 raise ValueError(f"Existing child failure record is invalid for {model}")
         else:
             failed = True
-            row = {"schema_version": 1, "study": STUDY, "model": model, "status": "failed", "numeric_status": "not_observed", "error_type": "ChildProcessError", "error": f"model child exited {result.returncode}", "command": command, "partial_files": [], "no_silent_resume": True, "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "gpu_used": False, "scored_run_authorized": False}}
+            row = {
+                "schema_version": 1,
+                "study": STUDY,
+                "model": model,
+                "status": "failed",
+                "numeric_status": "not_observed",
+                "error_type": "ChildProcessError",
+                "error": f"model child exited {result.returncode}",
+                "stage": "child_process_exit_without_record",
+                "stage_history": [],
+                "forward_counts": {
+                    "source_cpu_fp32": {"attempted": 0, "completed": 0},
+                    "onnx_cpu": {"attempted": 0, "completed": 0},
+                },
+                "command": command,
+                "partial_files_scope": f"models/{model}/owned_paths_only",
+                "partial_files": child_owned_files(output_root, model),
+                "no_silent_resume": True,
+                "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "gpu_used": False, "scored_run_authorized": False},
+            }
             write_json_no_overwrite(model_dir / "failure.json", row)
         if result.returncode != 0 or row.get("status") != "completed":
             failed = True
@@ -1206,10 +1375,13 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
         "execution_status": "failed" if failed else "completed",
         "numeric_verdict": aggregate_numeric_verdict(model_rows),
         "plan_path": "numeric_plan.json",
+        "previous_attempt": plan.get("previous_attempt"),
         "artifact_inventory": publishable_artifact_inventory(output_root),
         "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "gpu_used": False, "scored_run_authorized": False},
         "created_utc": datetime.now(timezone.utc).isoformat(),
     }
+    manifest["artifact_inventory_scope"] = "parent_output_root_publishable"
+    manifest["run_inventory"] = parent_run_inventory(output_root, models, manifest["artifact_inventory"])
     write_json_no_overwrite(output_root / "numeric_manifest.json", manifest)
     write_text_no_overwrite(output_root / "report.md", _final_report(manifest))
     print(f"DONE: {output_root / 'numeric_manifest.json'}")
@@ -1221,8 +1393,9 @@ def run_child(args: argparse.Namespace) -> int:
     plan = read_json(repo_path(repo, Path(args.plan)))
     model = args.model
     out_dir = repo_path(repo, Path(plan["output_root"])) / "models" / model
+    state = new_child_state(model)
     try:
-        result = run_model_child(repo, plan, model, out_dir)
+        result = run_model_child(repo, plan, model, out_dir, state=state)
         write_json_no_overwrite(out_dir / "numeric_report.json", result)
         print(f"DONE MODEL {model}: {out_dir / 'numeric_report.json'}")
         return 0
@@ -1235,7 +1408,11 @@ def run_child(args: argparse.Namespace) -> int:
             "numeric_status": "not_observed",
             "error_type": type(exc).__name__,
             "error": str(exc),
-            "partial_files": sorted(path.relative_to(repo_path(repo, Path(plan["output_root"]))).as_posix() for path in repo_path(repo, Path(plan["output_root"])).rglob("*") if path.is_file()),
+            "stage": state["stage"],
+            "stage_history": state["stage_history"],
+            "forward_counts": {key: dict(value) for key, value in state["forward_counts"].items()},
+            "partial_files_scope": f"models/{model}/owned_paths_only",
+            "partial_files": child_owned_files(repo_path(repo, Path(plan["output_root"])), model),
             "no_silent_resume": True,
             "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "gpu_used": False, "scored_run_authorized": False},
         }

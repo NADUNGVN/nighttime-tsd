@@ -5,6 +5,7 @@ import json
 import sys
 import tempfile
 import unittest
+from contextlib import nullcontext
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -16,6 +17,197 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 
 import verify_precision_head_confirmation_numeric as numeric  # noqa: E402
+
+
+class _FakeTensor:
+    def __init__(self, value):
+        self._value = np.ascontiguousarray(value)
+
+    @property
+    def device(self):
+        return SimpleNamespace(type="cpu")
+
+    @property
+    def dtype(self):
+        return "torch.float32"
+
+    def detach(self):
+        return self
+
+    def to(self, _device):
+        return self
+
+    def cpu(self):
+        return self
+
+    def contiguous(self):
+        return self
+
+    def numpy(self):
+        return self._value
+
+
+class _FakeNoGrad:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_args):
+        return False
+
+
+class _FakeTorch:
+    Tensor = _FakeTensor
+
+    @staticmethod
+    def device(_name):
+        return SimpleNamespace(type="cpu")
+
+    @staticmethod
+    def no_grad():
+        return _FakeNoGrad()
+
+
+class _FakeLetterBox:
+    interpolation = 1
+
+    def __init__(self, new_shape, **_kwargs):
+        self.new_shape = tuple(new_shape)
+
+    def get_params(self, sample):
+        image = sample["img"]
+        return {
+            "orig_shape": tuple(image.shape[:2]),
+            "ratio": (1.0, 1.0),
+            "new_unpad": tuple(image.shape[1::-1]),
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+        }
+
+    def __call__(self, image=None, **kwargs):
+        value = image if image is not None else kwargs["img"]
+        result = np.zeros((*self.new_shape, 3), dtype=np.uint8)
+        height = min(result.shape[0], value.shape[0])
+        width = min(result.shape[1], value.shape[1])
+        result[:height, :width] = value[:height, :width]
+        return result
+
+
+class _FakeBasePredictor:
+    @staticmethod
+    def pre_transform(predictor, images):
+        return [_FakeLetterBox((640, 640))(image=image) for image in images]
+
+    @staticmethod
+    def preprocess(predictor, images):
+        transformed = predictor.pre_transform(images)
+        return _FakeTensor(numeric.preprocess_array_contract(transformed[0], np))
+
+
+class _FakeYOLODataset:
+    @staticmethod
+    def load_image(_self, _index, rect_mode, resize_short):
+        assert rect_mode is True
+        assert resize_short is False
+        return np.zeros((384, 640, 3), dtype=np.uint8), (480, 800), (384, 640)
+
+
+class _FakeSessionOptions:
+    pass
+
+
+class _FakeSession:
+    def __init__(self, model, error=None):
+        self.model = model
+        self.error = error
+
+    def get_providers(self):
+        return ["CPUExecutionProvider"]
+
+    def get_inputs(self):
+        return [SimpleNamespace(name="images", type="tensor(float)", shape=[1, 3, 640, 640])]
+
+    def get_outputs(self):
+        return [SimpleNamespace(name="output0", type="tensor(float)", shape=numeric.EXPECTED_OUTPUT_SHAPES[self.model])]
+
+    def run(self, _outputs, _inputs):
+        if self.error is not None:
+            raise self.error
+        return [np.zeros(numeric.EXPECTED_OUTPUT_SHAPES[self.model], dtype=np.float32)]
+
+
+class _FakeORT:
+    GraphOptimizationLevel = SimpleNamespace(ORT_ENABLE_BASIC="basic")
+    ExecutionMode = SimpleNamespace(ORT_SEQUENTIAL="sequential")
+
+    def __init__(self, model, error=None):
+        self.model = model
+        self.error = error
+
+    def SessionOptions(self):
+        return _FakeSessionOptions()
+
+    def InferenceSession(self, _path, sess_options, providers):
+        assert providers == ["CPUExecutionProvider"]
+        return _FakeSession(self.model, self.error)
+
+
+def _fake_head(model, wrong=False):
+    head_type = "WrongHead" if wrong else "Detect"
+    head = type(head_type, (), {})()
+    head.i = 999 if wrong else numeric.EXPECTED_HEAD_IDENTITIES[model]["head_index"]
+    head.end2end = not numeric.EXPECTED_HEAD_IDENTITIES[model]["end2end"] if wrong else numeric.EXPECTED_HEAD_IDENTITIES[model]["end2end"]
+    return head
+
+
+class _FakeNetwork:
+    def __init__(self, model, wrong_head=False):
+        self.model_name = model
+        self.model = [_fake_head(model, wrong_head)]
+
+    def to(self, _device):
+        return self
+
+    def float(self):
+        return self
+
+    def eval(self):
+        return self
+
+    def parameters(self):
+        return [SimpleNamespace(device=SimpleNamespace(type="cpu"), dtype="torch.float32")]
+
+    def __call__(self, _tensor):
+        primary = _FakeTensor(np.zeros(numeric.EXPECTED_OUTPUT_SHAPES[self.model_name], dtype=np.float32))
+        boxes = _FakeTensor(np.zeros((1, 64 if self.model_name == "yolov8n" else 4, 8400), dtype=np.float32))
+        scores = _FakeTensor(np.zeros((1, 3, 8400), dtype=np.float32))
+        feats = [_FakeTensor(np.zeros((1, 1, 1, 1), dtype=np.float32)) for _ in range(3)]
+        branch = {"boxes": boxes, "scores": scores, "feats": feats}
+        if self.model_name == "yolov8n":
+            return primary, branch
+        return primary, {"one2many": branch, "one2one": branch}
+
+
+def _fake_runtime(model, *, wrong_head=False, onnx_error=None):
+    network = _FakeNetwork(model, wrong_head=wrong_head)
+
+    def yolo(_path, task):
+        assert task == "detect"
+        return SimpleNamespace(model=network)
+
+    return {
+        "np": np,
+        "ort": _FakeORT(model, onnx_error),
+        "torch": _FakeTorch(),
+        "YOLO": yolo,
+        "YOLODataset": _FakeYOLODataset,
+        "LetterBox": _FakeLetterBox,
+        "imread": lambda _path: np.zeros((480, 800, 3), dtype=np.uint8),
+        "BasePredictor": _FakeBasePredictor,
+        "packages": {"expected_from_config": {}, "observed": {"test_runtime": True}, "mode": "CPU double"},
+        "available_providers": ["CPUExecutionProvider"],
+    }
 
 
 def _selection(selection_id="U42", count=8):
@@ -42,6 +234,180 @@ def _selection(selection_id="U42", count=8):
 
 
 class PrecisionHeadNumericTests(unittest.TestCase):
+    def _external_child_plan(self, temp, model):
+        plan = json.loads((REPO / "results/measurement_audit_v1/precision_head_confirmation_numeric_v1/numeric_plan.json").read_text(encoding="utf-8"))
+        plan["output_root"] = "output"
+        graph_doc = json.loads((REPO / f"results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/models/{model}/graph_audit.json").read_text(encoding="utf-8"))
+        plan["models"][model]["reference_semantics"] = numeric.build_reference_semantics(model, graph_doc, plan["models"][model]["accepted_contract"], {})
+        (temp / "configs/precision_head_confirmation_v1.json").parent.mkdir(parents=True)
+        (temp / "configs/precision_head_confirmation_v1.json").write_text("{}", encoding="utf-8")
+        evidence = {}
+
+        def add_external_file(path, sha256, byte_count):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"x")
+            evidence[str(path.resolve())] = {"path": path.relative_to(temp).as_posix(), "exists": True, "regular_file": True, "bytes": byte_count, "sha256": sha256}
+
+        checkpoint = plan["models"][model]["checkpoint"]["expected"]
+        add_external_file(temp / checkpoint["path"], checkpoint["sha256"], checkpoint["bytes"])
+        onnx = plan["models"][model]["onnx"]
+        add_external_file(temp / onnx["path"], onnx["expected_sha256"], 1)
+        for row in plan["fixture"]["forward_images"] + plan["fixture"]["preprocess_trace_images"]:
+            source = numeric.resolve_bound_source_image(temp, row)
+            materialized = numeric.resolve_bound_materialized_image(temp, row)
+            add_external_file(source, row["expected_sha256"], row["expected_bytes"])
+            add_external_file(materialized, row["materialized_expected_sha256"], row["expected_bytes"])
+
+        def evidence_fn(repo, path):
+            return dict(evidence[str(path.resolve())])
+
+        return plan, evidence_fn
+
+    def test_canonical_plan_runs_both_child_loops_with_faithful_cpu_doubles(self):
+        rows = []
+        for model in numeric.MODEL_CHOICES:
+            with tempfile.TemporaryDirectory() as temp:
+                repo = Path(temp)
+                plan, evidence_fn = self._external_child_plan(repo, model)
+                result = numeric.run_model_child(
+                    repo,
+                    plan,
+                    model,
+                    repo / "output/models" / model,
+                    runtime_loader=lambda _config, model=model: _fake_runtime(model),
+                    source_evidence_fn=lambda: {"boundary": "external_cpu_runtime_double"},
+                    file_evidence_fn=evidence_fn,
+                )
+                self.assertEqual(result["status"], "completed")
+                self.assertEqual(result["numeric_status"], "pass")
+                self.assertEqual(len(result["comparisons"]), 8)
+                self.assertEqual(len(result["calibration_preprocess_traces"]), 3)
+                self.assertEqual(result["forward_counts"], {"source_cpu_fp32": {"attempted": 8, "completed": 8}, "onnx_cpu": {"attempted": 8, "completed": 8}})
+                self.assertEqual(result["lifecycle"]["status"], "completed")
+                stages = [event["stage"] for event in result["lifecycle"]["stage_history"]]
+                self.assertIn("head_validation_complete", stages)
+                self.assertIn("source_forward_complete", stages)
+                self.assertIn("onnx_forward_complete", stages)
+                self.assertIn("comparison_complete", stages)
+                self.assertEqual(stages[-1], "completed")
+                rows.append(result)
+        aggregate = numeric.aggregate_numeric_verdict(rows)
+        self.assertEqual(aggregate["status"], "pass")
+        self.assertEqual(aggregate["counts"], {"pass": 2, "fail": 0, "unresolved": 0, "not_observed": 0})
+
+    def test_child_lifecycle_preserves_failure_stage_and_forward_counters(self):
+        failure_cases = ("runtime", "head", "preprocess", "source_after", "onnx", "after_onnx")
+        for failure_case in failure_cases:
+            with self.subTest(failure_case=failure_case), tempfile.TemporaryDirectory() as temp:
+                repo = Path(temp)
+                plan, evidence_fn = self._external_child_plan(repo, "yolov8n")
+                state = numeric.new_child_state("yolov8n")
+                runtime_loader = lambda _config: _fake_runtime("yolov8n")
+                patches = []
+                if failure_case == "runtime":
+                    runtime_loader = lambda _config: (_ for _ in ()).throw(RuntimeError("runtime failure"))
+                elif failure_case == "head":
+                    runtime_loader = lambda _config: _fake_runtime("yolov8n", wrong_head=True)
+                elif failure_case == "onnx":
+                    runtime_loader = lambda _config: _fake_runtime("yolov8n", onnx_error=RuntimeError("onnx call failure"))
+                elif failure_case in ("preprocess", "source_after", "after_onnx"):
+                    if failure_case == "preprocess":
+                        patches.append(patch.object(numeric, "trace_preprocess", side_effect=RuntimeError("preprocess failure")))
+                    elif failure_case == "source_after":
+                        patches.append(patch.object(numeric, "extract_native_primary", side_effect=RuntimeError("source output failure")))
+                    else:
+                        patches.append(patch.object(numeric, "compare_primary", side_effect=RuntimeError("comparison failure after onnx")))
+                context = patches[0] if patches else nullcontext()
+                with context:
+                    with self.assertRaises(Exception):
+                        numeric.run_model_child(repo, plan, "yolov8n", repo / "output/models/yolov8n", runtime_loader=runtime_loader, source_evidence_fn=lambda: {"boundary": "external_cpu_runtime_double"}, file_evidence_fn=evidence_fn, state=state)
+                if failure_case == "runtime":
+                    self.assertEqual(state["stage"], "runtime_loading")
+                    self.assertEqual(state["forward_counts"]["source_cpu_fp32"], {"attempted": 0, "completed": 0})
+                elif failure_case == "head":
+                    self.assertEqual(state["stage"], "head_validation")
+                elif failure_case == "preprocess":
+                    self.assertEqual(state["stage"], "preprocess")
+                elif failure_case == "source_after":
+                    self.assertEqual(state["stage"], "source_forward")
+                    self.assertEqual(state["forward_counts"]["source_cpu_fp32"], {"attempted": 1, "completed": 1})
+                else:
+                    self.assertEqual(state["stage"], "comparison" if failure_case == "after_onnx" else "onnx_forward")
+                    self.assertEqual(state["forward_counts"]["source_cpu_fp32"], {"attempted": 1, "completed": 1})
+                    expected_onnx = {"attempted": 1, "completed": 0 if failure_case == "onnx" else 1}
+                    self.assertEqual(state["forward_counts"]["onnx_cpu"], expected_onnx)
+
+    def test_canonical_head_adapter_and_reference_use_real_readiness_metadata(self):
+        readiness_manifest = json.loads((REPO / "results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json").read_text(encoding="utf-8"))
+        contracts = {row["label"]: row for row in readiness_manifest["model_contracts"]}
+        graph_root = REPO / "results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4"
+        for model, expected in numeric.EXPECTED_HEAD_IDENTITIES.items():
+            contract = contracts[model]
+            self.assertEqual(numeric.canonical_head_contract(contract, model), expected)
+            graph_doc = json.loads((graph_root / f"models/{model}/graph_audit.json").read_text(encoding="utf-8"))
+            reference = numeric.build_reference_semantics(model, graph_doc, contract, {})
+            self.assertEqual(reference["native_reference"]["head_contract"], expected)
+
+    def test_model_plan_uses_canonical_head_contract_from_real_artifacts(self):
+        readiness_root = REPO / "results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2"
+        graph_root = REPO / "results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4"
+        readiness_prefix = REPO / "results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2"
+        canonical = {}
+        for relative in numeric.graph.READINESS_FILES:
+            blob = numeric.readiness.git_blob(REPO, numeric.graph.ACCEPTED_READINESS_COMMIT, readiness_prefix / relative)
+            canonical[relative] = json.loads(blob.decode("utf-8")) if relative.endswith(".json") else blob.decode("utf-8")
+        accepted = {
+            "manifest": canonical["readiness_manifest.json"],
+            "model_contracts": canonical["model_contracts.json"],
+            "calibration_readiness": canonical["calibration_readiness.json"],
+            "schedule": canonical["schedule.json"],
+            "accepted_git_commit": numeric.graph.ACCEPTED_READINESS_COMMIT,
+            "accepted_execution_commit": numeric.graph.ACCEPTED_READINESS_EXECUTION_COMMIT,
+            "files": {},
+        }
+        config = numeric.read_json(REPO / "configs/precision_head_confirmation_v1.json")
+        graph_audit = numeric.validate_graph_audit_artifact(REPO, graph_root, list(numeric.MODEL_CHOICES))
+        real_file_evidence = numeric.file_evidence
+
+        def external_onnx_evidence(repo, path):
+            if path.name == "model.onnx":
+                model = path.parent.name
+                return {"path": str(path), "exists": True, "regular_file": True, "bytes": 1, "sha256": numeric.EXPECTED_ONNX_SHA256[model]}
+            return real_file_evidence(repo, path)
+
+        with patch.object(numeric, "file_evidence", side_effect=external_onnx_evidence):
+            for model, expected in numeric.EXPECTED_HEAD_IDENTITIES.items():
+                plan = numeric._model_plan(REPO, config, accepted, graph_audit, model)
+                self.assertEqual(plan["reference_semantics"]["native_reference"]["head_contract"], expected)
+
+    def test_native_head_adapter_rejects_malformed_metadata_and_wrong_actual_head(self):
+        readiness_manifest = json.loads((REPO / "results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json").read_text(encoding="utf-8"))
+        contract = next(row for row in readiness_manifest["model_contracts"] if row["label"] == "yolov8n")
+        malformed = copy.deepcopy(contract)
+        malformed["head"].pop("index")
+        with self.assertRaisesRegex(ValueError, "Accepted canonical head schema invalid"):
+            numeric.canonical_head_contract(malformed, "yolov8n")
+
+        WrongHead = type("WrongHead", (), {})
+        wrong_head = WrongHead()
+        wrong_head.i = 99
+        wrong_head.end2end = False
+
+        class FakeNetwork:
+            model = [wrong_head]
+
+            def to(self, _device):
+                return self
+
+            def eval(self):
+                return self
+
+            def parameters(self):
+                return []
+
+        with self.assertRaisesRegex(numeric.NumericUnresolved, "expected=.*observed=.*"):
+            numeric.validate_native_head(FakeNetwork(), "yolov8n", contract)
+
     def test_protocol_locks_cpu_tolerances_and_fixture(self):
         accepted = {"manifest": {"calibration_readiness": {"selections": [_selection("U42"), _selection("U43", 2), _selection("U44", 2)]}}}
         plan = numeric.build_fixture_plan(accepted)
@@ -298,11 +664,39 @@ class PrecisionHeadNumericTests(unittest.TestCase):
         self.assertIn("yolov8n", command)
         self.assertNotIn("--model all", " ".join(command))
 
+    def test_child_failure_inventory_is_model_scoped_and_persists_lifecycle(self):
+        with tempfile.TemporaryDirectory() as temp:
+            repo = Path(temp)
+            output = repo / "output"
+            (output / "models/yolo26n/partial").mkdir(parents=True)
+            (output / "models/yolo26n/partial/owned.json").write_text("{}", encoding="utf-8")
+            (output / "models/yolov8n/failure.json").parent.mkdir(parents=True)
+            (output / "models/yolov8n/failure.json").write_text("{}", encoding="utf-8")
+            (output / "logs").mkdir()
+            (output / "logs/yolov8n.log").write_text("old child", encoding="utf-8")
+            (output / "numeric_plan.json").write_text(json.dumps({"output_root": "output"}), encoding="utf-8")
+            args = SimpleNamespace(repo_root=repo, plan=Path("output/numeric_plan.json"), model="yolo26n")
+
+            def fail_with_state(_repo, _plan, _model, _out_dir, **kwargs):
+                state = kwargs["state"]
+                numeric.record_child_stage(state, "head_validation")
+                raise numeric.NumericUnresolved("head failure")
+
+            with patch.object(numeric, "run_model_child", side_effect=fail_with_state):
+                self.assertEqual(numeric.run_child(args), 1)
+            failure = json.loads((output / "models/yolo26n/failure.json").read_text(encoding="utf-8"))
+            self.assertEqual(failure["stage"], "head_validation")
+            self.assertEqual(failure["forward_counts"]["source_cpu_fp32"], {"attempted": 0, "completed": 0})
+            self.assertEqual(failure["partial_files_scope"], "models/yolo26n/owned_paths_only")
+            self.assertEqual(failure["partial_files"], ["models/yolo26n/partial/owned.json"])
+            self.assertNotIn("yolov8n", " ".join(failure["partial_files"]))
+
     def test_source_has_no_trt_or_export_dispatch(self):
         source = Path(numeric.__file__).read_text(encoding="utf-8")
         self.assertNotIn("import tensorrt", source)
         self.assertNotIn("from tensorrt", source)
         self.assertNotIn(".export(", source)
+        self.assertNotIn("expected_contract", source)
         self.assertNotIn("uniform_build_repeat.prepare", source)
         self.assertIn("CPUExecutionProvider", source)
 
@@ -340,6 +734,19 @@ class PrecisionHeadNumericTests(unittest.TestCase):
             args = SimpleNamespace(model="all", out_dir=Path("output"), readiness_root=Path("readiness"), graph_audit_root=Path("graph"), source_root=Path("source"))
             with self.assertRaises(FileExistsError):
                 numeric.run_parent(args, repo)
+
+    def test_v2_links_preserved_v1_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp:
+            repo = Path(temp)
+            prior = repo / numeric.PRESERVED_V1_OUTPUT
+            prior.mkdir(parents=True)
+            (prior / "numeric_manifest.json").write_text(json.dumps({"status": "failed"}), encoding="utf-8")
+            (prior / "numeric_plan.json").write_text("{}", encoding="utf-8")
+            (prior / "report.md").write_text("# preserved v1\n", encoding="utf-8")
+            evidence = numeric.preserved_v1_evidence(repo, repo / "results/measurement_audit_v1/precision_head_confirmation_numeric_v2")
+            self.assertEqual(evidence["status"], "preserved_not_overwritten")
+            self.assertEqual(evidence["path"], "results/measurement_audit_v1/precision_head_confirmation_numeric_v1")
+            self.assertEqual(evidence["artifact_inventory"], ["numeric_manifest.json", "numeric_plan.json", "report.md"])
 
     def test_parent_dispatches_two_isolated_children_sequentially(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -412,6 +819,10 @@ class PrecisionHeadNumericTests(unittest.TestCase):
             self.assertEqual(manifest["numeric_verdict"]["status"], "not_observed")
             self.assertIn("models/yolov8n/failure.json", manifest["artifact_inventory"])
             self.assertFalse((repo / "output/models/yolov8n/numeric_report.json").exists())
+            self.assertEqual(manifest["run_inventory"]["owner"], "parent")
+            self.assertIn("models/yolov8n/failure.json", manifest["run_inventory"]["model_files"]["yolov8n"])
+            self.assertIn("models/yolo26n/numeric_report.json", manifest["run_inventory"]["model_files"]["yolo26n"])
+            self.assertNotIn("models/yolov8n/failure.json", manifest["run_inventory"]["model_files"]["yolo26n"])
 
     def test_parent_writes_fallback_failure_when_child_crashes_before_record(self):
         with tempfile.TemporaryDirectory() as temp:
