@@ -2002,3 +2002,85 @@ không đổi reference/head contract và không mở TensorRT/matrix. Hai đi�
 Astra quyết định trước lần chạy khác là sửa mapping key của native head guard
 và xác minh failure inventory không trộn artifact giữa các child. L2A-039
 dừng tại đây để Astra review.
+
+## L2A-040 — H1-H3 canonical head and child-lifecycle repair
+
+Đã đọc và thực hiện A2L-035. Implementation/protocol commit là
+`1e2f2dd32da6158a056e0c8cbdb6c1ffcfd82798` (`fix: repair numeric head
+contract and child lifecycle`), đã push lên `origin/master`. Entry A2L-035
+được commit nguyên nội dung. Checkpoint LFS đang dirty từ trước vẫn được giữ
+nguyên và không được stage.
+
+### H1 — canonical head contract
+
+Runner nay chỉ nhận identity từ `accepted_contract.head.type/index/end2end`.
+Adapter canonical trả về `head_type/head_index/end2end` và kiểm tra field,
+kiểu dữ liệu, label/model association cùng giá trị đã được readiness chấp
+nhận: YOLOv8n=`Detect/22/false`, YOLO26n=`Detect/23/true`. Metadata thiếu,
+sai kiểu hoặc sai model tạo schema-specific error có expected/observed; không
+còn đọc `expected_contract` hay fallback empty dict. Native head validation và
+`build_reference_semantics` dùng cùng adapter.
+
+### H2 — lifecycle/inventory ownership
+
+`run_child` chỉ liệt kê `models/<model>/` trong `partial_files`, kèm scope
+`owned_paths_only`; parent sở hữu inventory toàn run gồm plan, manifest,
+report, logs và file của cả hai model. Stage history có thứ tự và counts
+`source_cpu_fp32`/`onnx_cpu` với `attempted` và `completed`; các marker phân
+biệt runtime, head, preprocess, source forward, ONNX call, comparison sau
+ONNX và post-forward verification. Đây là bằng chứng ownership/lifecycle,
+không phải bằng chứng dữ liệu inference bị trộn.
+
+### H3 — metadata thật và bounded CPU doubles
+
+Numeric suite chạy trên readiness/graph-v4 metadata và canonical v1 plan thật;
+actual code path được gọi gồm fixture verification, `_model_plan`,
+`validate_native_head`, `run_model_child`, output extraction, comparison,
+report writer và aggregate verdict. Test chạy cả `yolov8n` và `yolo26n`, 8
+comparison/model và 3 calibration anchors/model. Chỉ runtime/file evidence
+không thể materialize an toàn được inject vào faithful CPU doubles; head,
+output shape/branch, CPU provider và float32 contract vẫn được kiểm tra bằng
+đường code thật. Có test malformed canonical metadata, wrong actual head,
+failure trước runtime, tại head, preprocess, sau source call, trong ONNX call,
+sau ONNX call, child tuần tự fail/success và parent inventory.
+
+### Verification and boundary
+
+- Numeric H1-H3 suite: **34/34 PASS**, gồm 31 test pass và 3 explicit skips vì
+  pinned Ultralytics/calibration producer dependencies không có trong local
+  environment. Test producer thật không bị giả mạo thành pass.
+- `py_compile`: PASS; `git diff --check`: PASS.
+- Preserved graph-audit regression: **4/4 PASS**.
+- Legacy graph-preparation suite không được dùng làm GO mới: local hiện thiếu
+  `ultralytics`/`pycocotools`, nên 2 preflight tests báo unresolved và 1 ONNX
+  test skip. Đây là giới hạn môi trường của suite cũ, không phải lỗi trong
+  numeric runner; không cài package hoặc sửa ngoài scope.
+- Không chạy server/GPU, checkpoint forward thật, export, TensorRT build,
+  benchmark, matrix hoặc calibration loader. Local checkpoint producer
+  inspection thật không thể hoàn tất vì pinned dependencies thiếu; hash/size
+  của artifact readiness được dùng cho plan binding và faithful doubles được
+  dùng đúng như H3 cho phép.
+
+`results/measurement_audit_v1/precision_head_confirmation_numeric_v1` được giữ
+nguyên bất biến. Protocol và runner dành cho một output mới
+`precision_head_confirmation_numeric_v2`; parent ghi `previous_attempt` link
+đến v1 trước khi dispatch. Theo conditional GO của A2L-035, operator có thể
+chạy đúng một bounded foreground CPU run sau khi pull và kiểm tra output v2
+chưa tồn tại. Không cần GPU trống, không dùng `nohup`, không retry/resume,
+không đổi tolerance/reference/head/output contract.
+
+### Lệnh operator sau khi pull commit
+
+Pull/check một dòng (thay `HANDOFF_COMMIT` bằng commit tài liệu handoff sau
+khi push):
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "HANDOFF_COMMIT" && test -d results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 && test -d results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4 && test -d results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2 && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_numeric_v1/numeric_manifest.json && if [ -e results/measurement_audit_v1/precision_head_confirmation_numeric_v2 ]; then echo OUTPUT_EXISTS; else echo OUTPUT_ABSENT; fi`
+
+Run foreground CPU một dòng:
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/verify_precision_head_confirmation_numeric.py --readiness-root results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 --graph-audit-root results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4 --source-root results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2 --model all --out-dir results/measurement_audit_v1/precision_head_confirmation_numeric_v2`
+
+Sau khi operator push các artifact publishable của v2, Luna sẽ pull và hậu
+kiểm inventory parent/child, stage/count, input hashes, provenance, provider,
+preprocess traces và numerical verdict; không suy diễn numeric PASS từ DONE
+hay exit 0 và không tự mở nghiên cứu tiếp theo.
