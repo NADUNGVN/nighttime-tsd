@@ -2252,3 +2252,76 @@ authorization. Không cần GPU idle, nhưng vẫn phải dùng đúng pinned CP
 giữ output root mới absent, không export/build/rebuild và không chạy thêm bước
 nghiên cứu. Sau khi được review và operator push bounded artifacts, Luna mới
 pull/hậu kiểm artifact và báo cáo tiếp theo.
+
+## L2A-043 — hậu kiểm localization v1: fail-closed boundary ở native preselection semantics
+
+Đã pull artifact commit `b8ae581b68863a648bf5377cf5beeaf2e3f0953a` từ server.
+Inventory của `precision_head_numeric_localization_v1` khớp **7/7 file** với
+filesystem/manifest: plan, manifest, report, hai log và hai model records.
+Không có private derived ONNX/full tensor bị push; output root được giữ nguyên
+để bảo toàn failure và không retry/overwrite.
+
+### Execution status
+
+Manifest là `status=failed`, `execution_status=failed`, `numeric_verdict=
+fail_preserved`. YOLOv8n/00009 có đúng một native forward attempted/completed,
+chưa chạy original ONNX. Failure ở sau `head_validated`:
+
+`yolov8n.native.boxes has no channel axis 4: [1, 64, 8400]`
+
+Do đó không có v8 ONNX comparison mới và không được gọi đây là localization
+đã hoàn tất. Numeric v2 strict FAIL lịch sử vẫn bất biến.
+
+YOLO26n/00006 có đúng một native forward, một original ONNX session và một
+derived ONNX session. Runtime ghi Torch `2.5.1+cu121`, Ultralytics `8.4.102`,
+NumPy `2.4.4`, pycocotools `2.0.10`, ONNX Runtime `1.24.4`, chỉ
+`CPUExecutionProvider`, với `CUDA_VISIBLE_DEVICES=-1`. Checkpoint/accepted
+ONNX before/after unchanged; private derived graph hash là
+`d86941d35b5273f69a0d6c3716f1ac8d4929d54bdea95eb3d5032fec33982c1e`.
+Instrumentation sensitivity là `unchanged_exact`.
+
+### Semantic boundary discovered
+
+The YOLO26 structural trace itself is useful: all required shapes/dtypes and
+TopK/Gather lineage pass; ONNX direct index arithmetic is exact; ONNX stage-2
+values, gathered class matrix và selected boxes tái dựng nội bộ đều pass.
+Strict fixed-row primary comparison vẫn là FAIL, với 1,056/1,200 box
+mismatch, 180/300 class-id mismatch, score channel pass và tie count
+reference/observed `0/240`.
+
+Tuy nhiên, cross-side preselection comparison trong report **không được dùng**:
+
+- native `one2one.scores` có miền `[-79.7921524, 2.8147359]`, âm và không phải
+  probabilities;
+- ONNX `Split_output_1` có miền `[0, 0.9434670]` và 20,050 zero, là class
+  probabilities sau sigmoid;
+- native `one2one.boxes` `[1,4,8400]` có miền `[-0.5678, 6.2581]`, trong khi
+  ONNX decoded boxes có miền `[-99.6667, 785.9184]`; mapping coordinate space
+  chưa được chứng minh.
+
+Vì vậy các kết quả same-anchor score/box và overlap selection `278/300` của
+run này là **unresolved/non-admissible for cross-side interpretation**. Chúng
+không chứng minh rank permutation, membership change hay upstream numerical
+error. Đây là lỗi semantic adapter của diagnostic, không phải lý do để đổi
+tolerance hoặc sửa verdict; không có bằng chứng TensorRT/GPU nào được suy ra.
+
+### Decision requested
+
+Trước mọi rerun, cần một entry Astra mới duyệt adapter semantics chính xác:
+
+1. YOLOv8 native `[1,64,8400]` phải được giải mã đúng thành decoded
+   `[1,4,8400]` từ tensor giữ lại trong cùng ordinary forward, có source/shape
+   contract rõ ràng; không được đoán bằng reshape thành 4 channels.
+2. Native YOLO26 raw class logits phải được map sang cùng post-Sigmoid
+   probability domain với ONNX trước so sánh/top-k; raw logits không được so
+   trực tiếp với probabilities.
+3. Native YOLO26 box tensor phải được xác định coordinate/decoder semantics
+   tương ứng với ONNX trước khi gọi là same-anchor decoded boxes.
+4. Giữ nguyên forward ceiling, fixed-row strict FAIL, no-rematching policy và
+   output root mới; không rerun artifact hiện tại, không export, TensorRT,
+   matrix hoặc GPU.
+
+Luna chưa sửa code sau run và chưa chạy lại. Astra cần quyết định adapter
+semantics/count trước bước tiếp theo; artifact hiện tại chỉ là bằng chứng
+failure/lifecycle và một phần structural ONNX diagnostic, không phải nghiệm
+thu localization chéo hai model.
