@@ -1,0 +1,600 @@
+{
+  "schema_version": "e2l1-source-bundle-v1",
+  "status": "execution_complete_numerical_fail",
+  "execution_status": "complete",
+  "numerical_verdict": "fail",
+  "real_device_execution": false,
+  "commit": "7dd178af4c001d074d1efbd4bbbafcb767dc6263",
+  "code_provenance": {
+    "code_root": "/tmp/luna1-e2l1-013-source-v2",
+    "requested_commit": "7dd178af4c001d074d1efbd4bbbafcb767dc6263",
+    "actual_head": "7dd178af4c001d074d1efbd4bbbafcb767dc6263",
+    "files": {
+      "scripts/edge_readiness/e2_source_bundle.py": "4602b77efe8a27a4f0c8082de539813a3cf09a0f04191e159477215027d2d565",
+      "scripts/edge_readiness/e2_source_fixture.py": "5771461f90a013f0b1343c833f70fd2cf2d5423606c9fe515282ea182658458a",
+      "scripts/edge_readiness/edge_errors.py": "c13691982d80dc714b935d367ef35bb371b07dfd591a8856be3d23ac1aaa7602"
+    }
+  },
+  "checkpoint": {
+    "source_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt",
+    "private_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/checkpoint/best.pt",
+    "sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
+  },
+  "fixture": {
+    "schema_version": "e2l1-cctsdb-fixture-binding-v1",
+    "status": "verified_read_only",
+    "split": "CCTSDB2021/train",
+    "official_test_used": false,
+    "negative_test_used": false,
+    "canonical_order": [
+      "00006",
+      "00009",
+      "00028"
+    ],
+    "records": [
+      {
+        "image_id": "00006",
+        "relative_path": "data/processed/cctsdb2021_clean/train/images/00006.jpg",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00006.jpg",
+        "nbytes": 63138,
+        "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+        "accepted_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+      },
+      {
+        "image_id": "00009",
+        "relative_path": "data/processed/cctsdb2021_clean/train/images/00009.jpg",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00009.jpg",
+        "nbytes": 120736,
+        "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+        "accepted_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+      },
+      {
+        "image_id": "00028",
+        "relative_path": "data/processed/cctsdb2021_clean/train/images/00028.jpg",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00028.jpg",
+        "nbytes": 314856,
+        "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde",
+        "accepted_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+      }
+    ],
+    "sequence_sha256": "7bfaaa99c4ed6b8ea2c92695f68747496a2ebb24400cf978b8630c27f41a6fc9",
+    "accepted_binding_manifest": "results/measurement_audit_v1/precision_head_confirmation_readiness_r1r3_v2/readiness_manifest.json",
+    "copy_policy": "bind actual source bytes by path/hash; do not copy image/model bytes into Git",
+    "derived_input": {
+      "status": "not_materialized_by_manifest",
+      "same_bytes_required_for_source_and_target": true,
+      "preprocess_helper": "scripts/edge_readiness/e2_source_fixture.py"
+    }
+  },
+  "fixture_after": {
+    "schema_version": "e2l1-cctsdb-fixture-binding-v1",
+    "status": "verified_read_only",
+    "split": "CCTSDB2021/train",
+    "official_test_used": false,
+    "negative_test_used": false,
+    "canonical_order": [
+      "00006",
+      "00009",
+      "00028"
+    ],
+    "records": [
+      {
+        "image_id": "00006",
+        "relative_path": "data/processed/cctsdb2021_clean/train/images/00006.jpg",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00006.jpg",
+        "nbytes": 63138,
+        "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+        "accepted_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+      },
+      {
+        "image_id": "00009",
+        "relative_path": "data/processed/cctsdb2021_clean/train/images/00009.jpg",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00009.jpg",
+        "nbytes": 120736,
+        "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+        "accepted_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+      },
+      {
+        "image_id": "00028",
+        "relative_path": "data/processed/cctsdb2021_clean/train/images/00028.jpg",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00028.jpg",
+        "nbytes": 314856,
+        "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde",
+        "accepted_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+      }
+    ],
+    "sequence_sha256": "7bfaaa99c4ed6b8ea2c92695f68747496a2ebb24400cf978b8630c27f41a6fc9",
+    "accepted_binding_manifest": "results/measurement_audit_v1/precision_head_confirmation_readiness_r1r3_v2/readiness_manifest.json",
+    "copy_policy": "bind actual source bytes by path/hash; do not copy image/model bytes into Git",
+    "derived_input": {
+      "status": "not_materialized_by_manifest",
+      "same_bytes_required_for_source_and_target": true,
+      "preprocess_helper": "scripts/edge_readiness/e2_source_fixture.py"
+    }
+  },
+  "environment": {
+    "numpy": "2.4.4",
+    "torch": "2.5.1+cu121",
+    "ultralytics": "8.4.102",
+    "onnx": "1.21.0",
+    "onnxruntime": "1.24.4",
+    "onnxslim": "0.1.94",
+    "cv2": "5.0.0",
+    "PIL": "12.2.0",
+    "python": "3.11.15",
+    "auto_install_control": "false",
+    "ort_providers_required": [
+      "CPUExecutionProvider"
+    ],
+    "torch_threads": {
+      "intra_op": 2,
+      "interop": 1
+    }
+  },
+  "model_flags": {
+    "head_class": "Detect",
+    "head_module": "ultralytics.nn.modules.head",
+    "class_order": [
+      "prohibitory",
+      "mandatory",
+      "warning"
+    ],
+    "nc": 3,
+    "reg_max": 16,
+    "end2end": false,
+    "export": false,
+    "training": false,
+    "xyxy": false,
+    "decoded_boxes": true,
+    "coordinate_format": "xywh_pixels_of_640_letterboxed_input",
+    "score_semantics": "sigmoid class probabilities",
+    "stride": [
+      8.0,
+      16.0,
+      32.0
+    ]
+  },
+  "export_flags": {
+    "before": {
+      "head_class": "Detect",
+      "head_module": "ultralytics.nn.modules.head",
+      "class_order": [
+        "prohibitory",
+        "mandatory",
+        "warning"
+      ],
+      "nc": 3,
+      "reg_max": 16,
+      "end2end": false,
+      "export": false,
+      "training": false,
+      "xyxy": false,
+      "decoded_boxes": true,
+      "coordinate_format": "xywh_pixels_of_640_letterboxed_input",
+      "score_semantics": "sigmoid class probabilities",
+      "stride": [
+        8.0,
+        16.0,
+        32.0
+      ]
+    },
+    "after": {
+      "head_class": "Detect",
+      "head_module": "ultralytics.nn.modules.head",
+      "class_order": [
+        "prohibitory",
+        "mandatory",
+        "warning"
+      ],
+      "nc": 3,
+      "reg_max": 16,
+      "end2end": false,
+      "export": false,
+      "training": false,
+      "xyxy": false,
+      "decoded_boxes": true,
+      "coordinate_format": "xywh_pixels_of_640_letterboxed_input",
+      "score_semantics": "sigmoid class probabilities",
+      "stride": [
+        8.0,
+        16.0,
+        32.0
+      ]
+    },
+    "checkpoint": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_export/best.pt"
+  },
+  "onnx": {
+    "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_export/best.onnx",
+    "sha256": "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7",
+    "contract": {
+      "input_name": "images",
+      "output_name": "output0",
+      "input_shape": [
+        1,
+        3,
+        640,
+        640
+      ],
+      "output_shape": [
+        1,
+        7,
+        8400
+      ],
+      "input_dtype": "float32",
+      "output_dtype": "float32",
+      "opset": 17,
+      "forbidden_nodes": [],
+      "checker": "pass"
+    }
+  },
+  "export": {
+    "options": {
+      "format": "onnx",
+      "device": "cpu",
+      "half": false,
+      "opset": 17,
+      "imgsz": 640,
+      "batch": 1,
+      "dynamic": false,
+      "nms": false,
+      "simplify": true,
+      "int8": false
+    },
+    "invocations": 1,
+    "internal_forward_calls": 4
+  },
+  "records": {
+    "00006": {
+      "input": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/inputs/00006.bin",
+        "nbytes": 4915200,
+        "sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474",
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "byteorder": "little",
+        "finite": true,
+        "metadata": {
+          "original_shape": [
+            720,
+            1280,
+            3
+          ],
+          "resized_shape": [
+            640,
+            640,
+            3
+          ],
+          "letterbox": {
+            "new_shape": [
+              640,
+              640
+            ],
+            "auto": false,
+            "scale_fill": false,
+            "scaleup": true,
+            "center": true,
+            "stride": 32,
+            "padding_value": 114,
+            "interpolation": "cv2.INTER_LINEAR"
+          },
+          "color": "BGR_to_RGB",
+          "layout": "NCHW",
+          "normalization": "pixel/255.0",
+          "contiguous": true,
+          "dtype_endian": "<f4"
+        }
+      },
+      "native": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/native_reference/00006.bin",
+        "nbytes": 235200,
+        "sha256": "7a200d1f08c39205d8b9677166f58513e03cdd29bef71e27e21e99837bd50125",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "byteorder": "little",
+        "finite": true,
+        "metadata": {}
+      },
+      "onnx": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_reference/00006.bin",
+        "nbytes": 235200,
+        "sha256": "caf4c185a245bae48ca99608b9a4dc507d5e35ba05d5fdd554528f982820fea0",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "byteorder": "little",
+        "finite": true,
+        "metadata": {}
+      }
+    },
+    "00009": {
+      "input": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/inputs/00009.bin",
+        "nbytes": 4915200,
+        "sha256": "357c0cc87ea2b4bfa56c1eca53bd54f5970bc1ea67b660d293a8bc4a9f62a9f0",
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "byteorder": "little",
+        "finite": true,
+        "metadata": {
+          "original_shape": [
+            720,
+            1280,
+            3
+          ],
+          "resized_shape": [
+            640,
+            640,
+            3
+          ],
+          "letterbox": {
+            "new_shape": [
+              640,
+              640
+            ],
+            "auto": false,
+            "scale_fill": false,
+            "scaleup": true,
+            "center": true,
+            "stride": 32,
+            "padding_value": 114,
+            "interpolation": "cv2.INTER_LINEAR"
+          },
+          "color": "BGR_to_RGB",
+          "layout": "NCHW",
+          "normalization": "pixel/255.0",
+          "contiguous": true,
+          "dtype_endian": "<f4"
+        }
+      },
+      "native": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/native_reference/00009.bin",
+        "nbytes": 235200,
+        "sha256": "376ea9cf833fa7fc075ecaa64e09837a8cf718198a020b1c5da2c3f4e5c68176",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "byteorder": "little",
+        "finite": true,
+        "metadata": {}
+      },
+      "onnx": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_reference/00009.bin",
+        "nbytes": 235200,
+        "sha256": "32501b8a9b90e00ee78884aeac45fbecf7dbb4be2c01f6002022eb1954886647",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "byteorder": "little",
+        "finite": true,
+        "metadata": {}
+      }
+    },
+    "00028": {
+      "input": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/inputs/00028.bin",
+        "nbytes": 4915200,
+        "sha256": "7b89184eac3c948ba0305d904e2b1e7b48e96d80bb13d4724abb2062b6286f29",
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "byteorder": "little",
+        "finite": true,
+        "metadata": {
+          "original_shape": [
+            768,
+            1024,
+            3
+          ],
+          "resized_shape": [
+            640,
+            640,
+            3
+          ],
+          "letterbox": {
+            "new_shape": [
+              640,
+              640
+            ],
+            "auto": false,
+            "scale_fill": false,
+            "scaleup": true,
+            "center": true,
+            "stride": 32,
+            "padding_value": 114,
+            "interpolation": "cv2.INTER_LINEAR"
+          },
+          "color": "BGR_to_RGB",
+          "layout": "NCHW",
+          "normalization": "pixel/255.0",
+          "contiguous": true,
+          "dtype_endian": "<f4"
+        }
+      },
+      "native": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/native_reference/00028.bin",
+        "nbytes": 235200,
+        "sha256": "66b1b796880db75e115a8aad5e1fc57d5726b8acfd1cb6fabdd494e358e5cc82",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "byteorder": "little",
+        "finite": true,
+        "metadata": {}
+      },
+      "onnx": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_reference/00028.bin",
+        "nbytes": 235200,
+        "sha256": "2ac6d843cad615f45817ce50697d0e2b2cd1c13adfcb83c394cc0672cb1f5193",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "byteorder": "little",
+        "finite": true,
+        "metadata": {}
+      }
+    }
+  },
+  "comparisons": {
+    "00006": {
+      "status": "pass",
+      "equation": "abs(observed-reference) <= 1e-5 + 1e-4*abs(reference)",
+      "elements": 58800,
+      "failing_elements": 0,
+      "box_failing_elements": 0,
+      "score_failing_elements": 0,
+      "max_abs_error": 0.0016632080078125,
+      "box_max_abs_error": 0.0016632080078125,
+      "score_max_abs_error": 2.980232238769531e-07,
+      "max_relative_error": 5.84876910707276,
+      "bounded_failures": []
+    },
+    "00009": {
+      "status": "pass",
+      "equation": "abs(observed-reference) <= 1e-5 + 1e-4*abs(reference)",
+      "elements": 58800,
+      "failing_elements": 0,
+      "box_failing_elements": 0,
+      "score_failing_elements": 0,
+      "max_abs_error": 0.0003509521484375,
+      "box_max_abs_error": 0.0003509521484375,
+      "score_max_abs_error": 1.1324882507324219e-06,
+      "max_relative_error": 6.758800016694825,
+      "bounded_failures": []
+    },
+    "00028": {
+      "status": "fail",
+      "equation": "abs(observed-reference) <= 1e-5 + 1e-4*abs(reference)",
+      "elements": 58800,
+      "failing_elements": 1,
+      "box_failing_elements": 1,
+      "score_failing_elements": 0,
+      "max_abs_error": 0.000335693359375,
+      "box_max_abs_error": 0.000335693359375,
+      "score_max_abs_error": 2.384185791015625e-07,
+      "max_relative_error": 6.365596604765779,
+      "bounded_failures": [
+        {
+          "flat_index": 16402,
+          "reference": 0.002925872802734375,
+          "observed": 0.002941131591796875,
+          "abs_error": 1.52587890625e-05,
+          "limit": 1.0292587280273439e-05
+        }
+      ]
+    }
+  },
+  "attempted_completed": {
+    "fixture_images_attempted": 3,
+    "fixture_images_verified": 3,
+    "inputs_attempted": 3,
+    "inputs_completed": 3,
+    "native_forwards_attempted": 3,
+    "native_forwards_completed": 3,
+    "export_invocations_attempted": 1,
+    "export_invocations_completed": 1,
+    "exporter_internal_forwards": 4,
+    "ort_forwards_attempted": 3,
+    "ort_forwards_completed": 3,
+    "comparisons_attempted": 3,
+    "comparisons_completed": 3
+  },
+  "private_inventory": [
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/checkpoint/best.pt",
+      "nbytes": 5483411,
+      "sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/inputs/00006.bin",
+      "nbytes": 4915200,
+      "sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/inputs/00009.bin",
+      "nbytes": 4915200,
+      "sha256": "357c0cc87ea2b4bfa56c1eca53bd54f5970bc1ea67b660d293a8bc4a9f62a9f0"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/inputs/00028.bin",
+      "nbytes": 4915200,
+      "sha256": "7b89184eac3c948ba0305d904e2b1e7b48e96d80bb13d4724abb2062b6286f29"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/native_reference/00006.bin",
+      "nbytes": 235200,
+      "sha256": "7a200d1f08c39205d8b9677166f58513e03cdd29bef71e27e21e99837bd50125"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/native_reference/00009.bin",
+      "nbytes": 235200,
+      "sha256": "376ea9cf833fa7fc075ecaa64e09837a8cf718198a020b1c5da2c3f4e5c68176"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/native_reference/00028.bin",
+      "nbytes": 235200,
+      "sha256": "66b1b796880db75e115a8aad5e1fc57d5726b8acfd1cb6fabdd494e358e5cc82"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_export/best.onnx",
+      "nbytes": 10605721,
+      "sha256": "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_export/best.pt",
+      "nbytes": 5483411,
+      "sha256": "3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_reference/00006.bin",
+      "nbytes": 235200,
+      "sha256": "caf4c185a245bae48ca99608b9a4dc507d5e35ba05d5fdd554528f982820fea0"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_reference/00009.bin",
+      "nbytes": 235200,
+      "sha256": "32501b8a9b90e00ee78884aeac45fbecf7dbb4be2c01f6002022eb1954886647"
+    },
+    {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private/onnx_reference/00028.bin",
+      "nbytes": 235200,
+      "sha256": "2ac6d843cad615f45817ce50697d0e2b2cd1c13adfcb83c394cc0672cb1f5193"
+    }
+  ],
+  "private_retention": {
+    "root": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private",
+    "published": false
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": "e2l1-source-bundle-index-v1",
+  "status": "execution_complete_numerical_fail",
+  "public_artifacts": [
+    "plan.json",
+    "manifest.json",
+    "report.md",
+    "run.log",
+    "index.json"
+  ],
+  "private_root": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2/private"
+}
