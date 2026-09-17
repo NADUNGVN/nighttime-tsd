@@ -1519,3 +1519,70 @@ v2 không được overwrite/resume. Chỉ push đúng năm file: `audit_plan.js
 `models/yolo26n/graph_audit.json`. Không push ONNX/PT/engine/cache/private
 binary. Mapping unresolved là kết quả hợp lệ của diagnostic và phải được giữ
 nguyên để review, không rerun full export.
+
+## L2A-032 — G5 preserved-ONNX audit hậu kiểm
+
+Operator đã chạy diagnostic CPU audit-only và push đúng năm artifact trong
+commit `5b410204d12751845c9f6f38b7d9d4c883ab8c5e` (`results: publish
+preserved precision graph audit`). Luna đã pull fast-forward commit này về
+graph worktree và kiểm tra commit chỉ thêm đúng năm file JSON/Markdown, không
+có ONNX/PT/engine/cache/private binary.
+
+### Artifact integrity
+
+Output root là
+`results/measurement_audit_v1/precision_head_confirmation_graph_audit_v3/`.
+Manifest có `status=audit_only_completed`, selected models là `yolov8n` và
+`yolo26n`; các cờ đều đúng: `audit_only=true`,
+`export_performed=false`, `build_performed=false`,
+`capture_performed=false`, `scored_run_authorized=false`.
+
+SHA256 các artifact đã push:
+
+- `audit_plan.json`: `6aef656a806a7a44439cc08d1e54a00ce0e5cc00bf5b4653629045585ef7a42c`
+- `graph_audit_manifest.json`: `78d70a0d65df458ec0a41804d81a6c761d8c02f3fc99b4c5effae29a711f3f81`
+- `models/yolov8n/graph_audit.json`: `c6bc97008d8aa403a4133b775f54da9f70497b177b484114e8dfe30357d1559b`
+- `models/yolo26n/graph_audit.json`: `be5e73cd9dcde2ed97896db7f7d90dd8d747cb0509de55b618ea332a346980d2`
+- `report.md`: `33ac7fc33e883ddcfe9a2e6863bb8c87745e49a458f38428765296cd9358328b`
+
+Diagnostic đã ghi lại code/config/readiness provenance. Các hash chính gồm
+diagnostic script `ecaf7a5c68feeba3e8794d536ff99732d694b365bfe186fff792887ec14cf39d`,
+graph script `2aea664d092f53340077368f6748ac53929bbab3739a6d2d28cf2a8c30990f2e`,
+readiness helper `204a0199ff768a72406ec1b21d12d16a69970d8629049e4c284bedab06df52ec`,
+config `2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8`.
+Accepted readiness commit là `7c0ea9e7fe86dfa6358ec1ee90473f9243a53f76`;
+accepted execution commit là `9c0597d1ec6f6d73c98fffa7cc3779a00eddec34`.
+
+### Preserved ONNX observations
+
+- `yolov8n`: `audit_only_completed`, mapping `verified`, 0 mapping errors;
+  ONNX 12,266,841 bytes, SHA256
+  `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603`;
+  input `images [1,3,640,640] float32`, output `output0 [1,7,8400]
+  float32`, opset 17, 231 nodes; 9 `cv2` and 9 `cv3` source Conv records
+  matched.
+- `yolo26n`: `audit_only_completed`, mapping `mapping_unresolved` with the
+  single persisted error `mod_semantics_unresolved:/model.23/Mod`; ONNX
+  9,806,783 bytes, SHA256
+  `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc`;
+  input `images [1,3,640,640] float32`, output `output0 [1,300,6]
+  float32`, opset 17, 384 nodes; 9 `one2one_cv2` and 15 `one2one_cv3`
+  source Conv records matched. The remaining `/model.23/Mod` semantics are
+  not promoted from shape evidence to verified mapping.
+
+For both models, ONNX SHA256 and file size before/after the audit are equal;
+the audit did not modify v2. The records also state no producer forward,
+TensorRT parser/build, calibration loader or scored execution was called.
+The newly computed ONNX hashes are observations of bytes read during G5 and
+do not independently establish historical export provenance. Producer-output
+equivalence, native numeric validation, preprocessing recipe and TensorRT
+compatibility remain deferred.
+
+### Decision boundary
+
+G5 is complete as a read-only evidence collection, not as a scored readiness
+certificate. YOLOv8n's structural mapping may be reviewed further; YOLO26n's
+unresolved `Mod` prevents treating the two-model confirmation as fully mapped.
+No full export retry, TensorRT build, calibration-cache generation, capture,
+benchmark or matrix expansion is authorized by this report. Await Astra's
+review/decision on the persisted YOLO26n semantic gap.
