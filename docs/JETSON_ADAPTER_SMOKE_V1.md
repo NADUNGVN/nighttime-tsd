@@ -180,3 +180,101 @@ prerequisite for real telemetry sessions; no inference data is fabricated here.
 E2L1-006 ends at local code and mock validation. A later device-side action
 requires Astra review of this package and explicit authorization; E3/E5 remain
 compatibility candidates rather than automatic scored arms.
+
+## E2L1-008 runtime preparation (CPU/read-only acceptance)
+
+This addendum prepares the real E2 path without executing it. No TensorRT/CUDA
+runtime was imported locally, no engine was deserialized, and no model was
+loaded, forwarded, exported, built, installed or benchmarked.
+
+### Observed E2 dependency evidence
+
+One bounded read-only probe used the established E2 alias `nx` from the shared
+infrastructure record. The remote identity was `arar-desktop`; the probe
+reported Python `3.8.10`, NumPy `1.17.4`, TensorRT `8.5.2.2`, CUDA `11.4.19`,
+cuDNN `8.6.0.166`, and 94 GB free on `/`. `pycuda`, `cuda.cudart`, ONNX,
+ONNX Runtime, Torch and Ultralytics were not discoverable in the probed Python
+environment. TensorRT source-token lookup was non-decisive because the public
+methods may be extension-backed; the target API check remains required.
+
+The probe was metadata/source discovery only: `returncode=0`,
+`local_elapsed_ns=1047000000`, `timed_out=false`, command SHA-256
+`89198aaeb9aacf2bd237506ee36c422c7ba07b37b97d936bce51fd9b0e29ea98`, and
+remote-script SHA-256
+`5b84148b10a383d55fc6252af4b6599a0c2ec004f417aa619a6747c843f8641d`.
+Raw evidence is retained under
+`results/edge_readiness_v1/e2l1-008/dependency_probe_20260917/`:
+`manifest.json` SHA-256
+`a299d04fd080a4307288508c845f65fd8af7589772216132b7f726c5607520fd`,
+`remote.stdout` SHA-256
+`5ef187b121a85fcf03bed57c190c2717de922a74478cf132dd5d38d45e81d5ef`, and
+empty `remote.stderr` SHA-256
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+
+### Real provider and fixture boundary
+
+`scripts/edge_readiness/jetson_runtime_provider.py` keeps TensorRT lazy until
+an explicit engine load, verifies the engine hash, introspects TensorRT 8
+binding-list descriptors, and separates the injected CUDA memory/stream owner
+from engine execution. `OwnedBuffers` validates shape, dtype and exact nbytes,
+uses one allocation map for H2D/enqueue/D2H, returns fresh synchronized host
+payloads, and frees allocations on explicit close or partial allocation
+failure. The local test double exercises this contract; it is not evidence of
+target execution.
+
+`scripts/edge_readiness/e2_source_fixture.py` binds the actual train-only
+fixture without copying image/model bytes into Git. Images are in canonical
+order `00006`, `00009`, `00028` under
+`data/processed/cctsdb2021_clean/train/images/`; all accepted content hashes
+match. Their sizes are 63,138, 120,736 and 314,856 bytes, and the order-bound
+sequence hash is
+`7bfaaa99c4ed6b8ea2c92695f68747496a2ebb24400cf978b8630c27f41a6fc9`.
+The edge-owned manifest is
+`results/edge_readiness_v1/e2l1-008/fixture_binding_20260917/fixture_manifest.json`
+with SHA-256
+`51de19e309367f99a71a458a941b27d60d8e54fa8da5155bfd63495e6e154523`.
+The helper uses an injected decoder/resizer because the local environment has
+no Pillow; it records BGR-to-RGB, aspect-preserving letterbox, pad 114,
+contiguous NCHW float32 and `/255` explicitly, without pretending to have
+materialized a decoded tensor.
+
+### Comparator and staged workflow
+
+`scripts/edge_readiness/e2_output_compare.py` compares native `output0`
+`[1,7,8400]` before decode/NMS. It binds source `fp32_reference` separately
+from target `fp16` compute and target binding/I/O dtype `float32`; this avoids
+calling FP16-compute/FP32-I/O a float32-compute reference. It uses the fixed
+equation `abs(reference-target) <= absolute + relative*abs(reference)`, with
+box tolerance `5e-3/1e-2` and score tolerance `2e-3/1e-2`, finite-value
+fail-closed handling and bounded mismatch summaries. The four box channels are
+`x,y,w,h` in the 640-input coordinate convention; the three score channels use
+the pinned class order `prohibitory`, `mandatory`, `warning`.
+
+The executable workflow is:
+
+    python scripts/edge_readiness/e2_correctness_workflow.py --stage preflight --repo-root . --source-root D:\Research\paper --out-dir results/edge_readiness_v1/e2l1-008/<run_id>/preflight
+    python scripts/edge_readiness/e2_correctness_workflow.py --stage source-artifacts --repo-root . --source-root D:\Research\paper --out-dir results/edge_readiness_v1/e2l1-008/<run_id>/source-artifacts
+    python scripts/edge_readiness/e2_correctness_workflow.py --stage target-build --repo-root . --source-root D:\Research\paper --out-dir results/edge_readiness_v1/e2l1-008/<run_id>/target-build
+    python scripts/edge_readiness/e2_correctness_workflow.py --stage inference-compare --repo-root . --source-root D:\Research\paper --out-dir results/edge_readiness_v1/e2l1-008/<run_id>/inference-compare
+
+The first two stages are local read-only checks. The final two deliberately
+return `blocked_not_authorized` and list disabled side effects, including
+transfer, CUDA allocation, deserialize, build, forward, timing, power and SSH
+execution. A future authorized source-export step must use the accepted
+checkpoint
+`results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt` (SHA-256
+`3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8`), export
+ONNX once with `imgsz=640`, batch 1, static shape `[1,3,640,640]`, `opset=17`,
+`simplify=true`, no Q/DQ, and retain the ONNX hash and exporter versions. The
+ONNX is source-export output, not a transferred TensorRT-10 engine. After
+review, E2 alone may build a target-native FP16 TensorRT 8.5.2.2 engine from
+that ONNX, inspect bindings, and write only target-scoped JSON/log artifacts;
+the engine and ONNX remain server/device-private. Required future inputs are
+the source-reference output, target API/binding evidence, native engine hash,
+fixture/preprocess manifest and final stream completion. Missing aligned power
+or clock evidence leaves energy unavailable and does not block correctness.
+
+The E2L1-008 exact local writes are the four staged workflow manifests plus
+the source fixture manifest and the dependency probe manifest/stdout/stderr under
+`results/edge_readiness_v1/e2l1-008/`. No image, checkpoint, ONNX, engine or
+large tensor is committed.

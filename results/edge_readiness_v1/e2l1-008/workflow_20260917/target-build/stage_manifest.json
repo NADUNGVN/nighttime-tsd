@@ -1,0 +1,28 @@
+{
+  "schema_version": "e2l1-e2-correctness-workflow-v1",
+  "stage": "target-build",
+  "target": "E2",
+  "created_at_utc": "2026-09-17T07:28:45.036400+00:00",
+  "real_device_execution": false,
+  "model_load_or_forward": false,
+  "status": "blocked_not_authorized",
+  "reason": "ASTRA_AUTHORIZATION_REQUIRED",
+  "disabled_side_effects": [
+    "model transfer",
+    "TensorRT export/build",
+    "CUDA context/allocation",
+    "engine deserialize",
+    "model load/forward",
+    "scored timing",
+    "power measurement",
+    "SSH device execution"
+  ],
+  "required_inputs": [
+    "preflight_verified_read_only",
+    "source_artifacts_verified_read_only",
+    "target-local E2 TensorRT 8.5.2.2 API check",
+    "target-native engine and hash",
+    "accepted source-reference output"
+  ],
+  "stage_entrypoint": "not enabled in E2L1-008"
+}

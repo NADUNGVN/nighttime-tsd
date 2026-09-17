@@ -1,0 +1,22 @@
+__E2L1_PROBE__ begin
+hostname=arar-desktop
+python3=Python 3.8.10
+disk_root=Filesystem     Type  Size  Used Avail Use% Mounted on
+/dev/mmcblk0p1 ext4  117G   19G   94G  17% /
+home_path=/home/arar
+home_directory=present
+home_permission=writable
+python_sys_version=3.8.10 (default, May 26 2023, 14:05:08)  [GCC 9.4.0]
+module=numpy;status=present;origin=/usr/lib/python3/dist-packages/numpy/__init__.py
+package_version=numpy;version=1.17.4
+module=tensorrt;status=present;origin=/usr/lib/python3.8/dist-packages/tensorrt/__init__.py
+package_version=tensorrt;version=8.5.2.2
+tensorrt_source_tokens=Runtime:present,deserialize_cuda_engine:absent,execute_async_v2:absent,set_tensor_address:absent,execute_async_v3:absent
+module=pycuda;status=missing
+module=cuda;status=missing
+module=cuda.cudart;spec_error=ModuleNotFoundError
+module=onnx;status=missing
+module=onnxruntime;status=missing
+module=torch;status=missing
+module=ultralytics;status=missing
+__E2L1_PROBE__ end

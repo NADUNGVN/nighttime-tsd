@@ -276,8 +276,20 @@ class JetsonRuntimeAdapter:
         except Exception as exc:
             raise AdapterError("COPY_D2H_FAILED", "buffer owner failed to complete device-to-host output copy") from exc
         expected_names = {binding.name for binding in self.engine.output_bindings()}
-        if set(outputs) != expected_names or any(not isinstance(tensor.payload, bytes) or len(tensor.payload) != tensor.nbytes for tensor in outputs.values()):
+        if set(outputs) != expected_names:
             raise AdapterError("OUTPUT_CONTRACT_MISMATCH", "buffer owner did not return complete host output payloads")
+        for binding in self.engine.output_bindings():
+            tensor = outputs[binding.name]
+            expected_nbytes_value = expected_nbytes(binding.shape, binding.dtype)
+            if (
+                tensor.name != binding.name
+                or tuple(tensor.shape) != tuple(binding.shape)
+                or tensor.dtype != binding.dtype
+                or tensor.nbytes != expected_nbytes_value
+                or not isinstance(tensor.payload, bytes)
+                or len(tensor.payload) != expected_nbytes_value
+            ):
+                raise AdapterError("OUTPUT_CONTRACT_MISMATCH", "host output descriptor or payload does not match engine binding", {"binding": binding.name})
         return outputs
 
 

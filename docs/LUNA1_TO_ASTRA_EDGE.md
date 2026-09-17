@@ -547,3 +547,116 @@ telemetry or block a separately labelled correctness/latency smoke.
 
 **Git:** branch `luna1/e2l1-006-jetson-adapter-smoke`; commit/push follows after
 final checks using the established `NADUNGVN` account. No PR or merge.
+
+## L1A-008 — E2 real-runtime preparation and verified source fixture
+
+**Status:** CPU/mock acceptance and read-only E2 preparation complete;
+**NO-GO** for TensorRT/CUDA execution, model transfer, source export, target
+build, inference, benchmark, installation, power measurement, or device
+configuration changes. The E2L1-008 inbox entry is staged unchanged with this
+report.
+
+### Runtime path and dependency evidence
+
+Added `scripts/edge_readiness/jetson_runtime_provider.py`. The provider is
+lazy: importing the module is CPU-safe and TensorRT is loaded only by explicit
+engine deserialization. It verifies the engine SHA-256, introspects the
+TensorRT 8 binding-list contract, keeps the CUDA memory/stream owner injected,
+uses one allocation map for H2D/enqueue/D2H, returns fresh synchronized host
+payloads, and frees prior allocations if a later allocation fails. Local fake
+TensorRT/memory doubles cover load laziness, hash rejection, allocation/free
+lifetime, repeated-call freshness and partial-failure cleanup; they do not
+establish real TensorRT correctness.
+
+Because the existing inventory did not expose decisive Python API details, one
+bounded read-only E2 probe was run through alias `nx`. It reported host
+`arar-desktop`, Python `3.8.10`, NumPy `1.17.4`, TensorRT `8.5.2.2`, CUDA
+`11.4.19`, cuDNN `8.6.0.166`, and 94 GB free on `/`. `pycuda`, `cuda.cudart`,
+ONNX, ONNX Runtime, Torch and Ultralytics were not discoverable. No CUDA or
+TensorRT import/initialization was performed. The probe returned exit 0,
+`timed_out=false`, elapsed `1.047 s`, command SHA-256
+`89198aaeb9aacf2bd237506ee36c422c7ba07b37b97d936bce51fd9b0e29ea98`, and
+remote script SHA-256
+`5b84148b10a383d55fc6252af4b6599a0c2ec004f417aa619a6747c843f8641d`.
+Raw stdout/stderr and the manifest are under
+`results/edge_readiness_v1/e2l1-008/dependency_probe_20260917/`; no device
+data was written.
+
+### Fixture and source contract
+
+`scripts/edge_readiness/e2_source_fixture.py` verified the actual train-only
+JPEG bytes in canonical order `00006`, `00009`, `00028` at
+`D:/Research/paper/data/processed/cctsdb2021_clean/train/images/`. Sizes are
+63,138, 120,736 and 314,856 bytes; each accepted hash matches, with sequence
+SHA-256
+`7bfaaa99c4ed6b8ea2c92695f68747496a2ebb24400cf978b8630c27f41a6fc9`.
+The edge-owned manifest is
+`results/edge_readiness_v1/e2l1-008/fixture_binding_20260917/fixture_manifest.json`
+(SHA-256
+`51de19e309367f99a71a458a941b27d60d8e54fa8da5155bfd63495e6e154523`). No
+image, checkpoint or large tensor was copied or staged. The helper records the
+future decoder/resizer boundary and explicit BGR→RGB, letterbox pad 114,
+NCHW float32 `/255` preprocessing; local Pillow is absent, so no decoded
+tensor is fabricated.
+
+The source reference is the frozen YOLO11n checkpoint
+`results/yolo11n_cctsdb_clean_s42_v2/weights/best.pt`, SHA-256
+`3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8`, with
+deployment policy `configs/deployment/yolo11n_fp16_trt10.json` and source
+FP16 evidence under
+`results/calibration_method_v1/rtx8000/yolo11n/eval/yolo11n_fp16_reference/`.
+A future source reference must run in its own recorded Python/PyTorch/
+Ultralytics/decoder environment and persist versions plus output hash; the
+RTX TensorRT engine is provenance only and is not transferable to E2.
+
+### Comparator, compatibility and staged workflow
+
+`scripts/edge_readiness/e2_output_compare.py` compares native `output0`
+`[1,7,8400]` before decode/NMS. The policy distinguishes source
+`fp32_reference`, target `fp16` compute, and target binding/I/O `float32`.
+It uses `abs(reference-target) <= absolute + relative*abs(reference)`;
+boxes (`x,y,w,h`) use `5e-3/1e-2`, scores use `2e-3/1e-2`, all values must be
+finite, and mismatch summaries are bounded. Score class order is pinned to
+`prohibitory`, `mandatory`, `warning`. These are pre-observation engineering
+thresholds, not an accuracy or precision bound.
+
+The explicit future conversion contract is: source export, separately
+authorized, from the accepted checkpoint with `imgsz=640`, batch 1, static
+`[1,3,640,640]`, `opset=17`, `simplify=true`, no Q/DQ; retain ONNX SHA-256,
+exporter versions, checker/schema and operator evidence. After review, build
+FP16 only on E2 with its existing TensorRT 8.5.2.2 runtime, validate the
+target-local API/bindings and write a target-native engine/hash; do not copy a
+TensorRT 10 engine. Required target resources are the existing runtime,
+target-supported CUDA allocation/copy/stream owner, private ONNX/engine,
+accepted checkpoint/fixture/source-reference outputs and a fresh scoped
+artifact directory. Missing Python bindings are reported as prerequisites,
+not repaired by installation.
+
+The executable staged workflow is
+`scripts/edge_readiness/e2_correctness_workflow.py`: `preflight` verifies the
+checkpoint/config hashes, `source-artifacts` verifies the fixture, while
+`target-build` and `inference-compare` write structured
+`blocked_not_authorized` manifests and disable transfer, CUDA allocation,
+deserialize, build, forward, timing, power and SSH execution. Existing output
+roots are rejected to prevent appending failure markers to prior success.
+Power/clock evidence is not a correctness gate: without aligned boundaries,
+energy remains unavailable.
+
+### Verification and remaining prerequisites
+
+    python -m unittest discover -s tests -p 'test_edge*.py' -v
+    Ran 51 tests ... OK
+    python -m py_compile scripts/edge_readiness/probe_e2_dependencies.py scripts/edge_readiness/jetson_runtime_provider.py scripts/edge_readiness/e2_source_fixture.py scripts/edge_readiness/e2_output_compare.py scripts/edge_readiness/e2_correctness_workflow.py tests/test_edge_e2_runtime.py
+    git diff --check
+
+The local checks use only CPU doubles and actual fixture hash reads. Remaining
+prerequisites are a separately authorized source forward/export, target-local
+TensorRT 8.5.2.2 API and CUDA-owner validation, target-native FP16 build and
+engine binding/hash manifest, then a bounded correctness compare with final
+stream completion. No scored timing/power/energy result is claimed; telemetry
+collector lifecycle and clock conversion remain future prerequisites.
+
+**Git:** branch `luna1/e2l1-006-jetson-adapter-smoke`; E2L1-008 code/docs,
+scoped evidence and this report are pushed in the completion commit using the
+established `NADUNGVN` account. No PR or merge; prior E2L1-005/E2L1-007
+artifacts and other worktrees remain untouched.

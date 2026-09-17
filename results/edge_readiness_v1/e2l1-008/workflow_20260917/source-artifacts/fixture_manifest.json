@@ -1,0 +1,46 @@
+{
+  "schema_version": "e2l1-cctsdb-fixture-binding-v1",
+  "status": "verified_read_only",
+  "split": "CCTSDB2021/train",
+  "official_test_used": false,
+  "negative_test_used": false,
+  "canonical_order": [
+    "00006",
+    "00009",
+    "00028"
+  ],
+  "records": [
+    {
+      "image_id": "00006",
+      "relative_path": "data/processed/cctsdb2021_clean/train/images/00006.jpg",
+      "absolute_path": "D:\\Research\\paper\\data\\processed\\cctsdb2021_clean\\train\\images\\00006.jpg",
+      "nbytes": 63138,
+      "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+      "accepted_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+    },
+    {
+      "image_id": "00009",
+      "relative_path": "data/processed/cctsdb2021_clean/train/images/00009.jpg",
+      "absolute_path": "D:\\Research\\paper\\data\\processed\\cctsdb2021_clean\\train\\images\\00009.jpg",
+      "nbytes": 120736,
+      "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+      "accepted_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+    },
+    {
+      "image_id": "00028",
+      "relative_path": "data/processed/cctsdb2021_clean/train/images/00028.jpg",
+      "absolute_path": "D:\\Research\\paper\\data\\processed\\cctsdb2021_clean\\train\\images\\00028.jpg",
+      "nbytes": 314856,
+      "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde",
+      "accepted_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+    }
+  ],
+  "sequence_sha256": "7bfaaa99c4ed6b8ea2c92695f68747496a2ebb24400cf978b8630c27f41a6fc9",
+  "accepted_binding_manifest": "results/measurement_audit_v1/precision_head_confirmation_readiness_r1r3_v2/readiness_manifest.json",
+  "copy_policy": "bind actual source bytes by path/hash; do not copy image/model bytes into Git",
+  "derived_input": {
+    "status": "not_materialized_by_manifest",
+    "same_bytes_required_for_source_and_target": true,
+    "preprocess_helper": "scripts/edge_readiness/e2_source_fixture.py"
+  }
+}

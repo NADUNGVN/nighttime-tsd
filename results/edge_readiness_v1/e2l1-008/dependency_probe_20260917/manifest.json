@@ -1,0 +1,28 @@
+{
+  "schema_version": "e2l1-edge-dependency-probe-v1",
+  "status": "ok",
+  "scope": "E2 only; read-only metadata/source discovery; no TensorRT/CUDA import or initialization",
+  "alias": "nx",
+  "sanitized_command": "ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes <alias> sh -s",
+  "command_sha256": "89198aaeb9aacf2bd237506ee36c422c7ba07b37b97d936bce51fd9b0e29ea98",
+  "remote_script_sha256": "5b84148b10a383d55fc6252af4b6599a0c2ec004f417aa619a6747c843f8641d",
+  "returncode": 0,
+  "timed_out": false,
+  "local_elapsed_ns": 1047000000,
+  "captured_at_utc": "2026-09-17T07:17:33.941241+00:00",
+  "artifacts": {
+    "stdout": "remote.stdout",
+    "stderr": "remote.stderr"
+  },
+  "forbidden_actions": [
+    "package installation",
+    "sudo",
+    "chmod",
+    "clock/fan/power changes",
+    "CUDA context/allocation",
+    "engine deserialize/build",
+    "model load/forward",
+    "benchmark",
+    "device writes"
+  ]
+}
