@@ -949,3 +949,85 @@ run here.
 **Git:** L1A-011, scoped code/docs and sanitized evidence are ready to push
 with the `NADUNGVN` account. Stop after this allocation result; a model smoke
 requires separate review.
+
+## L1A-012 — CPU source-bundle runner implemented; awaiting complete source environment
+
+**Status:** P1 implementation and tests complete; local real bundle execution
+is **BLOCKED by missing dependencies**, so no local bundle was dispatched. No
+E2 SSH/transfer/build/deserialization/model inference/benchmark was performed
+in this entry. The accepted E2 copy result remains unchanged.
+
+### P1 implementation
+
+Commit `05624d7333966de0c16e1a33a79359fb0a3663dc` adds
+`scripts/edge_readiness/e2_source_bundle.py` and
+`tests/test_edge_source_bundle.py`. The runner is CPU-only and lazy-imports
+the source stack. It verifies the frozen checkpoint SHA and the three accepted
+train fixtures in order, protects fixture hashes before/after, copies the
+checkpoint only into a private output area, freezes each input tensor once,
+records little-endian contiguous float32 bytes, and keeps all ONNX/reference
+tensor bytes under private retention paths.
+
+It uses Ultralytics `LetterBox` semantics with BGR decode, RGB conversion,
+normalization by `255.0`, NCHW `[1,3,640,640]`, CPU float32 and no test/dev or
+negative split. Native FP32 forwards occur before a separate exporter model is
+created. Export is constrained to CPU, float32 ONNX, opset 17, static batch-1
+640, no NMS/end2end wrapper, `simplify=true`, no Q/DQ/calibration/TensorRT;
+the private checkpoint copy is the only exporter input. ONNX checker/I/O
+shape/dtype/name validation and ORT `CPUExecutionProvider` validation are
+required. Native/ORT `[1,7,8400]` outputs are compared with
+`abs(observed-reference) <= 1e-5 + 1e-4*abs(reference)`, bounded failures and
+finite checks. Exporter internal forward calls are counted separately from the
+three native and three ORT fixture forwards.
+
+The public output contract is `public/plan.json`, terminal
+`manifest.json` or `failure.json`, `report.md`, `run.log` and `index.json`.
+The private `checkpoint/`, `onnx_export/`, `inputs/`, `native_reference/` and
+`onnx_reference/` paths are explicit in the manifest and must not be published
+to Git. New roots are exclusive; an existing or partial root is refused.
+Missing dependencies fail closed without package download/install, and every
+failure records attempted/completed counters.
+
+Verification is `74/74` edge tests PASS, including six new source-bundle tests:
+synthetic helper/producer byte equivalence, injected end-to-end bundle,
+private-copy protection, dependency fail-closed behavior, semantic/shape
+mismatch, and output-root collision. `py_compile` and `git diff --check` pass.
+
+### Local environment decision
+
+The inspected local environment is
+`D:\Research\paper\local\measurement_audit_env`: Ultralytics `8.4.102`,
+Torch `2.8.0+cu129`, ONNX Runtime `1.24.3`, OpenCV `4.13.0` and Pillow
+`12.3.0` are present, but `onnx` and `onnxslim` are absent. Therefore the
+complete source/export gate is not met. No automatic installation was attempted
+and `results/edge_readiness_v1/e2l1-012-source-v1/` was not created. The
+local checkpoint path exists at `D:\Research\paper\results\yolo11n_cctsdb_clean_s42_v2\weights\best.pt`,
+but that does not overcome the missing exporter dependencies.
+
+### Server operator command
+
+Run once in the existing complete main-server environment, preserving the main
+worktree by using a detached branch-scoped worktree. This is the exact command
+sequence; it does not alter the main checkout or install anything:
+
+    cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new
+    git fetch origin luna1/e2l1-006-jetson-adapter-smoke
+    git worktree add --detach /tmp/luna1-e2l1-012-source 05624d7333966de0c16e1a33a79359fb0a3663dc
+    /home/ubuntu/Dung_TDTU/nighttime-tsd-new/local/g0_size_env/bin/python /tmp/luna1-e2l1-012-source/scripts/edge_readiness/e2_source_bundle.py --source-root /home/ubuntu/Dung_TDTU/nighttime-tsd-new --out-dir /home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-012-source-v1 --commit 05624d7333966de0c16e1a33a79359fb0a3663dc
+
+Before running, the operator must verify that the output root is absent and
+that this interpreter has Ultralytics 8.4.102 plus Torch, `onnx`, `onnxslim`,
+ONNX Runtime, OpenCV and Pillow. The runner itself enforces CPU visibility,
+two CPU threads, no downloads/auto-install and ORT CPU provider. It writes
+private ONNX/checkpoint/tensor bytes only under the new output root; publish
+only the `public/` JSON/text artifacts after reviewing hashes and counters. Do
+not use another environment, add export options, retry a failed run, or reuse
+the other lane's output root. The runner is source CPU/reference preparation,
+not a complete camera/preprocess or E2 deployment claim.
+
+The intended source-run location is the Linux main-server repository
+`/home/ubuntu/Dung_TDTU/nighttime-tsd-new`; the Windows path
+`D:\Research\paper` is only the local development/source-reference location.
+Actual source forward/export and any numerical PASS/FAIL remain pending the
+operator's one server run. **Git:** code, this report and the unchanged
+E2L1-012 inbox are pushed using `NADUNGVN`; stop after the source-bundle result.
