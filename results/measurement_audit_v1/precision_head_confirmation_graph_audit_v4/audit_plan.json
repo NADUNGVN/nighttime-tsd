@@ -1,0 +1,368 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_confirmation_graph_audit_v1",
+  "status": "audit_only_dispatching",
+  "source_root": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2",
+  "output_root": "results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4",
+  "selected_models": [
+    "yolov8n",
+    "yolo26n"
+  ],
+  "source_provenance_resolved": {
+    "yolov8n": {
+      "source_root": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2",
+      "model_dir": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n",
+      "onnx": {
+        "before": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+          "exists": true,
+          "bytes": 12266841,
+          "sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+        },
+        "expected_sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+      },
+      "preserved_records": {
+        "models/yolov8n/model_prepare.json": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model_prepare.json",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model_prepare.json",
+          "exists": true,
+          "bytes": 60097,
+          "sha256": "7cad6c0728c0cc59f9cf15e2f025c99a1c9d7d90f9a884b24c2ba21896d97805",
+          "summary": {
+            "status": "completed",
+            "stage": null,
+            "error_type": null,
+            "error": null,
+            "partial_files": null,
+            "export": {
+              "reported_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/private/frozen_source.onnx",
+              "destination": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+              "requested_arguments": {
+                "format": "onnx",
+                "imgsz": 640,
+                "batch": 1,
+                "opset": 17,
+                "simplify": true,
+                "dynamic": false,
+                "half": false,
+                "device": "cpu",
+                "task": "detect"
+              },
+              "effective_arguments": {
+                "format": "onnx",
+                "imgsz": 640,
+                "batch": 1,
+                "opset": 17,
+                "simplify": true,
+                "dynamic": false,
+                "half": false,
+                "device": "cpu",
+                "task": "detect",
+                "actual_input_schema": [
+                  {
+                    "name": "images",
+                    "shape": [
+                      1,
+                      3,
+                      640,
+                      640
+                    ],
+                    "dtype": "float32"
+                  }
+                ],
+                "actual_output_schema": [
+                  {
+                    "name": "output0",
+                    "shape": [
+                      1,
+                      7,
+                      8400
+                    ],
+                    "dtype": "float32"
+                  }
+                ],
+                "actual_opset": 17,
+                "actual_static_shapes": true,
+                "actual_dynamic_shape_observed": false
+              },
+              "effective_arguments_status": "observed_from_exported_ONNX_schema; simplify_and_task_flags remain requested_only unless producer exposes them",
+              "head_end2end_before": false,
+              "head_end2end_after": false,
+              "model_device_before_export": "cpu",
+              "auto_install_guard": {
+                "YOLO_AUTOINSTALL": "0",
+                "ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS": "1",
+                "PIP_NO_INDEX": "1"
+              },
+              "source_weights_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+              "onnx_sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603",
+              "onnx_bytes": 12266841,
+              "export_arguments": {
+                "format": "onnx",
+                "imgsz": 640,
+                "batch": 1,
+                "opset": 17,
+                "simplify": true,
+                "dynamic": false,
+                "half": false,
+                "device": "cpu",
+                "task": "detect"
+              },
+              "preserved_end2end": false
+            },
+            "checkpoint": {
+              "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+              "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+              "bytes": 6260963,
+              "private_copy_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+            },
+            "no_silent_resume": null,
+            "scored_run_authorized": false
+          }
+        },
+        "prepare_plan.json": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/prepare_plan.json",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/prepare_plan.json",
+          "exists": true,
+          "bytes": 3857951,
+          "sha256": "6dabd3fa09a207a1cdac6b7986578058fa2bbd27a06c5a4d8eaa186d97ee91ea",
+          "summary": {
+            "status": "dispatching_model_children",
+            "stage": null,
+            "error_type": null,
+            "error": null,
+            "partial_files": null,
+            "export": null,
+            "checkpoint": null,
+            "no_silent_resume": null,
+            "scored_run_authorized": false
+          }
+        },
+        "failure.json": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/failure.json",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/failure.json",
+          "exists": true,
+          "bytes": 4572,
+          "sha256": "f67dbde40d339397b1a7c785a9801df17ad07bdf3afaeb10bffa40431c9a378d",
+          "summary": {
+            "status": "failed",
+            "stage": "child:yolo26n",
+            "error_type": "RuntimeError",
+            "error": "model child exited 1",
+            "partial_files": [
+              "logs/yolo26n.log",
+              "logs/yolov8n.log",
+              "models/yolo26n/failure.json",
+              "models/yolo26n/model.onnx",
+              "models/yolo26n/private/frozen_source.onnx",
+              "models/yolo26n/private/frozen_source.pt",
+              "models/yolov8n/graph_schema.json",
+              "models/yolov8n/model.onnx",
+              "models/yolov8n/model_prepare.json",
+              "models/yolov8n/private/frozen_source.onnx",
+              "models/yolov8n/private/frozen_source.pt",
+              "prepare_plan.json"
+            ],
+            "export": null,
+            "checkpoint": null,
+            "no_silent_resume": true,
+            "scored_run_authorized": false
+          }
+        },
+        "log": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/logs/yolov8n.log",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/logs/yolov8n.log",
+          "exists": true,
+          "bytes": 1849,
+          "sha256": "4b84dd32b117f2152216ebbee5f95ef83b58b0881711798700cba7ca26df311e"
+        }
+      }
+    },
+    "yolo26n": {
+      "source_root": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2",
+      "model_dir": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n",
+      "onnx": {
+        "before": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx",
+          "exists": true,
+          "bytes": 9806783,
+          "sha256": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc"
+        },
+        "expected_sha256": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc"
+      },
+      "preserved_records": {
+        "models/yolo26n/failure.json": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/failure.json",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/failure.json",
+          "exists": true,
+          "bytes": 1926,
+          "sha256": "0ba62043810d70b84b7c1ac67c3c4f64c58766fc14399fc1ff139bac7ab5c729",
+          "summary": {
+            "status": "failed",
+            "stage": "model_prepare",
+            "error_type": "ValueError",
+            "error": "Graph mapping unresolved for yolo26n: ['one2one_cv3:source_conv_match_count:model.23.one2one_cv3.0.0.0.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.0.0.1.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.0.1.0.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.0.1.1.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.1.0.0.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.1.0.1.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.1.1.0.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.1.1.1.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.2.0.0.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.2.0.1.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.2.1.0.conv:0', 'one2one_cv3:source_conv_match_count:model.23.one2one_cv3.2.1.1.conv:0', 'unknown_post_merge_semantics:/model.23/Split:Split', 'unknown_post_merge_semantics:/model.23/ReduceMax:ReduceMax', 'unknown_post_merge_semantics:/model.23/Flatten:Flatten', 'unknown_post_merge_semantics:/model.23/Unsqueeze:Unsqueeze', 'unknown_post_merge_semantics:/model.23/Flatten_1:Flatten', 'unknown_post_merge_semantics:/model.23/Tile:Tile', 'unknown_post_merge_semantics:/model.23/Unsqueeze_1:Unsqueeze', 'unknown_post_merge_semantics:/model.23/Mod:Mod', 'unknown_post_merge_semantics:/model.23/Unsqueeze_2:Unsqueeze', 'unknown_post_merge_semantics:/model.23/Tile_1:Tile']",
+            "partial_files": [
+              "model.onnx",
+              "private/frozen_source.onnx",
+              "private/frozen_source.pt"
+            ],
+            "export": null,
+            "checkpoint": null,
+            "no_silent_resume": true,
+            "scored_run_authorized": false
+          }
+        },
+        "prepare_plan.json": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/prepare_plan.json",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/prepare_plan.json",
+          "exists": true,
+          "bytes": 3857951,
+          "sha256": "6dabd3fa09a207a1cdac6b7986578058fa2bbd27a06c5a4d8eaa186d97ee91ea",
+          "summary": {
+            "status": "dispatching_model_children",
+            "stage": null,
+            "error_type": null,
+            "error": null,
+            "partial_files": null,
+            "export": null,
+            "checkpoint": null,
+            "no_silent_resume": null,
+            "scored_run_authorized": false
+          }
+        },
+        "failure.json": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/failure.json",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/failure.json",
+          "exists": true,
+          "bytes": 4572,
+          "sha256": "f67dbde40d339397b1a7c785a9801df17ad07bdf3afaeb10bffa40431c9a378d",
+          "summary": {
+            "status": "failed",
+            "stage": "child:yolo26n",
+            "error_type": "RuntimeError",
+            "error": "model child exited 1",
+            "partial_files": [
+              "logs/yolo26n.log",
+              "logs/yolov8n.log",
+              "models/yolo26n/failure.json",
+              "models/yolo26n/model.onnx",
+              "models/yolo26n/private/frozen_source.onnx",
+              "models/yolo26n/private/frozen_source.pt",
+              "models/yolov8n/graph_schema.json",
+              "models/yolov8n/model.onnx",
+              "models/yolov8n/model_prepare.json",
+              "models/yolov8n/private/frozen_source.onnx",
+              "models/yolov8n/private/frozen_source.pt",
+              "prepare_plan.json"
+            ],
+            "export": null,
+            "checkpoint": null,
+            "no_silent_resume": true,
+            "scored_run_authorized": false
+          }
+        },
+        "log": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/logs/yolo26n.log",
+          "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/logs/yolo26n.log",
+          "exists": true,
+          "bytes": 3608,
+          "sha256": "4f63b816a1aee4eeedcc69c863b2738ec6e583c8c379493c16cf3893d4816917"
+        }
+      }
+    }
+  },
+  "readiness": {
+    "root": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2",
+    "accepted_git_commit": "7c0ea9e7fe86dfa6358ec1ee90473f9243a53f76",
+    "accepted_execution_commit": "9c0597d1ec6f6d73c98fffa7cc3779a00eddec34",
+    "files": {
+      "readiness_manifest.json": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json",
+        "bytes": 3818285,
+        "sha256": "112afbd2384da4e381e3ba9f7293c2d7fdc22991448acabb66c1fa21b6276147",
+        "accepted_git_blob_sha256": "112afbd2384da4e381e3ba9f7293c2d7fdc22991448acabb66c1fa21b6276147"
+      },
+      "model_contracts.json": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/model_contracts.json",
+        "bytes": 44607,
+        "sha256": "dac10919a336f115676bbe997e30ecd66419b4b99f5795f4499498f1b7fd4d51",
+        "accepted_git_blob_sha256": "dac10919a336f115676bbe997e30ecd66419b4b99f5795f4499498f1b7fd4d51"
+      },
+      "calibration_readiness.json": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/calibration_readiness.json",
+        "bytes": 2356559,
+        "sha256": "34c258e518c826bae92ad880e76cb78977c6afd054943ae9ebb1fcfc49fec41c",
+        "accepted_git_blob_sha256": "34c258e518c826bae92ad880e76cb78977c6afd054943ae9ebb1fcfc49fec41c"
+      },
+      "schedule.json": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/schedule.json",
+        "bytes": 28310,
+        "sha256": "531ae23f2269f862fd9141e0f85b567fc8d997933391f62cedc2e3195f84dd5b",
+        "accepted_git_blob_sha256": "531ae23f2269f862fd9141e0f85b567fc8d997933391f62cedc2e3195f84dd5b"
+      },
+      "report.md": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/report.md",
+        "bytes": 2158,
+        "sha256": "7cf1f681d1cac6c3fe4b913b825ed088bcafe266e5874a1179d239d1aaeeaaf7",
+        "accepted_git_blob_sha256": "7cf1f681d1cac6c3fe4b913b825ed088bcafe266e5874a1179d239d1aaeeaaf7"
+      }
+    }
+  },
+  "config_binding": {
+    "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/precision_head_confirmation_v1.json",
+    "sha256": "2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8",
+    "semantic_sha256": "c0f7f53a56c79a041f9d2ff5f01f458b8e65191c3812006f6ad01f0b894243ec",
+    "accepted_script_sha256": "204a0199ff768a72406ec1b21d12d16a69970d8629049e4c284bedab06df52ec",
+    "accepted_execution_commit": "9c0597d1ec6f6d73c98fffa7cc3779a00eddec34"
+  },
+  "code_provenance": {
+    "diagnostic_script": {
+      "path": "scripts/audit_precision_head_confirmation_graph.py",
+      "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/audit_precision_head_confirmation_graph.py",
+      "exists": true,
+      "bytes": 20799,
+      "sha256": "4a68ed50a4ff0cb8c0fd2b93df11e04067e8d376b1f6bdaf1f2893f428944220"
+    },
+    "graph_script": {
+      "path": "scripts/prepare_precision_head_confirmation_graph.py",
+      "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/prepare_precision_head_confirmation_graph.py",
+      "exists": true,
+      "bytes": 109367,
+      "sha256": "40dfa34cf7396e405922f9ffc0bde3caa3029ee02f71b44f9d7426064e9ba72a"
+    },
+    "readiness_helper": {
+      "path": "scripts/prepare_precision_head_confirmation.py",
+      "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/scripts/prepare_precision_head_confirmation.py",
+      "exists": true,
+      "bytes": 66332,
+      "sha256": "204a0199ff768a72406ec1b21d12d16a69970d8629049e4c284bedab06df52ec"
+    },
+    "config": {
+      "path": "configs/precision_head_confirmation_v1.json",
+      "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/precision_head_confirmation_v1.json",
+      "exists": true,
+      "bytes": 7808,
+      "sha256": "2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8"
+    }
+  },
+  "environment": {
+    "python": "3.11.15",
+    "cuda_visible_devices": "-1",
+    "onnx_runtime_mode": "CPU/CUDA-hidden; no model runtime import",
+    "expected_onnx_sha256": {
+      "yolov8n": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603",
+      "yolo26n": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc"
+    }
+  },
+  "audit_flags": {
+    "audit_only": true,
+    "export_performed": false,
+    "build_performed": false,
+    "capture_performed": false,
+    "scored_run_authorized": false
+  },
+  "no_overwrite": true
+}
