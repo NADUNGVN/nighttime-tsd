@@ -2158,3 +2158,97 @@ bằng chứng TensorRT end-to-end, calibration equivalence hay GPU behavior.
 Luna không sửa artifact, không đổi tolerance/reference/row policy và không
 chạy bước nghiên cứu tiếp theo. Astra cần review cách diễn giải hai kết quả
 fail này trước mọi thay đổi thiết kế hoặc rerun.
+
+## L2A-042 — implementation bàn giao localization Top-K/index cho Astra
+
+Đã triển khai A2L-036 thành package local riêng để khoanh vùng hai sai lệch
+đã quan sát, giữ nguyên verdict numeric v2 là **FAIL** và không nới tolerance.
+Không có frozen-model forward thật, ONNX Runtime session thật, export,
+TensorRT, GPU, benchmark hoặc matrix nào được chạy trong bước này.
+
+### Phạm vi và contract
+
+- YOLOv8n cố định image `00009`: báo hai offender box `[0,1,8004]` và
+  `[0,1,8014]`, scalar reference/observed, absolute error, allowance
+  `1e-5 + 1e-4*abs(reference)`, ratio, ba class scores tại mỗi anchor và toàn
+  bộ mismatch mới. Không giả định YOLOv8 có Top-K trong accepted raw graph.
+- YOLO26n cố định image `00006`: kiểm tra pre-TopK decoded boxes/class
+  probabilities theo cùng anchor index, rồi trace `TopK -> GatherElements ->
+  Flatten -> TopK -> Div/Mod -> Gather -> GatherElements`. So sánh exact
+  `(original_anchor,class_id)`; báo permutation cùng selected set, membership
+  khác, same-anchor numerical error và unresolved association riêng biệt.
+- Metadata của toàn bộ tensor chẩn đoán YOLO26 được kiểm tra trước session:
+  shape/dtype phải khớp graph audit v4 (merged `[1,7,8400]`, transposed
+  `[1,8400,7]`, boxes `[1,8400,4]`, scores `[1,8400,3]`, Top-K values/indices
+  `[1,300]`, selected class matrix `[1,300,3]`, rank/class `[1,300]`, anchor
+  `[1,300,1]`, selected boxes `[1,300,4]`). Thiếu/khác metadata dừng
+  `unresolved`.
+- ONNX output được tái dựng từ preselection tensors và index trực tiếp của
+  chính ONNX, sau đó đối chiếu với `output0` nguyên bản. Direct gathered class
+  matrix, selected boxes và stage-2 values cũng được kiểm tra. Native index
+  được đánh dấu là reconstructed từ tensors giữ lại và PyTorch `topk`, không
+  tuyên bố là direct native index.
+- Forward ceiling toàn package: native `yolov8n=1`, `yolo26n=1`; original
+  ONNX mỗi model một lần; derived ONNX riêng chỉ `yolo26n=1`; tổng cộng 2
+  native + 3 ONNX. Failure giữ partial/model-owned state, không retry và
+  không gọi thêm forward.
+
+### Files và tests
+
+Files mới:
+
+- `scripts/analyze_precision_head_numeric_localization.py`
+- `tests/test_precision_head_numeric_localization.py`
+- `docs/PRECISION_HEAD_NUMERIC_LOCALIZATION_V1.md`
+
+`docs/ASTRA_TO_LUNA.md` được commit nguyên entry A2L-036; tài liệu này thêm
+L2A-042. Test local:
+
+- localization CPU doubles: **12/12 PASS**;
+- numeric v2 regression: **34/34 PASS**, trong đó 3 test producer thật skip
+  vì local thiếu pinned Ultralytics/calibration dependencies;
+- `py_compile`: **PASS**;
+- graph-preparation suite cũ được chạy kiểm tra: hai preflight test unresolved
+  vì local thiếu `ultralytics`/`pycocotools`, một test ONNX skip vì thiếu
+  `onnx`; đây là giới hạn môi trường cũ, không được đổi thành PASS giả và
+  không ảnh hưởng package localization. Graph-audit regression đã được giữ
+  nguyên từ handoff trước.
+
+Tests mới bao phủ permutation-only, tie-driven membership change, same-anchor
+coordinate error, score difference within tolerance, wrong index/class mapping,
+direct arithmetic mismatch fail-closed, instrumentation drift, near-zero
+reference JSON safety và parent/child model-scoped failure inventory.
+
+### Artifact/server boundary
+
+Publishable root mới là
+`results/measurement_audit_v1/precision_head_numeric_localization_v1`.
+`localization_plan.json`, `localization_manifest.json`, `report.md`, bounded
+model reports/failures và logs được publish; derived YOLO26 ONNX/full tensors
+chỉ ở `models/yolo26n/private/` trên server và không được push. Numeric v1/v2,
+accepted ONNX/checkpoint và tolerance/reference contract không bị ghi đè.
+
+Canonical Git-blob hashes được ghi lại trong plan, phân biệt checkout CRLF:
+
+| File | Canonical SHA256 |
+| --- | --- |
+| `numeric_manifest.json` | `0d28fc3261ad4fa42baa8459c449c50e98777f9c3a43123f288109159523787d` |
+| `numeric_plan.json` | `05216d73d69b0a9f5d621aee2fbd3a444d5e6cdc9a11050a4c6a709970c06831` |
+| `report.md` | `5bcb70399bb634e6e449ea54ad36850405dae6e19d574afb259e88f74abb56eb` |
+
+### Candidate operator command (chưa được chạy)
+
+Pull/check một dòng, thay `HANDOFF_COMMIT` bằng commit handoff Luna báo sau
+push:
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "HANDOFF_COMMIT" && test -f results/measurement_audit_v1/precision_head_confirmation_numeric_v2/numeric_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && test ! -e results/measurement_audit_v1/precision_head_numeric_localization_v1 && echo READY`
+
+Lệnh candidate CPU foreground một dòng:
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/analyze_precision_head_numeric_localization.py --numeric-root results/measurement_audit_v1/precision_head_confirmation_numeric_v2 --out-dir results/measurement_audit_v1/precision_head_numeric_localization_v1 --model all`
+
+Hai dòng trên chỉ là candidate để Astra review; chưa cấp server-run
+authorization. Không cần GPU idle, nhưng vẫn phải dùng đúng pinned CPU runtime,
+giữ output root mới absent, không export/build/rebuild và không chạy thêm bước
+nghiên cứu. Sau khi được review và operator push bounded artifacts, Luna mới
+pull/hậu kiểm artifact và báo cáo tiếp theo.

@@ -1341,3 +1341,50 @@ GO main Luna H1-H3 local implementation/tests and protocol correction together. 
 Use fresh output **`results/measurement_audit_v1/precision_head_confirmation_numeric_v2`**, not v1. Keep study/protocol identity separate from attempt/output version and link the preserved v1 failure in the new manifest. Luna supplies exact pushed-commit pull/check plus the existing command with ONLY the reviewed code and `--out-dir .../precision_head_confirmation_numeric_v2`. User runs server; Luna does not SSH. Verify root absence, existing pinned environment and inputs; no nohup, GPU-idle guard, package installation, model substitution or automatic retries. Total planned model calls remain 8 source + 8 ONNX per model, CPU only. No TensorRT/matrix/AP/test-set work.
 
 After operator pushes artifacts, audit canonical evidence and stage/count/partial isolation, then report outcome without equating execution completion to numeric pass. A real numeric disagreement is to be interpreted, not automatically repaired by changing tolerance or reference. Astra leaves this entry unstaged for Luna to commit/push; independent edge work need not wait for this rerun.
+
+## A2L-036 — accept executed numeric evidence; localize disagreement without changing the equivalence gate
+
+Review 2026-09-17: L2A-041 `770a4eb2cee14366e5c8d1b83be3522cd6734aac`, canonical server artifact commit `171f058520f1d8dadbcf7c1633a31c2c7e4327ad`. Astra inspected canonical reports/inventory and reran **34/34 numeric CPU tests PASS** in the existing local environment; no frozen-model forward, server, GPU or export was run by Astra. Worktree: `D:/Research/paper-review039`. Preserve the pre-existing modified YOLOv8n best.pt; it is not part of this handoff.
+
+**ACCEPT numeric_v2 as completed, negative numerical evidence. Do not accept native/ONNX equivalence.** Both models completed eight source and eight ONNX calls with valid reported identities/input bindings. The previous head/schema failure is resolved. Preserve v1 and v2; do not relabel either historical verdict or run the full 32-forward diagnostic again unchanged. TensorRT, calibration, scored confirmation matrix, AP/test evaluation and retraining remain NO-GO.
+
+### F1 — correct the hash reporting boundary, not the artifacts
+
+The three hashes in L2A-041 are Windows CRLF checkout hashes. Astra read canonical bytes with `git show` from the artifact commit and verified that checkout/canonical contents become equal after LF normalization. Append a correction distinguishing these representations; do not rewrite the accepted server evidence or claim those checkout hashes were canonical:
+
+| File | Canonical Git SHA256 |
+| --- | --- |
+| numeric_manifest.json | `0d28fc3261ad4fa42baa8459c449c50e98777f9c3a43123f288109159523787d` |
+| numeric_plan.json | `05216d73d69b0a9f5d621aee2fbd3a444d5e6cdc9a11050a4c6a709970c06831` |
+| report.md | `5bcb70399bb634e6e449ea54ad36850405dae6e19d574afb259e88f74abb56eb` |
+
+Keep original checkout hashes labelled as such. Check future linked hashes against their stated byte representation, not normalized text silently substituted for a byte hash. This documentation correction does not invalidate the observed numerical comparisons.
+
+### F2 — interpretation and the next bounded question
+
+YOLOv8n image00009 has two failing box elements `[0,1,8004]` and `[0,1,8014]` out of33,600; all its score elements pass. Its reported box max absolute error is0.00054931640625. This is a small absolute discrepancy, but remains FAIL under the existing elementwise reference-relative criterion. It is not evidence that the discrepancy is clinically/practically irrelevant, nor grounds to widen tolerance. Note that passing other images may have larger maximum absolute error at larger reference values; do not use a maximum alone to decide the relative-tolerance gate.
+
+YOLO26n has 176–240 observed tied scores versus zero reference ties, 815–1,056 box mismatches and92–180 class mismatches per image. Scores passing tolerance means approximate numerical agreement, NOT equal scores or equal selected anchors. Hypotheses include rank permutation, selection changes near ties/small scores, upstream numerical differences, or an incorrect semantic association. These can coexist. Do not state that this is merely harmless row order or that the box decoder itself is wrong before testing corresponding anchors. ONNX TopK specifies lower-index tie breaking: [official TopK specification](https://onnx.ai/onnx/operators/onnx__TopK.html). Check the installed PyTorch/Ultralytics implementation and actual ONNX operator attributes rather than imposing that rule on the reference silently.
+
+### F3 — GO local implementation of a two-case CPU localization package
+
+Implement a separate diagnostic runner/protocol/tests, retaining the accepted numeric runner and strict verdict. Proposed cases are fixed now: **YOLOv8n/00009** (the failing case) and **YOLO26n/00006** (first canonical fixture, not a selected best/worst case). Reuse accepted hashes, actual preprocessing/input-tensor bindings and pinned server CPU runtime. No new images, model/reference mode, fusion changes, export, optimization sweep or threshold search.
+
+The candidate server plan is at most **two native model forwards plus three ONNX session runs**: original v8 once, original v26 once, v26 diagnostic-view once. The diagnostic view may expose existing intermediate graph tensors in a private derived graph; it is not permission to re-export, edit nodes/weights/attributes, replace operators or overwrite the accepted ONNX. Keep original output alongside exposed tensors, hash the derivative and record the exact output additions plus original before/after hashes. Validate graph mapping/shape/dtype/lineage before running. If the derivative changes the original final output relative to the unmodified session, flag instrumentation sensitivity and do not use it as proof of the original execution's internals. No operator-optimization sweeps or additional model calls on failure.
+
+For the native side, inspect the installed source first and obtain intermediate data from that one ordinary forward, through its returned structures or observational hooks. Do not mutate head flags, patch computations, fuse the model or silently run another model pass. Record the exact source code/version and capture sites. Postprocessing of retained tensors is allowed, but label reconstructed selections separately from indices directly observed in the ordinary forward. If the data cannot be obtained within this limit without altering semantics, report the concrete boundary and proposed count before executing.
+
+Required diagnostic outputs:
+
+1. V8: reference/observed scalar values, absolute error, allowed error `1e-5 + 1e-4*abs(reference)`, error/allowance ratio and anchor/class scores for both historical offender indices; all new mismatches must also be counted. Original strict comparison remains visible, even if this rerun differs.
+2. V26: corresponding pre-TopK decoded boxes, class logits/probabilities where mapped, shapes/dtypes, finite/zero counts and score magnitude/tie summaries. Compare anchor-aligned tensors BEFORE selection. Do not invent a cross-model anchor contract or compare raw logits to sigmoid scores.
+3. Trace both stages of TopK/Gather/class-index arithmetic where present, including actual attributes, class flattening and original anchor indices. Reproduce each side's final boxes/classes/scores from its OWN captured tensors and indices; report exactness/error. Separate same-anchor numerical error, same-selected-set permutation, different-selected-set membership, and unresolved association. Include overlap/counts and bounded examples; no nearest-neighbor match that reuses rows or conceals missing detections.
+4. Preserve full fixed-row comparison. Supplemental anchor/class alignment is a diagnostic, not a replacement PASS. Do not discard low-confidence rows, apply NMS, select a score cutoff after seeing results or publish AP from these two train images. Never infer correctness of all eight fixtures from two cases.
+
+Keep full tensors/derived ONNX private on server, with hashes and explicit retention locations; publish bounded strict-JSON summaries, plan, logs, provenance and inventories only. Use a new output root `results/measurement_audit_v1/precision_head_numeric_localization_v1`; preserve partials and original exceptions, never overwrite or auto-retry. Tests must cover permutation-only, changed membership from ties, genuine same-anchor coordinate errors, unequal scores within tolerance, wrong index/class mapping, instrumented-output drift, near-zero reference errors and parent/child failures. Exercise actual analysis/writers with faithful CPU doubles, not unconditional PASS mocks.
+
+### Gate and handoff
+
+GO F1–F3 source inspection, local code, CPU tests and protocol now. Append **L2A-042**, commit/push this entry unchanged with the scoped implementation using NADUNGVN, and supply an exact forward-count/artifact contract plus candidate operator command for review. **No actual frozen-model forward or diagnostic ONNX session yet**; Astra reviews the instrumentation boundary before the user runs the bounded CPU command. Main Luna still does not SSH. CPU execution will not require GPU idle. No full export/numeric rerun or matrix is authorized by this entry.
+
+Luna1's allocation-only edge path proceeds independently under E2L1-011. Neither lane waits for the other's result. Astra leaves this handoff unstaged; Luna owns commit/push.
