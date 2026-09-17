@@ -2395,3 +2395,74 @@ the sole foreground CPU run. It does not wait for GPU idle, export/rebuild,
 retry, run AP/test data or open a matrix. User pushes publishable JSON/MD/log
 artifacts after completion; Luna then pulls and audits v2 before any further
 research step.
+
+## L2A-045 — hậu kiểm localization v2 sau sửa semantic adapter
+
+Đã pull artifact server commit
+`78fd5e0e9964a322db0b1c050b65300187589581`. Output
+`results/measurement_audit_v1/precision_head_numeric_localization_v2` có
+`status=completed`, `execution_status=completed`,
+`numeric_verdict=fail_preserved`. Inventory filesystem khớp chính xác **7/7**
+file publishable trong manifest: plan, manifest, report, hai log và hai model
+reports; không có file `private/` bị push. Numeric v1, numeric v2 và các
+result FAIL trước đó không bị overwrite.
+
+### Provenance và execution contract
+
+- Plan ghi `repo_head=51945ff1fc63f385784af7c35600be9154a08b88`, đúng handoff
+  code đã được pull trước run; numeric-v2 input execution commit là
+  `b2ac68c86900b82e564314b95e0dcda574733e64`.
+- Cả hai model dùng Torch `2.5.1+cu121`, Ultralytics `8.4.102`, NumPy
+  `2.4.4`, ONNX Runtime `1.24.4`, pycocotools `2.0.10`,
+  `CUDA_VISIBLE_DEVICES=-1` và `CPUExecutionProvider` duy nhất.
+- YOLOv8n checkpoint SHA256
+  `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b`, ONNX
+  `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603`;
+  YOLO26n checkpoint SHA256
+  `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e`, ONNX
+  `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc`.
+  Mỗi checkpoint/ONNX đều khớp expected và `before == after`.
+- Fixture source/materialized hash khớp ở cả hai model: v8/00009
+  `48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354`,
+  v26/00006
+  `a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434`.
+- Audit flags toàn bộ false: không export, TensorRT, build, GPU, matrix hay
+  đổi strict verdict.
+
+Forward counters đúng contract:
+
+- v8/00009: 1 ordinary native, 0 decoder replay, 0 postprocess replay, 1
+  original ONNX, 0 derived ONNX;
+- v26/00006: 1 ordinary native, 1 same-head `_inference(one2one)` decoder
+  replay, 1 installed `postprocess` replay, 1 original ONNX, 1 derived ONNX.
+
+### Semantic và numerical findings
+
+YOLOv8n adapter pass: primary `[1,7,8400]` được dùng trực tiếp với decoded
+`xywh` boxes và post-sigmoid probabilities; raw `[1,64,8400]` parameters/logits
+được giữ role riêng. Strict comparison vẫn **FAIL**, mismatch đúng 2 box tại
+`[0,1,8004]` và `[0,1,8014]`, score mismatch 0; không có thay đổi tolerance.
+
+YOLO26n adapter pass: raw `one2one` `[1,4,8400]`/logits được decode bằng
+chính installed head, output `[1,7,8400]` `xyxy`/probabilities; anchors,
+strides, shape giữ nguyên; postprocess replay khớp primary exact. Derived
+ONNX output cũng unchanged exact, vì vậy cross-side endpoint **admissible**
+theo A2L-037. Source method hashes của sáu method Detect được lưu trong model
+report.
+
+Strict fixed-row YOLO26n vẫn **FAIL**: tổng mismatch 1236/1800, gồm
+1056/1200 box và 180/300 class-id; score mismatch 0/300. Same-anchor decoded
+comparison: box mismatch 1, max absolute error `0.00018310546875`; class
+probabilities PASS, max absolute error `1.38166171836929e-07`. Top-K mapping
+trên mỗi phía được tái dựng/kiểm exact; selection alignment có overlap
+278/300, khác selected-set membership và khác thứ tự, với tie count
+reference `0` và observed `240`. Đây là localization evidence đã đủ semantic
+admissibility, không phải bằng chứng calibration-only, TensorRT end-to-end hay
+GPU behavior.
+
+### Handover state
+
+Step localization v2 đã hoàn tất hậu kiểm và dừng tại đây. Không chạy thêm
+rerun, export, build, AP/test, GPU, matrix hoặc nghiên cứu tiếp theo. Astra
+review các kết quả FAIL đã được semantic hóa; mọi bước thiết kế tiếp theo cần
+quyết định reviewer.
