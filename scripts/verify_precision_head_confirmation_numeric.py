@@ -19,6 +19,7 @@ import os
 import platform
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from types import SimpleNamespace
@@ -482,7 +483,7 @@ def compare_float_arrays(reference: Any, observed: Any, np: Any, domain: str) ->
     relative = np.zeros_like(delta, dtype=np.float64)
     np.divide(delta, abs_reference, out=relative, where=abs_reference > 0)
     relative[(abs_reference == 0) & (delta > 0)] = np.inf
-    close = np.isclose(reference, observed, rtol=LOCKED_TOLERANCES["float32"]["rtol"], atol=LOCKED_TOLERANCES["float32"]["atol"])
+    close = np.isclose(observed, reference, rtol=LOCKED_TOLERANCES["float32"]["rtol"], atol=LOCKED_TOLERANCES["float32"]["atol"])
     bad = np.argwhere(~close)
     result = {
         "status": "pass" if bool(close.all()) else "fail",
@@ -537,7 +538,7 @@ def compare_primary(model: str, reference: Any, observed: Any, np: Any) -> dict[
             "channel_results": {"boxes": boxes, "scores": scores},
             "mismatch_count": (boxes.get("mismatch_count") or 0) + (scores.get("mismatch_count") or 0),
             "element_count": (boxes.get("element_count") or 0) + (scores.get("element_count") or 0),
-            "tolerance_order": "reference first in numpy.isclose(reference, observed, rtol, atol)",
+            "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference",
         }
     if reference.dtype != np.dtype("float32") or observed.dtype != np.dtype("float32"):
         return {"status": "unresolved", "domain": "yolo26n_native_detections", "reason": "dtype_not_float32"}
@@ -563,7 +564,7 @@ def compare_primary(model: str, reference: Any, observed: Any, np: Any) -> dict[
         "channel_results": {"boxes": boxes, "score": scores},
         "mismatch_count": (boxes.get("mismatch_count") or 0) + (scores.get("mismatch_count") or 0) + int(np.sum(ref_classes != obs_classes)),
         "element_count": (boxes.get("element_count") or 0) + (scores.get("element_count") or 0) + int(ref_classes.size),
-        "tolerance_order": "reference first in numpy.isclose(reference, observed, rtol, atol)",
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference",
     }
     numeric["class_ids_exact"] = class_equal
     numeric["class_mismatch_count"] = int(np.sum(ref_classes != obs_classes))
@@ -729,7 +730,7 @@ def trace_calibration_preprocess(path: Path, runtime: dict[str, Any], stride: in
     image_stub = SimpleNamespace(
         ims=[None],
         im_files=[str(path)],
-        npy_files=[path.with_suffix(".npy")],
+        npy_files=[],
         channels=3,
         cv2_flag=1,
         prefix="bounded calibration trace: ",
@@ -739,7 +740,14 @@ def trace_calibration_preprocess(path: Path, runtime: dict[str, Any], stride: in
         max_buffer_length=0,
         cache=False,
     )
-    loaded, original_hw, resized_hw = dataset_cls.load_image(image_stub, 0, rect_mode=True, resize_short=False)
+    with tempfile.TemporaryDirectory(prefix="precision_head_calibration_trace_") as scratch:
+        scratch_dir = Path(scratch)
+        isolated_npy = scratch_dir / path.name.replace(path.suffix, ".npy")
+        if isolated_npy.exists():
+            raise NumericUnresolved("Private calibration trace cache candidate unexpectedly exists")
+        image_stub.npy_files = [isolated_npy]
+        loaded, original_hw, resized_hw = dataset_cls.load_image(image_stub, 0, rect_mode=True, resize_short=False)
+        isolated_candidate_exists_after_load = isolated_npy.exists()
     if loaded is None or loaded.ndim != 3 or loaded.shape[-1] != 3:
         raise NumericUnresolved("Calibration component loader did not produce BGR HWC image")
     letterbox = runtime["LetterBox"](
@@ -763,6 +771,16 @@ def trace_calibration_preprocess(path: Path, runtime: dict[str, Any], stride: in
         "producer_calls": ["YOLODataset.load_image", "LetterBox.__call__", "Format._format_img_equivalent"],
         "loader_dispatch": {"Exporter.get_int8_calibration_dataloader": False, "build_yolo_dataset": False, "dataloader": False},
         "dataset_side_effects": {"labels_read": False, "image_cache_read": False, "dataset_instantiated": False},
+        "cache_isolation": {
+            "mechanism": "fresh private TemporaryDirectory candidate passed as YOLODataset.npy_files",
+            "isolated_npy_candidate": str(isolated_npy),
+            "isolated_candidate_exists_before_load": False,
+            "isolated_candidate_exists_after_load": isolated_candidate_exists_after_load,
+            "scratch_deleted_after_trace": not scratch_dir.exists(),
+            "original_adjacent_npy_candidate": str(path.with_suffix(".npy")),
+            "original_adjacent_npy_used": False,
+            "original_adjacent_npy_deleted": False,
+        },
         "load_image": {
             "rect_mode": True,
             "resize_short": False,

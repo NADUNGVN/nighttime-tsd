@@ -1,4 +1,5 @@
 import copy
+import io
 import importlib.util
 import json
 import sys
@@ -164,6 +165,33 @@ class PrecisionHeadNumericTests(unittest.TestCase):
         self.assertEqual(trace["formatted_uint8"]["layout"], "RGB_CHW")
         self.assertEqual(trace["normalization"]["operation"], "float32(rgb_chw) / 255.0")
 
+    @unittest.skipUnless(
+        all(importlib.util.find_spec(name) is not None for name in ("torch", "ultralytics", "onnxruntime", "cv2")),
+        "pinned CPU producer dependencies are unavailable",
+    )
+    def test_calibration_trace_ignores_valid_stale_wrong_channel_and_corrupt_adjacent_npy(self):
+        numeric.set_cpu_environment()
+        import cv2
+
+        runtime = numeric.load_child_runtime({"runtime": {"torch": "2.8.0+cu129", "ultralytics": "8.4.102", "numpy": "2.4.2", "pycocotools": "2.0.10"}})
+        adjacent_payloads = {"valid": io.BytesIO(), "wrong_channel": io.BytesIO(), "corrupt": io.BytesIO(b"not-a-valid-npy")}
+        np.save(adjacent_payloads["valid"], np.zeros((4, 4, 3), dtype=np.uint8))
+        np.save(adjacent_payloads["wrong_channel"], np.zeros((4, 4, 1), dtype=np.uint8))
+        for name, payload in adjacent_payloads.items():
+            with tempfile.TemporaryDirectory() as temp:
+                image_path = Path(temp) / f"anchor_{name}.jpg"
+                image = np.full((480, 800, 3), 17, dtype=np.uint8)
+                self.assertTrue(cv2.imwrite(str(image_path), image))
+                adjacent = image_path.with_suffix(".npy")
+                adjacent.write_bytes(payload.getvalue())
+                before = adjacent.read_bytes()
+                with patch.object(runtime["np"], "load", side_effect=AssertionError("adjacent .npy must not be read")):
+                    trace = numeric.trace_calibration_preprocess(image_path, runtime, stride=32)
+                self.assertEqual(adjacent.read_bytes(), before)
+                self.assertFalse(trace["cache_isolation"]["original_adjacent_npy_used"])
+                self.assertFalse(trace["cache_isolation"]["original_adjacent_npy_deleted"])
+                self.assertNotEqual(Path(trace["cache_isolation"]["isolated_npy_candidate"]).resolve(), adjacent.resolve())
+
     def test_v8_raw_comparison_reports_pass_and_same_shape_corruption(self):
         reference = np.zeros((1, 7, 8400), dtype=np.float32)
         observed = reference.copy()
@@ -185,6 +213,17 @@ class PrecisionHeadNumericTests(unittest.TestCase):
         self.assertGreater(result["channel_results"]["boxes"]["relative_infinite_count"], 0)
         self.assertIsNone(result["channel_results"]["boxes"]["max_relative"])
         json.dumps(result, allow_nan=False)
+
+    def test_asymmetric_boundary_uses_reference_relative_isclose_order(self):
+        reference = np.zeros((1, 7, 8400), dtype=np.float32)
+        observed = reference.copy()
+        reference[0, 0, 0] = np.float32(0.0010002674534916878)
+        observed[0, 0, 0] = np.float32(0.0010103675303980708)
+        self.assertTrue(np.isclose(reference[0, 0, 0], observed[0, 0, 0], rtol=1e-4, atol=1e-5))
+        self.assertFalse(np.isclose(observed[0, 0, 0], reference[0, 0, 0], rtol=1e-4, atol=1e-5))
+        result = numeric.compare_primary("yolov8n", reference, observed, np)
+        self.assertEqual(result["status"], "fail")
+        self.assertIn("observed first", result["tolerance_order"])
 
     def test_v8_wrong_shape_and_nonfinite_are_unresolved(self):
         reference = np.zeros((1, 7, 8400), dtype=np.float32)
