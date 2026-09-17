@@ -1,0 +1,4501 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_confirmation_graph_audit_v1",
+  "model": "yolov8n",
+  "status": "audit_only_completed",
+  "mapping_status": "verified",
+  "mapping_errors": [],
+  "source_to_export_matches": {
+    "cv2": [
+      {
+        "source_module": "model.22.cv2.0.0.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv2.0.0.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv2.0.0.conv",
+          "model.22.cv2.0.cv2.0.0.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv2.0/cv2.0.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.0/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv2.0.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.0/cv2.0.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.0.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.0.0.conv",
+              "model.22.cv2.0.cv2.0.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.0/cv2.0.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 23
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv2.0.1.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv2.0.1.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv2.0.1.conv",
+          "model.22.cv2.0.cv2.0.1.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv2.0/cv2.0.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.1/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv2.0.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.0/cv2.0.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.0.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.0.1.conv",
+              "model.22.cv2.0.cv2.0.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.0/cv2.0.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 20
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv2.0.2",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv2.0.2",
+        "accepted_export_normalized_names": [
+          "model.22.cv2.0.2",
+          "model.22.cv2.0.cv2.0.2"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv2.0/cv2.0.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.2/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv2.0.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.0/cv2.0.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.0.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.0.2",
+              "model.22.cv2.0.cv2.0.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.0/cv2.0.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 17
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv2.1.0.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv2.1.0.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv2.1.0.conv",
+          "model.22.cv2.1.cv2.1.0.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv2.1/cv2.1.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.0/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv2.1.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.1/cv2.1.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.1.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.1.0.conv",
+              "model.22.cv2.1.cv2.1.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.1/cv2.1.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 23
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv2.1.1.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv2.1.1.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv2.1.1.conv",
+          "model.22.cv2.1.cv2.1.1.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv2.1/cv2.1.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.1/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv2.1.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.1/cv2.1.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.1.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.1.1.conv",
+              "model.22.cv2.1.cv2.1.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.1/cv2.1.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 20
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv2.1.2",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv2.1.2",
+        "accepted_export_normalized_names": [
+          "model.22.cv2.1.2",
+          "model.22.cv2.1.cv2.1.2"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv2.1/cv2.1.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.2/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv2.1.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.1/cv2.1.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.1.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.1.2",
+              "model.22.cv2.1.cv2.1.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.1/cv2.1.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 17
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv2.2.0.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv2.2.0.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv2.2.0.conv",
+          "model.22.cv2.2.cv2.2.0.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv2.2/cv2.2.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.0/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv2.2.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.2/cv2.2.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.2.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.2.0.conv",
+              "model.22.cv2.2.cv2.2.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.2/cv2.2.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 23
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv2.2.1.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv2.2.1.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv2.2.1.conv",
+          "model.22.cv2.2.cv2.2.1.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv2.2/cv2.2.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.1/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv2.2.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.2/cv2.2.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.2.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.2.1.conv",
+              "model.22.cv2.2.cv2.2.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.2/cv2.2.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 20
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv2.2.2",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv2.2.2",
+        "accepted_export_normalized_names": [
+          "model.22.cv2.2.2",
+          "model.22.cv2.2.cv2.2.2"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv2.2/cv2.2.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.2/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv2.2.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.2/cv2.2.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.2.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.2.2",
+              "model.22.cv2.2.cv2.2.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.2/cv2.2.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 17
+          }
+        ],
+        "status": "matched"
+      }
+    ],
+    "cv3": [
+      {
+        "source_module": "model.22.cv3.0.0.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv3.0.0.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv3.0.0.conv",
+          "model.22.cv3.0.cv3.0.0.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv3.0/cv3.0.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.0/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv3.0.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.0/cv3.0.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.0.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.0.0.conv",
+              "model.22.cv3.0.cv3.0.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.0/cv3.0.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 10
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv3.0.1.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv3.0.1.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv3.0.1.conv",
+          "model.22.cv3.0.cv3.0.1.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv3.0/cv3.0.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.1/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv3.0.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.0/cv3.0.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.0.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.0.1.conv",
+              "model.22.cv3.0.cv3.0.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.0/cv3.0.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 7
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv3.0.2",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv3.0.2",
+        "accepted_export_normalized_names": [
+          "model.22.cv3.0.2",
+          "model.22.cv3.0.cv3.0.2"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv3.0/cv3.0.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.2/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv3.0.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.0/cv3.0.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.0.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.0.2",
+              "model.22.cv3.0.cv3.0.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.0/cv3.0.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 4
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv3.1.0.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv3.1.0.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv3.1.0.conv",
+          "model.22.cv3.1.cv3.1.0.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv3.1/cv3.1.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.0/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv3.1.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.1/cv3.1.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.1.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.1.0.conv",
+              "model.22.cv3.1.cv3.1.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.1/cv3.1.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 10
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv3.1.1.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv3.1.1.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv3.1.1.conv",
+          "model.22.cv3.1.cv3.1.1.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv3.1/cv3.1.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.1/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv3.1.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.1/cv3.1.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.1.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.1.1.conv",
+              "model.22.cv3.1.cv3.1.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.1/cv3.1.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 7
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv3.1.2",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv3.1.2",
+        "accepted_export_normalized_names": [
+          "model.22.cv3.1.2",
+          "model.22.cv3.1.cv3.1.2"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv3.1/cv3.1.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.2/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv3.1.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.1/cv3.1.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.1.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.1.2",
+              "model.22.cv3.1.cv3.1.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.1/cv3.1.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 4
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv3.2.0.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv3.2.0.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv3.2.0.conv",
+          "model.22.cv3.2.cv3.2.0.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv3.2/cv3.2.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.0/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv3.2.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.2/cv3.2.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.2.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.2.0.conv",
+              "model.22.cv3.2.cv3.2.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.2/cv3.2.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 10
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv3.2.1.conv",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv3.2.1.conv",
+        "accepted_export_normalized_names": [
+          "model.22.cv3.2.1.conv",
+          "model.22.cv3.2.cv3.2.1.conv"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv3.2/cv3.2.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.1/conv/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv3.2.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.2/cv3.2.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.2.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.2.1.conv",
+              "model.22.cv3.2.cv3.2.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.2/cv3.2.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 7
+          }
+        ],
+        "status": "matched"
+      },
+      {
+        "source_module": "model.22.cv3.2.2",
+        "source_module_type": "Conv2d",
+        "source_normalized_name": "model.22.cv3.2.2",
+        "accepted_export_normalized_names": [
+          "model.22.cv3.2.2",
+          "model.22.cv3.2.cv3.2.2"
+        ],
+        "candidate_export_nodes": [
+          {
+            "name": "/model.22/cv3.2/cv3.2.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.2/Conv_output_0"
+            ]
+          }
+        ],
+        "matched_records": [
+          {
+            "source_module": "model.22.cv3.2.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.2/cv3.2.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.2.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.2.2",
+              "model.22.cv3.2.cv3.2.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.2/cv3.2.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 4
+          }
+        ],
+        "status": "matched"
+      }
+    ]
+  },
+  "onnx_schema": {
+    "inputs": [
+      {
+        "name": "images",
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "output0",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32"
+      }
+    ],
+    "value_info_count": 477,
+    "node_count": 231,
+    "op_types": [
+      "Add",
+      "Concat",
+      "Conv",
+      "Div",
+      "MaxPool",
+      "Mul",
+      "Reshape",
+      "Resize",
+      "Sigmoid",
+      "Slice",
+      "Softmax",
+      "Split",
+      "Sub",
+      "Transpose"
+    ],
+    "quantization_nodes": [],
+    "opset_imports": [
+      {
+        "domain": "",
+        "version": 17
+      }
+    ],
+    "shape_inference": "onnx.shape_inference.infer_shapes_then_checker",
+    "effective_observations": {
+      "input_schema": [
+        {
+          "name": "images",
+          "shape": [
+            1,
+            3,
+            640,
+            640
+          ],
+          "dtype": "float32"
+        }
+      ],
+      "output_schema": [
+        {
+          "name": "output0",
+          "shape": [
+            1,
+            7,
+            8400
+          ],
+          "dtype": "float32"
+        }
+      ],
+      "static_shapes": true,
+      "dynamic_shape_observed": false,
+      "float_graph_expected": true,
+      "opset": 17
+    }
+  },
+  "actual_head_conv_nodes": [
+    {
+      "index": 130,
+      "name": "/model.22/cv2.0/cv2.0.0/conv/Conv",
+      "normalized_name": "model.22.cv2.0.cv2.0.0.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.15/cv2/act/Mul_output_0",
+        "model.22.cv2.0.0.conv.weight",
+        "model.22.cv2.0.0.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv2.0/cv2.0.0/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 131,
+      "name": "/model.22/cv3.0/cv3.0.0/conv/Conv",
+      "normalized_name": "model.22.cv3.0.cv3.0.0.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.15/cv2/act/Mul_output_0",
+        "model.22.cv3.0.0.conv.weight",
+        "model.22.cv3.0.0.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv3.0/cv3.0.0/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 133,
+      "name": "/model.22/cv2.0/cv2.0.0/act/Sigmoid",
+      "normalized_name": "model.22.cv2.0.cv2.0.0.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv2.0/cv2.0.0/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.0/cv2.0.0/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 134,
+      "name": "/model.22/cv3.0/cv3.0.0/act/Sigmoid",
+      "normalized_name": "model.22.cv3.0.cv3.0.0.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv3.0/cv3.0.0/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.0/cv3.0.0/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 136,
+      "name": "/model.22/cv2.0/cv2.0.0/act/Mul",
+      "normalized_name": "model.22.cv2.0.cv2.0.0.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv2.0/cv2.0.0/conv/Conv_output_0",
+        "/model.22/cv2.0/cv2.0.0/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.0/cv2.0.0/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 137,
+      "name": "/model.22/cv3.0/cv3.0.0/act/Mul",
+      "normalized_name": "model.22.cv3.0.cv3.0.0.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv3.0/cv3.0.0/conv/Conv_output_0",
+        "/model.22/cv3.0/cv3.0.0/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.0/cv3.0.0/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 139,
+      "name": "/model.22/cv2.0/cv2.0.1/conv/Conv",
+      "normalized_name": "model.22.cv2.0.cv2.0.1.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv2.0/cv2.0.0/act/Mul_output_0",
+        "model.22.cv2.0.1.conv.weight",
+        "model.22.cv2.0.1.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv2.0/cv2.0.1/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 140,
+      "name": "/model.22/cv3.0/cv3.0.1/conv/Conv",
+      "normalized_name": "model.22.cv3.0.cv3.0.1.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv3.0/cv3.0.0/act/Mul_output_0",
+        "model.22.cv3.0.1.conv.weight",
+        "model.22.cv3.0.1.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv3.0/cv3.0.1/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 142,
+      "name": "/model.22/cv2.0/cv2.0.1/act/Sigmoid",
+      "normalized_name": "model.22.cv2.0.cv2.0.1.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv2.0/cv2.0.1/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.0/cv2.0.1/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 143,
+      "name": "/model.22/cv3.0/cv3.0.1/act/Sigmoid",
+      "normalized_name": "model.22.cv3.0.cv3.0.1.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv3.0/cv3.0.1/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.0/cv3.0.1/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 145,
+      "name": "/model.22/cv2.0/cv2.0.1/act/Mul",
+      "normalized_name": "model.22.cv2.0.cv2.0.1.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv2.0/cv2.0.1/conv/Conv_output_0",
+        "/model.22/cv2.0/cv2.0.1/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.0/cv2.0.1/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 146,
+      "name": "/model.22/cv3.0/cv3.0.1/act/Mul",
+      "normalized_name": "model.22.cv3.0.cv3.0.1.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv3.0/cv3.0.1/conv/Conv_output_0",
+        "/model.22/cv3.0/cv3.0.1/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.0/cv3.0.1/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 148,
+      "name": "/model.22/cv2.0/cv2.0.2/Conv",
+      "normalized_name": "model.22.cv2.0.cv2.0.2",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv2.0/cv2.0.1/act/Mul_output_0",
+        "model.22.cv2.0.2.weight",
+        "model.22.cv2.0.2.bias"
+      ],
+      "outputs": [
+        "/model.22/cv2.0/cv2.0.2/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 149,
+      "name": "/model.22/cv3.0/cv3.0.2/Conv",
+      "normalized_name": "model.22.cv3.0.cv3.0.2",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv3.0/cv3.0.1/act/Mul_output_0",
+        "model.22.cv3.0.2.weight",
+        "model.22.cv3.0.2.bias"
+      ],
+      "outputs": [
+        "/model.22/cv3.0/cv3.0.2/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          3,
+          80,
+          80
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 151,
+      "name": "/model.22/Reshape",
+      "normalized_name": "model.22.Reshape",
+      "op_type": "Reshape",
+      "inputs": [
+        "/model.22/cv2.0/cv2.0.2/Conv_output_0",
+        "/model.22/Constant_output_0"
+      ],
+      "outputs": [
+        "/model.22/Reshape_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          80,
+          80
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          6400
+        ]
+      ],
+      "attributes": {
+        "allowzero": 0
+      }
+    },
+    {
+      "index": 152,
+      "name": "/model.22/Reshape_3",
+      "normalized_name": "model.22.Reshape_3",
+      "op_type": "Reshape",
+      "inputs": [
+        "/model.22/cv3.0/cv3.0.2/Conv_output_0",
+        "/model.22/Constant_3_output_0"
+      ],
+      "outputs": [
+        "/model.22/Reshape_3_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          3,
+          80,
+          80
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          3,
+          6400
+        ]
+      ],
+      "attributes": {
+        "allowzero": 0
+      }
+    },
+    {
+      "index": 164,
+      "name": "/model.22/cv2.1/cv2.1.0/conv/Conv",
+      "normalized_name": "model.22.cv2.1.cv2.1.0.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.18/cv2/act/Mul_output_0",
+        "model.22.cv2.1.0.conv.weight",
+        "model.22.cv2.1.0.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv2.1/cv2.1.0/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          128,
+          40,
+          40
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 165,
+      "name": "/model.22/cv3.1/cv3.1.0/conv/Conv",
+      "normalized_name": "model.22.cv3.1.cv3.1.0.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.18/cv2/act/Mul_output_0",
+        "model.22.cv3.1.0.conv.weight",
+        "model.22.cv3.1.0.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv3.1/cv3.1.0/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          128,
+          40,
+          40
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 167,
+      "name": "/model.22/cv2.1/cv2.1.0/act/Sigmoid",
+      "normalized_name": "model.22.cv2.1.cv2.1.0.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv2.1/cv2.1.0/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.1/cv2.1.0/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 168,
+      "name": "/model.22/cv3.1/cv3.1.0/act/Sigmoid",
+      "normalized_name": "model.22.cv3.1.cv3.1.0.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv3.1/cv3.1.0/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.1/cv3.1.0/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 170,
+      "name": "/model.22/cv2.1/cv2.1.0/act/Mul",
+      "normalized_name": "model.22.cv2.1.cv2.1.0.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv2.1/cv2.1.0/conv/Conv_output_0",
+        "/model.22/cv2.1/cv2.1.0/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.1/cv2.1.0/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ],
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 171,
+      "name": "/model.22/cv3.1/cv3.1.0/act/Mul",
+      "normalized_name": "model.22.cv3.1.cv3.1.0.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv3.1/cv3.1.0/conv/Conv_output_0",
+        "/model.22/cv3.1/cv3.1.0/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.1/cv3.1.0/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ],
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 173,
+      "name": "/model.22/cv2.1/cv2.1.1/conv/Conv",
+      "normalized_name": "model.22.cv2.1.cv2.1.1.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv2.1/cv2.1.0/act/Mul_output_0",
+        "model.22.cv2.1.1.conv.weight",
+        "model.22.cv2.1.1.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv2.1/cv2.1.1/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 174,
+      "name": "/model.22/cv3.1/cv3.1.1/conv/Conv",
+      "normalized_name": "model.22.cv3.1.cv3.1.1.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv3.1/cv3.1.0/act/Mul_output_0",
+        "model.22.cv3.1.1.conv.weight",
+        "model.22.cv3.1.1.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv3.1/cv3.1.1/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 176,
+      "name": "/model.22/cv2.1/cv2.1.1/act/Sigmoid",
+      "normalized_name": "model.22.cv2.1.cv2.1.1.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv2.1/cv2.1.1/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.1/cv2.1.1/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 177,
+      "name": "/model.22/cv3.1/cv3.1.1/act/Sigmoid",
+      "normalized_name": "model.22.cv3.1.cv3.1.1.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv3.1/cv3.1.1/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.1/cv3.1.1/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 179,
+      "name": "/model.22/cv2.1/cv2.1.1/act/Mul",
+      "normalized_name": "model.22.cv2.1.cv2.1.1.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv2.1/cv2.1.1/conv/Conv_output_0",
+        "/model.22/cv2.1/cv2.1.1/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.1/cv2.1.1/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ],
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 180,
+      "name": "/model.22/cv3.1/cv3.1.1/act/Mul",
+      "normalized_name": "model.22.cv3.1.cv3.1.1.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv3.1/cv3.1.1/conv/Conv_output_0",
+        "/model.22/cv3.1/cv3.1.1/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.1/cv3.1.1/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ],
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 182,
+      "name": "/model.22/cv2.1/cv2.1.2/Conv",
+      "normalized_name": "model.22.cv2.1.cv2.1.2",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv2.1/cv2.1.1/act/Mul_output_0",
+        "model.22.cv2.1.2.weight",
+        "model.22.cv2.1.2.bias"
+      ],
+      "outputs": [
+        "/model.22/cv2.1/cv2.1.2/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 183,
+      "name": "/model.22/cv3.1/cv3.1.2/Conv",
+      "normalized_name": "model.22.cv3.1.cv3.1.2",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv3.1/cv3.1.1/act/Mul_output_0",
+        "model.22.cv3.1.2.weight",
+        "model.22.cv3.1.2.bias"
+      ],
+      "outputs": [
+        "/model.22/cv3.1/cv3.1.2/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          3,
+          40,
+          40
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 185,
+      "name": "/model.22/Reshape_1",
+      "normalized_name": "model.22.Reshape_1",
+      "op_type": "Reshape",
+      "inputs": [
+        "/model.22/cv2.1/cv2.1.2/Conv_output_0",
+        "/model.22/Constant_output_0"
+      ],
+      "outputs": [
+        "/model.22/Reshape_1_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          40,
+          40
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          1600
+        ]
+      ],
+      "attributes": {
+        "allowzero": 0
+      }
+    },
+    {
+      "index": 186,
+      "name": "/model.22/Reshape_4",
+      "normalized_name": "model.22.Reshape_4",
+      "op_type": "Reshape",
+      "inputs": [
+        "/model.22/cv3.1/cv3.1.2/Conv_output_0",
+        "/model.22/Constant_3_output_0"
+      ],
+      "outputs": [
+        "/model.22/Reshape_4_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          3,
+          40,
+          40
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          3,
+          1600
+        ]
+      ],
+      "attributes": {
+        "allowzero": 0
+      }
+    },
+    {
+      "index": 197,
+      "name": "/model.22/cv2.2/cv2.2.0/conv/Conv",
+      "normalized_name": "model.22.cv2.2.cv2.2.0.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.21/cv2/act/Mul_output_0",
+        "model.22.cv2.2.0.conv.weight",
+        "model.22.cv2.2.0.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv2.2/cv2.2.0/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          256,
+          20,
+          20
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 198,
+      "name": "/model.22/cv3.2/cv3.2.0/conv/Conv",
+      "normalized_name": "model.22.cv3.2.cv3.2.0.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.21/cv2/act/Mul_output_0",
+        "model.22.cv3.2.0.conv.weight",
+        "model.22.cv3.2.0.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv3.2/cv3.2.0/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          256,
+          20,
+          20
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 199,
+      "name": "/model.22/cv2.2/cv2.2.0/act/Sigmoid",
+      "normalized_name": "model.22.cv2.2.cv2.2.0.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv2.2/cv2.2.0/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.2/cv2.2.0/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 200,
+      "name": "/model.22/cv3.2/cv3.2.0/act/Sigmoid",
+      "normalized_name": "model.22.cv3.2.cv3.2.0.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv3.2/cv3.2.0/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.2/cv3.2.0/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 201,
+      "name": "/model.22/cv2.2/cv2.2.0/act/Mul",
+      "normalized_name": "model.22.cv2.2.cv2.2.0.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv2.2/cv2.2.0/conv/Conv_output_0",
+        "/model.22/cv2.2/cv2.2.0/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.2/cv2.2.0/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ],
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 202,
+      "name": "/model.22/cv3.2/cv3.2.0/act/Mul",
+      "normalized_name": "model.22.cv3.2.cv3.2.0.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv3.2/cv3.2.0/conv/Conv_output_0",
+        "/model.22/cv3.2/cv3.2.0/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.2/cv3.2.0/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ],
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 203,
+      "name": "/model.22/cv2.2/cv2.2.1/conv/Conv",
+      "normalized_name": "model.22.cv2.2.cv2.2.1.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv2.2/cv2.2.0/act/Mul_output_0",
+        "model.22.cv2.2.1.conv.weight",
+        "model.22.cv2.2.1.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv2.2/cv2.2.1/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 204,
+      "name": "/model.22/cv3.2/cv3.2.1/conv/Conv",
+      "normalized_name": "model.22.cv3.2.cv3.2.1.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv3.2/cv3.2.0/act/Mul_output_0",
+        "model.22.cv3.2.1.conv.weight",
+        "model.22.cv3.2.1.conv.bias"
+      ],
+      "outputs": [
+        "/model.22/cv3.2/cv3.2.1/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          3,
+          3
+        ],
+        "pads": [
+          1,
+          1,
+          1,
+          1
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 205,
+      "name": "/model.22/cv2.2/cv2.2.1/act/Sigmoid",
+      "normalized_name": "model.22.cv2.2.cv2.2.1.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv2.2/cv2.2.1/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.2/cv2.2.1/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 206,
+      "name": "/model.22/cv3.2/cv3.2.1/act/Sigmoid",
+      "normalized_name": "model.22.cv3.2.cv3.2.1.act.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/cv3.2/cv3.2.1/conv/Conv_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.2/cv3.2.1/act/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 207,
+      "name": "/model.22/cv2.2/cv2.2.1/act/Mul",
+      "normalized_name": "model.22.cv2.2.cv2.2.1.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv2.2/cv2.2.1/conv/Conv_output_0",
+        "/model.22/cv2.2/cv2.2.1/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv2.2/cv2.2.1/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ],
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 208,
+      "name": "/model.22/cv3.2/cv3.2.1/act/Mul",
+      "normalized_name": "model.22.cv3.2.cv3.2.1.act.Mul",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/cv3.2/cv3.2.1/conv/Conv_output_0",
+        "/model.22/cv3.2/cv3.2.1/act/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "/model.22/cv3.2/cv3.2.1/act/Mul_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ],
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 209,
+      "name": "/model.22/cv2.2/cv2.2.2/Conv",
+      "normalized_name": "model.22.cv2.2.cv2.2.2",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv2.2/cv2.2.1/act/Mul_output_0",
+        "model.22.cv2.2.2.weight",
+        "model.22.cv2.2.2.bias"
+      ],
+      "outputs": [
+        "/model.22/cv2.2/cv2.2.2/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 210,
+      "name": "/model.22/cv3.2/cv3.2.2/Conv",
+      "normalized_name": "model.22.cv3.2.cv3.2.2",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/cv3.2/cv3.2.1/act/Mul_output_0",
+        "model.22.cv3.2.2.weight",
+        "model.22.cv3.2.2.bias"
+      ],
+      "outputs": [
+        "/model.22/cv3.2/cv3.2.2/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ],
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          3,
+          20,
+          20
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 211,
+      "name": "/model.22/Reshape_2",
+      "normalized_name": "model.22.Reshape_2",
+      "op_type": "Reshape",
+      "inputs": [
+        "/model.22/cv2.2/cv2.2.2/Conv_output_0",
+        "/model.22/Constant_output_0"
+      ],
+      "outputs": [
+        "/model.22/Reshape_2_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          20,
+          20
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          400
+        ]
+      ],
+      "attributes": {
+        "allowzero": 0
+      }
+    },
+    {
+      "index": 212,
+      "name": "/model.22/Reshape_5",
+      "normalized_name": "model.22.Reshape_5",
+      "op_type": "Reshape",
+      "inputs": [
+        "/model.22/cv3.2/cv3.2.2/Conv_output_0",
+        "/model.22/Constant_3_output_0"
+      ],
+      "outputs": [
+        "/model.22/Reshape_5_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          3,
+          20,
+          20
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          3,
+          400
+        ]
+      ],
+      "attributes": {
+        "allowzero": 0
+      }
+    },
+    {
+      "index": 213,
+      "name": "/model.22/Concat",
+      "normalized_name": "model.22.Concat",
+      "op_type": "Concat",
+      "inputs": [
+        "/model.22/Reshape_output_0",
+        "/model.22/Reshape_1_output_0",
+        "/model.22/Reshape_2_output_0"
+      ],
+      "outputs": [
+        "/model.22/Concat_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          6400
+        ],
+        [
+          1,
+          64,
+          1600
+        ],
+        [
+          1,
+          64,
+          400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          64,
+          8400
+        ]
+      ],
+      "attributes": {
+        "axis": -1
+      }
+    },
+    {
+      "index": 214,
+      "name": "/model.22/Concat_1",
+      "normalized_name": "model.22.Concat_1",
+      "op_type": "Concat",
+      "inputs": [
+        "/model.22/Reshape_3_output_0",
+        "/model.22/Reshape_4_output_0",
+        "/model.22/Reshape_5_output_0"
+      ],
+      "outputs": [
+        "/model.22/Concat_1_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          3,
+          6400
+        ],
+        [
+          1,
+          3,
+          1600
+        ],
+        [
+          1,
+          3,
+          400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          3,
+          8400
+        ]
+      ],
+      "attributes": {
+        "axis": -1
+      }
+    },
+    {
+      "index": 215,
+      "name": "/model.22/dfl/Reshape",
+      "normalized_name": "model.22.dfl.Reshape",
+      "op_type": "Reshape",
+      "inputs": [
+        "/model.22/Concat_output_0",
+        "/model.22/dfl/Constant_output_0"
+      ],
+      "outputs": [
+        "/model.22/dfl/Reshape_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          64,
+          8400
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          4,
+          16,
+          8400
+        ]
+      ],
+      "attributes": {
+        "allowzero": 0
+      }
+    },
+    {
+      "index": 216,
+      "name": "/model.22/Sigmoid",
+      "normalized_name": "model.22.Sigmoid",
+      "op_type": "Sigmoid",
+      "inputs": [
+        "/model.22/Concat_1_output_0"
+      ],
+      "outputs": [
+        "/model.22/Sigmoid_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          3,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          3,
+          8400
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 217,
+      "name": "/model.22/dfl/Transpose",
+      "normalized_name": "model.22.dfl.Transpose",
+      "op_type": "Transpose",
+      "inputs": [
+        "/model.22/dfl/Reshape_output_0"
+      ],
+      "outputs": [
+        "/model.22/dfl/Transpose_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          4,
+          16,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          16,
+          4,
+          8400
+        ]
+      ],
+      "attributes": {
+        "perm": [
+          0,
+          2,
+          1,
+          3
+        ]
+      }
+    },
+    {
+      "index": 218,
+      "name": "/model.22/dfl/Softmax",
+      "normalized_name": "model.22.dfl.Softmax",
+      "op_type": "Softmax",
+      "inputs": [
+        "/model.22/dfl/Transpose_output_0"
+      ],
+      "outputs": [
+        "/model.22/dfl/Softmax_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          16,
+          4,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          16,
+          4,
+          8400
+        ]
+      ],
+      "attributes": {
+        "axis": 1
+      }
+    },
+    {
+      "index": 219,
+      "name": "/model.22/dfl/conv/Conv",
+      "normalized_name": "model.22.dfl.conv",
+      "op_type": "Conv",
+      "inputs": [
+        "/model.22/dfl/Softmax_output_0",
+        "model.22.dfl.conv.weight"
+      ],
+      "outputs": [
+        "/model.22/dfl/conv/Conv_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          16,
+          4,
+          8400
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          1,
+          4,
+          8400
+        ]
+      ],
+      "attributes": {
+        "dilations": [
+          1,
+          1
+        ],
+        "group": 1,
+        "kernel_shape": [
+          1,
+          1
+        ],
+        "pads": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "strides": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "index": 220,
+      "name": "/model.22/dfl/Reshape_1",
+      "normalized_name": "model.22.dfl.Reshape_1",
+      "op_type": "Reshape",
+      "inputs": [
+        "/model.22/dfl/conv/Conv_output_0",
+        "/model.22/dfl/Constant_1_output_0"
+      ],
+      "outputs": [
+        "/model.22/dfl/Reshape_1_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          1,
+          4,
+          8400
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          4,
+          8400
+        ]
+      ],
+      "attributes": {
+        "allowzero": 0
+      }
+    },
+    {
+      "index": 221,
+      "name": "/model.22/Slice",
+      "normalized_name": "model.22.Slice",
+      "op_type": "Slice",
+      "inputs": [
+        "/model.22/dfl/Reshape_1_output_0",
+        "/model.22/Constant_7_output_0",
+        "/model.22/Mul_output_0",
+        "/model.22/Constant_6_output_0"
+      ],
+      "outputs": [
+        "/model.22/Slice_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          4,
+          8400
+        ],
+        null,
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 222,
+      "name": "/model.22/Slice_1",
+      "normalized_name": "model.22.Slice_1",
+      "op_type": "Slice",
+      "inputs": [
+        "/model.22/dfl/Reshape_1_output_0",
+        "/model.22/Mul_output_0",
+        "/model.22/Mul_1_output_0",
+        "/model.22/Constant_6_output_0"
+      ],
+      "outputs": [
+        "/model.22/Slice_1_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          4,
+          8400
+        ],
+        null,
+        null,
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 223,
+      "name": "/model.22/Sub",
+      "normalized_name": "model.22.Sub",
+      "op_type": "Sub",
+      "inputs": [
+        "/model.22/Constant_12_output_0",
+        "/model.22/Slice_output_0"
+      ],
+      "outputs": [
+        "/model.22/Sub_output_0"
+      ],
+      "input_shapes": [
+        null,
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 224,
+      "name": "/model.22/Add_1",
+      "normalized_name": "model.22.Add_1",
+      "op_type": "Add",
+      "inputs": [
+        "/model.22/Constant_13_output_0",
+        "/model.22/Slice_1_output_0"
+      ],
+      "outputs": [
+        "/model.22/Add_1_output_0"
+      ],
+      "input_shapes": [
+        null,
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 225,
+      "name": "/model.22/Add_2",
+      "normalized_name": "model.22.Add_2",
+      "op_type": "Add",
+      "inputs": [
+        "/model.22/Sub_output_0",
+        "/model.22/Add_1_output_0"
+      ],
+      "outputs": [
+        "/model.22/Add_2_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          2,
+          8400
+        ],
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 226,
+      "name": "/model.22/Sub_1",
+      "normalized_name": "model.22.Sub_1",
+      "op_type": "Sub",
+      "inputs": [
+        "/model.22/Add_1_output_0",
+        "/model.22/Sub_output_0"
+      ],
+      "outputs": [
+        "/model.22/Sub_1_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          2,
+          8400
+        ],
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 227,
+      "name": "/model.22/Div_1",
+      "normalized_name": "model.22.Div_1",
+      "op_type": "Div",
+      "inputs": [
+        "/model.22/Add_2_output_0",
+        "/model.22/Constant_14_output_0"
+      ],
+      "outputs": [
+        "/model.22/Div_1_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          2,
+          8400
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 228,
+      "name": "/model.22/Concat_2",
+      "normalized_name": "model.22.Concat_2",
+      "op_type": "Concat",
+      "inputs": [
+        "/model.22/Div_1_output_0",
+        "/model.22/Sub_1_output_0"
+      ],
+      "outputs": [
+        "/model.22/Concat_2_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          2,
+          8400
+        ],
+        [
+          1,
+          2,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          4,
+          8400
+        ]
+      ],
+      "attributes": {
+        "axis": 1
+      }
+    },
+    {
+      "index": 229,
+      "name": "/model.22/Mul_2",
+      "normalized_name": "model.22.Mul_2",
+      "op_type": "Mul",
+      "inputs": [
+        "/model.22/Concat_2_output_0",
+        "/model.22/Constant_15_output_0"
+      ],
+      "outputs": [
+        "/model.22/Mul_2_output_0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          4,
+          8400
+        ],
+        null
+      ],
+      "output_shapes": [
+        [
+          1,
+          4,
+          8400
+        ]
+      ],
+      "attributes": {}
+    },
+    {
+      "index": 230,
+      "name": "/model.22/Concat_3",
+      "normalized_name": "model.22.Concat_3",
+      "op_type": "Concat",
+      "inputs": [
+        "/model.22/Mul_2_output_0",
+        "/model.22/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "output0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          4,
+          8400
+        ],
+        [
+          1,
+          3,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          7,
+          8400
+        ]
+      ],
+      "attributes": {
+        "axis": 1
+      }
+    }
+  ],
+  "post_merge_topology": [
+    {
+      "index": 230,
+      "name": "/model.22/Concat_3",
+      "normalized_name": "model.22.Concat_3",
+      "op_type": "Concat",
+      "inputs": [
+        "/model.22/Mul_2_output_0",
+        "/model.22/Sigmoid_output_0"
+      ],
+      "outputs": [
+        "output0"
+      ],
+      "input_shapes": [
+        [
+          1,
+          4,
+          8400
+        ],
+        [
+          1,
+          3,
+          8400
+        ]
+      ],
+      "output_shapes": [
+        [
+          1,
+          7,
+          8400
+        ]
+      ],
+      "attributes": {
+        "axis": 1
+      }
+    }
+  ],
+  "relevant_small_shape_index_constants": {},
+  "mapping": {
+    "status": "verified",
+    "model": "yolov8n",
+    "mapping_status": "verified",
+    "errors": [],
+    "graph_inputs": [
+      {
+        "name": "images",
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32"
+      }
+    ],
+    "graph_outputs": [
+      {
+        "name": "output0",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32"
+      }
+    ],
+    "expected_primary_output_shape": [
+      1,
+      7,
+      8400
+    ],
+    "primary_output_candidates": [
+      {
+        "name": "output0",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32"
+      }
+    ],
+    "active_branches": [
+      "cv2",
+      "cv3"
+    ],
+    "inactive_branches": [],
+    "active_branch_audit": {
+      "cv2": {
+        "owner": "bbox",
+        "source_prefix": "model.22.cv2",
+        "candidate_count": 21,
+        "candidate_nodes": [
+          {
+            "name": "/model.22/cv2.0/cv2.0.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.0/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.0/cv2.0.0/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.0/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.0/cv2.0.0/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.0/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.0/cv2.0.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.1/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.0/cv2.0.1/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.1/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.0/cv2.0.1/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.1/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.0/cv2.0.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.0/cv2.0.2/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.1/cv2.1.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.0/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.1/cv2.1.0/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.0/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.1/cv2.1.0/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.0/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.1/cv2.1.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.1/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.1/cv2.1.1/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.1/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.1/cv2.1.1/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.1/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.1/cv2.1.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.1/cv2.1.2/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.2/cv2.2.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.0/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.2/cv2.2.0/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.0/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.2/cv2.2.0/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.0/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.2/cv2.2.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.1/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.2/cv2.2.1/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.1/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.2/cv2.2.1/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.1/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv2.2/cv2.2.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv2.2/cv2.2.2/Conv_output_0"
+            ]
+          }
+        ],
+        "excluded_non_convolution_nodes": [
+          "/model.22/cv2.0/cv2.0.0/act/Mul",
+          "/model.22/cv2.0/cv2.0.0/act/Sigmoid",
+          "/model.22/cv2.0/cv2.0.1/act/Mul",
+          "/model.22/cv2.0/cv2.0.1/act/Sigmoid",
+          "/model.22/cv2.1/cv2.1.0/act/Mul",
+          "/model.22/cv2.1/cv2.1.0/act/Sigmoid",
+          "/model.22/cv2.1/cv2.1.1/act/Mul",
+          "/model.22/cv2.1/cv2.1.1/act/Sigmoid",
+          "/model.22/cv2.2/cv2.2.0/act/Mul",
+          "/model.22/cv2.2/cv2.2.0/act/Sigmoid",
+          "/model.22/cv2.2/cv2.2.1/act/Mul",
+          "/model.22/cv2.2/cv2.2.1/act/Sigmoid"
+        ],
+        "matched_convolutions": [
+          {
+            "source_module": "model.22.cv2.0.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.0/cv2.0.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.0.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.0.0.conv",
+              "model.22.cv2.0.cv2.0.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.0/cv2.0.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 23
+          },
+          {
+            "source_module": "model.22.cv2.0.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.0/cv2.0.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.0.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.0.1.conv",
+              "model.22.cv2.0.cv2.0.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.0/cv2.0.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 20
+          },
+          {
+            "source_module": "model.22.cv2.0.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.0/cv2.0.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.0.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.0.2",
+              "model.22.cv2.0.cv2.0.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.0/cv2.0.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 17
+          },
+          {
+            "source_module": "model.22.cv2.1.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.1/cv2.1.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.1.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.1.0.conv",
+              "model.22.cv2.1.cv2.1.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.1/cv2.1.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 23
+          },
+          {
+            "source_module": "model.22.cv2.1.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.1/cv2.1.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.1.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.1.1.conv",
+              "model.22.cv2.1.cv2.1.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.1/cv2.1.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 20
+          },
+          {
+            "source_module": "model.22.cv2.1.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.1/cv2.1.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.1.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.1.2",
+              "model.22.cv2.1.cv2.1.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.1/cv2.1.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 17
+          },
+          {
+            "source_module": "model.22.cv2.2.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.2/cv2.2.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.2.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.2.0.conv",
+              "model.22.cv2.2.cv2.2.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.2/cv2.2.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 23
+          },
+          {
+            "source_module": "model.22.cv2.2.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.2/cv2.2.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.2.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.2.1.conv",
+              "model.22.cv2.2.cv2.2.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.2/cv2.2.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 20
+          },
+          {
+            "source_module": "model.22.cv2.2.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv2.2/cv2.2.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv2.2.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv2.2.2",
+              "model.22.cv2.2.cv2.2.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv2.2/cv2.2.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 17
+          }
+        ],
+        "target_node_names": [
+          "/model.22/cv2.0/cv2.0.0/conv/Conv",
+          "/model.22/cv2.0/cv2.0.1/conv/Conv",
+          "/model.22/cv2.0/cv2.0.2/Conv",
+          "/model.22/cv2.1/cv2.1.0/conv/Conv",
+          "/model.22/cv2.1/cv2.1.1/conv/Conv",
+          "/model.22/cv2.1/cv2.1.2/Conv",
+          "/model.22/cv2.2/cv2.2.0/conv/Conv",
+          "/model.22/cv2.2/cv2.2.1/conv/Conv",
+          "/model.22/cv2.2/cv2.2.2/Conv"
+        ],
+        "output_lineage": {
+          "branch_owner": "bbox",
+          "pre_postprocess_merge": "/model.22/Concat_3",
+          "merge_output": "output0",
+          "channel_span": [
+            0,
+            4
+          ],
+          "semantic_role": "box_coordinates",
+          "reachability_may_be_shared_after_merge": false
+        }
+      },
+      "cv3": {
+        "owner": "classification",
+        "source_prefix": "model.22.cv3",
+        "candidate_count": 21,
+        "candidate_nodes": [
+          {
+            "name": "/model.22/cv3.0/cv3.0.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.0/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.0/cv3.0.0/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.0/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.0/cv3.0.0/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.0/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.0/cv3.0.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.1/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.0/cv3.0.1/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.1/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.0/cv3.0.1/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.1/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.0/cv3.0.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.0/cv3.0.2/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.1/cv3.1.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.0/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.1/cv3.1.0/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.0/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.1/cv3.1.0/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.0/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.1/cv3.1.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.1/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.1/cv3.1.1/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.1/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.1/cv3.1.1/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.1/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.1/cv3.1.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.1/cv3.1.2/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.2/cv3.2.0/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.0/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.2/cv3.2.0/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.0/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.2/cv3.2.0/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.0/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.2/cv3.2.1/conv/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.1/conv/Conv_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.2/cv3.2.1/act/Sigmoid",
+            "op_type": "Sigmoid",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.1/act/Sigmoid_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.2/cv3.2.1/act/Mul",
+            "op_type": "Mul",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.1/act/Mul_output_0"
+            ]
+          },
+          {
+            "name": "/model.22/cv3.2/cv3.2.2/Conv",
+            "op_type": "Conv",
+            "outputs": [
+              "/model.22/cv3.2/cv3.2.2/Conv_output_0"
+            ]
+          }
+        ],
+        "excluded_non_convolution_nodes": [
+          "/model.22/cv3.0/cv3.0.0/act/Mul",
+          "/model.22/cv3.0/cv3.0.0/act/Sigmoid",
+          "/model.22/cv3.0/cv3.0.1/act/Mul",
+          "/model.22/cv3.0/cv3.0.1/act/Sigmoid",
+          "/model.22/cv3.1/cv3.1.0/act/Mul",
+          "/model.22/cv3.1/cv3.1.0/act/Sigmoid",
+          "/model.22/cv3.1/cv3.1.1/act/Mul",
+          "/model.22/cv3.1/cv3.1.1/act/Sigmoid",
+          "/model.22/cv3.2/cv3.2.0/act/Mul",
+          "/model.22/cv3.2/cv3.2.0/act/Sigmoid",
+          "/model.22/cv3.2/cv3.2.1/act/Mul",
+          "/model.22/cv3.2/cv3.2.1/act/Sigmoid"
+        ],
+        "matched_convolutions": [
+          {
+            "source_module": "model.22.cv3.0.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.0/cv3.0.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.0.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.0.0.conv",
+              "model.22.cv3.0.cv3.0.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.0/cv3.0.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 10
+          },
+          {
+            "source_module": "model.22.cv3.0.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.0/cv3.0.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.0.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.0.1.conv",
+              "model.22.cv3.0.cv3.0.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.0/cv3.0.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 7
+          },
+          {
+            "source_module": "model.22.cv3.0.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.0/cv3.0.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.0.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.0.2",
+              "model.22.cv3.0.cv3.0.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.0/cv3.0.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 4
+          },
+          {
+            "source_module": "model.22.cv3.1.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.1/cv3.1.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.1.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.1.0.conv",
+              "model.22.cv3.1.cv3.1.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.1/cv3.1.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 10
+          },
+          {
+            "source_module": "model.22.cv3.1.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.1/cv3.1.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.1.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.1.1.conv",
+              "model.22.cv3.1.cv3.1.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.1/cv3.1.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 7
+          },
+          {
+            "source_module": "model.22.cv3.1.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.1/cv3.1.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.1.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.1.2",
+              "model.22.cv3.1.cv3.1.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.1/cv3.1.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 4
+          },
+          {
+            "source_module": "model.22.cv3.2.0.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.2/cv3.2.0/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.2.0.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.2.0.conv",
+              "model.22.cv3.2.cv3.2.0.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.2/cv3.2.0/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 10
+          },
+          {
+            "source_module": "model.22.cv3.2.1.conv",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.2/cv3.2.1/conv/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.2.1.conv",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.2.1.conv",
+              "model.22.cv3.2.cv3.2.1.conv"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.2/cv3.2.1/conv/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 7
+          },
+          {
+            "source_module": "model.22.cv3.2.2",
+            "source_module_type": "Conv2d",
+            "export_node": "/model.22/cv3.2/cv3.2.2/Conv",
+            "export_op_type": "Conv",
+            "match": "explicit_ultralytics_exporter_wrapper_alias",
+            "source_normalized_name": "model.22.cv3.2.2",
+            "accepted_export_normalized_names": [
+              "model.22.cv3.2.2",
+              "model.22.cv3.2.cv3.2.2"
+            ],
+            "output_tensors": [
+              "/model.22/cv3.2/cv3.2.2/Conv_output_0"
+            ],
+            "reachable_outputs": [
+              "output0"
+            ],
+            "downstream_node_count": 4
+          }
+        ],
+        "target_node_names": [
+          "/model.22/cv3.0/cv3.0.0/conv/Conv",
+          "/model.22/cv3.0/cv3.0.1/conv/Conv",
+          "/model.22/cv3.0/cv3.0.2/Conv",
+          "/model.22/cv3.1/cv3.1.0/conv/Conv",
+          "/model.22/cv3.1/cv3.1.1/conv/Conv",
+          "/model.22/cv3.1/cv3.1.2/Conv",
+          "/model.22/cv3.2/cv3.2.0/conv/Conv",
+          "/model.22/cv3.2/cv3.2.1/conv/Conv",
+          "/model.22/cv3.2/cv3.2.2/Conv"
+        ],
+        "output_lineage": {
+          "branch_owner": "classification",
+          "pre_postprocess_merge": "/model.22/Concat_3",
+          "merge_output": "output0",
+          "channel_span": [
+            4,
+            7
+          ],
+          "semantic_role": "classification_scores",
+          "reachability_may_be_shared_after_merge": false
+        }
+      }
+    },
+    "inactive_branch_audit": {},
+    "branch_owned_target_sets": {
+      "bbox": [
+        "/model.22/cv2.0/cv2.0.0/conv/Conv",
+        "/model.22/cv2.0/cv2.0.1/conv/Conv",
+        "/model.22/cv2.0/cv2.0.2/Conv",
+        "/model.22/cv2.1/cv2.1.0/conv/Conv",
+        "/model.22/cv2.1/cv2.1.1/conv/Conv",
+        "/model.22/cv2.1/cv2.1.2/Conv",
+        "/model.22/cv2.2/cv2.2.0/conv/Conv",
+        "/model.22/cv2.2/cv2.2.1/conv/Conv",
+        "/model.22/cv2.2/cv2.2.2/Conv"
+      ],
+      "classification": [
+        "/model.22/cv3.0/cv3.0.0/conv/Conv",
+        "/model.22/cv3.0/cv3.0.1/conv/Conv",
+        "/model.22/cv3.0/cv3.0.2/Conv",
+        "/model.22/cv3.1/cv3.1.0/conv/Conv",
+        "/model.22/cv3.1/cv3.1.1/conv/Conv",
+        "/model.22/cv3.1/cv3.1.2/Conv",
+        "/model.22/cv3.2/cv3.2.0/conv/Conv",
+        "/model.22/cv3.2/cv3.2.1/conv/Conv",
+        "/model.22/cv3.2/cv3.2.2/Conv"
+      ],
+      "both_union": [
+        "/model.22/cv2.0/cv2.0.0/conv/Conv",
+        "/model.22/cv2.0/cv2.0.1/conv/Conv",
+        "/model.22/cv2.0/cv2.0.2/Conv",
+        "/model.22/cv2.1/cv2.1.0/conv/Conv",
+        "/model.22/cv2.1/cv2.1.1/conv/Conv",
+        "/model.22/cv2.1/cv2.1.2/Conv",
+        "/model.22/cv2.2/cv2.2.0/conv/Conv",
+        "/model.22/cv2.2/cv2.2.1/conv/Conv",
+        "/model.22/cv2.2/cv2.2.2/Conv",
+        "/model.22/cv3.0/cv3.0.0/conv/Conv",
+        "/model.22/cv3.0/cv3.0.1/conv/Conv",
+        "/model.22/cv3.0/cv3.0.2/Conv",
+        "/model.22/cv3.1/cv3.1.0/conv/Conv",
+        "/model.22/cv3.1/cv3.1.1/conv/Conv",
+        "/model.22/cv3.1/cv3.1.2/Conv",
+        "/model.22/cv3.2/cv3.2.0/conv/Conv",
+        "/model.22/cv3.2/cv3.2.1/conv/Conv",
+        "/model.22/cv3.2/cv3.2.2/Conv"
+      ],
+      "disjoint": true
+    },
+    "output_ancestry_policy": "branch ownership is established before shared downstream reachability; YOLO26 does not require disjoint final-output ancestry",
+    "source_to_export_policy": "exact normalized source-module match; fusion/renaming without explicit lineage is unresolved",
+    "branch_merge": {
+      "node": "/model.22/Concat_3",
+      "output": "output0",
+      "axis": 1,
+      "shape": [
+        1,
+        7,
+        8400
+      ],
+      "input_spans": [
+        {
+          "input": "/model.22/Mul_2_output_0",
+          "owner": "bbox",
+          "span": [
+            0,
+            4
+          ],
+          "shape": [
+            1,
+            4,
+            8400
+          ]
+        },
+        {
+          "input": "/model.22/Sigmoid_output_0",
+          "owner": "classification",
+          "span": [
+            4,
+            7
+          ],
+          "shape": [
+            1,
+            3,
+            8400
+          ]
+        }
+      ],
+      "expected_channel_spans": {
+        "bbox": [
+          0,
+          4
+        ],
+        "classification": [
+          4,
+          7
+        ]
+      },
+      "primary_output_reachability": [
+        "output0"
+      ],
+      "downstream_semantic_audit": {
+        "status": "verified",
+        "reached_primary_outputs": [
+          "output0"
+        ],
+        "visited_nodes": [],
+        "unresolved": [],
+        "policy": "shape is supporting evidence only; unrecognized reshape/transpose/slice/gather/topk semantics remain unresolved"
+      }
+    },
+    "mapping_hash": "378d82b8753ba2cb326c488c176ab1f64c885ff0a681f2ab96f61b368a0b74bb"
+  },
+  "adapter_limitations": {
+    "declared_contract": {
+      "model": "yolov8n",
+      "primary_output_shape": [
+        1,
+        7,
+        8400
+      ],
+      "output_kind": "decoded_raw_plus_head_dict",
+      "postprocess": "none_in_model_head_output",
+      "nms": "not_in_model_head_output",
+      "declared_contract": {
+        "primary_output_shape": [
+          1,
+          7,
+          8400
+        ],
+        "primary_output_dtype": "torch.float32",
+        "output_kind": "decoded_raw_plus_head_dict",
+        "postprocess": "none_in_model_head_output",
+        "nms": "not_in_model_head_output",
+        "debug_paths": [
+          "boxes",
+          "scores",
+          "feats"
+        ]
+      },
+      "observed_native_numeric_validation": false,
+      "real_forward_validation": "deferred_to_server_TensorRT_or_producer_forward",
+      "scored_adapter_status": "deferred_declared_contract_only_until_real_TensorRT_forward_and_native_parser_validation",
+      "double_nms_forbidden": true
+    },
+    "numeric_forward_observed": false,
+    "producer_forward_called": false,
+    "tensorrt_parser_or_build_called": false,
+    "calibration_loader_called": false,
+    "scored_run_authorized": false,
+    "semantic_boundary": "mapping evidence is structural; producer-output equivalence and numeric semantics remain deferred",
+    "recipe_boundary": "calibration preprocessing and producer trace remain unresolved"
+  },
+  "provenance": {
+    "source_root": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2",
+    "model_dir": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n",
+    "onnx": {
+      "before": {
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+        "exists": true,
+        "bytes": 12266841,
+        "sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+      },
+      "after": {
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+        "exists": true,
+        "bytes": 12266841,
+        "sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+      },
+      "unchanged_during_audit": true
+    },
+    "preserved_records": {
+      "models/yolov8n/model_prepare.json": {
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model_prepare.json",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model_prepare.json",
+        "exists": true,
+        "bytes": 60097,
+        "sha256": "7cad6c0728c0cc59f9cf15e2f025c99a1c9d7d90f9a884b24c2ba21896d97805",
+        "summary": {
+          "status": "completed",
+          "stage": null,
+          "error_type": null,
+          "error": null,
+          "partial_files": null,
+          "export": {
+            "reported_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/private/frozen_source.onnx",
+            "destination": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+            "requested_arguments": {
+              "format": "onnx",
+              "imgsz": 640,
+              "batch": 1,
+              "opset": 17,
+              "simplify": true,
+              "dynamic": false,
+              "half": false,
+              "device": "cpu",
+              "task": "detect"
+            },
+            "effective_arguments": {
+              "format": "onnx",
+              "imgsz": 640,
+              "batch": 1,
+              "opset": 17,
+              "simplify": true,
+              "dynamic": false,
+              "half": false,
+              "device": "cpu",
+              "task": "detect",
+              "actual_input_schema": [
+                {
+                  "name": "images",
+                  "shape": [
+                    1,
+                    3,
+                    640,
+                    640
+                  ],
+                  "dtype": "float32"
+                }
+              ],
+              "actual_output_schema": [
+                {
+                  "name": "output0",
+                  "shape": [
+                    1,
+                    7,
+                    8400
+                  ],
+                  "dtype": "float32"
+                }
+              ],
+              "actual_opset": 17,
+              "actual_static_shapes": true,
+              "actual_dynamic_shape_observed": false
+            },
+            "effective_arguments_status": "observed_from_exported_ONNX_schema; simplify_and_task_flags remain requested_only unless producer exposes them",
+            "head_end2end_before": false,
+            "head_end2end_after": false,
+            "model_device_before_export": "cpu",
+            "auto_install_guard": {
+              "YOLO_AUTOINSTALL": "0",
+              "ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS": "1",
+              "PIP_NO_INDEX": "1"
+            },
+            "source_weights_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+            "onnx_sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603",
+            "onnx_bytes": 12266841,
+            "export_arguments": {
+              "format": "onnx",
+              "imgsz": 640,
+              "batch": 1,
+              "opset": 17,
+              "simplify": true,
+              "dynamic": false,
+              "half": false,
+              "device": "cpu",
+              "task": "detect"
+            },
+            "preserved_end2end": false
+          },
+          "checkpoint": {
+            "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+            "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+            "bytes": 6260963,
+            "private_copy_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+          },
+          "no_silent_resume": null,
+          "scored_run_authorized": false
+        }
+      },
+      "prepare_plan.json": {
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/prepare_plan.json",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/prepare_plan.json",
+        "exists": true,
+        "bytes": 3857951,
+        "sha256": "6dabd3fa09a207a1cdac6b7986578058fa2bbd27a06c5a4d8eaa186d97ee91ea",
+        "summary": {
+          "status": "dispatching_model_children",
+          "stage": null,
+          "error_type": null,
+          "error": null,
+          "partial_files": null,
+          "export": null,
+          "checkpoint": null,
+          "no_silent_resume": null,
+          "scored_run_authorized": false
+        }
+      },
+      "failure.json": {
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/failure.json",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/failure.json",
+        "exists": true,
+        "bytes": 4572,
+        "sha256": "f67dbde40d339397b1a7c785a9801df17ad07bdf3afaeb10bffa40431c9a378d",
+        "summary": {
+          "status": "failed",
+          "stage": "child:yolo26n",
+          "error_type": "RuntimeError",
+          "error": "model child exited 1",
+          "partial_files": [
+            "logs/yolo26n.log",
+            "logs/yolov8n.log",
+            "models/yolo26n/failure.json",
+            "models/yolo26n/model.onnx",
+            "models/yolo26n/private/frozen_source.onnx",
+            "models/yolo26n/private/frozen_source.pt",
+            "models/yolov8n/graph_schema.json",
+            "models/yolov8n/model.onnx",
+            "models/yolov8n/model_prepare.json",
+            "models/yolov8n/private/frozen_source.onnx",
+            "models/yolov8n/private/frozen_source.pt",
+            "prepare_plan.json"
+          ],
+          "export": null,
+          "checkpoint": null,
+          "no_silent_resume": true,
+          "scored_run_authorized": false
+        }
+      },
+      "log": {
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/logs/yolov8n.log",
+        "absolute_path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/logs/yolov8n.log",
+        "exists": true,
+        "bytes": 1849,
+        "sha256": "4b84dd32b117f2152216ebbee5f95ef83b58b0881711798700cba7ca26df311e"
+      }
+    }
+  },
+  "audit_flags": {
+    "audit_only": true,
+    "export_performed": false,
+    "build_performed": false,
+    "capture_performed": false,
+    "scored_run_authorized": false
+  },
+  "created_utc": "2026-09-17T00:28:47.627107+00:00"
+}
