@@ -1,0 +1,1275 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_numeric_localization_v2",
+  "model": "yolov8n",
+  "image_id": "00009",
+  "status": "completed",
+  "numeric_status": "fail",
+  "strict_numeric_v2_verdict": "fail_preserved",
+  "runtime": {
+    "expected_from_config": {
+      "torch": "2.5.1+cu121",
+      "ultralytics": "8.4.102",
+      "numpy": "2.4.4",
+      "pycocotools": "2.0.10"
+    },
+    "observed": {
+      "torch": "2.5.1+cu121",
+      "ultralytics": "8.4.102",
+      "numpy": "2.4.4",
+      "onnxruntime": "1.24.4",
+      "pycocotools": "2.0.10"
+    },
+    "cuda_visible_devices": "-1",
+    "mode": "CPUExecutionProvider; CUDA hidden"
+  },
+  "producer_source_evidence": {
+    "inference_producer": [
+      {
+        "label": "ultralytics.data.loaders.imread",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/utils/patches.py",
+        "source_sha256": "74ca0c734016352aef39a340636814117cc80692c1d67640fb773d9ddf8d5978",
+        "source_bytes": 1356
+      },
+      {
+        "label": "ultralytics.data.augment.LetterBox.__init__",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "8462cf07d17034a0971f12ffb2f66074c2ffa538c98b1263efa21557b333be09",
+        "source_bytes": 1665
+      },
+      {
+        "label": "ultralytics.data.augment.LetterBox.get_params",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "79839dbd1b1bea969c49c0f5440f7de1c7677b4a03dffba8de0a36075fb412a5",
+        "source_bytes": 1877
+      },
+      {
+        "label": "ultralytics.data.augment.LetterBox.apply_image",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "cc1764596f98740609403e032a2ccf47a785059058ed55077b259d90c8dcd5e1",
+        "source_bytes": 1301
+      },
+      {
+        "label": "ultralytics.engine.predictor.BasePredictor.pre_transform",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/predictor.py",
+        "source_sha256": "a8afc59dbc2d158ea8c553fd7a6c8fb00107652127ad7765effa0d4b560cb6ba",
+        "source_bytes": 693
+      },
+      {
+        "label": "ultralytics.engine.predictor.BasePredictor.preprocess",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/predictor.py",
+        "source_sha256": "feee028f3d5d1ce1cd03a223331f44d712dc898606f3a3c3311b395d2c281fd7",
+        "source_bytes": 943
+      },
+      {
+        "label": "ultralytics.data.augment.Format._format_img",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "1fed3cb6c543c42d1a180c5c11e51bdaa39d12b1db06983b460426cd4ee9e031",
+        "source_bytes": 1272
+      }
+    ],
+    "calibration_producer_source": [
+      {
+        "label": "calibration helper source",
+        "module": "ultralytics.engine.exporter",
+        "path": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "sha256": "e00736ab18868bc66b4429b246d117d55714d78d7e674ee8e53dfc96ce2724e6",
+        "bytes": 85675
+      },
+      {
+        "label": "dataset source",
+        "module": "ultralytics.data.dataset",
+        "path": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/dataset.py",
+        "sha256": "2cc6156013aac5f631171fe5c93f03c69d4821fa0b44c8c6aad8d70cc22d0ed1",
+        "bytes": 51280
+      },
+      {
+        "label": "augmentation source",
+        "module": "ultralytics.data.augment",
+        "path": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "sha256": "f211edb54b7bc92a90f7e3e2faa886844ed8328c46d549d24a42e7c974dcde90",
+        "bytes": 137982
+      },
+      {
+        "label": "ultralytics.engine.exporter.Exporter.get_int8_calibration_dataloader",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "source_sha256": "c3083ef89201276d5ea73e217846a0ddcaeed92b4909f75a2545c4ef2016b44c",
+        "source_bytes": 2189
+      },
+      {
+        "label": "ultralytics.engine.exporter.Exporter.__init__",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "source_sha256": "703de664efcc94bd1e0125eb027d74ca96185d8af880efcc549403dbb3acd8d9",
+        "source_bytes": 579
+      },
+      {
+        "label": "ultralytics.engine.exporter.Exporter.export_onnx",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "source_sha256": "1d6dc7e396ae244fb10c65a3061b695f18d1d5090009060514b0e09ceb37792e",
+        "source_bytes": 999
+      },
+      {
+        "label": "ultralytics.data.dataset.YOLODataset.load_image",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/base.py",
+        "source_sha256": "92b174f9d47137bb9cc5d14618d88c8b4212345f26b48441141b922d341d112a",
+        "source_bytes": 3695
+      },
+      {
+        "label": "ultralytics.data.dataset.YOLODataset.build_transforms",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/dataset.py",
+        "source_sha256": "9d258d2fdbe6351f88243c2bcfb82ec8182e19c065414a9087ee04c3cc0f3691",
+        "source_bytes": 1214
+      },
+      {
+        "label": "ultralytics.data.build.build_yolo_dataset",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/build.py",
+        "source_sha256": "cc30939a9a049a201481a43b84f1b41eea32f0e68bfe57aba3bbada5c9433e49",
+        "source_bytes": 1346
+      },
+      {
+        "label": "ultralytics.data.augment.Format._format_img",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "1fed3cb6c543c42d1a180c5c11e51bdaa39d12b1db06983b460426cd4ee9e031",
+        "source_bytes": 1272
+      },
+      {
+        "label": "repository calibration helper",
+        "path": "scripts/uniform_build_repeat.py"
+      }
+    ],
+    "calibration_loader_called": false,
+    "calibration_component_called": true,
+    "calibration_recipe_status": "source_inspected_scoped_image_trace; calibration loader dispatch forbidden",
+    "export_semantics_status": "accepted_settings_and_observed_ONNX_schema_recorded; native_reference_is_not_an_export_copy"
+  },
+  "onnx_original_session": {
+    "providers_observed": [
+      "CPUExecutionProvider"
+    ],
+    "providers_requested": [
+      "CPUExecutionProvider"
+    ],
+    "output_names": [
+      "output0"
+    ],
+    "session_output_names": [
+      "output0"
+    ]
+  },
+  "onnx_accepted": {
+    "before": {
+      "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 12266841,
+      "sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+    },
+    "after": {
+      "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 12266841,
+      "sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+    },
+    "unchanged": true
+  },
+  "checkpoint": {
+    "before": {
+      "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 6260963,
+      "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+    },
+    "after": {
+      "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 6260963,
+      "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+    },
+    "unchanged": true
+  },
+  "fixture_binding": {
+    "source": {
+      "path": "data/processed/cctsdb2021_clean/train/images/00009.jpg",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 120736,
+      "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+    },
+    "materialized": {
+      "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00009.jpg",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 120736,
+      "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+    }
+  },
+  "preprocess_trace": {
+    "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00009.jpg",
+    "decoded": {
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "dtype": "uint8",
+      "color_order": "BGR",
+      "bytes_sha256": "013a1c555169475a19c8cee71195cb0227516be591e0be33f31a59c9af2fe057"
+    },
+    "letterbox": {
+      "new_shape": [
+        640,
+        640
+      ],
+      "auto": false,
+      "scale_fill": false,
+      "scaleup": true,
+      "center": true,
+      "stride": 32,
+      "padding_value": 114,
+      "interpolation": 1,
+      "orig_shape": [
+        720,
+        1280
+      ],
+      "ratio": [
+        0.5,
+        0.5
+      ],
+      "new_unpad": [
+        640,
+        360
+      ],
+      "padding": {
+        "top": 140,
+        "bottom": 140,
+        "left": 0,
+        "right": 0
+      }
+    },
+    "transformed": {
+      "shape": [
+        640,
+        640,
+        3
+      ],
+      "dtype": "uint8",
+      "bytes_sha256": "19195c3a6f4543d8b581d4d3bcb365fda1120daeea31fa1fddf269405c34b0c5"
+    },
+    "tensor": {
+      "shape": [
+        1,
+        3,
+        640,
+        640
+      ],
+      "dtype": "float32",
+      "range": [
+        0.0,
+        1.0
+      ],
+      "bytes_sha256": "357c0cc87ea2b4bfa56c1eca53bd54f5970bc1ea67b660d293a8bc4a9f62a9f0"
+    },
+    "original_image_size_hw": [
+      720,
+      1280
+    ],
+    "operations": [
+      "decode pinned BGR",
+      "LetterBox via BasePredictor.pre_transform",
+      "BGR_to_RGB",
+      "BHWC_to_BCHW",
+      "contiguous",
+      "uint8_to_float32",
+      "divide_by_255",
+      "batch_axis"
+    ],
+    "same_tensor_for_source_and_onnx": true
+  },
+  "native_head_contract": {
+    "head": {
+      "type": "Detect",
+      "index": 22,
+      "end2end": false
+    },
+    "parameters_dtype": "torch.float32",
+    "float_explicit": true
+  },
+  "native_output_contract": {
+    "representation": "tuple_tensor_plus_dict",
+    "debug_keys": [
+      "boxes",
+      "scores",
+      "feats"
+    ],
+    "shape": [
+      1,
+      7,
+      8400
+    ],
+    "dtype": "torch.float32"
+  },
+  "native_preselection_capture": {
+    "capture_site": "ordinary native forward primary tensor",
+    "branch": "raw_debug_plus_decoded_primary",
+    "primary": {
+      "role": "yolov8n native primary",
+      "shape": [
+        1,
+        7,
+        8400
+      ],
+      "dtype": "float32",
+      "element_count": 58800,
+      "finite_count": 58800,
+      "zero_count": 0,
+      "sha256": "a44b379cbdc050e6bcb2f2dd3d145c5b0021de6396a97110f78a7fa5ba4dca26",
+      "min": -20.639019012451172,
+      "max": 637.907470703125,
+      "p50": 13.618438720703125,
+      "mean": 105.28600311279297
+    },
+    "decoded": {
+      "boxes": {
+        "role": "yolov8n native decoded boxes",
+        "shape": [
+          1,
+          8400,
+          4
+        ],
+        "dtype": "float32",
+        "element_count": 33600,
+        "finite_count": 33600,
+        "zero_count": 0,
+        "sha256": "6b49943d37bac2136416cb85b414fce374f14bd1dafdb86c4eb7dc33364bab67",
+        "min": -20.639019012451172,
+        "max": 637.907470703125,
+        "p50": 82.89219665527344,
+        "mean": 184.25030517578125
+      },
+      "class_probabilities": {
+        "role": "yolov8n native class probabilities",
+        "shape": [
+          1,
+          8400,
+          3
+        ],
+        "dtype": "float32",
+        "element_count": 25200,
+        "finite_count": 25200,
+        "zero_count": 0,
+        "sha256": "995f98a496f2d2c2214cf786f60b8e32f0fe523570cef6c4c315578b3aed417c",
+        "min": 1.972261517132459e-21,
+        "max": 0.903899610042572,
+        "p50": 4.767532590932433e-09,
+        "mean": 0.00023534019419457763
+      }
+    },
+    "box_format": "xywh",
+    "coordinate_space": "640x640 input pixels",
+    "score_semantics": "native primary post-sigmoid class probabilities",
+    "flags": {
+      "end2end": false,
+      "agnostic_nms": false,
+      "single_cls": false,
+      "export": false,
+      "dynamic": false,
+      "xyxy": false,
+      "nc": 3,
+      "max_det": 300,
+      "reg_max": 16
+    },
+    "raw_debug": {
+      "raw_box_parameters": {
+        "role": "yolov8n native raw box parameters",
+        "shape": [
+          1,
+          64,
+          8400
+        ],
+        "dtype": "float32",
+        "element_count": 537600,
+        "finite_count": 537600,
+        "zero_count": 0,
+        "sha256": "e9c1bc1dc41a8e8647c3293bc6049ece4ba62d74a9258aa8bbb5f802f3c3cf76",
+        "min": -44.56684875488281,
+        "max": 44.704410552978516,
+        "p50": -0.0590067133307457,
+        "mean": 0.9976697564125061
+      },
+      "raw_class_logits": {
+        "role": "yolov8n native raw class logits",
+        "shape": [
+          1,
+          3,
+          8400
+        ],
+        "dtype": "float32",
+        "element_count": 25200,
+        "finite_count": 25200,
+        "zero_count": 0,
+        "sha256": "007b11444bac969b91cfac4eef131dee229944955f711dc8f5825797e33550f8",
+        "min": -47.675106048583984,
+        "max": 2.2413246631622314,
+        "p50": -19.16143798828125,
+        "mean": -19.380998611450195
+      },
+      "feature_maps": [
+        {
+          "index": 0,
+          "shape": [
+            1,
+            64,
+            80,
+            80
+          ],
+          "dtype": "float32",
+          "finite": true,
+          "sha256": "6da4203d5512c67e98e0a37f87702970a31f8850e16e2ad868bd7352e46f37e8"
+        },
+        {
+          "index": 1,
+          "shape": [
+            1,
+            128,
+            40,
+            40
+          ],
+          "dtype": "float32",
+          "finite": true,
+          "sha256": "ee5ef911212fb72618d9e7574a5e4c94c4ce2beb1e76662b392298e9e59e83a2"
+        },
+        {
+          "index": 2,
+          "shape": [
+            1,
+            256,
+            20,
+            20
+          ],
+          "dtype": "float32",
+          "finite": true,
+          "sha256": "eb2ecdd144a1d73479d5fb3c7784f6d30784ccf349a40f2c3e8e24d6891e458c"
+        }
+      ],
+      "raw_roles": {
+        "boxes": "regression parameters before installed DFL/anchor/stride decoder",
+        "scores": "class logits before installed sigmoid",
+        "feats": "retained head feature maps"
+      }
+    },
+    "decoder_replay": {
+      "attempted": 0,
+      "completed": 0
+    },
+    "postprocess_replay": {
+      "attempted": 0,
+      "completed": 0
+    },
+    "method_evidence": {
+      "forward_head": {
+        "label": "ultralytics.nn.modules.head.Detect.forward_head",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+        "source_sha256": "8cd3f8b729baea3855d6865682ebe685dd67b69cfbe5e29e44b1d1c5236ca9a8",
+        "source_bytes": 657
+      },
+      "_inference": {
+        "label": "ultralytics.nn.modules.head.Detect._inference",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+        "source_sha256": "b279d22be88b8ccbc0d06d18ccacfbe9f4fa596c34f03a9a83b30481b6f5ad89",
+        "source_bytes": 534
+      },
+      "_get_decode_boxes": {
+        "label": "ultralytics.nn.modules.head.Detect._get_decode_boxes",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+        "source_sha256": "99c619bf82f7716eda5fbd0a4fad35213e342baddbb988799a1c6f27be1c36a2",
+        "source_bytes": 494
+      },
+      "decode_bboxes": {
+        "label": "ultralytics.nn.modules.head.Detect.decode_bboxes",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+        "source_sha256": "c5ef7989f19fb0a1bc7b3cb0abf553744a52255e212eb23b13003c2e6baaadeb",
+        "source_bytes": 321
+      },
+      "postprocess": {
+        "label": "ultralytics.nn.modules.head.Detect.postprocess",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+        "source_sha256": "0e95f5cec7c54e1effb27111e3d41fbc541f684276edfca0d1343395f0aba68b",
+        "source_bytes": 768
+      },
+      "get_topk_index": {
+        "label": "ultralytics.nn.modules.head.Detect.get_topk_index",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+        "source_sha256": "81455f3f421330e577aa73c49bf00c4a20e432a9328431d8dad76eea8b4d1f33",
+        "source_bytes": 1387
+      }
+    },
+    "semantic_admissibility": {
+      "status": "native_self_consistency_pass",
+      "cross_side_endpoints": "pending_onnx_invariance"
+    }
+  },
+  "analysis": {
+    "historical_offender_indices": [
+      {
+        "index": [
+          0,
+          1,
+          8004
+        ],
+        "box": {
+          "reference": 0.022602081298828125,
+          "observed": 0.022617340087890625,
+          "absolute_error": 1.52587890625e-05,
+          "allowed_error": 1.2260208129882813e-05,
+          "error_allowance_ratio": 1.2445783057555524,
+          "status": "fail"
+        },
+        "anchor_class_scores": [
+          {
+            "class_index": 0,
+            "reference": 8.650047900182756e-10,
+            "observed": 0.0,
+            "absolute_error": 8.650047900182756e-10,
+            "allowed_error": 1.000000008650048e-05,
+            "error_allowance_ratio": 8.650047825359428e-05,
+            "status": "pass"
+          },
+          {
+            "class_index": 1,
+            "reference": 8.704431619932507e-10,
+            "observed": 0.0,
+            "absolute_error": 8.704431619932507e-10,
+            "allowed_error": 1.0000000087044317e-05,
+            "error_allowance_ratio": 8.704431544165377e-05,
+            "status": "pass"
+          },
+          {
+            "class_index": 2,
+            "reference": 8.654403860219873e-10,
+            "observed": 0.0,
+            "absolute_error": 8.654403860219873e-10,
+            "allowed_error": 1.0000000086544039e-05,
+            "error_allowance_ratio": 8.654403785321167e-05,
+            "status": "pass"
+          }
+        ]
+      },
+      {
+        "index": [
+          0,
+          1,
+          8014
+        ],
+        "box": {
+          "reference": 0.06961441040039062,
+          "observed": 0.0695953369140625,
+          "absolute_error": 1.9073486328125e-05,
+          "allowed_error": 1.6961441040039063e-05,
+          "error_allowance_ratio": 1.1245203920527895,
+          "status": "fail"
+        },
+        "anchor_class_scores": [
+          {
+            "class_index": 0,
+            "reference": 3.293304240425954e-10,
+            "observed": 0.0,
+            "absolute_error": 3.293304240425954e-10,
+            "allowed_error": 1.0000000032933043e-05,
+            "error_allowance_ratio": 3.293304229580101e-05,
+            "status": "pass"
+          },
+          {
+            "class_index": 1,
+            "reference": 3.3007058197753736e-10,
+            "observed": 0.0,
+            "absolute_error": 3.3007058197753736e-10,
+            "allowed_error": 1.0000000033007059e-05,
+            "error_allowance_ratio": 3.3007058088807145e-05,
+            "status": "pass"
+          },
+          {
+            "class_index": 2,
+            "reference": 3.3027336421298514e-10,
+            "observed": 0.0,
+            "absolute_error": 3.3027336421298514e-10,
+            "allowed_error": 1.0000000033027337e-05,
+            "error_allowance_ratio": 3.302733631221802e-05,
+            "status": "pass"
+          }
+        ]
+      }
+    ],
+    "strict_rerun_comparison": {
+      "status": "fail",
+      "domain": "yolov8n_raw_primary_fixed_channel_spans",
+      "shape": [
+        1,
+        7,
+        8400
+      ],
+      "channel_spans": {
+        "boxes": [
+          0,
+          4
+        ],
+        "scores": [
+          4,
+          7
+        ]
+      },
+      "channel_results": {
+        "boxes": {
+          "status": "fail",
+          "domain": "yolov8n_raw_boxes_channels",
+          "shape": [
+            1,
+            4,
+            8400
+          ],
+          "dtype": "float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "mismatch_count": 2,
+          "element_count": 33600,
+          "max_abs": 0.00054931640625,
+          "max_relative": 0.0006751054852320675,
+          "relative_infinite_count": 0,
+          "abs_quantiles": {
+            "element_count": 33600,
+            "finite_count": 33600,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 0.0,
+            "p95": 6.103515625e-05,
+            "p99": 0.00018310546875,
+            "max": 0.00054931640625
+          },
+          "relative_quantiles": {
+            "element_count": 33600,
+            "finite_count": 33600,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 0.0,
+            "p95": 2.104261584994951e-06,
+            "p99": 3.859798231701953e-06,
+            "max": 0.0006751054852320675
+          },
+          "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+          "first_offenders": [
+            [
+              0,
+              1,
+              8004
+            ],
+            [
+              0,
+              1,
+              8014
+            ]
+          ]
+        },
+        "scores": {
+          "status": "pass",
+          "domain": "yolov8n_raw_score_channels",
+          "shape": [
+            1,
+            3,
+            8400
+          ],
+          "dtype": "float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "mismatch_count": 0,
+          "element_count": 25200,
+          "max_abs": 1.1324882507324219e-06,
+          "max_relative": 5.7383719496477354,
+          "relative_infinite_count": 0,
+          "abs_quantiles": {
+            "element_count": 25200,
+            "finite_count": 25200,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 3.777072210553456e-09,
+            "p95": 4.7237512745823534e-08,
+            "p99": 7.201481562191245e-08,
+            "max": 1.1324882507324219e-06
+          },
+          "relative_quantiles": {
+            "element_count": 25200,
+            "finite_count": 25200,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 1.0,
+            "p95": 1.0,
+            "p99": 2.046355972117281,
+            "max": 5.7383719496477354
+          },
+          "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+          "first_offenders": []
+        }
+      },
+      "mismatch_count": 2,
+      "element_count": 58800,
+      "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+    },
+    "all_new_mismatches": {
+      "box_mismatch_count": 2,
+      "score_mismatch_count": 0,
+      "total_mismatch_count": 2,
+      "first_box_offenders": [
+        [
+          0,
+          1,
+          8004
+        ],
+        [
+          0,
+          1,
+          8014
+        ]
+      ],
+      "first_score_offenders": []
+    },
+    "interpretation_boundary": "scalar and channel evidence is supplemental; the numeric_v2 strict FAIL remains unchanged",
+    "historical_numeric_v2_record": {
+      "selection": "U42",
+      "manifest_order": 1,
+      "image": "train/images/00009.jpg",
+      "image_id": "00009",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "357c0cc87ea2b4bfa56c1eca53bd54f5970bc1ea67b660d293a8bc4a9f62a9f0"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "a44b379cbdc050e6bcb2f2dd3d145c5b0021de6396a97110f78a7fa5ba4dca26"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "9e4eb1efe425845bc2cac9ad2c0751fb209120fee82305649d2b813d732c67ec"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "fail",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "fail",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 2,
+            "element_count": 33600,
+            "max_abs": 0.00054931640625,
+            "max_relative": 0.0006751054852320675,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 6.103515625e-05,
+              "p99": 0.00018310546875,
+              "max": 0.00054931640625
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 2.104261584994951e-06,
+              "p99": 3.859798231701953e-06,
+              "max": 0.0006751054852320675
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": [
+              [
+                0,
+                1,
+                8004
+              ],
+              [
+                0,
+                1,
+                8014
+              ]
+            ]
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 1.1324882507324219e-06,
+            "max_relative": 5.7383719496477354,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 3.777072210553456e-09,
+              "p95": 4.7237512745823534e-08,
+              "p99": 7.201481562191245e-08,
+              "max": 1.1324882507324219e-06
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 2.046355972117281,
+              "max": 5.7383719496477354
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 2,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    },
+    "native_preselection": {
+      "boxes": {
+        "role": "native decoded box tensor",
+        "shape": [
+          1,
+          8400,
+          4
+        ],
+        "dtype": "float32",
+        "element_count": 33600,
+        "finite_count": 33600,
+        "zero_count": 0,
+        "sha256": "6b49943d37bac2136416cb85b414fce374f14bd1dafdb86c4eb7dc33364bab67",
+        "min": -20.639019012451172,
+        "max": 637.907470703125,
+        "p50": 82.89219665527344,
+        "mean": 184.25030517578125
+      },
+      "class_probabilities": {
+        "role": "native post-sigmoid class probability tensor",
+        "shape": [
+          1,
+          8400,
+          3
+        ],
+        "dtype": "float32",
+        "element_count": 25200,
+        "finite_count": 25200,
+        "zero_count": 0,
+        "sha256": "995f98a496f2d2c2214cf786f60b8e32f0fe523570cef6c4c315578b3aed417c",
+        "min": 1.972261517132459e-21,
+        "max": 0.903899610042572,
+        "p50": 4.767532590932433e-09,
+        "mean": 0.00023534019419457763
+      },
+      "semantic_adapter": {
+        "capture_site": "ordinary native forward primary tensor",
+        "branch": "raw_debug_plus_decoded_primary",
+        "primary": {
+          "role": "yolov8n native primary",
+          "shape": [
+            1,
+            7,
+            8400
+          ],
+          "dtype": "float32",
+          "element_count": 58800,
+          "finite_count": 58800,
+          "zero_count": 0,
+          "sha256": "a44b379cbdc050e6bcb2f2dd3d145c5b0021de6396a97110f78a7fa5ba4dca26",
+          "min": -20.639019012451172,
+          "max": 637.907470703125,
+          "p50": 13.618438720703125,
+          "mean": 105.28600311279297
+        },
+        "decoded": {
+          "boxes": {
+            "role": "yolov8n native decoded boxes",
+            "shape": [
+              1,
+              8400,
+              4
+            ],
+            "dtype": "float32",
+            "element_count": 33600,
+            "finite_count": 33600,
+            "zero_count": 0,
+            "sha256": "6b49943d37bac2136416cb85b414fce374f14bd1dafdb86c4eb7dc33364bab67",
+            "min": -20.639019012451172,
+            "max": 637.907470703125,
+            "p50": 82.89219665527344,
+            "mean": 184.25030517578125
+          },
+          "class_probabilities": {
+            "role": "yolov8n native class probabilities",
+            "shape": [
+              1,
+              8400,
+              3
+            ],
+            "dtype": "float32",
+            "element_count": 25200,
+            "finite_count": 25200,
+            "zero_count": 0,
+            "sha256": "995f98a496f2d2c2214cf786f60b8e32f0fe523570cef6c4c315578b3aed417c",
+            "min": 1.972261517132459e-21,
+            "max": 0.903899610042572,
+            "p50": 4.767532590932433e-09,
+            "mean": 0.00023534019419457763
+          }
+        },
+        "box_format": "xywh",
+        "coordinate_space": "640x640 input pixels",
+        "score_semantics": "native primary post-sigmoid class probabilities",
+        "flags": {
+          "end2end": false,
+          "agnostic_nms": false,
+          "single_cls": false,
+          "export": false,
+          "dynamic": false,
+          "xyxy": false,
+          "nc": 3,
+          "max_det": 300,
+          "reg_max": 16
+        },
+        "raw_debug": {
+          "raw_box_parameters": {
+            "role": "yolov8n native raw box parameters",
+            "shape": [
+              1,
+              64,
+              8400
+            ],
+            "dtype": "float32",
+            "element_count": 537600,
+            "finite_count": 537600,
+            "zero_count": 0,
+            "sha256": "e9c1bc1dc41a8e8647c3293bc6049ece4ba62d74a9258aa8bbb5f802f3c3cf76",
+            "min": -44.56684875488281,
+            "max": 44.704410552978516,
+            "p50": -0.0590067133307457,
+            "mean": 0.9976697564125061
+          },
+          "raw_class_logits": {
+            "role": "yolov8n native raw class logits",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "element_count": 25200,
+            "finite_count": 25200,
+            "zero_count": 0,
+            "sha256": "007b11444bac969b91cfac4eef131dee229944955f711dc8f5825797e33550f8",
+            "min": -47.675106048583984,
+            "max": 2.2413246631622314,
+            "p50": -19.16143798828125,
+            "mean": -19.380998611450195
+          },
+          "feature_maps": [
+            {
+              "index": 0,
+              "shape": [
+                1,
+                64,
+                80,
+                80
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "sha256": "6da4203d5512c67e98e0a37f87702970a31f8850e16e2ad868bd7352e46f37e8"
+            },
+            {
+              "index": 1,
+              "shape": [
+                1,
+                128,
+                40,
+                40
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "sha256": "ee5ef911212fb72618d9e7574a5e4c94c4ce2beb1e76662b392298e9e59e83a2"
+            },
+            {
+              "index": 2,
+              "shape": [
+                1,
+                256,
+                20,
+                20
+              ],
+              "dtype": "float32",
+              "finite": true,
+              "sha256": "eb2ecdd144a1d73479d5fb3c7784f6d30784ccf349a40f2c3e8e24d6891e458c"
+            }
+          ],
+          "raw_roles": {
+            "boxes": "regression parameters before installed DFL/anchor/stride decoder",
+            "scores": "class logits before installed sigmoid",
+            "feats": "retained head feature maps"
+          }
+        },
+        "decoder_replay": {
+          "attempted": 0,
+          "completed": 0
+        },
+        "postprocess_replay": {
+          "attempted": 0,
+          "completed": 0
+        },
+        "method_evidence": {
+          "forward_head": {
+            "label": "ultralytics.nn.modules.head.Detect.forward_head",
+            "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+            "source_sha256": "8cd3f8b729baea3855d6865682ebe685dd67b69cfbe5e29e44b1d1c5236ca9a8",
+            "source_bytes": 657
+          },
+          "_inference": {
+            "label": "ultralytics.nn.modules.head.Detect._inference",
+            "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+            "source_sha256": "b279d22be88b8ccbc0d06d18ccacfbe9f4fa596c34f03a9a83b30481b6f5ad89",
+            "source_bytes": 534
+          },
+          "_get_decode_boxes": {
+            "label": "ultralytics.nn.modules.head.Detect._get_decode_boxes",
+            "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+            "source_sha256": "99c619bf82f7716eda5fbd0a4fad35213e342baddbb988799a1c6f27be1c36a2",
+            "source_bytes": 494
+          },
+          "decode_bboxes": {
+            "label": "ultralytics.nn.modules.head.Detect.decode_bboxes",
+            "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+            "source_sha256": "c5ef7989f19fb0a1bc7b3cb0abf553744a52255e212eb23b13003c2e6baaadeb",
+            "source_bytes": 321
+          },
+          "postprocess": {
+            "label": "ultralytics.nn.modules.head.Detect.postprocess",
+            "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+            "source_sha256": "0e95f5cec7c54e1effb27111e3d41fbc541f684276edfca0d1343395f0aba68b",
+            "source_bytes": 768
+          },
+          "get_topk_index": {
+            "label": "ultralytics.nn.modules.head.Detect.get_topk_index",
+            "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/nn/modules/head.py",
+            "source_sha256": "81455f3f421330e577aa73c49bf00c4a20e432a9328431d8dad76eea8b4d1f33",
+            "source_bytes": 1387
+          }
+        },
+        "semantic_admissibility": {
+          "status": "native_self_consistency_pass",
+          "cross_side_endpoints": "pending_onnx_invariance"
+        }
+      },
+      "semantic_validation": {
+        "status": "native_self_consistency_pass",
+        "validated": true
+      },
+      "selection_stage": "not_applicable; YOLOv8 accepted primary is decoded fixed-anchor output"
+    },
+    "onnx_preselection": {
+      "boxes": {
+        "role": "ONNX decoded box tensor",
+        "shape": [
+          1,
+          8400,
+          4
+        ],
+        "dtype": "float32",
+        "element_count": 33600,
+        "finite_count": 33600,
+        "zero_count": 0,
+        "sha256": "bacc88d69ff46d41c21e3886006ed1fecc85880b1945ac4e499584455e0a0738",
+        "min": -20.639019012451172,
+        "max": 637.907470703125,
+        "p50": 82.89215850830078,
+        "mean": 184.25030517578125
+      },
+      "class_probabilities": {
+        "role": "ONNX post-sigmoid class probability tensor",
+        "shape": [
+          1,
+          8400,
+          3
+        ],
+        "dtype": "float32",
+        "element_count": 25200,
+        "finite_count": 25200,
+        "zero_count": 18206,
+        "sha256": "d7c6ec00bf8ad3b48c51276608b2fd5342790bcdbac02020974700638336a40f",
+        "min": 0.0,
+        "max": 0.9038995504379272,
+        "p50": 0.0,
+        "mean": 0.00023533965577371418
+      },
+      "score_semantics": "accepted ONNX output class probabilities",
+      "selection_stage": "not_applicable"
+    }
+  },
+  "private_artifacts": [],
+  "forward_counts": {
+    "native_model_forwards": {
+      "attempted": 1,
+      "completed": 1
+    },
+    "native_decoder_replays": {
+      "attempted": 0,
+      "completed": 0
+    },
+    "native_postprocess_replays": {
+      "attempted": 0,
+      "completed": 0
+    },
+    "onnx_original_session_runs": {
+      "attempted": 1,
+      "completed": 1
+    },
+    "onnx_derived_session_runs": {
+      "attempted": 0,
+      "completed": 0
+    }
+  },
+  "lifecycle": {
+    "status": "completed",
+    "stage": "completed",
+    "stage_history": [
+      {
+        "sequence": 0,
+        "stage": "child_started"
+      },
+      {
+        "sequence": 1,
+        "stage": "runtime_loading"
+      },
+      {
+        "sequence": 2,
+        "stage": "runtime_loaded"
+      },
+      {
+        "sequence": 3,
+        "stage": "binary_binding"
+      },
+      {
+        "sequence": 4,
+        "stage": "preprocessed",
+        "image": "train/images/00009.jpg"
+      },
+      {
+        "sequence": 5,
+        "stage": "head_validated",
+        "head": {
+          "type": "Detect",
+          "index": 22,
+          "end2end": false
+        }
+      },
+      {
+        "sequence": 6,
+        "stage": "native_forward_complete"
+      },
+      {
+        "sequence": 7,
+        "stage": "original_onnx_complete"
+      },
+      {
+        "sequence": 8,
+        "stage": "completed"
+      }
+    ],
+    "forward_counts": {
+      "native_model_forwards": {
+        "attempted": 1,
+        "completed": 1
+      },
+      "native_decoder_replays": {
+        "attempted": 0,
+        "completed": 0
+      },
+      "native_postprocess_replays": {
+        "attempted": 0,
+        "completed": 0
+      },
+      "onnx_original_session_runs": {
+        "attempted": 1,
+        "completed": 1
+      },
+      "onnx_derived_session_runs": {
+        "attempted": 0,
+        "completed": 0
+      }
+    }
+  },
+  "audit_flags": {
+    "export_performed": false,
+    "tensorRT_imported": false,
+    "accepted_onnx_modified": false,
+    "gpu_used": false,
+    "scored_run_authorized": false,
+    "matrix_opened": false
+  },
+  "created_utc": "2026-09-17T15:43:33.983373+00:00"
+}
