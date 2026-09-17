@@ -2637,3 +2637,112 @@ chọn kết quả tốt nhất.
 
 Chưa mở TensorRT, scored matrix, official test hoặc study mới. Sau hậu kiểm,
 Luna sẽ ghi artifact-audit addendum tiếp theo để Astra review.
+
+### Artifact-audit addendum — commit `5f1a472`
+
+Đã pull canonical Git commit
+`5f1a472f463cb1f2ec660d98a54bb84d23a3cec0` và hoàn tất hậu kiểm read-only.
+Trạng thái chuyển thành `artifact_audited` với validity
+`validity_checks_passed; scientific_assessment_descriptive`.
+
+#### Inventory, provenance và lifecycle
+
+- Manifest inventory khớp **13/13 file** publishable; không có private tensor,
+  weights hoặc ONNX được publish trong output root.
+- `bridge_plan.repo_head` khớp commit dispatch
+  `b2a1ac0d9f81c792729bedff5e7f08aa1280d84b`; study, output root, config,
+  accepted graph/readiness bindings và canonical dev order khớp protocol.
+- Có đúng 1.636 native records, 1.636 ONNX records và 1.636 preprocess traces
+  cho mỗi model. Native/ONNX dùng cùng image order, image bytes/hash, tensor
+  shape/dtype/hash và preprocess trace; 2 model có tổng 6.544 ordinary calls.
+- Native/ONNX output contract đúng: YOLOv8n `[1,7,8400]`, YOLO26n
+  `[1,300,6]`; route v8 class-aware NMS và route v26 end-to-end filtering
+  đúng application contract. Detection payload, class IDs, confidence, box
+  shape và original-image coordinate contract đều hợp lệ.
+- Mỗi model có 1.636 native + 1.636 ONNX completed; finite checks là 0/1.636
+  lỗi ở cả hai phía. ORT requested/observed đúng
+  `CPUExecutionProvider`; `CUDA_VISIBLE_DEVICES=-1`, CPU thread/options và
+  package versions được ghi trong report. Danh sách provider khả dụng có
+  TensorRT/CUDA nhưng không phải provider được session sử dụng.
+- XML trong plan và cả hai metric reports cùng hash
+  `35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329`, đúng
+  2.706 instances/1.636 images. Checkpoint và accepted ONNX đều có
+  `before == after`; hashes server-side khớp accepted values:
+
+| Model | Checkpoint SHA256 | Accepted ONNX SHA256 |
+|---|---|---|
+| YOLOv8n | `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b` | `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603` |
+| YOLO26n | `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e` | `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc` |
+
+Canonical Git checkpoint blobs tại local cũng khớp hai checkpoint hashes trên.
+Accepted ONNX không nằm trong canonical Git/local checkout theo policy; vì
+vậy tính bất biến của ONNX được xác nhận bằng `before/after` và expected hash
+được ghi trong server report, không tuyên bố đã đọc lại binary ONNX local.
+
+#### Ordered output và prediction counts
+
+| Model | Native/ONNX predictions | Exact ordered detection payload | Count equal | Class sequence equal | Ordered payload khác |
+|---|---:|---:|---:|---:|---:|
+| YOLOv8n | 6504 / 6504 | 41 / 1636 | 1636 / 1636 | 1636 / 1636 | 1595 / 1636 |
+| YOLO26n | 5373 / 5373 | 79 / 1636 | 1636 / 1636 | 1636 / 1636 | 1557 / 1636 |
+
+Các khác biệt ordered chủ yếu phản ánh sai khác số thực trong payload; không
+có khác biệt count hoặc class sequence. Không rematching, sorting hậu nghiệm
+hay thay thế AP estimator được dùng.
+
+#### AP descriptive drift (AP units [0,1], ONNX − native)
+
+| Model | Bin | Native AP50 / AP50-95 | ONNX AP50 / AP50-95 | Delta AP50 / AP50-95 |
+|---|---|---:|---:|---:|
+| YOLOv8n | all | 0.968057805782 / 0.754885658417 | 0.968057805782 / 0.754885749397 | `+0 / +9.097978e-08` |
+| YOLOv8n | XS | 0.687391271343 / 0.274834095099 | 0.687391271343 / 0.274834095099 | `+0 / +0` |
+| YOLOv8n | S | 0.979432183266 / 0.677288193572 | 0.979432183266 / 0.677288193572 | `+0 / +0` |
+| YOLOv8n | M | 0.988774983345 / 0.770696617041 | 0.988774983345 / 0.770696617041 | `+0 / +0` |
+| YOLOv8n | L | 0.990475173843 / 0.838805169734 | 0.990475173843 / 0.838805169734 | `+0 / +0` |
+| YOLOv8n | XL | 0.987955330913 / 0.888986700430 | 0.987955330913 / 0.888986700430 | `+0 / +0` |
+| YOLO26n | all | 0.973543911896 / 0.765956452207 | 0.973543911896 / 0.765956346028 | `+0 / -1.061789e-07` |
+| YOLO26n | XS | 0.766201682734 / 0.376776502855 | 0.766201682734 / 0.376776502855 | `+0 / +0` |
+| YOLO26n | S | 0.972581586884 / 0.685342870037 | 0.972581586884 / 0.685342870037 | `+0 / +0` |
+| YOLO26n | M | 0.988501955262 / 0.774331084623 | 0.988501955262 / 0.774331084623 | `+0 / +0` |
+| YOLO26n | L | 0.989959600685 / 0.836824739140 | 0.989959600685 / 0.836824739140 | `+0 / +0` |
+| YOLO26n | XL | 0.986944229435 / 0.884645295658 | 0.986944229435 / 0.884645295658 | `+0 / +0` |
+
+Signed deltas được tính lại độc lập từ canonical model reports và khớp toàn bộ
+12 bins. Không đặt equivalence threshold, không gắn nhãn PASS khoa học và
+không thay thế numeric/localization strict `FAIL` trước đó.
+
+#### Canonical Git artifact hashes
+
+Các SHA256 dưới đây được tính trên bytes canonical từ `git show HEAD:path`,
+không reserialize JSON. Working-tree bytes local có khác line ending do CRLF;
+đây là khác biệt representation đã được giữ nguyên, không phải thay đổi nội
+dung artifact.
+
+| Artifact | Bytes | Canonical SHA256 |
+|---|---:|---|
+| `bridge_manifest.json` | 3084139 | `ddfdb83621dcd1bb3972363a8debeb9cd09e203f9e3f96babbcec29fd9000bb6` |
+| `bridge_plan.json` | 861104 | `cca902109c8a832ab548532afe8e2954ccadc7227449af6dbdae124d4ccf84cf` |
+| `logs/yolo26n.log` | 769 | `b2e0a68f21f588c396f6956731c295176175a0af01ebb85dc72aad05e9c3be96` |
+| `logs/yolov8n.log` | 769 | `e80ad2209caf178d3da84eff77d49b62aadb4f9c4ecd8945dcfb9c0399c27f11` |
+| `models/yolo26n/model_report.json` | 1300549 | `494ba8f7b48d87df34bdf9c6b1356195e8385eea2881e7e2f096274a49a354d7` |
+| `models/yolo26n/native_records.jsonl` | 2937074 | `f47403ee59ab3ba8a7d498cd140cecd93b24237ea1af6147363240e12dfc73cc` |
+| `models/yolo26n/onnx_records.jsonl` | 2693103 | `1d2e8b1cddb53be1203aee882eeb909e4d6de3af8d7bf123923d155a286a7382` |
+| `models/yolo26n/preprocess_trace.jsonl` | 1921159 | `7fb6037baa9a811f2aeea098de6c50409afd840f8ef466b72b9ac3b82da3095f` |
+| `models/yolov8n/model_report.json` | 1300676 | `cd738b87790cb6b66ec1d589e2f0da0b96b9d363fef1f51e7fb5d588008f347a` |
+| `models/yolov8n/native_records.jsonl` | 3015599 | `bf54dbee145438287629c2c95278b462a494e1aeea28f6ad5926bdcb6a705be4` |
+| `models/yolov8n/onnx_records.jsonl` | 2763794 | `a8fc273ae274bd56ba246b082464eb7985cf3ff204c91dc1d74d24270645303f` |
+| `models/yolov8n/preprocess_trace.jsonl` | 1921159 | `7fb6037baa9a811f2aeea098de6c50409afd840f8ef466b72b9ac3b82da3095f` |
+| `report.md` | 1550 | `5f0af9eb4ab32a2d8f5b23d227e027f0408b20d8b0e1e02418fea5dfe386e4bb` |
+
+Parent/model audit flags đều false cho export, TensorRT import/build, GPU,
+calibration loader, training, official test, matrix và scored authorization.
+`calibration_component_called=true` chỉ là metadata của source-inspection
+evidence; `calibration_loader_called=false` và không có calibration dispatch.
+Local checkpoint working tree vẫn có thay đổi ngoài scope và không bị stage,
+đúng yêu cầu bảo toàn file liên quan.
+
+Kết luận handoff: bridge CPU đã hợp lệ ở mức execution/provenance và đo được
+drift native-versus-accepted-ONNX rất nhỏ theo estimator đã khóa. Đây không là
+TensorRT end-to-end validation, không chứng minh equivalence, không tách
+calibration/build variability và không mở quyền cho matrix/scored confirmation.
+Đã dừng để Astra review scientific interpretation.
