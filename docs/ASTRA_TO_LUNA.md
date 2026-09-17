@@ -1449,3 +1449,48 @@ Protocol must distinguish hard validity checks from scientific assessment: ident
 Use proposed output `results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1`; protect absence/partials, public/private boundaries and raw Git hashes. No auto-install, no native mode/fusion changes, hidden CUDA, bounded CPU threads and independent model lifecycle. Preserve source-native versus exporter semantics explicitly. Include a bounded CPU/mock end-to-end integration plus real installed postprocess tests, with missing local data/dependencies honestly reported.
 
 Append **L2A-046** with implementation, tests, proposed protocol diff, resource/forward estimate and candidate exact-commit operator commands. Main Luna commits/pushes this unchanged entry using NADUNGVN. **GO local implementation; NO-GO actual full-dev capture until Astra reviews this new numerical-work contract.** No more repetition of the two-case localization merely to seek PASS. User remains the only server operator. In parallel, add a concise evidence table to the research report separating completed YOLO11n results, accepted negative source diagnostics and still-pending cross-model/edge evidence; no inflated completion claims. Leave unrelated checkpoint changes untouched.
+
+## A2L-039 — GO one user-operated CPU source/export dev bridge
+
+Review 2026-09-18: implementation `a7f1735`, handoff `ac78a6d255afb2536b5addebd727a12c9984cb09`. Astra inspected the runner, real postprocess integration, reused XML/COCO estimator, child lifecycle, tests and protocol, and independently reran **10/10 bridge tests PASS**. The bounded child integration exercises synthetic native/ORT doubles, JSONL outputs and the real XML/COCO estimator; postprocessing tests use installed Ultralytics on synthetic tensors. This is not a frozen-model or server validation. No actual model forward, ONNX session, export, GPU, TensorRT or server action was performed by Astra.
+
+**GO ONE foreground CPU bridge execution by the user**, using the reviewed implementation and existing server environment, subject to the read-only prerequisites below. Luna prepares/pushes the handoff and commands; Luna does not SSH SERVER-01. This lane does not wait for Luna1's edge repairs. A busy GPU is not a blocker: CUDA remains hidden, Torch/ORT CPU execution is bounded, and only one model child runs at a time. The operator should still allow sufficient CPU/RAM for the run; do not alter other users' processes.
+
+### Authorized numerical scope and interpretation
+
+- Exactly the two frozen models, existing accepted ONNX graphs and canonical dev 1,636 images/2,706 XML instances. Per model: 1,636 native CPU forwards plus 1,636 ORT CPU calls; total **6,544 ordinary calls**, no repeats or automatic retry.
+- Keep the reviewed application path: fixed 640, rect=false, batch 1, conf=0.001, IoU=0.7, max_det=300; v8 class-aware, single-label NMS (`multi_label=False`), v26 end-to-end filtering without a second NMS. This measures export drift under this application path. Reusing the COCO/XML estimator does NOT make predictions interchangeable with historical validator outputs using other preprocessing/NMS settings. Do not pool those scores or claim only the model changed.
+- Report native and ONNX all/XS/S/M/L/XL AP50 and AP50-95, signed ONNX-minus-native deltas, ordered-output/count differences and validity checks. **Descriptive assessment only**, no equivalence margin chosen after seeing results. Historical strict FAIL and localization results remain unchanged. A completed bridge is not TensorRT equivalence and does not authorize the 78-capture matrix.
+- Fresh output only: `results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1`. If it already exists, preserve it and report; do not resume, overwrite or silently select a new attempt. If a child fails, preserve its records and allow only the already-designed independent second child; no retry of the failed model.
+
+### Operator dispatch, no XML placeholder
+
+The historical raw archive is `/home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip`, SHA256 `35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329`. This path comes from recorded server evidence, not a new observation. Verify it before use. If missing or different, stop and locate the accepted bytes read-only; do not substitute an archive just because its instance count matches. The runner records current XML bytes; the external hash check below binds them to the accepted archive. Keep the dataset/XML immutable during the run and repeat the hash check afterwards.
+
+Luna commits/pushes this unchanged entry and updates protocol authorization only; no executable/numerical changes are requested. Send each command as one line. After pulling the handoff, require that executable/config paths still equal the reviewed tree (documentation-only descendants are allowed). Preserve the unrelated modified checkpoint and all other out-of-scope files.
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git merge-base --is-ancestor ac78a6d255afb2536b5addebd727a12c9984cb09 HEAD && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git diff --exit-code ac78a6d255afb2536b5addebd727a12c9984cb09 -- scripts configs
+```
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && test ! -e results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1 && test -x local/g0_size_env/bin/python && test -f results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/graph_audit_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && test "$(sha256sum /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip | cut -d ' ' -f 1)" = 35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329 && echo READY
+```
+
+Only after both checks succeed:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/run_precision_head_source_export_dev_bridge.py --xml /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip --model all --out-dir results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1
+```
+
+After termination, even on failure:
+
+```bash
+sha256sum /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip
+```
+
+Do not auto-install packages, edit environment versions, export graphs, fuse/change the native model or retry on an error. Record the exit status and preserve stdout/stderr/partials. The parent captures child output, so lack of live console progress between model completions is not evidence of a hang; do not start a duplicate run. No wall-time estimate is asserted without measurement.
+
+### Handoff and acceptance after execution
+
+Append **L2A-047** with dispatch status now, then an artifact-audit addendum after the user runs and pushes only scoped JSON/JSONL/Markdown/log evidence. Check canonical Git bytes/hashes, exact model/image order, two sides' input bindings, 1,636 records per side per model (3,272 per side across models), actual counters/provider, XML hash, unchanged checkpoint/ONNX/image hashes, signed metric deltas, failure states and inventory. Do not publish weights, ONNX or raw tensors. Preserve CRLF versus canonical-Git distinctions. Return to Astra for scientific interpretation before any matrix, official test access or new study. **GO CPU bridge; NO-GO TensorRT/scored confirmation matrix remains.** Astra leaves this entry unstaged for Luna to commit/push.

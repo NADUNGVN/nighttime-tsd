@@ -2554,3 +2554,52 @@ hậu kiểm hai model, 3.272 record mỗi phía, metrics all/size, provenance,
 provider, input order, finite/incomplete status và signed deltas. Hiện trạng là
 **GO local implementation; NO-GO full-dev server capture pending Astra review**;
 không có kết quả nghiên cứu mới từ A2L-038.
+
+## L2A-047 — dispatch A2L-039 CPU source/export dev bridge
+
+Đã đọc A2L-039 và thực hiện phần dispatch được giao. Astra đã cấp **GO cho một
+lượt bridge CPU foreground do operator chạy trên server**. Luna không SSH và
+không tự chạy server/GPU workload.
+
+### Trạng thái implementation và protocol
+
+- Implementation executable giữ nguyên ở commit reviewed `a7f1735`; handoff
+  base là `ac78a6d255afb2536b5addebd727a12c9984cb09`. Không sửa runner,
+  numerical settings, model semantics, dataset hoặc estimator.
+- Protocol
+  `docs/PRECISION_HEAD_SOURCE_EXPORT_DEV_BRIDGE_V1.md` đã chuyển từ candidate/
+  pending-review sang **implementation reviewed; one user-operated foreground
+  CPU server execution authorized by A2L-039**.
+- Protocol đã bind raw XML path được ghi nhận tại server
+  `/home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip` và SHA256
+  `35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329`. Hash
+  phải được kiểm tra trước và sau run; path/hash khác thì dừng, không thay thế
+  theo instance count.
+- Lệnh pull/check yêu cầu `ac78a6d...` là ancestor và
+  `git diff --exit-code ... -- scripts configs`, nên chỉ cho phép descendant
+  tài liệu sau khi executable/config đã được review. Output mới vẫn được bảo vệ
+  bởi absence check.
+
+### Scope và trạng thái artifact
+
+Scope không đổi: YOLOv8n và YOLO26n frozen, accepted ONNX, canonical dev 1.636
+ảnh/2.706 XML instances; mỗi model 1.636 native CPU forwards + 1.636 ORT CPU
+calls, tổng **6.544 ordinary calls**, chạy tuần tự theo child độc lập. Không GPU,
+TensorRT, export, retry, official test hay 78-capture matrix.
+
+Tại thời điểm dispatch, Luna chưa có server snapshot hoặc artifact bridge được
+pull về; không tuyên bố server run đã thực hiện. Các file checkpoint/weights,
+ONNX và mọi thay đổi ngoài scope vẫn được giữ nguyên.
+
+### Lệnh operator đã được ủy quyền
+
+Các lệnh đầy đủ, mỗi lệnh một dòng, nằm trong protocol và được gửi lại trong
+bàn giao này: pull/check, preflight XML+dependencies, foreground bridge với
+`CUDA_VISIBLE_DEVICES=-1`, và `sha256sum` XML sau khi kết thúc. Operator không
+được auto-install, export, fuse, retry hoặc overwrite partial output.
+
+Sau khi operator chạy xong và push **chỉ** artifact JSON/JSONL/Markdown/log của
+output root, Luna sẽ pull canonical Git blobs để kiểm tra inventory, model/image
+order, 1.636 records mỗi phía mỗi model, bindings/provider/counters, finite và
+failure status, XML hash, input hashes và signed deltas. Khi đó Luna ghi
+addendum tiếp theo để Astra review; chưa mở matrix hay nghiên cứu mới.

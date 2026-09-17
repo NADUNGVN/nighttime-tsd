@@ -1,6 +1,6 @@
 # Precision-head source/export dev bridge v1
 
-Status: local implementation and CPU/mock tests only. Server execution is `NO-GO` until Astra reviews this numerical-work contract.
+Status: implementation reviewed; one user-operated foreground CPU server execution is authorized by A2L-039. Luna does not SSH or execute the server workload.
 
 This bridge was added after the YOLOv8n/YOLO26n raw-output and localization diagnostics were accepted as bounded, strict `FAIL` evidence. It is a new, dated review gate; it does not rewrite, relax, or replace any earlier verdict.
 
@@ -10,7 +10,7 @@ Measure the application-level difference between each frozen PyTorch FP32 checkp
 
 The two independent model lifecycles are YOLOv8n and YOLO26n. The workload is the existing dev split only: 1,636 images and the accepted 2,706 XML instances. It excludes official positive/negative test images, training, calibration, TensorRT, new exports, derived graphs, repeats, bootstrap, model sweeps and the scored 78-capture matrix.
 
-The candidate workload is 6,544 ordinary calls:
+The authorized workload is 6,544 ordinary calls:
 
 - each model: 1,636 frozen native CPU FP32 forwards and 1,636 ORT CPU session runs;
 - one ORT session construction per model; no export/build calls;
@@ -52,23 +52,34 @@ If all validity checks pass, the result is descriptive measured source/export dr
 
 ## Output and operator boundary
 
-The proposed output is:
+The authorized output is:
 
 `results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1`
 
 Publishable artifacts are the bridge plan/manifest/report, model reports or model-scoped failure records, model native/ONNX/preprocess JSONL and child logs. Private tensor/derived-graph directories are not part of this runner and are not to be pushed. The output root is absence-protected; a partial root is preserved for review, not resumed.
 
-The operator must provide the actual raw XML archive path after checking its location. The following are candidate commands for the server after Astra reviews the implementation and after the exact commit is substituted in the read-only check:
+The recorded accepted raw XML archive is `/home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip` with SHA256 `35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329`. This path comes from recorded server evidence and must be verified before use. If the path is missing or the hash differs, stop and locate the accepted bytes read-only; do not substitute an archive based only on its instance count. Keep the XML immutable and repeat the hash check after the run.
+
+The following commands are authorized by A2L-039. Each is one foreground command; run the pull/check and preflight successfully before the bridge command:
 
 ```text
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git merge-base --is-ancestor a7f1735 HEAD && test ! -e results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1 && test -f results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/graph_audit_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && echo READY
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git merge-base --is-ancestor ac78a6d255afb2536b5addebd727a12c9984cb09 HEAD && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git diff --exit-code ac78a6d255afb2536b5addebd727a12c9984cb09 -- scripts configs
 ```
 
 ```text
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/run_precision_head_source_export_dev_bridge.py --xml /ABSOLUTE/SERVER/PATH/TO/CCTSDB_RAW_XML_ARCHIVE.zip --model all --out-dir results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && test ! -e results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1 && test -x local/g0_size_env/bin/python && test -f results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/graph_audit_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && test "$(sha256sum /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip | cut -d ' ' -f 1)" = 35c1f3b7cdfde8e5ddded9c186e16335b2f24364ebd00c2be95bdcfca4051329 && echo READY
+
+```text
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/run_precision_head_source_export_dev_bridge.py --xml /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip --model all --out-dir results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1
 ```
 
-The foreground command is one run, not a benchmark and not a TensorRT validation. It does not require an idle GPU because it hides CUDA and uses CPU; it must still run only after the operator has confirmed the server environment and raw XML path. Expected resource is one bounded CPU child at a time and 6,544 ordinary calls; no local wall-time estimate is claimed.
+After the foreground command terminates, record the XML integrity check with:
+
+```text
+sha256sum /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip
+```
+
+The foreground command is one run, not a benchmark and not a TensorRT validation. It does not require an idle GPU because it hides CUDA and uses CPU; it requires the operator to complete the reviewed pull/check and XML hash preflight. Expected resource is one bounded CPU child at a time and 6,544 ordinary calls; no local wall-time estimate is claimed.
 
 ## Local verification boundary
 
