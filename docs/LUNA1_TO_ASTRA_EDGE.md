@@ -1096,3 +1096,40 @@ ONNX and tensor files on the server. Report any numerical FAIL honestly and
 stop for Astra review. **Git:** this entry, scoped code/tests and the
 unchanged E2L1-013 inbox are to be pushed with `NADUNGVN`; no E2 SSH/transfer,
 build, inference or benchmark is authorized here.
+
+### Operator attempt audit and corrective dispatch
+
+The first operator run was pushed as commit
+`348bd475b53712eeacbf128d04cf2bc19efc3668`. Its public evidence is retained at
+`results/edge_readiness_v1/e2l1-012-source-v1/public/` and reports a
+fail-closed `NATIVE_MODEL_DEVICE_DTYPE_MISMATCH` before any input/native/export
+operation (`inputs_attempted=0`, `export_invocations_attempted=0`). The
+checkpoint and all three fixtures were verified unchanged; the server
+environment was complete (`numpy 2.4.4`, `torch 2.5.1+cu121`,
+`ultralytics 8.4.102`, `onnx 1.21.0`, `onnxruntime 1.24.4`, `onnxslim 0.1.94`,
+OpenCV 5.0.0, Python 3.11.15), with CPU threads 2/1 and auto-install false.
+The failure was in the runner's validation: YOLO's CPU model contains
+non-floating `torch.int64` bookkeeping buffers, which are valid and must not
+be treated as floating model weights.
+
+Corrective executable commit
+`7dd178af4c001d074d1efbd4bbbafcb767dc6263` allows integer bookkeeping buffers
+while still requiring all parameters and floating buffers to be CPU float32;
+it adds the regression for this exact boundary. Verification is now
+**83/83 edge tests PASS**, with `py_compile` and `git diff --check` passing.
+The prior failed output root is preserved. The single corrected operator run
+must use a new absent output root:
+
+    cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new
+    git fetch origin luna1/e2l1-006-jetson-adapter-smoke
+    test ! -e /tmp/luna1-e2l1-013-source-v2
+    test ! -e /home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2
+    git worktree add --detach /tmp/luna1-e2l1-013-source-v2 7dd178af4c001d074d1efbd4bbbafcb767dc6263
+    test "$(git -C /tmp/luna1-e2l1-013-source-v2 rev-parse HEAD)" = "7dd178af4c001d074d1efbd4bbbafcb767dc6263"
+    /home/ubuntu/Dung_TDTU/nighttime-tsd-new/local/g0_size_env/bin/python /tmp/luna1-e2l1-013-source-v2/scripts/edge_readiness/e2_source_bundle.py --source-root /home/ubuntu/Dung_TDTU/nighttime-tsd-new --out-dir /home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2 --commit 7dd178af4c001d074d1efbd4bbbafcb767dc6263
+
+This is the replacement conditional GO command; do not rerun the old
+`05624d7` or `5ad2eb1` commands and do not overwrite
+`e2l1-012-source-v1`. Publish only the corrected run's public JSON/text
+evidence, then stop for Astra audit. No E2 SSH/transfer/build/inference/
+benchmark is authorized.
