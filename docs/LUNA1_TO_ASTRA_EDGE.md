@@ -1162,3 +1162,87 @@ input/output hashes and bindings, comparison counters, private inventory and
 the exact equation. **NO-GO for tolerance changes, rerun, second environment
 or device deployment; stop for Astra review of this single numerical
 discrepancy.**
+
+## L1A-014 — E2 model diagnostic workflow implemented; target execution held
+
+**Status:** local implementation and protocol tests complete; server retrieval,
+transfer, TensorRT build/deserialization/inference and benchmark remain
+NO-GO pending Astra review. The accepted source bundle is consumed as a
+provenance-bound diagnostic input even though its strict source verdict is
+FAIL; this workflow never converts that result into PASS.
+
+Executable commit: `d9423f21d24ff0217e9424c9d6b7037602fd3596`.
+It adds `scripts/edge_readiness/e2_model_smoke.py` and its tests. The workflow
+is default-disabled and has one target profile, E2 / Jetson Xavier NX /
+TensorRT `8.5.2.2`.
+
+### Implemented contracts
+
+- The input bundle binds exactly ten private binaries from the accepted source
+  manifest: one ONNX plus `inputs/{00006,00009,00028}.bin`,
+  `native_reference/{00006,00009,00028}.bin` and
+  `onnx_reference/{00006,00009,00028}.bin`. The copied checkpoint and any
+  arbitrary manifest path are rejected. Paths are normalized under `private/`,
+  traversal and symlink components are rejected, and every size/SHA-256,
+  shape, little-endian float32 byte contract and finite value is revalidated.
+  The accepted ONNX hash is
+  `bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7`.
+- The production target path is parser/builder → TensorRTProvider →
+  OwnedBuffers/CUDA owner → JetsonRuntimeAdapter. It requires a target-local
+  TensorRT parser, one fixed 1 GiB builder workspace, FP16 builder flag,
+  disabled TF32 when available, no timing cache, no retries, and fresh private
+  engine/output paths. It validates E2 runtime identity, engine hash, binding
+  order/name/location/shape/dtype and raw `output0 [1,7,8400]` before dispatch.
+- E2 uses exact frozen float32 input bytes, with no decode/preprocess. It
+  executes one owned context/stream and exactly three sequential enqueues,
+  with no warmup/repeat/latency/energy benchmark. Full finite output checks,
+  attempted/completed counters and partial/unknown failure states are
+  recorded; cleanup does not kill unrelated work or claim completion after a
+  timeout.
+- The public manifest keeps three results separate:
+  `export_discrepancy.source_native_vs_source_onnx` (immutable strict source
+  result), `tensorrt_discrepancy.target_vs_source_onnx` (export-fixed target
+  diagnostic), and `tensorrt_discrepancy.target_vs_source_native` (total
+  target-vs-native diagnostic). The source strict FAIL remains visible even if
+  both target comparisons PASS. Target comparisons retain the frozen
+  `e2_output_compare.py` thresholds: boxes absolute `5e-3`, relative `1e-2`;
+  scores absolute `2e-3`, relative `1e-2`. These are engineering thresholds,
+  not accuracy claims. The channel-1/anchor-8002 neighborhood is recorded
+  without score cutoff or NMS.
+
+### Verification and boundary
+
+The new suite has 11 tests and the complete edge suite is **94/94 PASS**;
+`py_compile`, Python-3.8 AST compatibility checks and `git diff --check` pass.
+Tests cover exact allowlisting/traversal/tampering, parser errors and runtime
+mismatch, bounded FP16 builder settings, production parser/provider/
+owner/adapter orchestration with injected TRT/CUDA calls, distinct outputs for
+three images, source FAIL coexisting with target PASS, second-enqueue failure,
+unknown timeout, default-disabled execution and output collision. No real
+TensorRT/CUDA import or target call was made locally.
+
+### Proposed later operator staging and command (not authorized in L1A-014)
+
+After Astra review only, retrieve into a fresh scoped staging root the public
+source manifest plus exactly the ten allowlisted private files above. Do not
+retrieve/transfer `private/checkpoint/best.pt`, the whole repository, secrets,
+or arbitrary files. Keep the manifest at
+`/tmp/luna1-e2l1-014-source-bundle/public/manifest.json` and preserve its
+`private/` relative layout. The workflow emits the explicit allowlist in
+`public/plan.json`; model binaries and full output tensors remain private.
+
+Proposed foreground command after review:
+
+    cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new
+    test ! -e /tmp/luna1-e2l1-014-model-smoke
+    test ! -e /home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-014-model-smoke-v1
+    git fetch origin luna1/e2l1-006-jetson-adapter-smoke
+    git worktree add --detach /tmp/luna1-e2l1-014-model-smoke d9423f21d24ff0217e9424c9d6b7037602fd3596
+    test "$(git -C /tmp/luna1-e2l1-014-model-smoke rev-parse HEAD)" = "d9423f21d24ff0217e9424c9d6b7037602fd3596"
+    /home/ubuntu/Dung_TDTU/nighttime-tsd-new/local/g0_size_env/bin/python /tmp/luna1-e2l1-014-model-smoke/scripts/edge_readiness/e2_model_smoke.py --bundle-root /tmp/luna1-e2l1-014-source-bundle --manifest /tmp/luna1-e2l1-014-source-bundle/public/manifest.json --out-dir /home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-014-model-smoke-v1 --target E2 --execute-real-device --build-timeout-seconds 900 --inference-timeout-seconds 180
+
+This command is intentionally withheld from execution in this entry. No
+source re-export, additional allocation smoke, E2 SSH, transfer, build,
+inference, benchmark, package installation, device reset or configuration
+change is authorized. Publish only public JSON/text evidence after a later
+authorized run; Astra then audits and decides the next gate.
