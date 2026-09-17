@@ -1782,3 +1782,77 @@ Vấn đề cần Astra quyết định: chấp nhận `rtol=1e-4/atol=1e-5` và
 YOLO26 policy; chấp nhận ONNX Runtime version là observed provenance thay vì
 historical readiness lock; và cho phép candidate CPU command sau khi review
 implementation này. L2A-035 không tuyên bố numeric/server pass.
+
+## L2A-036 — hoàn tất N1-N3 numeric confirmation repair
+
+Đã đọc và thực hiện A2L-032. Implementation/protocol commit là
+`6495abd` (`diagnostic: complete numeric confirmation N1-N3`), tiếp nối
+commit handoff trước đó `b6eb174`. Commit implementation không sửa
+readiness, graph-v4, frozen weights, ONNX binaries, config hoặc numerical
+protocol lịch sử. A2L-032 được giữ nguyên nội dung trong commit handoff kế
+tiếp.
+
+### N1 — canonical layout and binding lifecycle
+
+- Thêm một canonical resolver cho source image dưới
+  `data/processed/cctsdb2021_clean/train/images`; materialized calibration
+  image vẫn resolve riêng dưới `calibration/uniform_s*_n1024/images`.
+- Resolver fail-closed với absolute/traversal/wrong-root path. Parent và child
+  dùng cùng resolver; source/materialized hash và byte count được kiểm tra
+  trước và sau child work.
+- Khi một image xuất hiện ở nhiều selection, tensor trace có thể deduplicate
+  nhưng `selection_bindings` vẫn giữ riêng từng U42/U43/U44 binding.
+
+### N2 — child failure and model selection
+
+- Parent consume và validate `models/<model>/failure.json` do child đã ghi,
+  không overwrite; chỉ tạo fallback failure khi child không tạo report hoặc
+  failure record nào.
+- Partial inference trace, calibration trace và comparison JSON được ghi dần
+  dưới `models/<model>/partial/`; final inventory phản ánh report/failure,
+  partial files và logs thực tế.
+- Manifest tách `execution_status` khỏi `numeric_verdict`, với các trạng thái
+  numeric rõ ràng `pass/fail/unresolved/not_observed`; disagreement trong run
+  completed vẫn là evidence để review.
+- CLI một model validate immutable graph-v4 đầy đủ cả hai model rồi mới chọn
+  subset; không biến artifact accepted thành artifact model-specific.
+
+### N3 — calibration trace, semantics and numeric reporting
+
+- Bounded calibration component trace trên ba anchor gọi trực tiếp
+  `YOLODataset.load_image(rect_mode=True, resize_short=False)`, validation
+  `LetterBox(scaleup=False, auto=False, center=True)` và RGB/CHW uint8 plus
+  `float32 / 255` representation. Không gọi exporter/full calibration loader,
+  dataloader, labels, dataset cache hoặc calibration cache.
+- Report ghi riêng inference và calibration stages, source inspection hashes,
+  accepted ONNX export settings/schema, native reference
+  `model.model.to(cpu).float().eval()`/`no_grad`, max-det 300 và boundary về
+  fusion/coordinate/packing/end2end. Không có export-equivalent reference
+  forward mới.
+- YOLOv8n báo riêng box channels `[0:4]` và score channels `[4:7]`; YOLO26n
+  báo riêng boxes `[0:4]` và score `[4:5]`, class ID exact fixed-row policy
+  vẫn giữ nguyên. Tolerance vẫn khóa `rtol=1e-4`, `atol=1e-5`,
+  `abs(observed-reference) <= atol + rtol*abs(reference)`, reference đứng
+  trước trong `np.isclose`.
+- Relative diagnostics của reference-zero dùng finite/infinite counts và
+  quantile trên finite values để JSON không mất report khi có `inf` tương
+  đối; không nới tolerance.
+
+### Tests and boundary
+
+- Numeric N1-N3 suite: **23/23 PASS** (có intentional child-failure output
+  trên stderr nhưng test pass).
+- Graph regression: **23 tests, 22 pass, 1 explicit skip** vì ONNX dependency
+  không có trong local measurement environment; skip không được tính là pass.
+- Preserved graph audit regression: **4/4 PASS**.
+- `py_compile` và `git diff --check`: PASS.
+- Local producer test dùng CPU synthetic image với environment hiện có
+  (Torch `2.8.0+cu129`, Ultralytics `8.4.102`, NumPy `2.4.2`, ORT
+  `1.24.3`). Đây chỉ là helper/component evidence; không phải server pass.
+
+Chưa chạy server/GPU, frozen-model forward, ONNX export, TensorRT build,
+benchmark hoặc calibration loader. Candidate foreground command trong
+`docs/PRECISION_HEAD_CONFIRMATION_NUMERIC_V1.md` vẫn chờ Astra review; không
+có artifact server để hậu kiểm. Vấn đề cần Astra quyết định là chấp nhận
+implementation N1-N3 và cho phép operator chạy đúng bounded CPU diagnostic.
+Không mở bước nghiên cứu tiếp theo tự động.
