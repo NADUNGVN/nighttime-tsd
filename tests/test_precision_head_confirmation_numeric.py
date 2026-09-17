@@ -63,6 +63,51 @@ class PrecisionHeadNumericTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             numeric._selection_rows(bad, 8)
 
+    def test_bound_image_uses_canonical_dataset_root_and_rejects_traversal(self):
+        with tempfile.TemporaryDirectory() as temp:
+            repo = Path(temp)
+            canonical = repo / "data/processed/cctsdb2021_clean/train/images/00001.jpg"
+            materialized = repo / "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00001.jpg"
+            decoy = repo / "train/images/00001.jpg"
+            canonical.parent.mkdir(parents=True)
+            materialized.parent.mkdir(parents=True)
+            decoy.parent.mkdir(parents=True)
+            content = b"canonical image bytes"
+            canonical.write_bytes(content)
+            materialized.write_bytes(content)
+            decoy.write_bytes(b"wrong-root decoy")
+            row = {"selection": "U42", "image": "train/images/00001.jpg", "expected_sha256": numeric.sha256_bytes(content), "expected_bytes": len(content), "materialized_expected_sha256": numeric.sha256_bytes(content)}
+            evidence = numeric.verify_bound_image(repo, row)
+            self.assertEqual(Path(evidence["source"]["path"]), Path("data/processed/cctsdb2021_clean/train/images/00001.jpg"))
+            self.assertEqual(numeric.resolve_bound_source_image(repo, row), canonical.resolve())
+            canonical.write_bytes(b"changed image bytes")
+            with self.assertRaises(ValueError):
+                numeric.verify_bound_image(repo, row)
+            bad = dict(row, image="train/images/../secret.jpg")
+            with self.assertRaises(ValueError):
+                numeric.resolve_bound_source_image(repo, bad)
+            bad = dict(row, image="../train/images/00001.jpg")
+            with self.assertRaises(ValueError):
+                numeric.resolve_bound_materialized_image(repo, bad)
+
+    def test_fixture_verification_preserves_selection_bindings_when_image_is_deduplicated(self):
+        with tempfile.TemporaryDirectory() as temp:
+            repo = Path(temp)
+            content = b"shared anchor"
+            source = repo / "data/processed/cctsdb2021_clean/train/images/00001.jpg"
+            source.parent.mkdir(parents=True)
+            source.write_bytes(content)
+            for selection in ("U42", "U43"):
+                materialized = repo / f"data/processed/cctsdb2021_clean/calibration/uniform_s{selection[1:]}_n1024/images/00001.jpg"
+                materialized.parent.mkdir(parents=True)
+                materialized.write_bytes(content)
+            digest = numeric.sha256_bytes(content)
+            row42 = {"selection": "U42", "manifest_order": 0, "image": "train/images/00001.jpg", "image_id": "00001", "expected_sha256": digest, "expected_bytes": len(content), "materialized_expected_sha256": digest}
+            row43 = dict(row42, selection="U43", manifest_order=1)
+            result = numeric.verify_fixture_files(repo, {"forward_images": [row42], "preprocess_trace_images": [row43]})
+            self.assertEqual(result["unique_image_count"], 1)
+            self.assertEqual([item["selection"] for item in result["images"]["train/images/00001.jpg"]["selection_bindings"]], ["U42", "U43"])
+
     def test_preprocess_array_contract_is_rgb_chw_float32_and_batched(self):
         bgr = np.array([[[1, 2, 3], [4, 5, 6]]], dtype=np.uint8)
         tensor = numeric.preprocess_array_contract(bgr, np)
@@ -94,6 +139,31 @@ class PrecisionHeadNumericTests(unittest.TestCase):
         self.assertEqual(trace["letterbox"]["padding"], {"top": 128, "bottom": 128, "left": 0, "right": 0})
         self.assertTrue(trace["same_tensor_for_source_and_onnx"])
 
+    @unittest.skipUnless(
+        all(importlib.util.find_spec(name) is not None for name in ("torch", "ultralytics", "onnxruntime", "cv2")),
+        "pinned CPU producer dependencies are unavailable",
+    )
+    def test_actual_calibration_component_trace_is_bounded_and_separate(self):
+        numeric.set_cpu_environment()
+        import cv2
+
+        runtime = numeric.load_child_runtime({"runtime": {"torch": "2.8.0+cu129", "ultralytics": "8.4.102", "numpy": "2.4.2", "pycocotools": "2.0.10"}})
+        with tempfile.TemporaryDirectory() as temp:
+            image_path = Path(temp) / "calibration_anchor.jpg"
+            image = np.zeros((480, 800, 3), dtype=np.uint8)
+            image[:, :, 0] = 10
+            image[:, :, 1] = 20
+            image[:, :, 2] = 30
+            self.assertTrue(cv2.imwrite(str(image_path), image))
+            trace = numeric.trace_calibration_preprocess(image_path, runtime, stride=32)
+        self.assertEqual(trace["stage"], "bounded_calibration_component_trace")
+        self.assertFalse(trace["loader_dispatch"]["Exporter.get_int8_calibration_dataloader"])
+        self.assertFalse(trace["dataset_side_effects"]["labels_read"])
+        self.assertEqual(trace["load_image"]["resized_hw"], [384, 640])
+        self.assertEqual(trace["letterbox"]["padding"], {"top": 128, "bottom": 128, "left": 0, "right": 0})
+        self.assertEqual(trace["formatted_uint8"]["layout"], "RGB_CHW")
+        self.assertEqual(trace["normalization"]["operation"], "float32(rgb_chw) / 255.0")
+
     def test_v8_raw_comparison_reports_pass_and_same_shape_corruption(self):
         reference = np.zeros((1, 7, 8400), dtype=np.float32)
         observed = reference.copy()
@@ -104,6 +174,17 @@ class PrecisionHeadNumericTests(unittest.TestCase):
         failed = numeric.compare_primary("yolov8n", reference, observed, np)
         self.assertEqual(failed["status"], "fail")
         self.assertGreater(failed["mismatch_count"], 0)
+        self.assertEqual(set(failed["channel_results"]), {"boxes", "scores"})
+
+    def test_zero_reference_relative_diagnostics_are_json_safe(self):
+        reference = np.zeros((1, 7, 8400), dtype=np.float32)
+        observed = reference.copy()
+        observed[0, 0, 0] = 1.0
+        result = numeric.compare_primary("yolov8n", reference, observed, np)
+        self.assertEqual(result["status"], "fail")
+        self.assertGreater(result["channel_results"]["boxes"]["relative_infinite_count"], 0)
+        self.assertIsNone(result["channel_results"]["boxes"]["max_relative"])
+        json.dumps(result, allow_nan=False)
 
     def test_v8_wrong_shape_and_nonfinite_are_unresolved(self):
         reference = np.zeros((1, 7, 8400), dtype=np.float32)
@@ -184,6 +265,12 @@ class PrecisionHeadNumericTests(unittest.TestCase):
                 with self.assertRaises(numeric.NumericUnresolved):
                     numeric.validate_graph_audit_artifact(Path(temp), root, list(numeric.MODEL_CHOICES))
 
+    def test_single_model_selection_binds_full_accepted_graph_artifact(self):
+        root = REPO / "results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4"
+        accepted = numeric.validate_graph_audit_artifact(REPO, root, ["yolov8n"])
+        self.assertEqual(set(accepted["accepted_models"]), set(numeric.MODEL_CHOICES))
+        self.assertEqual(set(accepted["models"]), {"yolov8n"})
+
     def test_no_overwrite_is_enforced_by_parent_boundary(self):
         with tempfile.TemporaryDirectory() as temp:
             repo = Path(temp)
@@ -229,6 +316,66 @@ class PrecisionHeadNumericTests(unittest.TestCase):
             self.assertEqual(json.loads((repo / "output/numeric_manifest.json").read_text(encoding="utf-8"))["status"], "completed")
             self.assertTrue((repo / "output/logs/yolov8n.log").is_file())
             self.assertTrue((repo / "output/logs/yolo26n.log").is_file())
+
+    def test_parent_consumes_existing_child_failure_without_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp:
+            repo = Path(temp)
+            (repo / "configs").mkdir()
+            (repo / "configs/config.json").write_text("{}", encoding="utf-8")
+            (repo / "source").mkdir()
+            fixture = {"forward_images": [], "preprocess_trace_images": [], "forward_image_count": 8, "selection_rule": "fixed"}
+            accepted = {"manifest": {}, "files": {}, "accepted_git_commit": "r", "accepted_execution_commit": "e"}
+            binding = {"path": str(repo / "configs/config.json"), "sha256": "c", "semantic_sha256": "s"}
+            config = {"runtime": {}, "models": []}
+            graph_audit = {"files": {}, "models": {model: {"mapping_status": "verified"} for model in numeric.MODEL_CHOICES}}
+            args = SimpleNamespace(model="all", out_dir=Path("output"), readiness_root=Path("readiness"), graph_audit_root=Path("graph"), source_root=Path("source"))
+            original_failure = {"model": "yolov8n", "status": "failed", "numeric_status": "not_observed", "error": "preserved child failure", "no_silent_resume": True}
+
+            def fake_run(command, **kwargs):
+                if command[:3] == ["git", "rev-parse", "HEAD"]:
+                    return SimpleNamespace(returncode=0, stdout="head\n", stderr="")
+                model = command[command.index("--model") + 1]
+                model_dir = repo / "output/models" / model
+                model_dir.mkdir(parents=True, exist_ok=True)
+                if model == "yolov8n":
+                    (model_dir / "failure.json").write_text(json.dumps(original_failure), encoding="utf-8")
+                    return SimpleNamespace(returncode=1, stdout="failed\n", stderr="")
+                (model_dir / "numeric_report.json").write_text(json.dumps({"model": model, "status": "completed", "numeric_status": "pass"}), encoding="utf-8")
+                return SimpleNamespace(returncode=0, stdout="child\n", stderr="")
+
+            with patch.object(numeric.graph, "validate_readiness_artifact", return_value=accepted), patch.object(numeric.graph, "validate_config_binding", return_value=binding), patch.object(numeric.readiness, "load_config", return_value=config), patch.object(numeric, "validate_graph_audit_artifact", return_value=graph_audit), patch.object(numeric, "build_fixture_plan", return_value=fixture), patch.object(numeric, "verify_bound_image"), patch.object(numeric, "_model_plan", return_value={"accepted_contract": {}}), patch.object(numeric, "file_evidence", return_value={"exists": True}), patch.object(numeric.subprocess, "run", side_effect=fake_run):
+                result = numeric.run_parent(args, repo)
+            manifest = json.loads((repo / "output/numeric_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(result, 1)
+            self.assertEqual(manifest["models"][0], original_failure)
+            self.assertEqual(manifest["numeric_verdict"]["status"], "not_observed")
+            self.assertIn("models/yolov8n/failure.json", manifest["artifact_inventory"])
+            self.assertFalse((repo / "output/models/yolov8n/numeric_report.json").exists())
+
+    def test_parent_writes_fallback_failure_when_child_crashes_before_record(self):
+        with tempfile.TemporaryDirectory() as temp:
+            repo = Path(temp)
+            (repo / "configs").mkdir()
+            (repo / "configs/config.json").write_text("{}", encoding="utf-8")
+            (repo / "source").mkdir()
+            fixture = {"forward_images": [], "preprocess_trace_images": [], "forward_image_count": 8, "selection_rule": "fixed"}
+            accepted = {"manifest": {}, "files": {}, "accepted_git_commit": "r", "accepted_execution_commit": "e"}
+            binding = {"path": str(repo / "configs/config.json"), "sha256": "c", "semantic_sha256": "s"}
+            config = {"runtime": {}, "models": []}
+            graph_audit = {"files": {}, "models": {model: {"mapping_status": "verified"} for model in numeric.MODEL_CHOICES}}
+            args = SimpleNamespace(model="yolov8n", out_dir=Path("output"), readiness_root=Path("readiness"), graph_audit_root=Path("graph"), source_root=Path("source"))
+
+            def fake_run(command, **kwargs):
+                if command[:3] == ["git", "rev-parse", "HEAD"]:
+                    return SimpleNamespace(returncode=0, stdout="head\n", stderr="")
+                return SimpleNamespace(returncode=1, stdout="crash\n", stderr="before report\n")
+
+            with patch.object(numeric.graph, "validate_readiness_artifact", return_value=accepted), patch.object(numeric.graph, "validate_config_binding", return_value=binding), patch.object(numeric.readiness, "load_config", return_value=config), patch.object(numeric, "validate_graph_audit_artifact", return_value=graph_audit), patch.object(numeric, "build_fixture_plan", return_value=fixture), patch.object(numeric, "verify_bound_image"), patch.object(numeric, "_model_plan", return_value={"accepted_contract": {}}), patch.object(numeric, "file_evidence", return_value={"exists": True}), patch.object(numeric.subprocess, "run", side_effect=fake_run):
+                result = numeric.run_parent(args, repo)
+            failure = json.loads((repo / "output/models/yolov8n/failure.json").read_text(encoding="utf-8"))
+            self.assertEqual(result, 1)
+            self.assertEqual(failure["numeric_status"], "not_observed")
+            self.assertTrue(failure["no_silent_resume"])
 
     def test_child_failure_persists_partial_failure_without_resume(self):
         with tempfile.TemporaryDirectory() as temp:

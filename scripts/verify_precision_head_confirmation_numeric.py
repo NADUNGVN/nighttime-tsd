@@ -79,6 +79,34 @@ CPU_ENVIRONMENT = {
     "PIP_DISABLE_PIP_VERSION_CHECK": "1",
 }
 GRAPH_AUDIT_MODEL_FILES = {model: f"models/{model}/graph_audit.json" for model in MODEL_CHOICES}
+DATASET_ROOT = Path("data/processed/cctsdb2021_clean")
+CALIBRATION_SELECTION_ROOT = DATASET_ROOT / "calibration"
+ACCEPTED_EXPORT_ARGUMENTS = {
+    "format": "onnx",
+    "imgsz": 640,
+    "batch": 1,
+    "opset": 17,
+    "simplify": True,
+    "dynamic": False,
+    "half": False,
+    "device": "cpu",
+    "task": "detect",
+}
+CALIBRATION_TRACE_ARGUMENTS = {
+    "dataset_mode": "val",
+    "rect": False,
+    "fraction": 1.0,
+    "workers": 0,
+    "batch": 1,
+    "imgsz": 640,
+    "YOLODataset.load_image.rect_mode": True,
+    "YOLODataset.load_image.resize_short": False,
+    "LetterBox.auto": False,
+    "LetterBox.scale_fill": False,
+    "LetterBox.scaleup": False,
+    "LetterBox.center": True,
+    "LetterBox.padding_value": 114,
+}
 
 
 class NumericUnresolved(RuntimeError):
@@ -164,13 +192,15 @@ def validate_graph_audit_artifact(repo: Path, root: Path, models: list[str]) -> 
             raise ValueError(f"Graph-v4 artifact is not a regular file: {relative}")
         canonical = readiness.git_blob(repo, GRAPH_AUDIT_COMMIT, repo / "results/measurement_audit_v1" / GRAPH_AUDIT_ROOT_NAME / relative)
         canonical_hash = sha256_bytes(canonical)
-        if canonical_hash != expected or path.read_bytes() != canonical:
+        working_bytes = path.read_bytes()
+        if canonical_hash != expected or (working_bytes != canonical and working_bytes.replace(b"\r\n", b"\n") != canonical):
             raise ValueError(f"Graph-v4 file does not equal accepted Git content: {relative}")
         records[relative] = {
             "path": str(path),
             "bytes": path.stat().st_size,
-            "sha256": sha256_file(path),
+            "sha256": sha256_bytes(working_bytes),
             "accepted_git_blob_sha256": canonical_hash,
+            "content_match_mode": "exact" if working_bytes == canonical else "LF_normalized_for_core_autocrlf",
         }
     manifest = read_json(root / "graph_audit_manifest.json")
     if manifest.get("status") != "audit_only_completed":
@@ -178,8 +208,14 @@ def validate_graph_audit_artifact(repo: Path, root: Path, models: list[str]) -> 
     if manifest.get("audit_flags", {}).get("export_performed") is not False:
         raise ValueError("Graph-v4 manifest incorrectly records export")
     rows = {row.get("model"): row for row in manifest.get("models", [])}
-    if set(rows) != set(models):
-        raise ValueError(f"Graph-v4 model set differs: {sorted(rows)}")
+    # The accepted graph artifact is a two-model, five-file contract.  A
+    # single-model numeric selection may select from it, but may not turn the
+    # accepted artifact into a model-specific substitute.
+    if set(rows) != set(MODEL_CHOICES):
+        raise ValueError(f"Graph-v4 model set differs from accepted full set: {sorted(rows)}")
+    unknown = set(models) - set(MODEL_CHOICES)
+    if unknown:
+        raise ValueError(f"Unsupported graph model selection: {sorted(unknown)}")
     model_docs = {}
     for model in models:
         row = rows[model]
@@ -199,7 +235,7 @@ def validate_graph_audit_artifact(repo: Path, root: Path, models: list[str]) -> 
         if not schema_outputs or schema_outputs[0].get("name") != "output0" or shape_value != EXPECTED_OUTPUT_SHAPES[model]:
             raise ValueError(f"Graph-v4 output schema differs for {model}: {shape_value}")
         model_docs[model] = doc
-    return {"root": str(root), "commit": GRAPH_AUDIT_COMMIT, "files": records, "manifest": manifest, "models": model_docs}
+    return {"root": str(root), "commit": GRAPH_AUDIT_COMMIT, "files": records, "manifest": manifest, "accepted_models": sorted(rows), "models": model_docs}
 
 
 def accepted_model_contracts(accepted: dict[str, Any], models: list[str]) -> dict[str, dict[str, Any]]:
@@ -291,13 +327,35 @@ def build_fixture_plan(accepted: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _safe_train_image_parts(image: Any) -> tuple[PurePosixPath, tuple[str, ...]]:
+    if not isinstance(image, str) or not image:
+        raise ValueError(f"Invalid bound image path: {image!r}")
+    parsed = PurePosixPath(image)
+    parts = parsed.parts
+    if parsed.is_absolute() or len(parts) != 3 or parts[:2] != ("train", "images") or any(part in ("", ".", "..") for part in parts):
+        raise ValueError(f"Bound image is not a safe canonical train image: {image!r}")
+    return parsed, parts
+
+
+def resolve_bound_source_image(repo: Path, row: dict[str, Any]) -> Path:
+    """Resolve a readiness POSIX image ID against the canonical dataset root."""
+    _parsed, parts = _safe_train_image_parts(row.get("image"))
+    return repo_path(repo, DATASET_ROOT / Path(*parts))
+
+
+def resolve_bound_materialized_image(repo: Path, row: dict[str, Any]) -> Path:
+    """Resolve the separate materialized calibration copy without reusing source root."""
+    parsed, _parts = _safe_train_image_parts(row.get("image"))
+    selection = row.get("selection")
+    if selection not in SELECTION_IDS:
+        raise ValueError(f"Unknown calibration selection for bound image: {selection!r}")
+    root = CALIBRATION_SELECTION_ROOT / f"uniform_s{selection[1:]}_n1024" / "images"
+    return repo_path(repo, root / parsed.name)
+
+
 def verify_bound_image(repo: Path, row: dict[str, Any]) -> dict[str, Any]:
-    parsed = PurePosixPath(row["image"])
-    source = repo_path(repo, Path(*parsed.parts))
-    # The calibration manifest's directory is stable and is derived from the
-    # accepted path, not from the absolute server path in the readiness record.
-    selection_manifest = repo / "data/processed/cctsdb2021_clean/calibration" / f"uniform_s{row['selection'][1:]}_n1024" / "calibration_manifest.json"
-    materialized = selection_manifest.parent / "images" / parsed.name
+    source = resolve_bound_source_image(repo, row)
+    materialized = resolve_bound_materialized_image(repo, row)
     if source.is_symlink() or not source.is_file() or materialized.is_symlink() or not materialized.is_file():
         raise FileNotFoundError(f"Bound source/materialized image missing: {row['image']}")
     source_record = file_evidence(repo, source)
@@ -313,7 +371,18 @@ def verify_fixture_files(repo: Path, fixture: dict[str, Any]) -> dict[str, Any]:
     rows = fixture["forward_images"] + fixture["preprocess_trace_images"]
     unique = {}
     for row in rows:
-        unique[row["image"]] = verify_bound_image(repo, row)
+        evidence = verify_bound_image(repo, row)
+        image = row["image"]
+        if image not in unique:
+            unique[image] = {"source": evidence["source"], "materialized": evidence["materialized"], "materialized_by_selection": {}, "selection_bindings": []}
+        elif any(unique[image]["source"].get(key) != evidence["source"].get(key) for key in ("sha256", "bytes")):
+            raise ValueError(f"Deduplicated fixture image has inconsistent source byte evidence: {image}")
+        selection = row["selection"]
+        prior_materialized = unique[image]["materialized_by_selection"].get(selection)
+        if prior_materialized is not None and any(prior_materialized.get(key) != evidence["materialized"].get(key) for key in ("sha256", "bytes")):
+            raise ValueError(f"Repeated fixture selection has inconsistent materialized byte evidence: {selection}/{image}")
+        unique[image]["materialized_by_selection"][selection] = evidence["materialized"]
+        unique[image]["selection_bindings"].append({"selection": row["selection"], "manifest_order": row["manifest_order"], "expected_sha256": row["expected_sha256"], "materialized_expected_sha256": row["materialized_expected_sha256"]})
     return {"status": "matched", "images": unique, "unique_image_count": len(unique)}
 
 
@@ -341,6 +410,7 @@ def producer_file_evidence(label: str, module_name: str) -> dict[str, Any]:
 
 def runtime_source_evidence() -> dict[str, Any]:
     from ultralytics.data.augment import LetterBox
+    from ultralytics.data.augment import Format
     from ultralytics.data.dataset import YOLODataset
     from ultralytics.data.build import build_yolo_dataset
     from ultralytics.engine.exporter import Exporter
@@ -355,18 +425,25 @@ def runtime_source_evidence() -> dict[str, Any]:
             callable_source_evidence("ultralytics.data.augment.LetterBox.apply_image", LetterBox.apply_image),
             callable_source_evidence("ultralytics.engine.predictor.BasePredictor.pre_transform", BasePredictor.pre_transform),
             callable_source_evidence("ultralytics.engine.predictor.BasePredictor.preprocess", BasePredictor.preprocess),
+            callable_source_evidence("ultralytics.data.augment.Format._format_img", Format._format_img),
         ],
         "calibration_producer_source": [
             producer_file_evidence("calibration helper source", "ultralytics.engine.exporter"),
             producer_file_evidence("dataset source", "ultralytics.data.dataset"),
             producer_file_evidence("augmentation source", "ultralytics.data.augment"),
             callable_source_evidence("ultralytics.engine.exporter.Exporter.get_int8_calibration_dataloader", Exporter.get_int8_calibration_dataloader),
+            callable_source_evidence("ultralytics.engine.exporter.Exporter.__init__", Exporter.__init__),
+            callable_source_evidence("ultralytics.engine.exporter.Exporter.export_onnx", Exporter.export_onnx),
             callable_source_evidence("ultralytics.data.dataset.YOLODataset.load_image", YOLODataset.load_image),
+            callable_source_evidence("ultralytics.data.dataset.YOLODataset.build_transforms", YOLODataset.build_transforms),
             callable_source_evidence("ultralytics.data.build.build_yolo_dataset", build_yolo_dataset),
+            callable_source_evidence("ultralytics.data.augment.Format._format_img", Format._format_img),
             {"label": "repository calibration helper", "path": "scripts/uniform_build_repeat.py"},
         ],
         "calibration_loader_called": False,
+        "calibration_component_called": True,
         "calibration_recipe_status": "source_inspected_scoped_image_trace; calibration loader dispatch forbidden",
+        "export_semantics_status": "accepted_settings_and_observed_ONNX_schema_recorded; native_reference_is_not_an_export_copy",
     }
 
 
@@ -374,24 +451,37 @@ def array_digest(array: Any) -> str:
     return sha256_bytes(array.tobytes(order="C"))
 
 
-def quantile_summary(values: Any, np: Any) -> dict[str, float]:
+def quantile_summary(values: Any, np: Any) -> dict[str, Any]:
     flat = np.asarray(values, dtype=np.float64).reshape(-1)
-    if flat.size == 0 or not np.isfinite(flat).all():
-        raise NumericUnresolved("Cannot summarize empty or non-finite numeric values")
-    q = np.quantile(flat, [0.0, 0.5, 0.95, 0.99, 1.0], method="linear")
-    return {key: float(value) for key, value in zip(("min", "p50", "p95", "p99", "max"), q)}
+    if flat.size == 0:
+        raise NumericUnresolved("Cannot summarize empty numeric values")
+    finite = flat[np.isfinite(flat)]
+    result: dict[str, Any] = {
+        "element_count": int(flat.size),
+        "finite_count": int(finite.size),
+        "infinite_count": int(np.isinf(flat).sum()),
+        "nan_count": int(np.isnan(flat).sum()),
+    }
+    if finite.size:
+        q = np.quantile(finite, [0.0, 0.5, 0.95, 0.99, 1.0], method="linear")
+        result.update({key: float(value) for key, value in zip(("min", "p50", "p95", "p99", "max"), q)})
+    else:
+        result.update({key: None for key in ("min", "p50", "p95", "p99", "max")})
+    return result
 
 
 def compare_float_arrays(reference: Any, observed: Any, np: Any, domain: str) -> dict[str, Any]:
     if reference.shape != observed.shape:
-        return {"status": "unresolved", "domain": domain, "reason": "shape_mismatch", "reference_shape": list(reference.shape), "observed_shape": list(observed.shape)}
+        return {"status": "unresolved", "domain": domain, "reason": "shape_mismatch", "reference_shape": list(reference.shape), "observed_shape": list(observed.shape), "mismatch_count": None, "element_count": None}
     if reference.dtype != np.dtype("float32") or observed.dtype != np.dtype("float32"):
-        return {"status": "unresolved", "domain": domain, "reason": "dtype_not_float32", "reference_dtype": str(reference.dtype), "observed_dtype": str(observed.dtype)}
+        return {"status": "unresolved", "domain": domain, "reason": "dtype_not_float32", "reference_dtype": str(reference.dtype), "observed_dtype": str(observed.dtype), "mismatch_count": None, "element_count": int(reference.size)}
     if not np.isfinite(reference).all() or not np.isfinite(observed).all():
         return {"status": "unresolved", "domain": domain, "reason": "nonfinite_output"}
     delta = np.abs(observed.astype(np.float64) - reference.astype(np.float64))
-    denominator = np.maximum(np.abs(reference.astype(np.float64)), np.finfo(np.float64).tiny)
-    relative = delta / denominator
+    abs_reference = np.abs(reference.astype(np.float64))
+    relative = np.zeros_like(delta, dtype=np.float64)
+    np.divide(delta, abs_reference, out=relative, where=abs_reference > 0)
+    relative[(abs_reference == 0) & (delta > 0)] = np.inf
     close = np.isclose(reference, observed, rtol=LOCKED_TOLERANCES["float32"]["rtol"], atol=LOCKED_TOLERANCES["float32"]["atol"])
     bad = np.argwhere(~close)
     result = {
@@ -404,9 +494,11 @@ def compare_float_arrays(reference: Any, observed: Any, np: Any, domain: str) ->
         "mismatch_count": int((~close).sum()),
         "element_count": int(close.size),
         "max_abs": float(delta.max()),
-        "max_relative": float(relative.max()),
+        "max_relative": float(relative.max()) if np.isfinite(relative.max()) else None,
+        "relative_infinite_count": int(np.isinf(relative).sum()),
         "abs_quantiles": quantile_summary(delta, np),
         "relative_quantiles": quantile_summary(relative, np),
+        "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
         "first_offenders": [list(map(int, item)) for item in bad[:10]],
     }
     return result
@@ -434,7 +526,19 @@ def compare_primary(model: str, reference: Any, observed: Any, np: Any) -> dict[
     if not np.isfinite(reference).all() or not np.isfinite(observed).all():
         return {"status": "unresolved", "domain": "native_primary", "reason": "nonfinite_primary_output"}
     if model == "yolov8n":
-        return compare_float_arrays(reference, observed, np, "yolov8n_raw_primary_channelwise")
+        boxes = compare_float_arrays(reference[:, 0:4, :], observed[:, 0:4, :], np, "yolov8n_raw_boxes_channels")
+        scores = compare_float_arrays(reference[:, 4:7, :], observed[:, 4:7, :], np, "yolov8n_raw_score_channels")
+        overall = "fail" if "fail" in (boxes["status"], scores["status"]) else ("unresolved" if "unresolved" in (boxes["status"], scores["status"]) else "pass")
+        return {
+            "status": overall,
+            "domain": "yolov8n_raw_primary_fixed_channel_spans",
+            "shape": list(reference.shape),
+            "channel_spans": {"boxes": [0, 4], "scores": [4, 7]},
+            "channel_results": {"boxes": boxes, "scores": scores},
+            "mismatch_count": (boxes.get("mismatch_count") or 0) + (scores.get("mismatch_count") or 0),
+            "element_count": (boxes.get("element_count") or 0) + (scores.get("element_count") or 0),
+            "tolerance_order": "reference first in numpy.isclose(reference, observed, rtol, atol)",
+        }
     if reference.dtype != np.dtype("float32") or observed.dtype != np.dtype("float32"):
         return {"status": "unresolved", "domain": "yolo26n_native_detections", "reason": "dtype_not_float32"}
     ref_classes = reference[..., 5]
@@ -447,16 +551,25 @@ def compare_primary(model: str, reference: Any, observed: Any, np: Any) -> dict[
     )
     if not valid_class:
         return {"status": "unresolved", "domain": "yolo26n_native_detections", "reason": "class_id_not_finite_integer_in_range"}
-    numeric = compare_float_arrays(reference[..., :5], observed[..., :5], np, "yolo26n_fixed_row_box_score")
+    boxes = compare_float_arrays(reference[..., :4], observed[..., :4], np, "yolo26n_fixed_row_boxes")
+    scores = compare_float_arrays(reference[..., 4:5], observed[..., 4:5], np, "yolo26n_fixed_row_scores")
     class_equal = bool(np.array_equal(ref_classes, obs_classes))
-    numeric["domain"] = "yolo26n_native_detections_fixed_row"
+    numeric_statuses = (boxes["status"], scores["status"], "pass" if class_equal else "fail")
+    numeric = {
+        "status": "fail" if "fail" in numeric_statuses else ("unresolved" if "unresolved" in numeric_statuses else "pass"),
+        "domain": "yolo26n_native_detections_fixed_row",
+        "shape": list(reference.shape),
+        "channel_spans": {"boxes": [0, 4], "score": [4, 5], "class_id": [5, 6]},
+        "channel_results": {"boxes": boxes, "score": scores},
+        "mismatch_count": (boxes.get("mismatch_count") or 0) + (scores.get("mismatch_count") or 0) + int(np.sum(ref_classes != obs_classes)),
+        "element_count": (boxes.get("element_count") or 0) + (scores.get("element_count") or 0) + int(ref_classes.size),
+        "tolerance_order": "reference first in numpy.isclose(reference, observed, rtol, atol)",
+    }
     numeric["class_ids_exact"] = class_equal
     numeric["class_mismatch_count"] = int(np.sum(ref_classes != obs_classes))
     numeric["tie_count_reference_scores"] = _tie_count(reference[..., 4], np)
     numeric["tie_count_observed_scores"] = _tie_count(observed[..., 4], np)
     numeric["tie_handling"] = "fixed native row index; ties are reported and never rematched"
-    if not class_equal:
-        numeric["status"] = "fail"
     return numeric
 
 
@@ -533,6 +646,7 @@ def load_child_runtime(config: dict[str, Any]) -> dict[str, Any]:
         import torch
         import ultralytics
         from ultralytics.data.augment import LetterBox
+        from ultralytics.data.dataset import YOLODataset
         from ultralytics.data.loaders import imread
         from ultralytics.engine.predictor import BasePredictor
         from ultralytics import YOLO
@@ -542,7 +656,7 @@ def load_child_runtime(config: dict[str, Any]) -> dict[str, Any]:
     providers = list(ort.get_available_providers())
     if "CPUExecutionProvider" not in providers:
         raise NumericUnresolved(f"ONNX Runtime CPU provider is unavailable: {providers}")
-    return {"np": np, "ort": ort, "torch": torch, "YOLO": YOLO, "LetterBox": LetterBox, "imread": imread, "BasePredictor": BasePredictor, "packages": packages, "available_providers": providers}
+    return {"np": np, "ort": ort, "torch": torch, "YOLO": YOLO, "YOLODataset": YOLODataset, "LetterBox": LetterBox, "imread": imread, "BasePredictor": BasePredictor, "packages": packages, "available_providers": providers}
 
 
 def trace_preprocess(path: Path, runtime: dict[str, Any], stride: int = 32) -> tuple[Any, dict[str, Any]]:
@@ -602,6 +716,83 @@ def trace_preprocess(path: Path, runtime: dict[str, Any], stride: int = 32) -> t
     return tensor, trace
 
 
+def trace_calibration_preprocess(path: Path, runtime: dict[str, Any], stride: int = 32) -> dict[str, Any]:
+    """Trace only the pinned calibration image components on one bounded image.
+
+    This deliberately calls ``YOLODataset.load_image`` and the validation
+    ``LetterBox``/``Format`` semantics directly on a small stub.  It does not
+    instantiate a dataset, read labels, use an image cache, build a dataloader,
+    or dispatch ``Exporter.get_int8_calibration_dataloader``.
+    """
+    np = runtime["np"]
+    dataset_cls = runtime["YOLODataset"]
+    image_stub = SimpleNamespace(
+        ims=[None],
+        im_files=[str(path)],
+        npy_files=[path.with_suffix(".npy")],
+        channels=3,
+        cv2_flag=1,
+        prefix="bounded calibration trace: ",
+        imgsz=640,
+        augment=False,
+        buffer=[],
+        max_buffer_length=0,
+        cache=False,
+    )
+    loaded, original_hw, resized_hw = dataset_cls.load_image(image_stub, 0, rect_mode=True, resize_short=False)
+    if loaded is None or loaded.ndim != 3 or loaded.shape[-1] != 3:
+        raise NumericUnresolved("Calibration component loader did not produce BGR HWC image")
+    letterbox = runtime["LetterBox"](
+        new_shape=(640, 640), auto=False, scale_fill=False, scaleup=False,
+        center=True, stride=int(stride), padding_value=114,
+    )
+    params = letterbox.get_params({"img": loaded.copy()})
+    transformed = letterbox(image=loaded.copy())
+    if transformed.ndim != 3 or tuple(transformed.shape[:2]) != (640, 640):
+        raise NumericUnresolved("Calibration LetterBox did not produce 640x640 image")
+    # Validation Format._format_img emits uint8 RGB CHW; the repository
+    # calibration helper performs /255 on that stream before TensorRT consumes
+    # it.  Keep both stages explicit without constructing the loader.
+    rgb_chw = np.ascontiguousarray(transformed[..., ::-1].transpose((2, 0, 1)))
+    if rgb_chw.dtype != np.dtype("uint8"):
+        raise NumericUnresolved(f"Calibration formatted image dtype differs: {rgb_chw.dtype}")
+    normalized = rgb_chw.astype(np.float32) / 255.0
+    return {
+        "path": str(path),
+        "stage": "bounded_calibration_component_trace",
+        "producer_calls": ["YOLODataset.load_image", "LetterBox.__call__", "Format._format_img_equivalent"],
+        "loader_dispatch": {"Exporter.get_int8_calibration_dataloader": False, "build_yolo_dataset": False, "dataloader": False},
+        "dataset_side_effects": {"labels_read": False, "image_cache_read": False, "dataset_instantiated": False},
+        "load_image": {
+            "rect_mode": True,
+            "resize_short": False,
+            "input_path_kind": "materialized calibration image",
+            "original_hw": [int(value) for value in original_hw],
+            "resized_hw": [int(value) for value in resized_hw],
+            "dtype": str(loaded.dtype),
+            "color_order": "BGR",
+            "bytes_sha256": array_digest(np.ascontiguousarray(loaded)),
+        },
+        "letterbox": {
+            "new_shape": [640, 640],
+            "auto": False,
+            "scale_fill": False,
+            "scaleup": False,
+            "center": True,
+            "stride": int(stride),
+            "padding_value": 114,
+            "interpolation": int(letterbox.interpolation),
+            "orig_shape": [int(value) for value in params["orig_shape"]],
+            "ratio": [float(value) for value in params["ratio"]],
+            "new_unpad": [int(value) for value in params["new_unpad"]],
+            "padding": {key: int(params[key]) for key in ("top", "bottom", "left", "right")},
+        },
+        "formatted_uint8": {"shape": list(rgb_chw.shape), "dtype": str(rgb_chw.dtype), "layout": "RGB_CHW", "bytes_sha256": array_digest(rgb_chw)},
+        "normalization": {"applied": True, "operation": "float32(rgb_chw) / 255.0", "shape": list(normalized.shape), "dtype": str(normalized.dtype), "range": [float(normalized.min()), float(normalized.max())], "bytes_sha256": array_digest(normalized)},
+        "calibration_trace_scope": "three accepted anchors only; no full calibration set, cache, test or negative-test data",
+    }
+
+
 def validate_native_head(network: Any, model: str, accepted_contract: dict[str, Any]) -> dict[str, Any]:
     network = network.to("cpu").eval()
     head = network.model[-1]
@@ -610,7 +801,10 @@ def validate_native_head(network: Any, model: str, accepted_contract: dict[str, 
         raise NumericUnresolved(f"Native head identity differs for {model}")
     if any(getattr(parameter, "device", None).type != "cpu" for parameter in network.parameters()):
         raise NumericUnresolved(f"Native parameters are not on CPU for {model}")
-    return {"head": {"type": type(head).__name__, "index": int(head.i), "end2end": bool(head.end2end)}}
+    parameter_dtypes = {str(getattr(parameter, "dtype", None)) for parameter in network.parameters()}
+    if parameter_dtypes != {"torch.float32"}:
+        raise NumericUnresolved(f"Native parameters are not explicitly float32 for {model}: {sorted(parameter_dtypes)}")
+    return {"head": {"type": type(head).__name__, "index": int(head.i), "end2end": bool(head.end2end)}, "parameters_dtype": "torch.float32", "float_explicit": True}
 
 
 def verify_native_model(network: Any, model: str, accepted_contract: dict[str, Any], tensor: Any, runtime: dict[str, Any]) -> tuple[Any, dict[str, Any]]:
@@ -650,6 +844,9 @@ def run_onnx_session(onnx_path: Path, model: str, runtime: dict[str, Any]) -> tu
 
 def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path) -> dict[str, Any]:
     set_cpu_environment()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    partial_dir = out_dir / "partial"
+    partial_dir.mkdir(parents=True, exist_ok=True)
     config = read_json(repo_path(repo, Path(plan["config_path"])))
     runtime = load_child_runtime(config)
     model_plan = plan["models"][model]
@@ -662,24 +859,34 @@ def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path)
     fixture_binding = verify_fixture_files(repo, plan["fixture"])
     source_evidence = runtime_source_evidence()
     model_loader = runtime["YOLO"](str(checkpoint_path), task="detect")
-    network = model_loader.model.to("cpu").eval()
+    network = model_loader.model.to("cpu").float().eval()
     native_head_contract = validate_native_head(network, model, model_plan["accepted_contract"])
     raw_stride = getattr(network, "stride", 32)
     try:
         model_stride = int(raw_stride.max().item())
     except AttributeError:
         model_stride = int(raw_stride)
-    unique_rows = {}
+    unique_rows: dict[str, list[dict[str, Any]]] = {}
     for row in plan["fixture"]["forward_images"] + plan["fixture"]["preprocess_trace_images"]:
-        unique_rows[row["image"]] = row
+        unique_rows.setdefault(row["image"], []).append(row)
     traces = {}
+    calibration_traces = {}
     tensors = {}
-    for image, row in unique_rows.items():
-        source_path = repo_path(repo, Path(*PurePosixPath(image).parts))
+    for image, bound_rows in unique_rows.items():
+        row = bound_rows[0]
+        source_path = resolve_bound_source_image(repo, row)
         tensor, trace = trace_preprocess(source_path, runtime, stride=model_stride)
-        trace.update({"selection": row["selection"], "image_id": row["image_id"], "expected_source_sha256": row["expected_sha256"]})
+        trace.update({"selection": row["selection"], "image_id": row["image_id"], "expected_source_sha256": row["expected_sha256"], "selection_bindings": [{"selection": item["selection"], "manifest_order": item["manifest_order"], "image_id": item["image_id"], "expected_source_sha256": item["expected_sha256"]} for item in bound_rows]})
         traces[image] = trace
         tensors[image] = tensor
+        write_json_no_overwrite(partial_dir / f"inference_trace_{row['selection']}_{row['image_id']}.json", trace)
+    for row in plan["fixture"]["preprocess_trace_images"]:
+        image = row["image"]
+        materialized_path = resolve_bound_materialized_image(repo, row)
+        calibration_trace = trace_calibration_preprocess(materialized_path, runtime, stride=model_stride)
+        calibration_trace.update({"selection": row["selection"], "image_id": row["image_id"], "image": image, "expected_source_sha256": row["expected_sha256"], "materialized_expected_sha256": row["materialized_expected_sha256"]})
+        calibration_traces[f"{row['selection']}::{image}"] = calibration_trace
+        write_json_no_overwrite(partial_dir / f"calibration_trace_{row['selection']}_{row['image_id']}.json", calibration_trace)
 
     session, onnx_contract = run_onnx_session(onnx_path, model, runtime)
     comparisons = []
@@ -698,7 +905,7 @@ def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path)
             raise NumericUnresolved(f"ONNX returned an unexpected output count for {model}")
         onnx_primary = runtime["np"].ascontiguousarray(onnx_outputs[0])
         comparison = compare_primary(model, native_primary, onnx_primary, runtime["np"])
-        comparisons.append({
+        comparison_record = {
             "selection": row["selection"],
             "manifest_order": row["manifest_order"],
             "image": image,
@@ -708,11 +915,16 @@ def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path)
             "onnx_primary": {"shape": list(onnx_primary.shape), "dtype": str(onnx_primary.dtype), "sha256": array_digest(onnx_primary)},
             "same_verified_input": True,
             "comparison": comparison,
-        })
+        }
+        comparisons.append(comparison_record)
+        write_json_no_overwrite(partial_dir / f"comparison_{row['selection']}_{row['image_id']}.json", comparison_record)
     checkpoint_after = file_evidence(repo, checkpoint_path)
     onnx_after = file_evidence(repo, onnx_path)
     if checkpoint_before != checkpoint_after or onnx_before != onnx_after:
         raise ValueError(f"Input binary changed during numeric verification for {model}")
+    fixture_binding_after = verify_fixture_files(repo, plan["fixture"])
+    if fixture_binding != fixture_binding_after:
+        raise ValueError(f"Bound source/materialized image bytes changed during numeric verification for {model}")
     statuses = [row["comparison"]["status"] for row in comparisons]
     overall = "pass" if statuses and all(status == "pass" for status in statuses) else ("fail" if any(status == "fail" for status in statuses) else "unresolved")
     return {
@@ -724,23 +936,67 @@ def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path)
         "runtime": runtime["packages"],
         "onnxruntime": onnx_contract,
         "producer_source_evidence": source_evidence,
+        "reference_semantics": model_plan["reference_semantics"],
         "checkpoint": {"before": checkpoint_before, "after": checkpoint_after, "unchanged": checkpoint_before == checkpoint_after},
         "onnx": {"before": onnx_before, "after": onnx_after, "unchanged": onnx_before == onnx_after, "expected_sha256": EXPECTED_ONNX_SHA256[model]},
         "fixture_binding": fixture_binding,
+        "fixture_binding_after": fixture_binding_after,
+        "fixture_binding_unchanged": fixture_binding == fixture_binding_after,
         "preprocess_traces": traces,
+        "calibration_preprocess_traces": calibration_traces,
         "native_head_contract": native_head_contract,
         "model_stride": model_stride,
         "native_output_contract": native_contract,
         "comparisons": comparisons,
         "forward_counts": {"source_cpu_fp32": len(comparisons), "onnx_cpu": len(comparisons)},
-        "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "gpu_used": False, "scored_run_authorized": False},
+        "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "calibration_component_called": True, "gpu_used": False, "scored_run_authorized": False},
         "created_utc": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def build_reference_semantics(model: str, graph_doc: dict[str, Any], accepted_contract: dict[str, Any], config: dict[str, Any]) -> dict[str, Any]:
+    observed_schema = graph_doc.get("onnx_schema", {})
+    requested = dict(ACCEPTED_EXPORT_ARGUMENTS)
+    preserved = graph_doc.get("provenance", {}).get("preserved_records", {})
+    for record in preserved.values():
+        export = (record.get("summary", {}) or {}).get("export") or {}
+        if isinstance(export.get("requested_arguments"), dict):
+            requested = dict(export["requested_arguments"])
+            break
+    return {
+        "model": model,
+        "native_reference": {
+            "mode": "frozen PyTorch model.model.to(cpu).float().eval() under torch.no_grad",
+            "dtype": "explicit float32 primary output",
+            "head_contract": accepted_contract.get("expected_contract", {}),
+            "forward_counts": {"native_primary": 0, "export_reference": 0},
+            "fusion": "not_reproduced_in_native_reference; any historical exporter fusion belongs to the ONNX artifact and is not inferred from numeric agreement",
+        },
+        "accepted_export_settings": requested,
+        "observed_onnx_schema": {
+            "inputs": observed_schema.get("inputs", []),
+            "outputs": observed_schema.get("outputs", []),
+            "opset_imports": observed_schema.get("opset_imports", []),
+            "static_shapes": observed_schema.get("effective_observations", {}).get("static_shapes"),
+            "dynamic_shape_observed": observed_schema.get("effective_observations", {}).get("dynamic_shape_observed"),
+            "float_graph_expected": observed_schema.get("effective_observations", {}).get("float_graph_expected"),
+            "quantization_nodes": observed_schema.get("quantization_nodes", []),
+        },
+        "head_output_semantics": {
+            "output_name": "output0",
+            "output_shape": EXPECTED_OUTPUT_SHAPES[model],
+            "max_det": config.get("runtime", {}).get("max_det", 300),
+            "postprocess": "no additional NMS/rematching in this diagnostic; YOLO26 fixed native row index",
+            "coordinate_or_packing": "accepted graph schema/structural audit is referenced; native-to-ONNX numeric comparison is measured separately",
+        },
+        "source_inspection_boundary": "Exporter and dataset/augmentation source hashes are recorded at runtime; source inspection is evidence of implementation, not proof of a producer call unless the corresponding call flag is true",
     }
 
 
 def _model_plan(repo: Path, config: dict[str, Any], accepted: dict[str, Any], graph_audit: dict[str, Any], model: str) -> dict[str, Any]:
     checkpoint = validate_checkpoint_contract(repo, config, accepted, model)
     graph_doc = graph_audit["models"][model]
+    accepted_contract = accepted_model_contracts(accepted, [model])[model]
     onnx_relative = f"results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/{model}/model.onnx"
     onnx_path = repo_path(repo, Path(onnx_relative))
     onnx_record = file_evidence(repo, onnx_path)
@@ -755,7 +1011,8 @@ def _model_plan(repo: Path, config: dict[str, Any], accepted: dict[str, Any], gr
         "checkpoint": checkpoint,
         "onnx": {"path": onnx_relative, "expected_sha256": EXPECTED_ONNX_SHA256[model], "before": onnx_record},
         "graph_contract": {"audit_model_report": f"{GRAPH_AUDIT_ROOT_NAME}/{GRAPH_AUDIT_MODEL_FILES[model]}", "mapping_status": graph_doc.get("mapping_status"), "output_shape": EXPECTED_OUTPUT_SHAPES[model]},
-        "accepted_contract": accepted_model_contracts(accepted, [model])[model],
+        "accepted_contract": accepted_contract,
+        "reference_semantics": build_reference_semantics(model, graph_doc, accepted_contract, config),
     }
 
 
@@ -791,6 +1048,7 @@ def _final_report(manifest: dict[str, Any]) -> str:
         "",
         f"- Study: `{manifest['study']}`",
         f"- Status: `{manifest['status']}`",
+        f"- Execution status: `{manifest.get('execution_status', manifest['status'])}`; numeric verdict: `{manifest.get('numeric_verdict', {}).get('status', 'not_observed')}`.",
         "- This diagnostic is not a scored accuracy test and does not authorize TensorRT work.",
         "- Source and existing ONNX bytes are checked before and after; raw arrays are not published.",
         "",
@@ -808,6 +1066,38 @@ def _final_report(manifest: dict[str, Any]) -> str:
         "- Any fail or unresolved result remains evidence for review; no model, output or preprocessing change is applied automatically.",
     ]
     return "\n".join(lines) + "\n"
+
+
+def aggregate_numeric_verdict(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    allowed = ("pass", "fail", "unresolved", "not_observed")
+    counts = {status: 0 for status in allowed}
+    for row in rows:
+        status = row.get("numeric_status") if row.get("status") == "completed" else "not_observed"
+        if status not in counts:
+            status = "unresolved"
+        counts[status] += 1
+    if counts["fail"]:
+        overall = "fail"
+    elif counts["unresolved"]:
+        overall = "unresolved"
+    elif counts["not_observed"]:
+        overall = "not_observed"
+    else:
+        overall = "pass"
+    return {"status": overall, "counts": counts, "execution_and_numeric_are_separate": True}
+
+
+def publishable_artifact_inventory(output_root: Path) -> list[str]:
+    """List JSON/text evidence, including partial lifecycle evidence, not binaries."""
+    inventory = {"numeric_plan.json", "numeric_manifest.json", "report.md"}
+    if output_root.is_dir():
+        for path in output_root.rglob("*"):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(output_root).as_posix()
+            if path.suffix in (".json", ".md", ".log") or path.name.endswith(".log.gz"):
+                inventory.add(relative)
+    return sorted(inventory)
 
 
 def run_parent(args: argparse.Namespace, repo: Path) -> int:
@@ -843,6 +1133,7 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
         "graph_audit": {"root": str(graph_root.relative_to(repo.resolve()).as_posix()), "commit": GRAPH_AUDIT_COMMIT, "files": graph_audit["files"]},
         "config_binding": {key: value for key, value in binding.items() if key != "config"},
         "fixture": fixture,
+        "calibration_trace_contract": {"anchors": fixture["preprocess_trace_images"], "arguments": CALIBRATION_TRACE_ARGUMENTS, "full_loader_called": False, "cache_created": False, "labels_read": False},
         "models": model_plans,
         "environment": {"requested": CPU_ENVIRONMENT, "mode": "CPU parent; model-specific children import Torch/ONNX Runtime", "expected_packages": {name: config.get("runtime", {}).get(name) for name in ("torch", "ultralytics", "numpy", "pycocotools")}, "onnx_provider": "CPUExecutionProvider"},
         "tolerances": LOCKED_TOLERANCES,
@@ -853,7 +1144,7 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
             "repository_calibration_helper": file_evidence(repo, repo / "scripts/uniform_build_repeat.py"),
             "config": file_evidence(repo, config_path),
         },
-        "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "gpu_used": False, "scored_run_authorized": False},
+        "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "calibration_component_called": True, "gpu_used": False, "scored_run_authorized": False},
         "no_overwrite": True,
     }
     output_root.mkdir(parents=True)
@@ -870,9 +1161,13 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
         report_path = model_dir / "numeric_report.json"
         if report_path.is_file():
             row = read_json(report_path)
+        elif (model_dir / "failure.json").is_file():
+            row = read_json(model_dir / "failure.json")
+            if row.get("model") != model or row.get("status") != "failed":
+                raise ValueError(f"Existing child failure record is invalid for {model}")
         else:
             failed = True
-            row = {"schema_version": 1, "study": STUDY, "model": model, "status": "failed", "error_type": "ChildProcessError", "error": f"model child exited {result.returncode}", "command": command, "audit_flags": {"export_performed": False, "build_performed": False, "scored_run_authorized": False}}
+            row = {"schema_version": 1, "study": STUDY, "model": model, "status": "failed", "numeric_status": "not_observed", "error_type": "ChildProcessError", "error": f"model child exited {result.returncode}", "command": command, "partial_files": [], "no_silent_resume": True, "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "gpu_used": False, "scored_run_authorized": False}}
             write_json_no_overwrite(model_dir / "failure.json", row)
         if result.returncode != 0 or row.get("status") != "completed":
             failed = True
@@ -882,8 +1177,10 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
         "study": STUDY,
         "status": "failed" if failed else "completed",
         "models": model_rows,
+        "execution_status": "failed" if failed else "completed",
+        "numeric_verdict": aggregate_numeric_verdict(model_rows),
         "plan_path": "numeric_plan.json",
-        "artifact_inventory": ["numeric_plan.json", "numeric_manifest.json", "report.md"] + [f"models/{model}/numeric_report.json" for model in models] + [f"logs/{model}.log" for model in models],
+        "artifact_inventory": publishable_artifact_inventory(output_root),
         "audit_flags": {"export_performed": False, "build_performed": False, "calibration_loader_called": False, "gpu_used": False, "scored_run_authorized": False},
         "created_utc": datetime.now(timezone.utc).isoformat(),
     }
@@ -909,6 +1206,7 @@ def run_child(args: argparse.Namespace) -> int:
             "study": STUDY,
             "model": model,
             "status": "failed",
+            "numeric_status": "not_observed",
             "error_type": type(exc).__name__,
             "error": str(exc),
             "partial_files": sorted(path.relative_to(repo_path(repo, Path(plan["output_root"]))).as_posix() for path in repo_path(repo, Path(plan["output_root"])).rglob("*") if path.is_file()),
