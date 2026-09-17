@@ -29,6 +29,7 @@ class CudaMemoryOwner(Protocol):
     def allocate_device(self, nbytes: int, name: str) -> int: ...
     def copy_host_to_device(self, payload: bytes, device_pointer: int, stream_handle: int) -> None: ...
     def copy_device_to_host(self, device_pointer: int, destination: bytearray, stream_handle: int) -> None: ...
+    def synchronize(self, stream_handle: int) -> None: ...
     def free_device(self, device_pointer: int) -> None: ...
 
 
@@ -122,6 +123,10 @@ class OwnedBuffers:
         if self._freed and not self._allocations:
             return
         errors: list[Exception] = []
+        try:
+            self.memory.synchronize(self.stream_handle)
+        except Exception as exc:
+            errors.append(exc)
         for allocation in list(self._allocations.values()):
             try:
                 self.memory.free_device(allocation.device_pointer)
@@ -220,8 +225,10 @@ class TensorRTProvider:
     def close(self) -> None:
         self._context = None
         self._engine = None
-        self._logger = None
         self._runtime = None
+        # Keep logger alive until Runtime is released; TensorRT may retain the
+        # logger through the runtime lifetime.
+        self._logger = None
         self._trt = None
         self._descriptor = None
         self._native_output_contract = None

@@ -751,3 +751,115 @@ change the correctness NO-GO.
 **Git:** branch `luna1/e2l1-006-jetson-adapter-smoke`; correction commit/push
 uses the established `NADUNGVN` account. No PR or merge; historical results
 and other worktrees remain untouched.
+
+## L1A-010 — concrete CUDA runtime owner and default-disabled allocation smoke
+
+**Status:** local implementation complete; **NO-GO** for real CUDA calls,
+allocation smoke execution, TensorRT/model load, build, inference, benchmark,
+installation or device configuration. The owner is ready for Astra review and
+separate authorization of the small E2 memory roundtrip.
+
+### Concrete route and native evidence
+
+Implemented `scripts/edge_readiness/cuda_runtime_owner.py` as a lazy,
+injected-loader `ctypes` binding to the CUDA 11.4 Runtime C API. Importing the
+module does not load `libcudart`; `CudaRuntime.open()` is the explicit load
+boundary. The owner configures and checks raw return codes for `cudaMalloc`,
+`cudaFree`, `cudaMemcpy`, `cudaStreamCreate`, `cudaStreamSynchronize`,
+`cudaStreamDestroy` and `cudaGetErrorString`, with structured `AdapterError`
+codes. It owns one stream, validates positive pointers/sizes and rejects a
+non-owned stream. Its context policy is explicit: use the caller's current
+CUDA primary context, without creating or switching a context.
+
+The selected copy mode is synchronous `cudaMemcpy` for both H2D and D2H. This
+is deliberate: ordinary Python `bytes`/`bytearray` are not silently treated as
+pinned memory. The one-stream completion call remains part of the contract,
+and `OwnedBuffers.free()` synchronizes before attempting every device free,
+including after an earlier cleanup error. The TensorRT provider release order
+keeps the logger alive until the runtime is released. The implementation does
+not claim target compatibility until the separately authorized smoke loads the
+target library.
+
+The official ABI/API references are the [CUDA Runtime API v11.4
+reference](https://docs.nvidia.com/cuda/archive/11.4.0/pdf/CUDA_Runtime_API.pdf)
+and [CUDA stream synchronization
+documentation](https://docs.nvidia.com/cuda/archive/11.4.0/cuda-runtime-api/group__CUDART__STREAM.html).
+
+One bounded read-only E2 inspection was performed through alias `nx` only. It
+recorded host `arar-desktop`, no `nvcc` (`nvcc: not found`), loader discovery of
+`libcudart.so.11.0`, and both symlinks resolving to
+`/usr/local/cuda-11.4/targets/aarch64-linux/lib/libcudart.so.11.4.298`. The
+installed header resolves to
+`/usr/local/cuda-11.4/targets/aarch64-linux/include/cuda_runtime_api.h` and
+declares the observed allocation/free/stream/error APIs plus
+`cudaMemcpyAsync`; symbol inspection observed `cudaMalloc`, `cudaFree`,
+`cudaMallocHost`, `cudaFreeHost`, `cudaMemcpyAsync` and
+`cudaStreamSynchronize`. No library was loaded and no CUDA function was
+called. The read-only artifact is under
+`results/edge_readiness_v1/e2l1-010/cuda_runtime_probe_20260917/`:
+returncode `0`, `timed_out=false`, local elapsed `1.734s`, remote child bound
+`50s`, local bound `60s`, command SHA-256
+`ba098b7bacc1354775e27828fa3f60a002756f4fe4787e3256681703ce7503ff`, remote
+script SHA-256
+`1910e2a351b4d37041b3459281b797e91e5f70cc8fa821bed679e1f9cc7ebb21`, manifest
+SHA-256 `4d21d95cbd473c5c6e389d1945bb53af1dc6e3358d1ea7af6ad944f1654c4f29`,
+stdout SHA-256
+`8357c470ec17ad3351a4e285cd3994805d73c7944bf14dc2e09a9b59ea13e3a0`, and
+empty stderr SHA-256
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`.
+
+### Allocation-only smoke and source handoff
+
+`scripts/edge_readiness/e2_cuda_allocation_smoke.py` is default-disabled and
+prints a plan without loading CUDA:
+
+    python scripts/edge_readiness/e2_cuda_allocation_smoke.py --target E2
+
+The candidate command, **not executed in L1A-010**, is:
+
+    python scripts/edge_readiness/e2_cuda_allocation_smoke.py --target E2 --execute-real-device --out-dir results/edge_readiness_v1/e2l1-010/<run_id>/allocation_smoke
+
+It is E2-only, one owned stream, one deterministic 4096-byte payload, one
+allocation capped at 1 MiB, one synchronous H2D/D2H roundtrip, exact-byte
+comparison, synchronization and cleanup. It must write only a scoped JSON
+manifest (or failure JSON); it must not touch an engine, model, TensorRT,
+inference, benchmark, power/thermal collection, package state or device
+configuration. Astra must authorize this command separately before any real
+device invocation.
+
+The later source/reference handoff remains unchanged and is explicitly future
+work: frozen YOLO11n checkpoint SHA
+`3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8`, the
+verified train fixture sequence `00006`, `00009`, `00028` with sequence SHA
+`7bfaaa99c4ed6b8ea2c92695f68747496a2ebb24400cf978b8630c27f41a6fc9`, input
+`[1,3,640,640]`, letterbox/RGB/`[0,1]` recipe, ONNX `opset=17`, static shape,
+`simplify=true`, no Q/DQ, and native output `output0 [1,7,8400]`. No source
+forward/export was run or claimed; no TRT10 engine is transferred.
+The intended source-run location is the server-side `D:\Research\paper`
+environment (CPU/reference/export only, after separate authorization); E2 is
+reserved for the later target-native TensorRT build and synchronized compare.
+Artifact roles are separated: checkpoint SHA identifies frozen weights, the
+fixture manifest/sequence SHA identifies the three source inputs, the future
+ONNX SHA identifies source export, and a future E2 engine SHA identifies only
+the target-native TensorRT artifact. No large image, tensor, ONNX or engine
+bytes are added to this handoff.
+
+### Verification
+
+    python -m unittest discover -s tests -p 'test_edge*.py'
+    Ran 63 tests ... OK
+    python -m unittest tests.test_edge_e2_runtime
+    Ran 24 tests ... OK
+    python -m py_compile scripts/edge_readiness/cuda_runtime_owner.py scripts/edge_readiness/e2_cuda_allocation_smoke.py scripts/edge_readiness/probe_e2_cuda_runtime.py scripts/edge_readiness/jetson_runtime_provider.py tests/test_edge_e2_runtime.py
+    git diff --check (source/docs; the raw vendor-header capture is retained verbatim)
+
+The tests use injected C-function doubles only and cover allocation/copy/sync/
+free failures, exact small-copy roundtrip, repeated stream use and close,
+partial cleanup, and provider integration. The full repository discovery was
+not used as acceptance evidence because this workstation lacks unrelated
+NumPy/PIL dependencies and canonical fixtures. No E2 CUDA call, build or
+inference was performed.
+
+**Git:** L1A-010 includes the concrete owner, default-disabled smoke, scoped
+read-only E2 evidence, tests and this report. Push uses the `NADUNGVN` account;
+the E2L1-010 inbox entry remains unchanged.

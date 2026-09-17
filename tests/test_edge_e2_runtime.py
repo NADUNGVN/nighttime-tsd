@@ -1,4 +1,5 @@
 import hashlib
+import ctypes
 import json
 import struct
 import sys
@@ -34,6 +35,14 @@ from edge_readiness.jetson_adapter import (  # noqa: E402
 from edge_readiness.jetson_runtime_provider import (  # noqa: E402
     OwnedBuffers,
     TensorRTProvider,
+)
+from edge_readiness.cuda_runtime_owner import (  # noqa: E402
+    CudaRuntime,
+    CudaRuntimeMemoryOwner,
+)
+from edge_readiness.e2_cuda_allocation_smoke import (  # noqa: E402
+    build_plan,
+    run_roundtrip,
 )
 
 
@@ -100,6 +109,9 @@ class FakeMemory:
         self.pending_d2h = []
         self.completion_value = 42
         self.fail_h2d = False
+        self.fail_sync = False
+        self.fail_free = False
+        self.sync_calls = []
 
     def allocate_device(self, nbytes, name):
         if self.fail_after is not None and len(self.allocations) >= self.fail_after:
@@ -126,7 +138,14 @@ class FakeMemory:
         self.pending_d2h.clear()
         self.completion_value += 1
 
+    def synchronize(self, stream_handle):
+        self.sync_calls.append(stream_handle)
+        if self.fail_sync:
+            raise RuntimeError("injected synchronize failure")
+
     def free_device(self, device_pointer):
+        if self.fail_free:
+            raise RuntimeError("injected free failure")
         self.freed.append(device_pointer)
 
 
@@ -141,6 +160,81 @@ class FakeStream:
         if self.on_synchronize is not None:
             self.on_synchronize()
         self.stages.append(stage)
+
+
+class FakeCFunction:
+    def __init__(self, function):
+        self.function = function
+        self.argtypes = None
+        self.restype = None
+
+    def __call__(self, *args):
+        return self.function(*args)
+
+
+class FakeCudaLibrary:
+    def __init__(self, fail_operation=None):
+        self.device_memory = {}
+        self.next_pointer = 0x5000
+        self.freed = []
+        self.destroyed_streams = []
+        self.fail_operation = fail_operation
+        self.cudaMalloc = FakeCFunction(self._cuda_malloc)
+        self.cudaFree = FakeCFunction(self._cuda_free)
+        self.cudaMemcpy = FakeCFunction(self._cuda_memcpy)
+        self.cudaStreamCreate = FakeCFunction(self._cuda_stream_create)
+        self.cudaStreamDestroy = FakeCFunction(self._cuda_stream_destroy)
+        self.cudaStreamSynchronize = FakeCFunction(self._cuda_stream_synchronize)
+        self.cudaGetErrorString = FakeCFunction(lambda code: f"fake-{code}".encode())
+
+    def _maybe_fail(self, operation):
+        return 7 if self.fail_operation == operation else 0
+
+    @staticmethod
+    def _value(value):
+        return value.value if hasattr(value, "value") else int(value)
+
+    def _cuda_malloc(self, output, size):
+        failure = self._maybe_fail("cudaMalloc")
+        if failure:
+            return failure
+        pointer = self.next_pointer
+        self.next_pointer += 0x1000
+        output._obj.value = pointer
+        self.device_memory[pointer] = bytearray(self._value(size))
+        return 0
+
+    def _cuda_free(self, pointer):
+        failure = self._maybe_fail("cudaFree")
+        if failure:
+            return failure
+        self.freed.append(int(pointer.value))
+        self.device_memory.pop(int(pointer.value), None)
+        return 0
+
+    def _cuda_memcpy(self, destination, source, size, kind):
+        failure = self._maybe_fail("cudaMemcpy")
+        if failure:
+            return failure
+        count = self._value(size)
+        if self._value(kind) == 1:
+            self.device_memory[int(destination.value)][:count] = ctypes.string_at(source, count)
+        elif int(kind) == 2:
+            ctypes.memmove(destination, bytes(self.device_memory[int(source.value)][:count]), count)
+        else:
+            return 9
+        return 0
+
+    def _cuda_stream_create(self, output):
+        output._obj.value = 0x7000
+        return 0
+
+    def _cuda_stream_destroy(self, stream):
+        self.destroyed_streams.append(int(stream.value))
+        return 0
+
+    def _cuda_stream_synchronize(self, _stream):
+        return self._maybe_fail("cudaStreamSynchronize")
 
 
 class E2RuntimeProviderTests(unittest.TestCase):
@@ -235,6 +329,7 @@ class E2RuntimeProviderTests(unittest.TestCase):
         self.assertEqual(len(first["output0"].payload), expected_nbytes((1, 7, 8400), "float32"))
         buffers.free()
         self.assertEqual(set(memory.freed), {allocation[2] for allocation in memory.allocations})
+        self.assertIn(13, memory.sync_calls)
         provider.close()
 
     def test_failed_second_call_cannot_expose_previous_output_and_free_rejects_reuse(self):
@@ -300,6 +395,66 @@ class E2RuntimeProviderTests(unittest.TestCase):
         with self.assertRaisesRegex(AdapterError, "ENGINE_HASH_MISMATCH"):
             provider.load_engine(b"fake-engine", "0" * 64)
         self.assertEqual(loaded, [])
+
+
+class ConcreteCudaOwnerTests(unittest.TestCase):
+    def test_ctypes_owner_is_lazy_and_roundtrip_is_exact_with_fake_functions(self):
+        library = FakeCudaLibrary()
+        runtime = CudaRuntime(library_loader=lambda _candidate: library, library_candidates=("fake-libcudart",))
+        self.assertFalse(runtime.loaded)
+        runtime.open()
+        stream = runtime.create_stream()
+        owner = CudaRuntimeMemoryOwner(runtime, stream)
+        result = run_roundtrip(owner, stream)
+        self.assertEqual(result["status"], "pass")
+        self.assertEqual(result["observed_sha256"], result["payload_sha256"])
+        self.assertEqual(library.device_memory, {})
+        stream.close()
+        runtime.close()
+        self.assertEqual(library.destroyed_streams, [0x7000])
+
+    def test_ctypes_owner_checks_return_codes_and_does_not_claim_load_success(self):
+        library = FakeCudaLibrary(fail_operation="cudaMalloc")
+        runtime = CudaRuntime(library_loader=lambda _candidate: library, library_candidates=("fake-libcudart",))
+        runtime.open()
+        with self.assertRaisesRegex(AdapterError, "CUDA_CALL_FAILED"):
+            runtime.allocate_device(64)
+        runtime.close()
+
+    def test_ctypes_owner_copy_sync_and_free_failures_are_structured(self):
+        for operation, expected in (("cudaMemcpy", "CUDA_CALL_FAILED"), ("cudaStreamSynchronize", "CUDA_CALL_FAILED"), ("cudaFree", "CUDA_CALL_FAILED")):
+            library = FakeCudaLibrary(fail_operation=operation)
+            runtime = CudaRuntime(library_loader=lambda _candidate, lib=library: lib, library_candidates=("fake-libcudart",))
+            runtime.open()
+            stream = runtime.create_stream()
+            owner = CudaRuntimeMemoryOwner(runtime, stream)
+            if operation == "cudaFree":
+                pointer = owner.allocate_device(64, "failure-test")
+                with self.assertRaisesRegex(AdapterError, expected):
+                    owner.free_device(pointer)
+            else:
+                with self.assertRaisesRegex(AdapterError, expected):
+                    run_roundtrip(owner, stream)
+            stream.close()
+            runtime.close()
+
+    def test_owned_buffers_attempts_sync_and_every_free_even_when_cleanup_fails(self):
+        descriptor = FakeEngineDescriptor()
+        memory = FakeMemory()
+        buffers = OwnedBuffers(descriptor, memory, stream_handle=13)
+        memory.fail_sync = True
+        memory.fail_free = True
+        with self.assertRaisesRegex(AdapterError, "FREE_FAILED"):
+            buffers.free()
+        self.assertEqual(len(memory.sync_calls), 1)
+        self.assertEqual(memory.freed, [])
+        buffers.free()
+
+    def test_allocation_smoke_is_default_disabled(self):
+        plan = build_plan()
+        self.assertEqual(plan["status"], "proposed_default_disabled")
+        self.assertFalse(plan["real_device_execution"])
+        self.assertLessEqual(plan["payload_nbytes"], 1024 * 1024)
 
 
 class FakeEngineDescriptor:

@@ -1,0 +1,145 @@
+__E2L1_CUDA_PROBE__ begin
+hostname=arar-desktop
+nvcc_path=nvcc_version=sh: 6: nvcc: not found
+ldconfig_libcudart=	libcudart.so.11.0 (libc6,AArch64) => /usr/local/cuda/targets/aarch64-linux/lib/libcudart.so.11.0
+library_path=/usr/local/cuda-11.4/lib64/libcudart.so.11.0
+library_realpath=/usr/local/cuda-11.4/targets/aarch64-linux/lib/libcudart.so.11.4.298
+library_stat=lrwxrwxrwx root root 21 /usr/local/cuda-11.4/lib64/libcudart.so.11.0
+library_symbols=
+00000000000530f0 T cudaFree
+0000000000053470 T cudaFreeArray
+00000000000704f0 T cudaFreeAsync
+0000000000059ee0 T cudaFreeAsync_ptsz
+00000000000532b0 T cudaFreeHost
+0000000000053630 T cudaFreeMipmappedArray
+000000000004ad68 T cudaGetErrorString
+0000000000052960 T cudaMalloc
+0000000000054118 T cudaMalloc3D
+0000000000054310 T cudaMalloc3DArray
+0000000000052ee0 T cudaMallocArray
+0000000000070310 T cudaMallocAsync
+0000000000059d00 T cudaMallocAsync_ptsz
+00000000000706b8 T cudaMallocFromPoolAsync
+000000000005ad88 T cudaMallocFromPoolAsync_ptsz
+0000000000052b28 T cudaMallocHost
+0000000000052780 T cudaMallocManaged
+0000000000054530 T cudaMallocMipmappedArray
+0000000000052cf0 T cudaMallocPitch
+000000000006ad58 T cudaMemcpyAsync
+0000000000056ac0 T cudaMemcpyAsync_ptsz
+000000000006d7c8 T cudaStreamSynchronize
+000000000004de08 T cudaStreamSynchronize_ptsz
+library_path=/usr/local/cuda/lib64/libcudart.so.11.0
+library_realpath=/usr/local/cuda-11.4/targets/aarch64-linux/lib/libcudart.so.11.4.298
+library_stat=lrwxrwxrwx root root 21 /usr/local/cuda/lib64/libcudart.so.11.0
+library_symbols=
+00000000000530f0 T cudaFree
+0000000000053470 T cudaFreeArray
+00000000000704f0 T cudaFreeAsync
+0000000000059ee0 T cudaFreeAsync_ptsz
+00000000000532b0 T cudaFreeHost
+0000000000053630 T cudaFreeMipmappedArray
+000000000004ad68 T cudaGetErrorString
+0000000000052960 T cudaMalloc
+0000000000054118 T cudaMalloc3D
+0000000000054310 T cudaMalloc3DArray
+0000000000052ee0 T cudaMallocArray
+0000000000070310 T cudaMallocAsync
+0000000000059d00 T cudaMallocAsync_ptsz
+00000000000706b8 T cudaMallocFromPoolAsync
+000000000005ad88 T cudaMallocFromPoolAsync_ptsz
+0000000000052b28 T cudaMallocHost
+0000000000052780 T cudaMallocManaged
+0000000000054530 T cudaMallocMipmappedArray
+0000000000052cf0 T cudaMallocPitch
+000000000006ad58 T cudaMemcpyAsync
+0000000000056ac0 T cudaMemcpyAsync_ptsz
+000000000006d7c8 T cudaStreamSynchronize
+000000000004de08 T cudaStreamSynchronize_ptsz
+header_path=/usr/local/cuda-11.4/include/cuda_runtime_api.h
+header_realpath=/usr/local/cuda-11.4/targets/aarch64-linux/include/cuda_runtime_api.h
+header_stat=-rw-r--r-- root root 540860 /usr/local/cuda-11.4/include/cuda_runtime_api.h
+1356:extern __host__ __cudart_builtin__ const char* CUDARTAPI cudaGetErrorString(cudaError_t error);
+2037: * using ::cudaMalloc(), ::cudaMallocPitch() or ::cudaMallocArray()
+2039: * from this host thread using ::cudaMallocHost() or ::cudaHostAlloc() 
+2640:extern __host__ cudaError_t CUDARTAPI cudaStreamSynchronize(cudaStream_t stream);
+2649: * is equivalent to having called ::cudaStreamSynchronize().
+4720: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4736: * ::cudaMalloc() returns ::cudaErrorMemoryAllocation in case of failure.
+4754: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4758:extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPtr, size_t size);
+4769: * memory with ::cudaMallocHost() may degrade system performance, since it
+4787: * \ref ::cudaMallocHost(void**, size_t, unsigned int) "cudaMallocHost (C++ API)",
+4791:extern __host__ cudaError_t CUDARTAPI cudaMallocHost(void **ptr, size_t size);
+4829: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4878: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4889: * returned by a previous call to ::cudaMalloc() or ::cudaMallocPitch().
+4890: * Otherwise, or if ::cudaFree(\p devPtr) has already been called before,
+4892: * ::cudaFree() returns ::cudaErrorValue in case of failure.
+4907: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4912:extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaFree(void *devPtr);
+4918: * returned by a previous call to ::cudaMallocHost() or ::cudaHostAlloc().
+4931: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4935:extern __host__ cudaError_t CUDARTAPI cudaFreeHost(void *ptr);
+4954: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4977: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5001: * ::cudaHostAlloc() to emulate ::cudaMallocHost().
+5027: * Memory allocated by this function must be freed with ::cudaFreeHost().
+5042: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5265: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5406: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5548: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5581: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+6390: * The memory areas may not overlap. Calling ::cudaMemcpyAsync() with \p dst and
+6394: * ::cudaMemcpyAsync() is asynchronous with respect to the host, so the call
+6432:extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMemcpyAsync(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind, cudaStream_t stream __dv(0));
+8024: * All host memory allocated through all devices using ::cudaMallocHost() and
+8044: * ::cudaMalloc() and ::cudaMallocPitch() will immediately be accessible 
+8542: * If the device memory pointer was returned from ::cudaMalloc(), the offset is
+8595: * If the device memory pointer was returned from ::cudaMalloc(), the offset is
+12739:    extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMemcpyAsync(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind, cudaStream_t stream __dv(0));
+12760:    extern __host__ cudaError_t CUDARTAPI cudaStreamSynchronize(cudaStream_t stream);
+header_path=/usr/local/cuda/include/cuda_runtime_api.h
+header_realpath=/usr/local/cuda-11.4/targets/aarch64-linux/include/cuda_runtime_api.h
+header_stat=-rw-r--r-- root root 540860 /usr/local/cuda/include/cuda_runtime_api.h
+1356:extern __host__ __cudart_builtin__ const char* CUDARTAPI cudaGetErrorString(cudaError_t error);
+2037: * using ::cudaMalloc(), ::cudaMallocPitch() or ::cudaMallocArray()
+2039: * from this host thread using ::cudaMallocHost() or ::cudaHostAlloc() 
+2640:extern __host__ cudaError_t CUDARTAPI cudaStreamSynchronize(cudaStream_t stream);
+2649: * is equivalent to having called ::cudaStreamSynchronize().
+4720: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4736: * ::cudaMalloc() returns ::cudaErrorMemoryAllocation in case of failure.
+4754: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4758:extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMalloc(void **devPtr, size_t size);
+4769: * memory with ::cudaMallocHost() may degrade system performance, since it
+4787: * \ref ::cudaMallocHost(void**, size_t, unsigned int) "cudaMallocHost (C++ API)",
+4791:extern __host__ cudaError_t CUDARTAPI cudaMallocHost(void **ptr, size_t size);
+4829: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4878: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4889: * returned by a previous call to ::cudaMalloc() or ::cudaMallocPitch().
+4890: * Otherwise, or if ::cudaFree(\p devPtr) has already been called before,
+4892: * ::cudaFree() returns ::cudaErrorValue in case of failure.
+4907: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4912:extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaFree(void *devPtr);
+4918: * returned by a previous call to ::cudaMallocHost() or ::cudaHostAlloc().
+4931: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4935:extern __host__ cudaError_t CUDARTAPI cudaFreeHost(void *ptr);
+4954: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+4977: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5001: * ::cudaHostAlloc() to emulate ::cudaMallocHost().
+5027: * Memory allocated by this function must be freed with ::cudaFreeHost().
+5042: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5265: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5406: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5548: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+5581: * \ref ::cudaMallocHost(void**, size_t) "cudaMallocHost (C API)",
+6390: * The memory areas may not overlap. Calling ::cudaMemcpyAsync() with \p dst and
+6394: * ::cudaMemcpyAsync() is asynchronous with respect to the host, so the call
+6432:extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMemcpyAsync(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind, cudaStream_t stream __dv(0));
+8024: * All host memory allocated through all devices using ::cudaMallocHost() and
+8044: * ::cudaMalloc() and ::cudaMallocPitch() will immediately be accessible 
+8542: * If the device memory pointer was returned from ::cudaMalloc(), the offset is
+8595: * If the device memory pointer was returned from ::cudaMalloc(), the offset is
+12739:    extern __host__ __cudart_builtin__ cudaError_t CUDARTAPI cudaMemcpyAsync(void *dst, const void *src, size_t count, enum cudaMemcpyKind kind, cudaStream_t stream __dv(0));
+12760:    extern __host__ cudaError_t CUDARTAPI cudaStreamSynchronize(cudaStream_t stream);
+__E2L1_CUDA_PROBE__ end

@@ -291,3 +291,33 @@ the adapter has called `stream.synchronize("after_output_copy")`; only then does
 double completes the queued copy at synchronization and asserts the returned
 payload contains `42`. This correction is CPU/mock evidence only and does not
 authorize E2 inference.
+
+## L1A-010 implementation note
+
+The concrete E2-native candidate is `scripts/edge_readiness/cuda_runtime_owner.py`.
+It lazily loads the installed CUDA 11.4 runtime through an injected `ctypes`
+loader, binds documented C-runtime allocation/free/copy/stream/error symbols,
+checks raw return codes, uses the caller's current primary context without
+switching it, and exposes one owned stream. Copies are synchronous so ordinary
+Python buffers are not mislabelled as pinned. `OwnedBuffers` synchronizes its
+stream before attempting all frees, while the TensorRT provider keeps its
+logger alive until runtime release.
+
+The default-disabled plan is executable with:
+
+    python scripts/edge_readiness/e2_cuda_allocation_smoke.py --target E2
+
+The separately authorized real candidate is limited to one E2 stream, one
+deterministic 4096-byte payload, one allocation no larger than 1 MiB, one exact
+H2D/D2H roundtrip, completion and cleanup. It was not executed. The code does
+not invoke TensorRT, an engine, a model, inference, build, benchmark, telemetry,
+installation or device configuration.
+
+Native feasibility evidence is retained at
+`results/edge_readiness_v1/e2l1-010/cuda_runtime_probe_20260917/`; it observed
+the E2 libcudart symlink/realpath, CUDA runtime header and required allocation,
+free, stream and error symbols using one bounded read-only SSH inspection.
+`nvcc` was absent, so no device compilation/build is implied. See the official
+[CUDA Runtime API v11.4 reference](https://docs.nvidia.com/cuda/archive/11.4.0/pdf/CUDA_Runtime_API.pdf)
+and [stream synchronization API](https://docs.nvidia.com/cuda/archive/11.4.0/cuda-runtime-api/group__CUDART__STREAM.html)
+for the ABI/API basis.

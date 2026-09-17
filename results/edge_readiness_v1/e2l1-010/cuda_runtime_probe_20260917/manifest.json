@@ -1,0 +1,30 @@
+{
+  "schema_version": "e2l1-edge-cuda-runtime-probe-v1",
+  "status": "ok",
+  "scope": "E2 only; read-only libcudart/header/symbol inspection; no CUDA load or initialization",
+  "alias": "nx",
+  "remote_child_timeout_seconds": 50,
+  "local_timeout_seconds": 60,
+  "sanitized_command": "ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes <alias> timeout 50s sh -s",
+  "command_sha256": "ba098b7bacc1354775e27828fa3f60a002756f4fe4787e3256681703ce7503ff",
+  "remote_script_sha256": "1910e2a351b4d37041b3459281b797e91e5f70cc8fa821bed679e1f9cc7ebb21",
+  "returncode": 0,
+  "timed_out": false,
+  "local_elapsed_ns": 1734000000,
+  "captured_at_utc": "2026-09-17T08:55:04.551135+00:00",
+  "artifacts": {
+    "stdout": "remote.stdout",
+    "stderr": "remote.stderr"
+  },
+  "forbidden_actions": [
+    "ctypes.CDLL",
+    "CUDA load/init",
+    "context/stream creation",
+    "allocation",
+    "memory copy",
+    "TensorRT/model operation",
+    "package installation",
+    "sudo",
+    "device writes"
+  ]
+}
