@@ -539,18 +539,54 @@ def _value_shape(value: Any) -> list[Any] | None:
         return list(shape) if isinstance(shape, list) else None
     type_proto = getattr(value, "type", None)
     tensor_type = getattr(type_proto, "tensor_type", None)
+    tensor_has_field = getattr(tensor_type, "HasField", None)
+    if callable(tensor_has_field):
+        try:
+            if not tensor_type.HasField("shape"):
+                return None
+        except (ValueError, TypeError):
+            pass
     shape_proto = getattr(tensor_type, "shape", None)
     if shape_proto is None:
         return None
     result: list[Any] = []
     for dimension in getattr(shape_proto, "dim", []):
-        if getattr(dimension, "dim_value", 0):
-            result.append(int(dimension.dim_value))
-        elif getattr(dimension, "dim_param", ""):
-            result.append(str(dimension.dim_param))
+        has_field = getattr(dimension, "HasField", None)
+        if callable(has_field):
+            try:
+                if dimension.HasField("dim_value"):
+                    result.append(int(dimension.dim_value))
+                elif dimension.HasField("dim_param"):
+                    result.append(str(dimension.dim_param))
+                else:
+                    result.append(None)
+                continue
+            except (ValueError, TypeError):
+                pass
+        dim_value = getattr(dimension, "dim_value", None)
+        dim_param = getattr(dimension, "dim_param", "")
+        if dim_value is not None:
+            result.append(int(dim_value))
+        elif dim_param:
+            result.append(str(dim_param))
         else:
             result.append(None)
     return result
+
+
+_ONNX_DTYPE_NAMES = {
+    1: "float32", 2: "uint8", 3: "int8", 4: "uint16", 5: "int16",
+    6: "int32", 7: "int64", 8: "string", 9: "bool", 10: "float16",
+    11: "float64", 12: "uint32", 13: "uint64", 14: "complex64",
+    15: "complex128", 16: "bfloat16",
+}
+
+
+def _dtype_name(elem_type: Any) -> str | None:
+    try:
+        return _ONNX_DTYPE_NAMES.get(int(elem_type)) if elem_type else None
+    except (TypeError, ValueError):
+        return None
 
 
 def _value_dtype(value: Any) -> str | None:
@@ -560,16 +596,98 @@ def _value_dtype(value: Any) -> str | None:
     type_proto = getattr(value, "type", None)
     tensor_type = getattr(type_proto, "tensor_type", None)
     elem_type = getattr(tensor_type, "elem_type", None)
-    mapping = {
-        1: "float32", 2: "uint8", 6: "int32", 7: "int64", 9: "bool",
-        10: "float16", 11: "float64",
+    return _dtype_name(elem_type)
+
+
+def _merge_tensor_metadata(
+    metadata: dict[str, dict[str, Any]],
+    conflicts: list[dict[str, Any]],
+    name: str,
+    shape: list[Any] | None,
+    dtype: str | None,
+    source: str,
+) -> None:
+    """Merge protobuf metadata without conflating scalar, unknown, or conflict."""
+    if not isinstance(name, str) or not name:
+        return
+    record = metadata.setdefault(name, {
+        "shape": None,
+        "shape_status": "missing_rank",
+        "dtype": None,
+        "dtype_status": "missing_dtype",
+        "sources": [],
+    })
+    record["sources"].append(source)
+    if shape is not None:
+        shape = list(shape)
+        if record["shape_status"] == "explicit" and record["shape"] != shape:
+            conflicts.append({
+                "name": name,
+                "field": "shape",
+                "existing": record["shape"],
+                "incoming": shape,
+                "existing_sources": list(record["sources"][:-1]),
+                "incoming_source": source,
+            })
+            record["shape"] = None
+            record["shape_status"] = "conflict"
+        elif record["shape_status"] != "conflict":
+            record["shape"] = shape
+            record["shape_status"] = "explicit"
+    if dtype is not None:
+        dtype = str(dtype)
+        if record["dtype_status"] == "explicit" and record["dtype"] != dtype:
+            conflicts.append({
+                "name": name,
+                "field": "dtype",
+                "existing": record["dtype"],
+                "incoming": dtype,
+                "existing_sources": list(record["sources"][:-1]),
+                "incoming_source": source,
+            })
+            record["dtype"] = None
+            record["dtype_status"] = "conflict"
+        elif record["dtype_status"] != "conflict":
+            record["dtype"] = dtype
+            record["dtype_status"] = "explicit"
+
+
+def _metadata_shape_for_tensor_proto(tensor: Any) -> list[int] | None:
+    """TensorProto dims are authoritative; absent repeated dims means scalar []."""
+    if not hasattr(tensor, "dims"):
+        return None
+    try:
+        return [int(dimension) for dimension in tensor.dims]
+    except (TypeError, ValueError):
+        return None
+
+
+def _metadata_record(
+    name: str,
+    shape: list[Any] | None,
+    dtype: str | None,
+    source: str,
+    *,
+    value: Any = None,
+    value_recorded: bool = False,
+) -> dict[str, Any]:
+    return {
+        "name": name,
+        "shape": list(shape) if isinstance(shape, list) else None,
+        "shape_status": "explicit" if shape is not None else "missing_rank",
+        "dtype": dtype,
+        "dtype_status": "explicit" if dtype is not None else "missing_dtype",
+        "source": source,
+        **({"value": value} if value_recorded else {}),
     }
-    return mapping.get(int(elem_type)) if elem_type else None
 
 
 def graph_tensor_shapes(graph: Any) -> dict[str, list[Any]]:
     result: dict[str, list[Any]] = {}
     if isinstance(graph, dict):
+        for name, metadata in (graph.get("tensor_metadata", {}) or {}).items():
+            if isinstance(metadata, dict) and metadata.get("shape_status") == "explicit" and isinstance(metadata.get("shape"), list):
+                result[str(name)] = list(metadata["shape"])
         for name, shape in (graph.get("tensor_shapes", {}) or {}).items():
             result[str(name)] = list(shape)
         for row in graph.get("inputs", []) + graph.get("outputs", []) + graph.get("value_info", []):
@@ -587,11 +705,17 @@ def graph_tensor_shapes(graph: Any) -> dict[str, list[Any]]:
 def graph_tensor_dtypes(graph: Any) -> dict[str, str | None]:
     result: dict[str, str | None] = {}
     if isinstance(graph, dict):
+        for name, metadata in (graph.get("tensor_metadata", {}) or {}).items():
+            if isinstance(metadata, dict) and metadata.get("dtype_status") == "explicit":
+                result[str(name)] = metadata.get("dtype")
         for name, dtype in (graph.get("tensor_dtypes", {}) or {}).items():
-            result[str(name)] = str(dtype) if dtype is not None else None
+            if dtype is not None or str(name) not in result:
+                result[str(name)] = str(dtype) if dtype is not None else None
         for row in graph.get("inputs", []) + graph.get("outputs", []) + graph.get("value_info", []):
             if isinstance(row, dict) and isinstance(row.get("name"), str):
-                result[row["name"]] = _value_dtype(row)
+                dtype = _value_dtype(row)
+                if dtype is not None or row["name"] not in result:
+                    result[row["name"]] = dtype
         return result
     for row in list(getattr(graph, "input", [])) + list(getattr(graph, "output", [])) + list(getattr(graph, "value_info", [])):
         result[str(row.name)] = _value_dtype(row)
@@ -881,10 +1005,15 @@ def _downstream_semantic_audit(
     shapes: dict[str, list[Any]],
     initializers: dict[str, Any] | None = None,
     allowed_postprocess_ops: set[str] | None = None,
+    tensor_dtypes: dict[str, str | None] | None = None,
+    initializer_metadata: dict[str, dict[str, Any]] | None = None,
+    expected_class_count: int | None = None,
 ) -> dict[str, Any]:
     """Check known post-merge operators without treating shape as semantics."""
     initializers = initializers or {}
     allowed_postprocess_ops = set(allowed_postprocess_ops or ())
+    tensor_dtypes = tensor_dtypes or {}
+    initializer_metadata = initializer_metadata or {}
     queue = [start_tensor]
     seen_tensors: set[str] = set()
     visited: list[dict[str, Any]] = []
@@ -1065,14 +1194,60 @@ def _downstream_semantic_audit(
                         })
                 else:
                     fmod = _attribute_int(node["attributes"], "fmod", 0)
-                    broadcast = _broadcast_shape(input_shapes[0] if input_shapes else None, input_shapes[1] if len(input_shapes) > 1 else None)
+                    divisor_name = node["inputs"][1] if len(node["inputs"]) > 1 else None
+                    divisor_values, divisor_source = _parameter_sequence(node, "divisor", 1, initializers)
+                    divisor_metadata = initializer_metadata.get(divisor_name, {}) if divisor_name else {}
+                    input_dtype = tensor_dtypes.get(node["inputs"][0]) if node["inputs"] else None
+                    divisor_dtype = tensor_dtypes.get(divisor_name) if divisor_name else None
+                    output_dtype = tensor_dtypes.get(node["outputs"][0]) if node["outputs"] else None
+                    divisor_shape = shapes.get(divisor_name) if divisor_name else None
+                    semantic.update({
+                        "fmod": fmod,
+                        "fmod_source": "attribute:fmod" if "fmod" in node["attributes"] else "onnx_default:0",
+                        "input_dtype": input_dtype,
+                        "divisor": {
+                            "tensor": divisor_name,
+                            "value": divisor_values,
+                            "shape": divisor_shape,
+                            "dtype": divisor_dtype,
+                            "parameter_source": divisor_source,
+                            "metadata": divisor_metadata,
+                        },
+                        "output_dtype": output_dtype,
+                        "lineage": {
+                            "input": node["inputs"][0] if node["inputs"] else None,
+                            "divisor": divisor_name,
+                            "output": node["outputs"][0] if node["outputs"] else None,
+                        },
+                    })
+                    broadcast = _broadcast_shape(input_shapes[0] if input_shapes else None, divisor_shape)
                     output_shape = output_shapes[0] if output_shapes else None
-                    if fmod not in (0, 1) or broadcast is None or output_shape != broadcast:
+                    integer_dtypes = {"int8", "uint8", "int16", "uint16", "int32", "uint32", "int64", "uint64"}
+                    divisor_shape_supported = divisor_shape in ([], [1])
+                    divisor_supported = (
+                        divisor_values == [expected_class_count]
+                        if expected_class_count is not None
+                        else divisor_values is not None
+                    )
+                    integer_contract = (
+                        input_dtype in integer_dtypes
+                        and divisor_dtype in integer_dtypes
+                        and output_dtype in integer_dtypes
+                        and fmod == 0
+                    )
+                    if (
+                        fmod not in (0, 1)
+                        or not integer_contract
+                        or not divisor_shape_supported
+                        or not divisor_supported
+                        or broadcast is None
+                        or output_shape != broadcast
+                    ):
                         unresolved.append(f"mod_semantics_unresolved:{node['name']}")
                     else:
                         semantic.update({
-                            "fmod": fmod,
-                            "evidence": "explicit_or_default_mod_mode_and_broadcast_shape_match",
+                            "expected_class_count": expected_class_count,
+                            "evidence": "explicit_scalar_or_singleton_integer_divisor_3_and_broadcast_shape_match",
                         })
             elif op in known_passthrough:
                 if input_shapes and output_shapes and input_shapes[0] is not None and output_shapes[0] is not None and op != "Concat" and input_shapes[0] != output_shapes[0]:
@@ -1221,6 +1396,9 @@ def audit_graph_mapping(graph: Any, model_label: str, accepted_model: dict[str, 
             merge["output"], primary_output_names, consumers, shapes,
             graph.get("initializers", {}) if isinstance(graph, dict) else {},
             allowed_postprocess_ops,
+            graph_tensor_dtypes(graph),
+            graph.get("initializer_metadata", {}) if isinstance(graph, dict) else {},
+            scores_shape[1] if isinstance(scores_shape, list) and len(scores_shape) == 3 and isinstance(scores_shape[1], int) else None,
         )
         if merge["downstream_semantic_audit"]["status"] != "verified":
             errors.extend(merge["downstream_semantic_audit"]["unresolved"])
@@ -1500,6 +1678,78 @@ def calibration_recipe_evidence(repo: Path, config: dict[str, Any], current: dic
     return recipe
 
 
+def _collect_onnx_tensor_metadata(
+    graph: Any, numpy_helper: Any
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]], dict[str, Any], list[dict[str, Any]]]:
+    """Collect protobuf shapes/types and small values without flattening shape semantics."""
+    tensor_metadata: dict[str, dict[str, Any]] = {}
+    initializer_metadata: dict[str, dict[str, Any]] = {}
+    initializers: dict[str, Any] = {}
+    conflicts: list[dict[str, Any]] = []
+
+    def add_graph_value(name: str, shape: list[Any] | None, dtype: str | None, source: str) -> None:
+        _merge_tensor_metadata(tensor_metadata, conflicts, name, shape, dtype, source)
+
+    for collection_name in ("input", "output", "value_info"):
+        for index, value in enumerate(getattr(graph, collection_name, [])):
+            add_graph_value(
+                str(value.name),
+                _value_shape(value),
+                _value_dtype(value),
+                f"graph.{collection_name}[{index}]",
+            )
+
+    def add_tensor(name: str, tensor: Any, source: str, *, constant_kind: str) -> None:
+        shape = _metadata_shape_for_tensor_proto(tensor)
+        dtype = _dtype_name(getattr(tensor, "data_type", None))
+        _merge_tensor_metadata(tensor_metadata, conflicts, name, shape, dtype, source)
+        size = 1
+        if shape is not None:
+            for dimension in shape:
+                size *= int(dimension)
+        value_recorded = False
+        value: Any = None
+        if size <= 4096:
+            try:
+                value = numpy_helper.to_array(tensor).tolist()
+                initializers[name] = value
+                value_recorded = True
+            except Exception as exc:
+                conflicts.append({
+                    "name": name,
+                    "field": "value",
+                    "error": f"{type(exc).__name__}:{exc}",
+                    "source": source,
+                })
+        initializer_metadata[name] = _metadata_record(
+            name, shape, dtype, source, value=value, value_recorded=value_recorded
+        )
+        initializer_metadata[name]["kind"] = constant_kind
+
+    for index, initializer in enumerate(getattr(graph, "initializer", [])):
+        add_tensor(
+            str(initializer.name), initializer,
+            f"graph.initializer[{index}]",
+            constant_kind="initializer",
+        )
+    for node_index, node in enumerate(getattr(graph, "node", [])):
+        if node.op_type != "Constant":
+            continue
+        for attribute_index, attribute in enumerate(node.attribute):
+            has_tensor = False
+            try:
+                has_tensor = int(getattr(attribute, "type", 0) or 0) == 4 and attribute.HasField("t")
+            except (AttributeError, ValueError, TypeError):
+                has_tensor = False
+            if has_tensor and node.output:
+                add_tensor(
+                    str(node.output[0]), attribute.t,
+                    f"graph.node[{node_index}].attribute[{attribute_index}].t",
+                    constant_kind="Constant.tensor",
+                )
+    return tensor_metadata, initializer_metadata, initializers, conflicts
+
+
 def _load_onnx(path: Path) -> tuple[Any, dict[str, Any]]:
     onnx = importlib.import_module("onnx")
     model = onnx.load(str(path), load_external_data=True)
@@ -1508,29 +1758,24 @@ def _load_onnx(path: Path) -> tuple[Any, dict[str, Any]]:
     onnx.checker.check_model(model)
     graph = model.graph
     nodes = graph_node_records(graph)
-    tensor_shapes = graph_tensor_shapes(graph)
-    tensor_dtypes = graph_tensor_dtypes(graph)
-    initializers: dict[str, Any] = {}
     try:
         numpy_helper = importlib.import_module("onnx.numpy_helper")
-        for initializer in graph.initializer:
-            size = 1
-            for dimension in initializer.dims:
-                size *= int(dimension)
-            if size <= 4096:
-                initializers[initializer.name] = numpy_helper.to_array(initializer).tolist()
-        for node in graph.node:
-            if node.op_type != "Constant":
-                continue
-            for attribute in node.attribute:
-                if int(getattr(attribute, "type", 0) or 0) == 4 and attribute.HasField("t"):
-                    size = 1
-                    for dimension in attribute.t.dims:
-                        size *= int(dimension)
-                    if size <= 4096 and node.output:
-                        initializers[node.output[0]] = numpy_helper.to_array(attribute.t).tolist()
+        tensor_metadata, initializer_metadata, initializers, metadata_conflicts = _collect_onnx_tensor_metadata(graph, numpy_helper)
     except Exception as exc:
-        initializers["__audit_error__"] = f"{type(exc).__name__}:{exc}"
+        tensor_metadata = {}
+        initializer_metadata = {}
+        initializers = {"__audit_error__": f"{type(exc).__name__}:{exc}"}
+        metadata_conflicts = [{"field": "loader", "error": f"{type(exc).__name__}:{exc}"}]
+    tensor_shapes = {
+        name: list(record["shape"])
+        for name, record in tensor_metadata.items()
+        if record.get("shape_status") == "explicit" and isinstance(record.get("shape"), list)
+    }
+    tensor_dtypes = {
+        name: record.get("dtype")
+        for name, record in tensor_metadata.items()
+        if record.get("dtype_status") == "explicit"
+    }
     graph_doc = {
         "nodes": nodes,
         "inputs": graph_input_records(graph),
@@ -1541,7 +1786,10 @@ def _load_onnx(path: Path) -> tuple[Any, dict[str, Any]]:
         ],
         "tensor_shapes": tensor_shapes,
         "tensor_dtypes": tensor_dtypes,
+        "tensor_metadata": tensor_metadata,
         "initializers": initializers,
+        "initializer_metadata": initializer_metadata,
+        "metadata_conflicts": metadata_conflicts,
     }
     schema = {
         "inputs": graph_input_records(graph),
@@ -1550,6 +1798,8 @@ def _load_onnx(path: Path) -> tuple[Any, dict[str, Any]]:
         "node_count": len(graph.node),
         "op_types": sorted({node["op_type"] for node in nodes}),
         "quantization_nodes": [node["name"] for node in nodes if node["op_type"] in ("QuantizeLinear", "DequantizeLinear")],
+        "initializer_metadata_count": len(initializer_metadata),
+        "metadata_conflicts": metadata_conflicts,
         "opset_imports": [{"domain": item.domain, "version": item.version} for item in model.opset_import],
         "shape_inference": "onnx.shape_inference.infer_shapes_then_checker",
         "effective_observations": {

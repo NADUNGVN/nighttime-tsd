@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -64,6 +65,20 @@ def file_evidence(repo: Path, path: Path) -> dict[str, Any]:
     return record
 
 
+def parse_expected_onnx_hashes(values: list[str]) -> dict[str, str]:
+    expected: dict[str, str] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError(f"Invalid expected ONNX hash {value!r}; expected MODEL=SHA256")
+        model, digest = value.split("=", 1)
+        if model not in MODEL_CHOICES or not re.fullmatch(r"[0-9a-fA-F]{64}", digest):
+            raise ValueError(f"Invalid expected ONNX hash {value!r}; expected locked model and 64-hex SHA256")
+        if model in expected and expected[model] != digest.lower():
+            raise ValueError(f"Conflicting expected ONNX hashes for {model}")
+        expected[model] = digest.lower()
+    return expected
+
+
 def _record_summary(repo: Path, source_root: Path, model_dir: Path) -> dict[str, Any]:
     records: dict[str, Any] = {}
     paths = [
@@ -99,6 +114,7 @@ def _record_summary(repo: Path, source_root: Path, model_dir: Path) -> dict[str,
 
 
 def _node_with_shapes(node: dict[str, Any], shapes: dict[str, list[Any]]) -> dict[str, Any]:
+    dtypes = node.get("_tensor_dtypes", {}) if isinstance(node.get("_tensor_dtypes"), dict) else {}
     return {
         "index": node.get("index"),
         "name": node["name"],
@@ -108,6 +124,8 @@ def _node_with_shapes(node: dict[str, Any], shapes: dict[str, list[Any]]) -> dic
         "outputs": node["outputs"],
         "input_shapes": [shapes.get(name) for name in node["inputs"]],
         "output_shapes": [shapes.get(name) for name in node["outputs"]],
+        "input_dtypes": [dtypes.get(name) for name in node["inputs"]],
+        "output_dtypes": [dtypes.get(name) for name in node["outputs"]],
         "attributes": node["attributes"],
     }
 
@@ -116,8 +134,9 @@ def _head_nodes(graph_doc: dict[str, Any], model: dict[str, Any]) -> list[dict[s
     evidence = model.get("head_output_evidence") or {}
     prefix = f"model.{evidence.get('head_index')}."
     shapes = graph_doc.get("tensor_shapes", {})
+    dtypes = graph_doc.get("tensor_dtypes", {})
     return [
-        _node_with_shapes(node, shapes)
+        _node_with_shapes({**node, "_tensor_dtypes": dtypes}, shapes)
         for node in graph_doc.get("nodes", [])
         if node.get("normalized_name", "").startswith(prefix)
     ]
@@ -130,8 +149,9 @@ def _post_merge_nodes(graph_doc: dict[str, Any], mapping: dict[str, Any]) -> lis
     if merge.get("node"):
         names.add(merge["node"])
     shapes = graph_doc.get("tensor_shapes", {})
+    dtypes = graph_doc.get("tensor_dtypes", {})
     return [
-        _node_with_shapes(node, shapes)
+        _node_with_shapes({**node, "_tensor_dtypes": dtypes}, shapes)
         for node in graph_doc.get("nodes", [])
         if node.get("name") in names
     ]
@@ -174,13 +194,20 @@ def _source_to_node_matches(
 
 def _relevant_initializers(graph_doc: dict[str, Any], post_nodes: list[dict[str, Any]]) -> dict[str, Any]:
     initializers = graph_doc.get("initializers", {})
+    initializer_metadata = graph_doc.get("initializer_metadata", {})
     names = {
         input_name
         for node in post_nodes
         for input_name in node.get("inputs", [])
         if input_name in initializers
     }
-    return {name: initializers[name] for name in sorted(names)}
+    return {
+        name: {
+            "value": initializers[name],
+            "metadata": initializer_metadata.get(name),
+        }
+        for name in sorted(names)
+    }
 
 
 def _provenance(repo: Path, source_root: Path, model: str) -> dict[str, Any]:
@@ -209,16 +236,31 @@ def audit_model(
     model_label: str,
     accepted_model: dict[str, Any],
     model_output: Path,
+    expected_onnx_sha256: str | None = None,
 ) -> dict[str, Any]:
     provenance = _provenance(repo, source_root, model_label)
     onnx_path = source_root / "models" / model_label / "model.onnx"
+    before_sha256 = provenance["onnx"]["before"].get("sha256")
+    if expected_onnx_sha256 is not None and before_sha256 != expected_onnx_sha256:
+        raise ValueError(
+            f"Existing ONNX hash mismatch before audit for {model_label}: "
+            f"expected {expected_onnx_sha256}, observed {before_sha256}"
+        )
     graph_doc, schema = graph._load_onnx(onnx_path)
     mapping = graph.audit_graph_mapping(graph_doc, model_label, accepted_model)
     after = file_evidence(repo, onnx_path)
     provenance["onnx"].update({
         "after": after,
         "unchanged_during_audit": provenance["onnx"]["before"] == after,
+        "expected_sha256": expected_onnx_sha256,
+        "expected_before_match": expected_onnx_sha256 is None or before_sha256 == expected_onnx_sha256,
+        "expected_after_match": expected_onnx_sha256 is None or after.get("sha256") == expected_onnx_sha256,
     })
+    if expected_onnx_sha256 is not None and after.get("sha256") != expected_onnx_sha256:
+        raise ValueError(
+            f"Existing ONNX hash mismatch after audit for {model_label}: "
+            f"expected {expected_onnx_sha256}, observed {after.get('sha256')}"
+        )
     head_nodes = _head_nodes(graph_doc, accepted_model)
     post_nodes = _post_merge_nodes(graph_doc, mapping)
     adapter = graph.adapter_contract(model_label, accepted_model["head_output_evidence"])
@@ -234,6 +276,7 @@ def audit_model(
         "actual_head_conv_nodes": head_nodes,
         "post_merge_topology": post_nodes,
         "relevant_small_shape_index_constants": _relevant_initializers(graph_doc, post_nodes),
+        "graph_metadata_conflicts": graph_doc.get("metadata_conflicts", []),
         "mapping": mapping,
         "adapter_limitations": {
             "declared_contract": adapter,
@@ -266,6 +309,7 @@ def _report(manifest: dict[str, Any]) -> str:
         f"- Source root: `{manifest['source_root']}`",
         "- Mode: audit-only; existing ONNX read/check/shape-inference/mapping in memory.",
         "- Exporter, model forward, calibration loader, TensorRT and scored execution were not called.",
+        "- Initializer/Constant protobuf shape and dtype metadata are recorded; explicit scalar shape `[]` is not treated as unknown rank.",
         "",
         "## Model results",
         "",
@@ -307,7 +351,19 @@ def run_audit(args: argparse.Namespace, repo: Path) -> int:
 
     # Resolve every source path before creating the output tree.  A missing
     # binary stops the diagnostic; it must never trigger an export substitute.
+    expected_hashes = parse_expected_onnx_hashes(getattr(args, "expected_onnx_sha256", []))
+    unexpected_hash_models = sorted(set(expected_hashes) - set(selected))
+    if unexpected_hash_models:
+        raise ValueError(f"Expected ONNX hash supplied for unselected model(s): {unexpected_hash_models}")
     source_provenance = {model: _provenance(repo, source_root, model) for model in selected}
+    for model, expected_hash in expected_hashes.items():
+        observed_hash = source_provenance[model]["onnx"]["before"].get("sha256")
+        if observed_hash != expected_hash:
+            raise ValueError(
+                f"Existing ONNX hash mismatch before audit for {model}: "
+                f"expected {expected_hash}, observed {observed_hash}"
+            )
+        source_provenance[model]["onnx"]["expected_sha256"] = expected_hash
     readiness_root = graph.repo_path(repo, args.readiness_root)
     accepted = graph.validate_readiness_artifact(repo, readiness_root)
     binding = graph.validate_config_binding(repo, accepted)
@@ -342,6 +398,7 @@ def run_audit(args: argparse.Namespace, repo: Path) -> int:
             "python": platform.python_version(),
             "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
             "onnx_runtime_mode": "CPU/CUDA-hidden; no model runtime import",
+            "expected_onnx_sha256": expected_hashes,
         },
         "audit_flags": {
             "audit_only": True,
@@ -361,7 +418,10 @@ def run_audit(args: argparse.Namespace, repo: Path) -> int:
         model_output = output_root / "models" / model_label
         model_output.mkdir(parents=True)
         try:
-            row = audit_model(repo, source_root, model_label, accepted_models[model_label], model_output)
+            row = audit_model(
+                repo, source_root, model_label, accepted_models[model_label], model_output,
+                expected_hashes.get(model_label),
+            )
         except Exception as exc:
             fatal = True
             row = {
@@ -410,6 +470,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--readiness-root", type=Path, default=graph.DEFAULT_READINESS_ROOT)
     parser.add_argument("--model", choices=(*MODEL_CHOICES, "all"), default="all")
     parser.add_argument("--out-dir", type=Path, default=OUTPUT_ROOT_DEFAULT)
+    parser.add_argument(
+        "--expected-onnx-sha256", action="append", default=[], metavar="MODEL=SHA256",
+        help="Bind the existing ONNX bytes before and after audit; repeat once per selected model",
+    )
     args = parser.parse_args(argv)
     repo = Path(__file__).resolve().parents[1]
     return run_audit(args, repo)

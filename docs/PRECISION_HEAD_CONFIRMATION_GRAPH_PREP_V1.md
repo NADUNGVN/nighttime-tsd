@@ -80,7 +80,10 @@ the private workspace before the ONNX is copied to the new model output.
 
 `onnx.checker.check_model` is required. The audit records all graph inputs and
 outputs, input/output dtypes, static shapes, small constant initializers, node
-count/op types, Q/DQ nodes and the ONNX SHA256.
+count/op types, Q/DQ nodes and the ONNX SHA256. Initializer and `Constant`
+protobuf metadata records the actual `dims` and `data_type`: explicit scalar
+shape `[]`, singleton vector `[1]`, zero dimensions and missing rank remain
+distinct. Metadata conflicts are recorded and do not get silently resolved.
 Q/DQ is rejected for this float export. A graph output shape alone is not a
 mapping proof.
 
@@ -145,11 +148,18 @@ tree without invoking the exporter or loading a frozen model. It requires the
 exact existing v2 `model.onnx` files and corresponding records; a missing input
 stops the diagnostic and cannot trigger a substitute export. The helper runs
 ONNX checker and shape inference in memory, calls only the graph mapping audit,
-and writes a fresh audit-v3 root. It records source ONNX hashes before/after,
+and writes a fresh audit-v4 root. It records source ONNX hashes before/after,
 actual head Conv names, source-to-node candidates, I/O/opset/schema, post-merge
 topology/attributes/shapes, small referenced constants, provenance hashes and
 unresolved errors. It does not modify v1/v2, create a prepare manifest, perform
 model forward, calibration, TensorRT, build, capture or scored execution.
+
+The audit command binds the expected existing ONNX SHA256 for each selected
+model before and after inspection. A mismatch stops the audit; it never
+substitutes or re-exports a model. The YOLO26 `Mod` record includes input,
+divisor and output dtype/shape/value/lineage evidence. Structural acceptance
+requires supported integer `fmod=0`, a known scalar/singleton divisor equal to
+the locked three-class count, and matching broadcast output shape.
 
 Audit output is evidence only. `audit_only=true`,
 `export_performed=false`, `build_performed=false`, and

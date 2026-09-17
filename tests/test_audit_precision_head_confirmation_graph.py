@@ -44,6 +44,7 @@ class PreservedGraphAuditTests(unittest.TestCase):
                 source_root=Path("source"),
                 readiness_root=Path("readiness"),
                 out_dir=Path("audit"),
+                expected_onnx_sha256=["yolov8n=" + audit.sha256_file(onnx_path)],
             )
             accepted = self._accepted(model)
             binding = {"path": str(root / "config.json"), "sha256": "config", "semantic_sha256": "semantic"}
@@ -78,7 +79,29 @@ class PreservedGraphAuditTests(unittest.TestCase):
             after = row["provenance"]["onnx"]["after"]["sha256"]
             self.assertEqual(before, after)
             self.assertTrue(row["provenance"]["onnx"]["unchanged_during_audit"])
+            self.assertTrue(row["provenance"]["onnx"]["expected_before_match"])
+            self.assertTrue(row["provenance"]["onnx"]["expected_after_match"])
             self.assertTrue(onnx_path.read_bytes() == b"preserved-onnx")
+
+    def test_expected_onnx_hash_mismatch_stops_before_output_creation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "source" / "models" / "yolov8n"
+            source.mkdir(parents=True)
+            (source / "model.onnx").write_bytes(b"preserved-onnx")
+            (source / "model_prepare.json").write_text("{}", encoding="utf-8")
+            args = SimpleNamespace(
+                model="yolov8n",
+                source_root=Path("source"),
+                readiness_root=Path("readiness"),
+                out_dir=Path("audit"),
+                expected_onnx_sha256=["yolov8n=" + ("0" * 64)],
+            )
+            with patch.object(audit.graph, "validate_readiness_artifact", return_value=self._accepted(graph_tests.expected_model("yolov8n"))), \
+                 patch.object(audit.graph, "validate_config_binding", return_value={"path": "config", "sha256": "c", "semantic_sha256": "s"}):
+                with self.assertRaises(ValueError):
+                    audit.run_audit(args, root)
+            self.assertFalse((root / "audit").exists())
 
     def test_missing_existing_onnx_stops_without_creating_output_or_export(self):
         with tempfile.TemporaryDirectory() as temp:

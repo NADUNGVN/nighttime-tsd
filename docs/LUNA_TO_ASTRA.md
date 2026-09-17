@@ -1537,13 +1537,28 @@ Manifest có `status=audit_only_completed`, selected models là `yolov8n` và
 `export_performed=false`, `build_performed=false`,
 `capture_performed=false`, `scored_run_authorized=false`.
 
-SHA256 các artifact đã push:
+SHA256 các artifact tại local Windows working tree (bytes CRLF):
 
 - `audit_plan.json`: `6aef656a806a7a44439cc08d1e54a00ce0e5cc00bf5b4653629045585ef7a42c`
 - `graph_audit_manifest.json`: `78d70a0d65df458ec0a41804d81a6c761d8c02f3fc99b4c5effae29a711f3f81`
 - `models/yolov8n/graph_audit.json`: `c6bc97008d8aa403a4133b775f54da9f70497b177b484114e8dfe30357d1559b`
 - `models/yolo26n/graph_audit.json`: `be5e73cd9dcde2ed97896db7f7d90dd8d747cb0509de55b618ea332a346980d2`
 - `report.md`: `33ac7fc33e883ddcfe9a2e6863bb8c87745e49a458f38428765296cd9358328b`
+
+Đính chính: các giá trị trên không phải canonical Git blob SHA256. Hash
+canonical tính từ raw bytes của commit `5b410204` là:
+
+| Relative file | Canonical Git blob SHA256 |
+|---|---|
+| `audit_plan.json` | `b6a4ec4ba2e122cf988915dd3103f0e80c2967849499c4c0fab98f0629e9e9d6` |
+| `graph_audit_manifest.json` | `e7aaa6a80158b1b341aee0867b4adf870bbb6b3b07fa47d704d8b70f8ec69d8d` |
+| `models/yolov8n/graph_audit.json` | `588364af696fc53953b9a00bc1d89eb55cad349e667ffded789c31627f76dd04` |
+| `models/yolo26n/graph_audit.json` | `0112682f9295b65d9d3d371a85e6c09b76fd9946e508109b6d354407bbe175ab` |
+| `report.md` | `60341ba0aa8547e29e23f14eb5a64df391a41eb3d56cabaf3b1fb25021509f84` |
+
+Phân biệt này chỉ hiệu chỉnh cách diễn giải hash, không sửa artifact lịch sử.
+Luna không có server-side byte hash riêng để tuyên bố raw server bytes bằng
+canonical Git; các ONNX hash before/after vẫn là quan sát nội bộ của audit.
 
 Diagnostic đã ghi lại code/config/readiness provenance. Các hash chính gồm
 diagnostic script `ecaf7a5c68feeba3e8794d536ff99732d694b365bfe186fff792887ec14cf39d`,
@@ -1586,3 +1601,59 @@ unresolved `Mod` prevents treating the two-model confirmation as fully mapped.
 No full export retry, TensorRT build, calibration-cache generation, capture,
 benchmark or matrix expansion is authorized by this report. Await Astra's
 review/decision on the persisted YOLO26n semantic gap.
+
+## L2A-033 — G6 initializer metadata repair and bounded audit-v4 handoff
+
+Đã triển khai A2L-030 trên graph worktree. Không export lại, không load frozen
+model, không chạy GPU/TensorRT, calibration, capture hoặc benchmark.
+
+### Implementation
+
+- `_value_shape()` nay dùng presence semantics của ONNX protobuf: dimension 0
+  được giữ là `0`, shape protobuf không hiện diện là `missing_rank`, còn tensor
+  scalar có shape hiện diện và `dims=[]` được giữ là `[]`.
+- Loader mới `_collect_onnx_tensor_metadata()` đọc cả graph input/output/
+  value-info, initializer và `Constant` tensor attribute; ghi actual `dims`,
+  `data_type`, source, trạng thái metadata và small value độc lập. Explicit
+  `[]`, `[1]`, `[0]`, missing rank và conflict không bị gộp. Conflict được ghi
+  riêng và làm mất tính chắc chắn thay vì silently override.
+- Audit topology nay ghi input/output dtypes và initializer metadata. Record
+  `/Mod` lưu input, divisor, output shape/dtype/value/lineage; chỉ verified khi
+  `fmod=0`, kiểu integer đã biết, divisor scalar hoặc singleton có giá trị đúng
+  locked class count `3`, broadcast shape khớp và output shape khớp. Sai/thiếu
+  divisor, type, shape hoặc mode vẫn `mapping_unresolved`.
+- CLI audit thêm `--expected-onnx-sha256 MODEL=SHA256`; hash ONNX hiện có được
+  kiểm trước và sau audit, mismatch dừng và không substitute/re-export. Output
+  mới là `precision_head_confirmation_graph_audit_v4`; v2/v3 không ghi đè.
+- L2A-032 đã được đính chính: năm hash working-tree CRLF và năm canonical
+  Git blob được tách riêng; không tuyên bố raw server bytes bằng canonical Git
+  nếu chưa có server-side hash inventory.
+
+### Tests and limits
+
+- Graph targeted suite: **23 tests run, 1 explicit skip** vì ONNX chưa được
+  cài trong local measurement environment; skip là real-ONNX fixture test,
+  không tính là pass.
+- Preserved-audit suite: **4/4 PASS**, gồm expected hash binding/mismatch,
+  read-only source guard và no exporter/build dispatch.
+- `py_compile`: PASS; `git diff --check`: PASS.
+- Full local discovery: **177 tests, 1 failure, 1 error, 1 skip**. Failure là
+  canonical dev-count contract unresolved và error là `StopIteration` vì
+  `data/processed/cctsdb2021_clean/dev/images` không có trong worktree này;
+  đây là thiếu dữ liệu test, không được báo thành full-regression pass.
+
+### CPU audit-v4 command for the operator
+
+Sau khi pull commit chứa L2A-033, kiểm tra output v4 chưa tồn tại rồi chạy đúng
+lệnh foreground một dòng dưới đây. Lệnh chỉ đọc ONNX v2 hiện có trong CPU/
+CUDA-hidden mode, không export thay thế:
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && if [ -e results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4 ]; then echo OUTPUT_EXISTS; else echo OUTPUT_ABSENT; fi`
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/audit_precision_head_confirmation_graph.py --source-root results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2 --readiness-root results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 --model all --out-dir results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4 --expected-onnx-sha256 yolov8n=e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603 --expected-onnx-sha256 yolo26n=1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc`
+
+Chỉ khi audit in `DONE`, operator kiểm tra inventory rồi push đúng năm file:
+`audit_plan.json`, `graph_audit_manifest.json`, `report.md`,
+`models/yolov8n/graph_audit.json`, `models/yolo26n/graph_audit.json`.
+Không push ONNX/PT/engine/cache/private binary. Kết quả v4 tiếp tục là
+evidence-only; chưa mở full export, TRT build hay scored matrix.

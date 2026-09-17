@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import importlib.util
 import inspect
 import json
 import sys
@@ -114,7 +115,14 @@ def graph_fixture(label: str, *, add_nonconv: bool = True, shared_downstream: bo
             merged: [1, 7, 8400],
             output: model["head_output_evidence"]["primary_output_shape"],
         },
-        "tensor_dtypes": {"images": "float32", output: "float32"},
+        "tensor_dtypes": {
+            "images": "float32",
+            "features": "float32",
+            bbox_tensor: "float32",
+            class_tensor: "float32",
+            merged: "float32",
+            output: "float32",
+        },
     }, model
 
 
@@ -129,7 +137,114 @@ class TensorLike:
         return self._rows
 
 
+class FakeDim:
+    def __init__(self, value=None, param=""):
+        self.dim_value = value
+        self.dim_param = param
+
+
+class FakeTensorProto:
+    def __init__(self, dims, data_type, value):
+        self.dims = list(dims)
+        self.data_type = data_type
+        self.value = value
+
+
+class FakeNumpyHelper:
+    @staticmethod
+    def to_array(tensor):
+        return TensorLike(tensor.dims, tensor.value)
+
+
+class FakeTensorAttribute:
+    def __init__(self, tensor):
+        self.type = 4
+        self.t = tensor
+
+    def HasField(self, name):
+        return name == "t"
+
+
+def fake_value_info(name, shape, elem_type):
+    shape_proto = None if shape is None else SimpleNamespace(dim=[FakeDim(value=item) for item in shape])
+    tensor_type = SimpleNamespace(shape=shape_proto, elem_type=elem_type)
+    return SimpleNamespace(name=name, type=SimpleNamespace(tensor_type=tensor_type))
+
+
+class FakeMetadataGraph:
+    def __init__(self, *, value_info, initializer, nodes=()):
+        self.input = []
+        self.output = []
+        self.value_info = list(value_info)
+        self.initializer = list(initializer)
+        self.node = list(nodes)
+
+
 class PrecisionHeadGraphTests(unittest.TestCase):
+    def test_onnx_metadata_preserves_scalar_vector_zero_and_missing_rank_and_conflicts(self):
+        scalar = FakeTensorProto([], 7, 3)
+        vector = FakeTensorProto([1], 7, [3])
+        zero = FakeTensorProto([0], 7, [])
+        conflict = FakeTensorProto([3], 7, [1, 2, 3])
+        constant = FakeTensorProto([], 7, 3)
+        metadata_graph = FakeMetadataGraph(
+            value_info=[
+                fake_value_info("missing_rank", None, 7),
+                fake_value_info("conflict", [2], 1),
+            ],
+            initializer=[
+                SimpleNamespace(name="scalar", **scalar.__dict__),
+                SimpleNamespace(name="vector", **vector.__dict__),
+                SimpleNamespace(name="zero", **zero.__dict__),
+                SimpleNamespace(name="conflict", **conflict.__dict__),
+            ],
+            nodes=[SimpleNamespace(
+                op_type="Constant",
+                output=["constant_scalar"],
+                attribute=[FakeTensorAttribute(constant)],
+            )],
+        )
+        tensor_metadata, initializer_metadata, initializers, conflicts = graph._collect_onnx_tensor_metadata(
+            metadata_graph, FakeNumpyHelper
+        )
+        self.assertEqual(tensor_metadata["scalar"]["shape"], [])
+        self.assertEqual(tensor_metadata["vector"]["shape"], [1])
+        self.assertEqual(tensor_metadata["zero"]["shape"], [0])
+        self.assertEqual(tensor_metadata["missing_rank"]["shape_status"], "missing_rank")
+        self.assertEqual(tensor_metadata["conflict"]["shape_status"], "conflict")
+        self.assertEqual(tensor_metadata["conflict"]["dtype_status"], "conflict")
+        self.assertEqual(initializer_metadata["constant_scalar"]["shape"], [])
+        self.assertEqual(initializer_metadata["constant_scalar"]["dtype"], "int64")
+        self.assertEqual(initializers["scalar"], 3)
+        self.assertEqual(tensor_metadata["scalar"]["dtype"], "int64")
+        self.assertEqual(graph.graph_tensor_shapes({"tensor_metadata": tensor_metadata})["scalar"], [])
+        self.assertEqual(graph.graph_tensor_shapes({"tensor_metadata": tensor_metadata})["zero"], [0])
+        self.assertNotIn("missing_rank", graph.graph_tensor_shapes({"tensor_metadata": tensor_metadata}))
+        self.assertGreaterEqual(len(conflicts), 2)
+
+    def test_real_onnx_loader_records_scalar_initializer_metadata_when_available(self):
+        if importlib.util.find_spec("onnx") is None:
+            self.skipTest("onnx is not installed in the local measurement environment")
+        import onnx
+        from onnx import TensorProto, helper
+
+        graph_proto = helper.make_graph(
+            [helper.make_node("Mod", ["indices", "divisor"], ["mod_out"], fmod=0)],
+            "scalar-mod",
+            [helper.make_tensor_value_info("indices", TensorProto.INT64, [1, 300])],
+            [helper.make_tensor_value_info("mod_out", TensorProto.INT64, [1, 300])],
+            initializer=[helper.make_tensor("divisor", TensorProto.INT64, [], [3])],
+        )
+        model = helper.make_model(graph_proto, opset_imports=[helper.make_operatorsetid("", 17)])
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "scalar_mod.onnx"
+            onnx.save(model, path)
+            graph_doc, _ = graph._load_onnx(path)
+        self.assertEqual(graph_doc["initializer_metadata"]["divisor"]["shape"], [])
+        self.assertEqual(graph_doc["initializer_metadata"]["divisor"]["dtype"], "int64")
+        self.assertEqual(graph_doc["tensor_shapes"]["divisor"], [])
+        self.assertEqual(graph_doc["tensor_dtypes"]["divisor"], "int64")
+
     def test_yolov8_dataflow_mapping_excludes_nonconv_helpers_and_records_spans(self):
         fixture, model = graph_fixture("yolov8n")
         result = graph.audit_graph_mapping(fixture, "yolov8n", model)
@@ -309,16 +424,35 @@ class PrecisionHeadGraphTests(unittest.TestCase):
             "expanded_scores": [1, 8400, 1, 1],
             "tile_repeats": [3],
             "tiled_scores": [3, 8400, 1],
-            "mod_divisor": [1],
+            "mod_divisor": [],
             "mod_scores": [1, 8400, 1],
             "top_values": [1, 300, 1],
             "top_indices": [1, 300, 1],
         })
-        fixture["initializers"] = {"tile_repeats": [3, 1, 1], "mod_divisor": [2]}
+        fixture["tensor_dtypes"].update({
+            "max_scores": "int64",
+            "mod_divisor": "int64",
+            "mod_scores": "int64",
+        })
+        fixture["initializers"] = {"tile_repeats": [3, 1, 1], "mod_divisor": [3]}
         result = graph.audit_graph_mapping(fixture, "yolo26n", model)
         self.assertEqual(result["mapping_status"], "verified", result["errors"])
         audited_ops = {row["op_type"] for row in result["branch_merge"]["downstream_semantic_audit"]["visited_nodes"]}
         self.assertTrue({"Split", "ReduceMax", "Flatten", "Unsqueeze", "Tile", "Mod"}.issubset(audited_ops))
+
+        mod_semantics = next(
+            row for row in result["branch_merge"]["downstream_semantic_audit"]["visited_nodes"]
+            if row["op_type"] == "Mod"
+        )
+        self.assertEqual(mod_semantics["divisor"]["shape"], [])
+        self.assertEqual(mod_semantics["divisor"]["dtype"], "int64")
+        self.assertEqual(mod_semantics["divisor"]["value"], [3])
+        self.assertEqual(mod_semantics["expected_class_count"], 3)
+
+        singleton = copy.deepcopy(fixture)
+        singleton["tensor_shapes"]["mod_divisor"] = [1]
+        singleton_result = graph.audit_graph_mapping(singleton, "yolo26n", model)
+        self.assertEqual(singleton_result["mapping_status"], "verified", singleton_result["errors"])
 
         invalid = copy.deepcopy(fixture)
         split = next(node for node in invalid["nodes"] if node["op_type"] == "Split")
@@ -326,6 +460,25 @@ class PrecisionHeadGraphTests(unittest.TestCase):
         invalid_result = graph.audit_graph_mapping(invalid, "yolo26n", model)
         self.assertEqual(invalid_result["mapping_status"], "mapping_unresolved")
         self.assertIn("split_semantics_unresolved", " ".join(invalid_result["errors"]))
+
+        for divisor, divisor_shape, divisor_dtype in ((0, [], "int64"), (3, None, "int64"), (3, [], "float32")):
+            invalid_mod = copy.deepcopy(fixture)
+            invalid_mod["initializers"]["mod_divisor"] = [divisor]
+            if divisor_shape is None:
+                invalid_mod["tensor_shapes"].pop("mod_divisor", None)
+            else:
+                invalid_mod["tensor_shapes"]["mod_divisor"] = divisor_shape
+            invalid_mod["tensor_dtypes"]["mod_divisor"] = divisor_dtype
+            invalid_mod_result = graph.audit_graph_mapping(invalid_mod, "yolo26n", model)
+            self.assertEqual(invalid_mod_result["mapping_status"], "mapping_unresolved")
+            self.assertIn("mod_semantics_unresolved", " ".join(invalid_mod_result["errors"]))
+
+        unsupported_mode = copy.deepcopy(fixture)
+        mod_node = next(node for node in unsupported_mode["nodes"] if node["op_type"] == "Mod")
+        mod_node["attributes"]["fmod"] = 1
+        unsupported_result = graph.audit_graph_mapping(unsupported_mode, "yolo26n", model)
+        self.assertEqual(unsupported_result["mapping_status"], "mapping_unresolved")
+        self.assertIn("mod_semantics_unresolved", " ".join(unsupported_result["errors"]))
 
     def test_precision_targets_require_verified_mapping_and_consistent_merge(self):
         fixture, model = graph_fixture("yolov8n")
