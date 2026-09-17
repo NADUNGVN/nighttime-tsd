@@ -47,7 +47,8 @@ TARGET_ID = "E2"
 EXPECTED_RUNTIME_PREFIX = "8.5.2.2"
 EXPECTED_HARDWARE = "Jetson Xavier NX"
 SOURCE_MANIFEST_SCHEMA = "e2l1-source-bundle-v1"
-CANONICAL_SOURCE_MANIFEST_SHA256 = "df2e81e943c471cb540dd837151e87f7799510b01c050be1b2d14e2869f760be"
+CANONICAL_SOURCE_COMMIT = "34a542b2f787d7ef60dc3d3125cecad78e0c16f9"
+CANONICAL_SOURCE_MANIFEST_SHA256 = "60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08"
 SOURCE_ONNX_SHA256 = "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7"
 FIXTURE_IDS = ("00006", "00009", "00028")
 INPUT_SHAPE = (1, 3, 640, 640)
@@ -172,16 +173,44 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def code_provenance(requested_commit: str = "unknown") -> Dict[str, Any]:
-    code_root = Path(__file__).resolve().parents[2]
+PROVENANCE_FILES = ("scripts/edge_readiness/e2_model_smoke.py", "scripts/edge_readiness/e2_output_compare.py", "scripts/edge_readiness/jetson_adapter.py", "scripts/edge_readiness/jetson_runtime_provider.py", "scripts/edge_readiness/cuda_runtime_owner.py", "scripts/edge_readiness/edge_errors.py")
+
+
+def create_code_export_manifest(commit: str, code_root: Optional[Path] = None) -> Dict[str, Any]:
+    if not isinstance(commit, str) or len(commit) != 40 or any(character not in "0123456789abcdefABCDEF" for character in commit):
+        raise ModelSmokeError("CODE_REVISION_INVALID", "code export manifest requires a full 40-character hexadecimal revision")
+    root = (code_root or Path(__file__).resolve().parents[2]).resolve()
+    return {"schema_version": "e2l1-code-export-v1", "commit": commit.lower(), "files": {relative: file_sha256(root / relative) for relative in PROVENANCE_FILES}}
+
+
+def code_provenance(requested_commit: str = "unknown", archive_manifest_path: Optional[Path] = None, code_root: Optional[Path] = None) -> Dict[str, Any]:
+    code_root = (code_root or Path(__file__).resolve().parents[2]).resolve()
+    if archive_manifest_path is not None:
+        try:
+            archive_bytes = archive_manifest_path.read_bytes()
+            archive_manifest = json.loads(archive_bytes.decode("utf-8"))
+        except (OSError, UnicodeError, ValueError) as exc:
+            raise ModelSmokeError("CODE_ARCHIVE_MANIFEST_INVALID", "reviewed archive manifest cannot be read", {"path": str(archive_manifest_path)}) from exc
+        if archive_manifest.get("schema_version") != "e2l1-code-export-v1" or not isinstance(archive_manifest.get("commit"), str) or len(archive_manifest["commit"]) != 40 or any(character not in "0123456789abcdefABCDEF" for character in archive_manifest["commit"]):
+            raise ModelSmokeError("CODE_ARCHIVE_MANIFEST_INVALID", "reviewed archive manifest schema or full commit is invalid", {"path": str(archive_manifest_path)})
+        recorded_files = archive_manifest.get("files")
+        if not isinstance(recorded_files, dict) or set(recorded_files) != set(PROVENANCE_FILES):
+            raise ModelSmokeError("CODE_ARCHIVE_MANIFEST_INVALID", "reviewed archive manifest must bind exactly the required helper files")
+        observed_files = {relative: file_sha256(code_root / relative) for relative in PROVENANCE_FILES}
+        mismatches = {relative: {"expected": recorded_files[relative], "observed": observed_files[relative]} for relative in PROVENANCE_FILES if recorded_files[relative] != observed_files[relative]}
+        if mismatches:
+            raise ModelSmokeError("CODE_ARCHIVE_BYTES_MISMATCH", "executing archive bytes differ from the reviewed export manifest", {"mismatches": mismatches})
+        reviewed_commit = archive_manifest["commit"]
+        if requested_commit not in {"", "unknown", reviewed_commit}:
+            raise ModelSmokeError("CODE_REVISION_MISMATCH", "requested code revision differs from reviewed archive revision", {"requested_commit": requested_commit, "reviewed_commit": reviewed_commit})
+        return {"provenance_mode": "reviewed_archive_manifest", "code_root": str(code_root), "archive_manifest": str(archive_manifest_path.resolve()), "archive_manifest_sha256": hashlib.sha256(archive_bytes).hexdigest(), "requested_commit": requested_commit, "reviewed_commit": reviewed_commit, "files": observed_files}
     try:
         actual_head = subprocess.check_output(["git", "-C", str(code_root), "rev-parse", "HEAD"], text=True).strip()
     except (OSError, subprocess.CalledProcessError) as exc:
         raise ModelSmokeError("CODE_REVISION_UNAVAILABLE", "cannot resolve the executing repository revision", {"code_root": str(code_root)}) from exc
     if requested_commit not in {"", "unknown", actual_head}:
         raise ModelSmokeError("CODE_REVISION_MISMATCH", "requested code revision is not the executing HEAD", {"requested_commit": requested_commit, "actual_head": actual_head})
-    relative_files = ("scripts/edge_readiness/e2_model_smoke.py", "scripts/edge_readiness/e2_output_compare.py", "scripts/edge_readiness/jetson_adapter.py", "scripts/edge_readiness/jetson_runtime_provider.py", "scripts/edge_readiness/cuda_runtime_owner.py", "scripts/edge_readiness/edge_errors.py")
-    return {"code_root": str(code_root), "requested_commit": requested_commit, "actual_head": actual_head, "files": {relative: file_sha256(code_root / relative) for relative in relative_files}}
+    return {"provenance_mode": "git_head", "code_root": str(code_root), "requested_commit": requested_commit, "actual_head": actual_head, "files": {relative: file_sha256(code_root / relative) for relative in PROVENANCE_FILES}}
 
 
 def write_once(path: Path, payload: Any) -> None:
@@ -379,7 +408,7 @@ class TensorRTOnnxBuilder:
             with engine_path.open("xb") as handle:
                 handle.write(payload)
             digest = hashlib.sha256(payload).hexdigest()
-            self.last_event = {"parser_errors": [], "builder_flags": flags_record, "logger_lifetime": "held through parser and builder", "engine_sha256": digest}
+            self.last_event = {"parser_errors": [], "parser_completed": True, "build_completed": True, "builder_flags": flags_record, "logger_lifetime": "held through parser and builder", "engine_sha256": digest}
             return EngineArtifact(engine_path.resolve(), digest, len(payload), runtime_version, {"builder_flags": flags_record, "parser_errors": [], "source_onnx_sha256": SOURCE_ONNX_SHA256})
         except AdapterError:
             raise
@@ -387,7 +416,7 @@ class TensorRTOnnxBuilder:
             raise
         except Exception as exc:
             errors = _collect_parser_errors(parser) if parser is not None else []
-            self.last_event = {"parser_errors": errors}
+            self.last_event = {"parser_errors": errors, "parser_completed": bool(self.last_event.get("parser_completed")), "build_completed": False}
             raise ModelSmokeError("ENGINE_BUILD_FAILED", "TensorRT parser/builder raised an exception", {"parser_errors": errors}) from exc
 
 
@@ -482,6 +511,8 @@ class E2TensorRTRuntime:
             if cleanup_errors and isinstance(primary, AdapterError):
                 primary.details = dict(primary.details)
                 primary.details["cleanup_errors"] = cleanup_errors
+            elif cleanup_errors:
+                raise ModelSmokeError("TARGET_OPEN_FAILED", "target execution open failed and cleanup was incomplete", {"primary_error": _error_dict(primary), "cleanup_errors": cleanup_errors}) from primary
             raise
 
 
@@ -532,40 +563,70 @@ def run_bounded_process(command: Sequence[str], timeout_seconds: float, stage: s
     try:
         stdout, stderr = process.communicate(timeout=float(timeout_seconds))
     except subprocess.TimeoutExpired as exc:
-        terminated = False
+        term_sent = False
+        kill_sent = False
         try:
             if os.name == "nt":
                 process.terminate()
             else:
                 os.killpg(process.pid, signal.SIGTERM)
-            terminated = True
+            term_sent = True
         except OSError:
-            terminated = process.poll() is not None
+            term_sent = process.poll() is not None
         try:
-            stdout, stderr = process.communicate(timeout=min(5.0, max(0.1, float(timeout_seconds))))
+            stdout, stderr = process.communicate(timeout=min(1.0, max(0.1, float(timeout_seconds))))
         except subprocess.TimeoutExpired:
-            process.kill()
-            stdout, stderr = process.communicate()
-        _append_stage_event(event_path, {"stage": stage, "event": "timeout", "termination_confirmed": terminated, "returncode": process.returncode})
-        raise TargetTimeout("STAGE_TIMEOUT", "owned stage exceeded its deadline", {"stage": stage, "seconds": timeout_seconds, "termination_confirmed": terminated, "event_path": str(event_path), "completion": "unknown", "stdout": stdout[-4000:], "stderr": stderr[-4000:]}) from exc
-    _append_stage_event(event_path, {"stage": stage, "event": "complete", "returncode": process.returncode})
+            try:
+                if os.name == "nt":
+                    process.kill()
+                else:
+                    os.killpg(process.pid, signal.SIGKILL)
+                kill_sent = True
+            except OSError:
+                kill_sent = process.poll() is not None
+            try:
+                stdout, stderr = process.communicate(timeout=1.0)
+            except subprocess.TimeoutExpired:
+                stdout, stderr = "", ""
+                for pipe in (process.stdout, process.stderr):
+                    if pipe is not None:
+                        pipe.close()
+                try:
+                    process.wait(timeout=0.2)
+                except subprocess.TimeoutExpired:
+                    pass
+        termination_confirmed = process.poll() is not None
+        _append_stage_event(event_path, {"stage": stage, "event": "timeout", "term_signal_dispatched": term_sent, "kill_signal_dispatched": kill_sent, "termination_confirmed": termination_confirmed, "cleanup_unconfirmed": not termination_confirmed, "returncode": process.returncode})
+        raise TargetTimeout("STAGE_TIMEOUT", "owned stage exceeded its deadline", {"stage": stage, "seconds": timeout_seconds, "term_signal_dispatched": term_sent, "kill_signal_dispatched": kill_sent, "termination_confirmed": termination_confirmed, "cleanup_unconfirmed": not termination_confirmed, "event_path": str(event_path), "completion": "unknown", "stdout": stdout[-4000:], "stderr": stderr[-4000:]}) from exc
     if process.returncode != 0:
+        _append_stage_event(event_path, {"stage": stage, "event": "failed", "returncode": process.returncode})
         raise ModelSmokeError("TARGET_STAGE_FAILED", "owned stage exited unsuccessfully", {"stage": stage, "returncode": process.returncode, "event_path": str(event_path), "stdout": stdout[-4000:], "stderr": stderr[-4000:]})
+    _append_stage_event(event_path, {"stage": stage, "event": "complete", "returncode": process.returncode})
     return subprocess.CompletedProcess(process.args, process.returncode, stdout, stderr)
 
 
 class SubprocessStageExecutor:
     """Production executor: build and inference have independent child lifetimes."""
 
-    def __init__(self, script_path: Optional[Path] = None) -> None:
+    def __init__(self, script_path: Optional[Path] = None, commit: str = "unknown", archive_manifest_path: Optional[Path] = None) -> None:
         self.script_path = (script_path or Path(__file__)).resolve()
+        self.commit = commit
+        self.archive_manifest_path = archive_manifest_path
+
+    def _provenance_args(self) -> List[str]:
+        args = ["--commit", self.commit]
+        if self.archive_manifest_path is not None:
+            args.extend(["--archive-manifest", str(self.archive_manifest_path)])
+        return args
 
     def build(self, bundle: SourceBundle, engine_path: Path, timeout_seconds: float) -> Tuple[EngineArtifact, Dict[str, int], Path]:
         result_path = engine_path.parent / "build_result.json"
         events_path = engine_path.parent / "build_events.jsonl"
-        command = [sys.executable, str(self.script_path), "--child-stage", "build", "--onnx", str(bundle.onnx), "--engine", str(engine_path), "--result", str(result_path), "--events", str(events_path)]
+        command = [sys.executable, str(self.script_path), "--child-stage", "build"] + self._provenance_args() + ["--onnx", str(bundle.onnx), "--engine", str(engine_path), "--result", str(result_path), "--events", str(events_path)]
         try:
             run_bounded_process(command, timeout_seconds, "build", events_path)
+        except TargetTimeout:
+            raise
         except ModelSmokeError as exc:
             _raise_child_failure(result_path, "build", events_path, exc)
         result = json.loads(result_path.read_text(encoding="utf-8"))
@@ -575,9 +636,11 @@ class SubprocessStageExecutor:
     def infer(self, bundle: SourceBundle, engine: EngineArtifact, target_dir: Path, timeout_seconds: float) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, int], Path]:
         result_path = target_dir.parent / "inference_result.json"
         events_path = target_dir.parent / "inference_events.jsonl"
-        command = [sys.executable, str(self.script_path), "--child-stage", "infer", "--bundle-root", str(bundle.root), "--manifest", str(bundle.manifest_path), "--engine", str(engine.path), "--engine-sha256", engine.sha256, "--output-dir", str(target_dir), "--result", str(result_path), "--events", str(events_path)]
+        command = [sys.executable, str(self.script_path), "--child-stage", "infer"] + self._provenance_args() + ["--bundle-root", str(bundle.root), "--manifest", str(bundle.manifest_path), "--engine", str(engine.path), "--engine-sha256", engine.sha256, "--output-dir", str(target_dir), "--result", str(result_path), "--events", str(events_path)]
         try:
             run_bounded_process(command, timeout_seconds, "inference", events_path)
+        except TargetTimeout:
+            raise
         except ModelSmokeError as exc:
             _raise_child_failure(result_path, "inference", events_path, exc)
         result = json.loads(result_path.read_text(encoding="utf-8"))
@@ -605,6 +668,14 @@ def _raise_child_failure(result_path: Path, stage: str, event_path: Path, outer:
     raise ModelSmokeError(code, error.get("message", outer.message), details) from outer
 
 
+def _merge_counter_dict(counters: SmokeCounters, values: Any) -> None:
+    if not isinstance(values, dict):
+        return
+    for name, value in values.items():
+        if hasattr(counters, name) and isinstance(value, int) and not isinstance(value, bool):
+            setattr(counters, name, max(getattr(counters, name), value))
+
+
 def _child_stage_main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--child-stage", choices=("build", "infer"), required=True)
@@ -616,23 +687,30 @@ def _child_stage_main(argv: List[str]) -> int:
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--result", type=Path, required=True)
     parser.add_argument("--events", type=Path, required=True)
+    parser.add_argument("--commit", default="unknown")
+    parser.add_argument("--archive-manifest", type=Path)
     args = parser.parse_args(argv)
     counters = {"parse_attempted": 0, "parse_completed": 0, "build_attempted": 0, "build_completed": 0, "engine_load_attempted": 0, "engine_load_completed": 0, "enqueues_attempted": 0, "enqueues_completed": 0, "output_copies_attempted": 0, "output_copies_completed": 0}
     try:
         _append_stage_event(args.events, {"event": "started", "stage": args.child_stage})
+        code_provenance(args.commit, args.archive_manifest)
         def observe(event: str) -> None:
             mapping = {"enqueue_attempted": "enqueues_attempted", "enqueue_completed": "enqueues_completed", "d2h_copy_attempted": "output_copies_attempted", "d2h_copy_completed": "output_copies_completed"}
             if event in mapping:
                 counters[mapping[event]] += 1
+            _append_stage_event(args.events, {"event": event, "stage": args.child_stage, "counters": dict(counters)})
         runtime = E2TensorRTRuntime(stage_observer=observe)
         runtime.preflight()
+        builder = None
         if args.child_stage == "build":
             counters["parse_attempted"] = 1
             counters["build_attempted"] = 1
             builder = TensorRTOnnxBuilder()
             artifact = builder.build(args.onnx.resolve(), args.engine.resolve(), WORKSPACE_BYTES)
             counters["parse_completed"] = 1 if builder.last_event.get("parser_completed") else 0
-            counters["build_completed"] = 1
+            counters["build_completed"] = 1 if builder.last_event.get("build_completed") else 0
+            _append_stage_event(args.events, {"event": "parser_completed", "stage": "build", "counters": dict(counters)})
+            _append_stage_event(args.events, {"event": "build_completed", "stage": "build", "counters": dict(counters)})
             payload = {"path": str(artifact.path), "sha256": artifact.sha256, "nbytes": artifact.nbytes, "runtime_version": artifact.runtime_version, "build_contract": artifact.build_contract, "counters": counters}
         else:
             bundle = load_source_bundle(args.manifest, args.bundle_root)
@@ -667,6 +745,8 @@ def _child_stage_main(argv: List[str]) -> int:
                     elif isinstance(primary, AdapterError):
                         primary.details = dict(primary.details)
                         primary.details["cleanup_error"] = _error_dict(cleanup_exc)
+                    else:
+                        primary = ModelSmokeError("TARGET_INFERENCE_FAILED", "inference failed and cleanup was incomplete", {"primary_error": _error_dict(primary), "cleanup_error": _error_dict(cleanup_exc)})
             if primary is not None:
                 raise primary
             payload = {"outputs": outputs, "counters": counters}
@@ -675,6 +755,9 @@ def _child_stage_main(argv: List[str]) -> int:
         _append_stage_event(args.events, {"event": "finished", "stage": args.child_stage, "counters": counters})
         return 0
     except BaseException as exc:
+        if builder is not None:
+            counters["parse_completed"] = max(counters["parse_completed"], 1 if builder.last_event.get("parser_completed") else 0)
+            counters["build_completed"] = max(counters["build_completed"], 1 if builder.last_event.get("build_completed") else 0)
         _child_write_error(args.result, exc, counters)
         _append_stage_event(args.events, {"event": "failed", "stage": args.child_stage, "error": _error_dict(exc), "counters": counters})
         return 2
@@ -701,35 +784,65 @@ def _neighborhood(image_id: str, native: Sequence[float], source_onnx: Sequence[
 
 
 class ModelSmokeRunner:
-    def __init__(self, bundle: SourceBundle, out_dir: Path, target: TargetRuntime, *, execute: bool = False, build_timeout_seconds: float = 900.0, inference_timeout_seconds: float = 180.0, commit: str = "unknown") -> None:
+    def __init__(self, bundle: SourceBundle, out_dir: Path, target: TargetRuntime, *, execute: bool = False, build_timeout_seconds: float = 900.0, inference_timeout_seconds: float = 180.0, commit: str = "unknown", archive_manifest_path: Optional[Path] = None, stage_executor: Optional[SubprocessStageExecutor] = None) -> None:
         self.bundle = bundle
         self.out_dir = out_dir.resolve()
         self.target = target
         self.execute = execute
         self.build_timeout_seconds = build_timeout_seconds
         self.inference_timeout_seconds = inference_timeout_seconds
+        self.commit = commit
+        self.archive_manifest_path = archive_manifest_path
+        self.stage_executor = stage_executor
         self.counters = SmokeCounters()
         self.events: List[str] = []
-        self.evidence: Dict[str, Any] = {"source_bundle": {"manifest": str(bundle.manifest_path), "manifest_sha256": CANONICAL_SOURCE_MANIFEST_SHA256, "onnx_sha256": SOURCE_ONNX_SHA256, "allowlist": bundle.allowlist}, "out_dir": str(self.out_dir), "code_provenance": code_provenance(commit)}
+        self.evidence: Dict[str, Any] = {"source_bundle": {"manifest": str(bundle.manifest_path), "manifest_sha256": CANONICAL_SOURCE_MANIFEST_SHA256, "onnx_sha256": SOURCE_ONNX_SHA256, "allowlist": bundle.allowlist}, "out_dir": str(self.out_dir), "code_provenance": code_provenance(commit, archive_manifest_path)}
 
     def _log(self, event: str) -> None:
         self.events.append(event)
 
     def _plan(self) -> Dict[str, Any]:
-        return {"schema_version": "e2l1-model-smoke-v1", "status": "planned", "target": {"id": TARGET_ID, "ssh_alias": "nx", "hostname": EXPECTED_HOSTNAME, "architecture": EXPECTED_ARCHITECTURE, "hardware": EXPECTED_HARDWARE, "runtime_prefix": EXPECTED_RUNTIME_PREFIX}, "source_bundle": {"manifest": str(self.bundle.manifest_path), "manifest_sha256": CANONICAL_SOURCE_MANIFEST_SHA256, "onnx_sha256": SOURCE_ONNX_SHA256, "allowlist": self.bundle.allowlist}, "builder": {"workspace_bytes": WORKSPACE_BYTES, "fp16_enabled": True, "output_dtype": "float32", "timing_cache": "none", "retries": 0}, "execution": {"device": "E2", "enqueues": 3, "warmup": 0, "repeats": 0, "latency_benchmark": False, "energy_benchmark": False, "input_policy": "exact frozen float32 input bytes; no E2 decode/preprocess", "lifecycle": "owned child process per build and inference stage"}, "comparisons": {"source_strict": STRICT_SOURCE_POLICY.as_dict(), "target_diagnostic": TARGET_POLICY.as_dict(), "domains": ["boxes", "scores"], "source_failure_preserved": True}, "private_policy": "engine and full tensor outputs remain private; publish only JSON/text evidence"}
+        return {"schema_version": "e2l1-model-smoke-v1", "status": "planned", "code_provenance": self.evidence["code_provenance"], "target": {"id": TARGET_ID, "ssh_alias": "nx", "hostname": EXPECTED_HOSTNAME, "architecture": EXPECTED_ARCHITECTURE, "hardware": EXPECTED_HARDWARE, "runtime_prefix": EXPECTED_RUNTIME_PREFIX}, "source_bundle": {"manifest": str(self.bundle.manifest_path), "manifest_sha256": CANONICAL_SOURCE_MANIFEST_SHA256, "onnx_sha256": SOURCE_ONNX_SHA256, "allowlist": self.bundle.allowlist}, "builder": {"workspace_bytes": WORKSPACE_BYTES, "fp16_enabled": True, "output_dtype": "float32", "timing_cache": "none", "retries": 0}, "execution": {"device": "E2", "enqueues": 3, "warmup": 0, "repeats": 0, "latency_benchmark": False, "energy_benchmark": False, "input_policy": "exact frozen float32 input bytes; no E2 decode/preprocess", "lifecycle": "owned child process per build and inference stage"}, "comparisons": {"source_strict": STRICT_SOURCE_POLICY.as_dict(), "target_diagnostic": TARGET_POLICY.as_dict(), "domains": ["boxes", "scores"], "source_failure_preserved": True}, "private_policy": "engine and full tensor outputs remain private; publish only JSON/text evidence"}
 
     def _write_failure(self, exc: BaseException) -> Dict[str, Any]:
-        failure = {"schema_version": "e2l1-model-smoke-v1", "status": "failed", "execution_state": self.evidence.get("execution_state", "not_started"), "real_device_execution": self.execute, "source_strict_status": "fail" if any(item["status"] == "fail" for item in self.bundle.source_comparisons.values()) else "pass", "attempted_completed": self.counters.as_dict(), "events": self.events, "provenance": self.evidence, "error": _error_dict(exc)}
+        failure = {"schema_version": "e2l1-model-smoke-v1", "status": "failed", "execution_state": self.evidence.get("execution_state", "not_started"), "real_device_execution": self.execute, "source_strict_status": "fail" if any(item["status"] == "fail" for item in self.bundle.source_comparisons.values()) else "pass", "attempted_completed": self.counters.as_dict(), "events": self.events, "code_provenance": self.evidence.get("code_provenance"), "stage_evidence": self.evidence.get("stage_evidence", {}), "provenance": self.evidence, "error": _error_dict(exc)}
         write_once(self.out_dir / "public" / "failure.json", failure)
         write_once(self.out_dir / "public" / "run.log", "\n".join(self.events) + "\n")
         write_once(self.out_dir / "public" / "index.json", {"schema_version": "e2l1-model-smoke-index-v1", "status": "failed", "public_artifacts": ["plan.json", "failure.json", "run.log", "index.json"]})
         return failure
 
+    def _reconcile_stage_evidence(self) -> None:
+        stage_evidence = self.evidence.get("stage_evidence", {})
+        snapshot = {}
+        for stage, paths in stage_evidence.items():
+            if not isinstance(paths, dict):
+                continue
+            stage_snapshot = {}
+            result_path = Path(paths["result"])
+            events_path = Path(paths["events"])
+            if result_path.is_file():
+                try:
+                    result = json.loads(result_path.read_text(encoding="utf-8"))
+                    _merge_counter_dict(self.counters, result.get("counters"))
+                    stage_snapshot["result"] = {"sha256": file_sha256(result_path), "bytes": result_path.stat().st_size, "content": result}
+                except (OSError, ValueError) as exc:
+                    stage_snapshot["result_error"] = str(exc)
+            if events_path.is_file():
+                try:
+                    event_text = events_path.read_text(encoding="utf-8")
+                    stage_snapshot["events"] = {"sha256": file_sha256(events_path), "bytes": events_path.stat().st_size, "content": event_text[-16000:]}
+                except OSError as exc:
+                    stage_snapshot["events_error"] = str(exc)
+            snapshot[stage] = stage_snapshot
+        if snapshot:
+            self.evidence["stage_evidence_snapshot"] = snapshot
+
     def _run_subprocess_workflow(self, public: Path, private: Path, source_status: str, target_info: Dict[str, Any]) -> Tuple[int, Dict[str, Any]]:
-        executor = SubprocessStageExecutor()
+        executor = self.stage_executor or SubprocessStageExecutor(commit=self.commit, archive_manifest_path=self.archive_manifest_path)
         engine_path = private / "engine" / "e2_yolo11n_fp16.engine"
         self.counters.parse_attempted = 1
         self.counters.build_attempted = 1
+        self.evidence["stage_evidence"] = {"build": {"events": str((private / "engine" / "build_events.jsonl").resolve()), "result": str((private / "engine" / "build_result.json").resolve())}}
         engine, build_counts, build_events = executor.build(self.bundle, engine_path, self.build_timeout_seconds)
         for name, value in build_counts.items():
             if hasattr(self.counters, name):
@@ -738,6 +851,7 @@ class ModelSmokeRunner:
         self.evidence["engine"] = {"path": str(engine.path), "sha256": engine.sha256, "nbytes": engine.nbytes, "runtime_version": engine.runtime_version, "build_contract": engine.build_contract}
         target_dir = private / "target_output"
         self.evidence["target_outputs"] = {}
+        self.evidence["stage_evidence"]["inference"] = {"events": str((private / "inference_events.jsonl").resolve()), "result": str((private / "inference_result.json").resolve())}
         outputs, infer_counts, infer_events = executor.infer(self.bundle, engine, target_dir, self.inference_timeout_seconds)
         for name, value in infer_counts.items():
             if hasattr(self.counters, name):
@@ -762,7 +876,8 @@ class ModelSmokeRunner:
         target_native_status = "pass" if all(item["target_vs_source_native"]["status"] == "pass" for item in target_outputs.values()) else "fail"
         target_status = "pass" if target_onnx_status == "pass" and target_native_status == "pass" else "fail"
         status = "execution_complete_source_strict_fail_target_pass" if source_status == "fail" and target_status == "pass" else ("execution_complete_all_diagnostic_comparisons_pass" if target_status == "pass" else "execution_complete_target_mismatch")
-        manifest = {"schema_version": "e2l1-model-smoke-v1", "status": status, "execution_status": "complete", "source_strict_status": source_status, "export_discrepancy": {"status": source_status, "source_native_vs_source_onnx": self.bundle.source_comparisons}, "target_diagnostic_status": "complete", "tensorrt_discrepancy": {"target_vs_source_onnx": target_onnx_status, "target_vs_source_native": target_native_status}, "target_vs_source_onnx_status": target_onnx_status, "target_vs_source_native_status": target_native_status, "target_comparison_outcome": target_status, "real_device_execution": True, "source_bundle": self.evidence["source_bundle"], "target_preflight": target_info, "engine": self.evidence["engine"], "source_comparisons": self.bundle.source_comparisons, "target_outputs": target_outputs, "attempted_completed": self.counters.as_dict(), "private_retention": {"root": str(private.resolve()), "published": False}}
+        self._reconcile_stage_evidence()
+        manifest = {"schema_version": "e2l1-model-smoke-v1", "status": status, "execution_status": "complete", "source_strict_status": source_status, "export_discrepancy": {"status": source_status, "source_native_vs_source_onnx": self.bundle.source_comparisons}, "target_diagnostic_status": "complete", "tensorrt_discrepancy": {"target_vs_source_onnx": target_onnx_status, "target_vs_source_native": target_native_status}, "target_vs_source_onnx_status": target_onnx_status, "target_vs_source_native_status": target_native_status, "target_comparison_outcome": target_status, "real_device_execution": True, "code_provenance": self.evidence["code_provenance"], "stage_evidence": self.evidence.get("stage_evidence_snapshot", {}), "source_bundle": self.evidence["source_bundle"], "target_preflight": target_info, "engine": self.evidence["engine"], "source_comparisons": self.bundle.source_comparisons, "target_outputs": target_outputs, "attempted_completed": self.counters.as_dict(), "private_retention": {"root": str(private.resolve()), "published": False}}
         write_once(public / "manifest.json", manifest)
         write_once(public / "report.md", "# E2 model smoke\n\nStatus: {}; source strict: {}; target-vs-ONNX: {}; target-vs-native: {}.\n".format(status, source_status, target_onnx_status, target_native_status))
         write_once(public / "run.log", "\n".join(self.events + ["model_smoke_complete"]) + "\n")
@@ -797,7 +912,7 @@ class ModelSmokeRunner:
             if not _identity_matches(target_info):
                 raise ModelSmokeError("TARGET_IDENTITY_MISMATCH", "target preflight does not match the E2 TensorRT 8.5.2.2 profile", {"observed": target_info})
             self.evidence["target_preflight"] = target_info
-            if isinstance(self.target, E2TensorRTRuntime):
+            if self.stage_executor is not None or isinstance(self.target, E2TensorRTRuntime):
                 return self._run_subprocess_workflow(public, private, source_status, target_info)
             build_budget = StageBudget("build", self.build_timeout_seconds)
             engine_path = private / "engine" / "e2_yolo11n_fp16.engine"
@@ -862,6 +977,8 @@ class ModelSmokeRunner:
                         if isinstance(primary_exc, AdapterError):
                             primary_exc.details = dict(primary_exc.details)
                             primary_exc.details["cleanup_error"] = _error_dict(close_exc)
+                        else:
+                            self.evidence["primary_error"] = _error_dict(primary_exc)
                     else:
                         raise
             target_onnx_status = "pass" if all(item["target_vs_source_onnx"]["status"] == "pass" for item in target_outputs.values()) else "fail"
@@ -881,9 +998,17 @@ class ModelSmokeRunner:
             return 0 if target_status == "pass" else 3, manifest
         except BaseException as exc:
             self._log("failed:{}".format(type(exc).__name__))
+            if isinstance(exc, AdapterError):
+                _merge_counter_dict(self.counters, exc.details.get("counters"))
+            self._reconcile_stage_evidence()
             target_dir = self.out_dir / "private" / "target_output"
-            if target_dir.is_dir() and "target_outputs" not in self.evidence:
-                self.evidence["target_outputs"] = {path.stem: {"path": str(path.resolve()), "nbytes": path.stat().st_size, "sha256": file_sha256(path), "completion": "partial"} for path in sorted(target_dir.glob("*.bin"))}
+            if target_dir.is_dir():
+                partial = {path.stem: {"path": str(path.resolve()), "nbytes": path.stat().st_size, "sha256": file_sha256(path), "completion": "partial"} for path in sorted(target_dir.glob("*.bin"))}
+                existing = self.evidence.get("target_outputs", {})
+                if not isinstance(existing, dict):
+                    existing = {}
+                existing.update(partial)
+                self.evidence["target_outputs"] = existing
             if self.evidence.get("execution_state") == "started":
                 self.evidence["execution_state"] = "unknown" if isinstance(exc, (TargetTimeout, TargetExecutionUnknown, TimeoutError)) else "failed"
             failure = self._write_failure(exc)
@@ -900,6 +1025,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser.add_argument("--build-timeout-seconds", type=float, default=900.0)
     parser.add_argument("--inference-timeout-seconds", type=float, default=180.0)
     parser.add_argument("--commit", default="unknown")
+    parser.add_argument("--archive-manifest", type=Path)
     args = parser.parse_args(argv)
     if args.target != TARGET_ID:
         raise SystemExit("only E2 is in E2L1-014")
@@ -907,7 +1033,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     try:
         bundle = load_source_bundle(args.manifest, args.bundle_root)
-        runner = ModelSmokeRunner(bundle, args.out_dir, E2TensorRTRuntime(), execute=args.execute_real_device, build_timeout_seconds=args.build_timeout_seconds, inference_timeout_seconds=args.inference_timeout_seconds, commit=args.commit)
+        runner = ModelSmokeRunner(bundle, args.out_dir, E2TensorRTRuntime(), execute=args.execute_real_device, build_timeout_seconds=args.build_timeout_seconds, inference_timeout_seconds=args.inference_timeout_seconds, commit=args.commit, archive_manifest_path=args.archive_manifest)
         code, result = runner.run()
     except BaseException as exc:
         result = {"schema_version": "e2l1-model-smoke-v1", "status": "failed_before_output", "error": _error_dict(exc)}
