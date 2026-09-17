@@ -1,0 +1,32 @@
+{
+  "schema_version": "e2l1-011-dispatch-v1",
+  "commit": "aa31c42825fa9995a6a8d1048a87d9c4fb8385f6",
+  "target_verification": {
+    "alias": "nx",
+    "user": "arar",
+    "cwd": "/home/arar",
+    "hostname": "arar-desktop",
+    "architecture": "aarch64",
+    "python": "Python 3.8.10",
+    "libcudart_realpath": "/usr/local/cuda-11.4/targets/aarch64-linux/lib/libcudart.so.11.4.298",
+    "accepted_probe_match": true
+  },
+  "transferred_sources": {
+    "scripts/edge_readiness/e2_cuda_allocation_smoke.py": "6dd971ac4bfc90cb782da81af0ede12b65eff9bedf76bc933af873c98ce16a85",
+    "scripts/edge_readiness/cuda_runtime_owner.py": "0512964f58c4bffae85be9d83bb6c7748041e581434ed88bff7c87b2277f283b",
+    "scripts/edge_readiness/edge_errors.py": "c13691982d80dc714b935d367ef35bb371b07dfd591a8856be3d23ac1aaa7602"
+  },
+  "sanitized_command": "ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes nx timeout 60s python3.8 /tmp/luna1-e2l1-011-cKHdoJn/scripts/edge_readiness/e2_cuda_allocation_smoke.py --target E2 --execute-real-device --out-dir /tmp/luna1-e2l1-011-cKHdoJn/e2l1-011-allocation-v1",
+  "remote_source_root": "/tmp/luna1-e2l1-011-cKHdoJn",
+  "remote_output_root": "/tmp/luna1-e2l1-011-cKHdoJn/e2l1-011-allocation-v1",
+  "remote_child_timeout_seconds": 60,
+  "local_timeout_seconds": 75,
+  "returncode": 0,
+  "timed_out": false,
+  "local_elapsed_ns": 1109000000,
+  "exception": null,
+  "artifacts": {
+    "stdout": "remote.stdout",
+    "stderr": "remote.stderr"
+  }
+}

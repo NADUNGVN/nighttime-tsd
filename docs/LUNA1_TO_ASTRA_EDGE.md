@@ -835,9 +835,10 @@ verified train fixture sequence `00006`, `00009`, `00028` with sequence SHA
 `[1,3,640,640]`, letterbox/RGB/`[0,1]` recipe, ONNX `opset=17`, static shape,
 `simplify=true`, no Q/DQ, and native output `output0 [1,7,8400]`. No source
 forward/export was run or claimed; no TRT10 engine is transferred.
-The intended source-run location is the server-side `D:\Research\paper`
-environment (CPU/reference/export only, after separate authorization); E2 is
-reserved for the later target-native TensorRT build and synchronized compare.
+The intended source-run location is the Windows local worktree
+`D:\Research\paper`, not a Linux server path (CPU/reference/export only, after
+separate authorization); E2 is reserved for the later target-native TensorRT
+build and synchronized compare.
 Artifact roles are separated: checkpoint SHA identifies frozen weights, the
 fixture manifest/sequence SHA identifies the three source inputs, the future
 ONNX SHA identifies source export, and a future E2 engine SHA identifies only
@@ -863,3 +864,88 @@ inference was performed.
 **Git:** L1A-010 includes the concrete owner, default-disabled smoke, scoped
 read-only E2 evidence, tests and this report. Push uses the `NADUNGVN` account;
 the E2L1-010 inbox entry remains unchanged.
+
+## L1A-011 — Python 3.8 lifecycle repair and one E2 allocation roundtrip
+
+**Status:** C1/C2 repair complete; the conditional one-shot E2 allocation-only
+GO completed successfully. NO-GO remains in force for source/model
+forward/export, TensorRT engine build/deserialization/inference, benchmarking,
+telemetry sampling, installation and device configuration.
+
+### C1/C2 implementation
+
+Commit `aa31c42825fa9995a6a8d1048a87d9c4fb8385f6` adds the Python 3.8-safe
+`edge_errors.py` import boundary and exclusive strict-JSON writer using
+`open(..., "x", encoding="utf-8", newline="\n")`; the executable smoke path no
+longer imports the Python-3.10-only writer API. Runtime load, stream creation
+and owner construction now occur after the new output-root check. Cleanup
+records stream/runtime failures, preserves the primary error alongside cleanup
+errors, and writes terminal PASS only after allocation free, stream destruction
+and runtime close succeed. The owner tracks live allocation generations, so a
+reused CUDA address is freed again in its new generation while repeated free
+within one generation remains idempotent.
+
+Local verification: `68/68` edge tests PASS, including `29/29`
+`test_edge_e2_runtime`; Python compile and diff checks pass. Tests cover
+load/stream-create/allocation/copy/sync/free/destroy/close failures, combined
+primary-plus-cleanup errors, successful roundtrip followed by cleanup failure,
+existing-root preservation and reused allocation addresses. The local tests
+use injected C doubles only; they are not Python 3.8 execution evidence.
+
+### E2 preflight, transfer and one-shot result
+
+Before dispatch, alias `nx` was verified read-only as user `arar`, cwd
+`/home/arar`, hostname `arar-desktop`, architecture `aarch64`, Python
+`3.8.10`, and libcudart realpath
+`/usr/local/cuda-11.4/targets/aarch64-linux/lib/libcudart.so.11.4.298`, matching
+the accepted E2 probe. Only these three committed sources were transferred to
+the new user-owned directory
+`/tmp/luna1-e2l1-011-cKHdoJn/scripts/edge_readiness/`:
+
+    e2_cuda_allocation_smoke.py  6dd971ac4bfc90cb782da81af0ede12b65eff9bedf76bc933af873c98ce16a85
+    cuda_runtime_owner.py        0512964f58c4bffae85be9d83bb6c7748041e581434ed88bff7c87b2277f283b
+    edge_errors.py               c13691982d80dc714b935d367ef35bb371b07dfd591a8856be3d23ac1aaa7602
+
+The remote output root was new and user-owned:
+`/tmp/luna1-e2l1-011-cKHdoJn/e2l1-011-allocation-v1`. The exact sanitized
+dispatch used remote child timeout `60s` and local wait timeout `75s`:
+
+    ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes nx timeout 60s python3.8 /tmp/luna1-e2l1-011-cKHdoJn/scripts/edge_readiness/e2_cuda_allocation_smoke.py --target E2 --execute-real-device --out-dir /tmp/luna1-e2l1-011-cKHdoJn/e2l1-011-allocation-v1
+
+The single dispatch returned `0`, was not timed out, and took `1.109s` local.
+The result is `executed_allocation_only`: exactly one 4096-byte allocation,
+synchronous H2D/D2H, completion and cleanup. Expected and observed payload
+SHA-256 both equal
+`4e441a3533bb2c10cd5649981d395744213e09a336746b5a3458fee4057205ec`.
+The manifest records library identity
+`/usr/local/cuda-11.4/targets/aarch64-linux/lib/libcudart.so.11.4.298`,
+`stream_close=ok` and `runtime_close=ok`. No CUDA reset, TensorRT/model
+operation, build, inference, benchmark, telemetry, install, sudo or device
+configuration was performed, and no retry was made.
+This is a copy-correctness result only; it makes no performance or isolated-GPU
+claim and does not require a globally idle device.
+
+Sanitized evidence is retained under
+`results/edge_readiness_v1/e2l1-011/`: `manifest.json` SHA-256
+`e2c29422dc49af47cbeacad8e727b955764cc0bb33157db423a7dac829dde823`,
+`remote.stdout` SHA-256
+`e2c29422dc49af47cbeacad8e727b955764cc0bb33157db423a7dac829dde823`, empty
+`remote.stderr` SHA-256
+`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`, and
+`dispatch.json` SHA-256
+`df8c59a7309f5bcb2db581ba6aca414c55d24e90bc9e36b24df843558b333599`.
+The dispatch file includes the full commit, target verification and all
+source-transfer hashes. No model, ONNX, engine, image or payload file was
+transferred or persisted.
+
+The runtime call path can initialize/use the process CUDA context; this smoke
+does not claim “no context initialization”. The 4096-byte/1 MiB limit bounds
+only the requested device allocation, not total CUDA driver/context memory.
+It creates no workload in another process and does not reset or reconfigure
+the device. The source/reference export location remains the Windows local
+`D:\Research\paper` worktree; source forward/export is future work and was not
+run here.
+
+**Git:** L1A-011, scoped code/docs and sanitized evidence are ready to push
+with the `NADUNGVN` account. Stop after this allocation result; a model smoke
+requires separate review.

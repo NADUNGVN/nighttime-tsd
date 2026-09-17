@@ -1,0 +1,47 @@
+{
+  "schema_version": "e2l1-cuda-allocation-smoke-v1",
+  "status": "executed_allocation_only",
+  "target": "E2",
+  "real_device_execution": true,
+  "authorization_required": "--execute-real-device plus separate Astra authorization",
+  "payload_nbytes": 4096,
+  "payload_sha256": "4e441a3533bb2c10cd5649981d395744213e09a336746b5a3458fee4057205ec",
+  "max_device_allocation_bytes": 1048576,
+  "operations": [
+    "one owned stream",
+    "one device allocation",
+    "one synchronous H2D",
+    "one synchronous D2H",
+    "one stream completion check",
+    "exact-byte compare",
+    "free allocation",
+    "destroy stream"
+  ],
+  "forbidden": [
+    "TensorRT",
+    "engine",
+    "model",
+    "inference",
+    "benchmark",
+    "power/thermal collection",
+    "package installation",
+    "device configuration"
+  ],
+  "artifact_policy": "new scoped JSON manifest only; no payload bytes or device binary",
+  "cleanup": {
+    "stream_close": "ok",
+    "runtime_close": "ok"
+  },
+  "runtime_identity": {
+    "library_path": "/usr/local/cuda-11.4/targets/aarch64-linux/lib/libcudart.so.11.4.298",
+    "library_realpath": "/usr/local/cuda-11.4/targets/aarch64-linux/lib/libcudart.so.11.4.298",
+    "library_basename": "libcudart.so.11.4.298"
+  },
+  "roundtrip": {
+    "status": "pass",
+    "nbytes": 4096,
+    "payload_sha256": "4e441a3533bb2c10cd5649981d395744213e09a336746b5a3458fee4057205ec",
+    "observed_sha256": "4e441a3533bb2c10cd5649981d395744213e09a336746b5a3458fee4057205ec",
+    "stream_handle": 620844720
+  }
+}
