@@ -1,0 +1,141 @@
+{
+  "selection": "U42",
+  "manifest_order": 4,
+  "image": "train/images/00054.jpg",
+  "image_id": "00054",
+  "input_tensor": {
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "dtype": "float32",
+    "sha256": "3dfe153ee1c53ce203852906461be6d755f7ed64a221e998c131b3cde782d2e7"
+  },
+  "source_primary": {
+    "shape": [
+      1,
+      7,
+      8400
+    ],
+    "dtype": "float32",
+    "sha256": "24cab59266c012b2af311663e924fa4073b14fe150c2789b32e1c1018fade33f"
+  },
+  "onnx_primary": {
+    "shape": [
+      1,
+      7,
+      8400
+    ],
+    "dtype": "float32",
+    "sha256": "201825e8ba738e7f5d4cdfa97013708e940d4ac8f04880ea7a6b1400faaf2996"
+  },
+  "same_verified_input": true,
+  "comparison": {
+    "status": "pass",
+    "domain": "yolov8n_raw_primary_fixed_channel_spans",
+    "shape": [
+      1,
+      7,
+      8400
+    ],
+    "channel_spans": {
+      "boxes": [
+        0,
+        4
+      ],
+      "scores": [
+        4,
+        7
+      ]
+    },
+    "channel_results": {
+      "boxes": {
+        "status": "pass",
+        "domain": "yolov8n_raw_boxes_channels",
+        "shape": [
+          1,
+          4,
+          8400
+        ],
+        "dtype": "float32",
+        "rtol": 0.0001,
+        "atol": 1e-05,
+        "mismatch_count": 0,
+        "element_count": 33600,
+        "max_abs": 0.00140380859375,
+        "max_relative": 2.6801508031518573e-05,
+        "relative_infinite_count": 0,
+        "abs_quantiles": {
+          "element_count": 33600,
+          "finite_count": 33600,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 9.1552734375e-05,
+          "p99": 0.000244140625,
+          "max": 0.00140380859375
+        },
+        "relative_quantiles": {
+          "element_count": 33600,
+          "finite_count": 33600,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 2.529065446486068e-06,
+          "p99": 6.052649927725843e-06,
+          "max": 2.6801508031518573e-05
+        },
+        "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+        "first_offenders": []
+      },
+      "scores": {
+        "status": "pass",
+        "domain": "yolov8n_raw_score_channels",
+        "shape": [
+          1,
+          3,
+          8400
+        ],
+        "dtype": "float32",
+        "rtol": 0.0001,
+        "atol": 1e-05,
+        "mismatch_count": 0,
+        "element_count": 25200,
+        "max_abs": 4.76837158203125e-07,
+        "max_relative": 5.674160895291135,
+        "relative_infinite_count": 0,
+        "abs_quantiles": {
+          "element_count": 25200,
+          "finite_count": 25200,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 3.2698591612145833e-09,
+          "p95": 4.617374980142586e-08,
+          "p99": 7.153319939945386e-08,
+          "max": 4.76837158203125e-07
+        },
+        "relative_quantiles": {
+          "element_count": 25200,
+          "finite_count": 25200,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 1.0,
+          "p95": 1.0,
+          "p99": 1.8589585465592748,
+          "max": 5.674160895291135
+        },
+        "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+        "first_offenders": []
+      }
+    },
+    "mismatch_count": 0,
+    "element_count": 58800,
+    "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/images/00000.jpg",
+  "stage": "bounded_calibration_component_trace",
+  "producer_calls": [
+    "YOLODataset.load_image",
+    "LetterBox.__call__",
+    "Format._format_img_equivalent"
+  ],
+  "loader_dispatch": {
+    "Exporter.get_int8_calibration_dataloader": false,
+    "build_yolo_dataset": false,
+    "dataloader": false
+  },
+  "dataset_side_effects": {
+    "labels_read": false,
+    "image_cache_read": false,
+    "dataset_instantiated": false
+  },
+  "cache_isolation": {
+    "mechanism": "fresh private TemporaryDirectory candidate passed as YOLODataset.npy_files",
+    "isolated_npy_candidate": "/tmp/precision_head_calibration_trace_6u222vbp/00000.npy",
+    "isolated_candidate_exists_before_load": false,
+    "isolated_candidate_exists_after_load": false,
+    "scratch_deleted_after_trace": true,
+    "original_adjacent_npy_candidate": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/images/00000.npy",
+    "original_adjacent_npy_used": false,
+    "original_adjacent_npy_deleted": false
+  },
+  "load_image": {
+    "rect_mode": true,
+    "resize_short": false,
+    "input_path_kind": "materialized calibration image",
+    "original_hw": [
+      768,
+      1024
+    ],
+    "resized_hw": [
+      480,
+      640
+    ],
+    "dtype": "uint8",
+    "color_order": "BGR",
+    "bytes_sha256": "5a3685da916cdeb660d7dd885e5a8f3f46d20df8eccfb84c1ed8432c4c6d6035"
+  },
+  "letterbox": {
+    "new_shape": [
+      640,
+      640
+    ],
+    "auto": false,
+    "scale_fill": false,
+    "scaleup": false,
+    "center": true,
+    "stride": 32,
+    "padding_value": 114,
+    "interpolation": 1,
+    "orig_shape": [
+      480,
+      640
+    ],
+    "ratio": [
+      1.0,
+      1.0
+    ],
+    "new_unpad": [
+      640,
+      480
+    ],
+    "padding": {
+      "top": 80,
+      "bottom": 80,
+      "left": 0,
+      "right": 0
+    }
+  },
+  "formatted_uint8": {
+    "shape": [
+      3,
+      640,
+      640
+    ],
+    "dtype": "uint8",
+    "layout": "RGB_CHW",
+    "bytes_sha256": "a442a9e216a7e5e4863c26c2bc1af8770062f9f06b1f73059dfc0bee1b2295fc"
+  },
+  "normalization": {
+    "applied": true,
+    "operation": "float32(rgb_chw) / 255.0",
+    "shape": [
+      3,
+      640,
+      640
+    ],
+    "dtype": "float32",
+    "range": [
+      0.0,
+      1.0
+    ],
+    "bytes_sha256": "0abfaddc4e95ae323c782d1656b77bbda681e6e65944239081a53632812119bd"
+  },
+  "calibration_trace_scope": "three accepted anchors only; no full calibration set, cache, test or negative-test data",
+  "selection": "U44",
+  "image_id": "00000",
+  "image": "train/images/00000.jpg",
+  "expected_source_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72",
+  "materialized_expected_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+}

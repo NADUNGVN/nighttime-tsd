@@ -1,0 +1,93 @@
+{
+  "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00098.jpg",
+  "decoded": {
+    "shape": [
+      720,
+      1280,
+      3
+    ],
+    "dtype": "uint8",
+    "color_order": "BGR",
+    "bytes_sha256": "58f8089555f644a9d816c890d1534044120400f8193fbe78c84d250435d0b538"
+  },
+  "letterbox": {
+    "new_shape": [
+      640,
+      640
+    ],
+    "auto": false,
+    "scale_fill": false,
+    "scaleup": true,
+    "center": true,
+    "stride": 32,
+    "padding_value": 114,
+    "interpolation": 1,
+    "orig_shape": [
+      720,
+      1280
+    ],
+    "ratio": [
+      0.5,
+      0.5
+    ],
+    "new_unpad": [
+      640,
+      360
+    ],
+    "padding": {
+      "top": 140,
+      "bottom": 140,
+      "left": 0,
+      "right": 0
+    }
+  },
+  "transformed": {
+    "shape": [
+      640,
+      640,
+      3
+    ],
+    "dtype": "uint8",
+    "bytes_sha256": "4c5aaf64858646d749eabe52ebbf1ee1c02df7223c28f0f3fb9d7ae15cfc88d3"
+  },
+  "tensor": {
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "dtype": "float32",
+    "range": [
+      0.0,
+      1.0
+    ],
+    "bytes_sha256": "2eae963b3fd7f7ee906b5d23cb4ad43f2e36605713e97dadea95b0549706bd50"
+  },
+  "original_image_size_hw": [
+    720,
+    1280
+  ],
+  "operations": [
+    "decode pinned BGR",
+    "LetterBox via BasePredictor.pre_transform",
+    "BGR_to_RGB",
+    "BHWC_to_BCHW",
+    "contiguous",
+    "uint8_to_float32",
+    "divide_by_255",
+    "batch_axis"
+  ],
+  "same_tensor_for_source_and_onnx": true,
+  "selection": "U42",
+  "image_id": "00098",
+  "expected_source_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb",
+  "selection_bindings": [
+    {
+      "selection": "U42",
+      "manifest_order": 6,
+      "image_id": "00098",
+      "expected_source_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+    }
+  ]
+}

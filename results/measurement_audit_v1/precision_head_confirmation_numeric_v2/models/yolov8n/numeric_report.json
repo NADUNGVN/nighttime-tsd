@@ -1,0 +1,3909 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_confirmation_numeric_v1",
+  "model": "yolov8n",
+  "status": "completed",
+  "numeric_status": "fail",
+  "runtime": {
+    "expected_from_config": {
+      "torch": "2.5.1+cu121",
+      "ultralytics": "8.4.102",
+      "numpy": "2.4.4",
+      "pycocotools": "2.0.10"
+    },
+    "observed": {
+      "torch": "2.5.1+cu121",
+      "ultralytics": "8.4.102",
+      "numpy": "2.4.4",
+      "onnxruntime": "1.24.4",
+      "pycocotools": "2.0.10"
+    },
+    "cuda_visible_devices": "-1",
+    "mode": "CPUExecutionProvider; CUDA hidden"
+  },
+  "onnxruntime": {
+    "providers_requested": [
+      "CPUExecutionProvider"
+    ],
+    "providers_observed": [
+      "CPUExecutionProvider"
+    ],
+    "options": {
+      "graph_optimization_level": "ORT_ENABLE_BASIC",
+      "intra_op_num_threads": 2,
+      "inter_op_num_threads": 1,
+      "execution_mode": "ORT_SEQUENTIAL",
+      "enable_mem_pattern": false,
+      "enable_cpu_mem_arena": true
+    },
+    "input": {
+      "name": "images",
+      "type": "tensor(float)",
+      "shape": [
+        1,
+        3,
+        640,
+        640
+      ]
+    },
+    "output": {
+      "name": "output0",
+      "type": "tensor(float)",
+      "shape": [
+        1,
+        7,
+        8400
+      ]
+    }
+  },
+  "producer_source_evidence": {
+    "inference_producer": [
+      {
+        "label": "ultralytics.data.loaders.imread",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/utils/patches.py",
+        "source_sha256": "74ca0c734016352aef39a340636814117cc80692c1d67640fb773d9ddf8d5978",
+        "source_bytes": 1356
+      },
+      {
+        "label": "ultralytics.data.augment.LetterBox.__init__",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "8462cf07d17034a0971f12ffb2f66074c2ffa538c98b1263efa21557b333be09",
+        "source_bytes": 1665
+      },
+      {
+        "label": "ultralytics.data.augment.LetterBox.get_params",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "79839dbd1b1bea969c49c0f5440f7de1c7677b4a03dffba8de0a36075fb412a5",
+        "source_bytes": 1877
+      },
+      {
+        "label": "ultralytics.data.augment.LetterBox.apply_image",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "cc1764596f98740609403e032a2ccf47a785059058ed55077b259d90c8dcd5e1",
+        "source_bytes": 1301
+      },
+      {
+        "label": "ultralytics.engine.predictor.BasePredictor.pre_transform",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/predictor.py",
+        "source_sha256": "a8afc59dbc2d158ea8c553fd7a6c8fb00107652127ad7765effa0d4b560cb6ba",
+        "source_bytes": 693
+      },
+      {
+        "label": "ultralytics.engine.predictor.BasePredictor.preprocess",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/predictor.py",
+        "source_sha256": "feee028f3d5d1ce1cd03a223331f44d712dc898606f3a3c3311b395d2c281fd7",
+        "source_bytes": 943
+      },
+      {
+        "label": "ultralytics.data.augment.Format._format_img",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "1fed3cb6c543c42d1a180c5c11e51bdaa39d12b1db06983b460426cd4ee9e031",
+        "source_bytes": 1272
+      }
+    ],
+    "calibration_producer_source": [
+      {
+        "label": "calibration helper source",
+        "module": "ultralytics.engine.exporter",
+        "path": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "sha256": "e00736ab18868bc66b4429b246d117d55714d78d7e674ee8e53dfc96ce2724e6",
+        "bytes": 85675
+      },
+      {
+        "label": "dataset source",
+        "module": "ultralytics.data.dataset",
+        "path": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/dataset.py",
+        "sha256": "2cc6156013aac5f631171fe5c93f03c69d4821fa0b44c8c6aad8d70cc22d0ed1",
+        "bytes": 51280
+      },
+      {
+        "label": "augmentation source",
+        "module": "ultralytics.data.augment",
+        "path": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "sha256": "f211edb54b7bc92a90f7e3e2faa886844ed8328c46d549d24a42e7c974dcde90",
+        "bytes": 137982
+      },
+      {
+        "label": "ultralytics.engine.exporter.Exporter.get_int8_calibration_dataloader",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "source_sha256": "c3083ef89201276d5ea73e217846a0ddcaeed92b4909f75a2545c4ef2016b44c",
+        "source_bytes": 2189
+      },
+      {
+        "label": "ultralytics.engine.exporter.Exporter.__init__",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "source_sha256": "703de664efcc94bd1e0125eb027d74ca96185d8af880efcc549403dbb3acd8d9",
+        "source_bytes": 579
+      },
+      {
+        "label": "ultralytics.engine.exporter.Exporter.export_onnx",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "source_sha256": "1d6dc7e396ae244fb10c65a3061b695f18d1d5090009060514b0e09ceb37792e",
+        "source_bytes": 999
+      },
+      {
+        "label": "ultralytics.data.dataset.YOLODataset.load_image",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/base.py",
+        "source_sha256": "92b174f9d47137bb9cc5d14618d88c8b4212345f26b48441141b922d341d112a",
+        "source_bytes": 3695
+      },
+      {
+        "label": "ultralytics.data.dataset.YOLODataset.build_transforms",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/dataset.py",
+        "source_sha256": "9d258d2fdbe6351f88243c2bcfb82ec8182e19c065414a9087ee04c3cc0f3691",
+        "source_bytes": 1214
+      },
+      {
+        "label": "ultralytics.data.build.build_yolo_dataset",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/build.py",
+        "source_sha256": "cc30939a9a049a201481a43b84f1b41eea32f0e68bfe57aba3bbada5c9433e49",
+        "source_bytes": 1346
+      },
+      {
+        "label": "ultralytics.data.augment.Format._format_img",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "1fed3cb6c543c42d1a180c5c11e51bdaa39d12b1db06983b460426cd4ee9e031",
+        "source_bytes": 1272
+      },
+      {
+        "label": "repository calibration helper",
+        "path": "scripts/uniform_build_repeat.py"
+      }
+    ],
+    "calibration_loader_called": false,
+    "calibration_component_called": true,
+    "calibration_recipe_status": "source_inspected_scoped_image_trace; calibration loader dispatch forbidden",
+    "export_semantics_status": "accepted_settings_and_observed_ONNX_schema_recorded; native_reference_is_not_an_export_copy"
+  },
+  "reference_semantics": {
+    "model": "yolov8n",
+    "native_reference": {
+      "mode": "frozen PyTorch model.model.to(cpu).float().eval() under torch.no_grad",
+      "dtype": "explicit float32 primary output",
+      "head_contract": {
+        "head_type": "Detect",
+        "head_index": 22,
+        "end2end": false
+      },
+      "forward_counts": {
+        "native_primary": 0,
+        "export_reference": 0
+      },
+      "fusion": "not_reproduced_in_native_reference; any historical exporter fusion belongs to the ONNX artifact and is not inferred from numeric agreement"
+    },
+    "accepted_export_settings": {
+      "format": "onnx",
+      "imgsz": 640,
+      "batch": 1,
+      "opset": 17,
+      "simplify": true,
+      "dynamic": false,
+      "half": false,
+      "device": "cpu",
+      "task": "detect"
+    },
+    "observed_onnx_schema": {
+      "inputs": [
+        {
+          "name": "images",
+          "shape": [
+            1,
+            3,
+            640,
+            640
+          ],
+          "dtype": "float32"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output0",
+          "shape": [
+            1,
+            7,
+            8400
+          ],
+          "dtype": "float32"
+        }
+      ],
+      "opset_imports": [
+        {
+          "domain": "",
+          "version": 17
+        }
+      ],
+      "static_shapes": true,
+      "dynamic_shape_observed": false,
+      "float_graph_expected": true,
+      "quantization_nodes": []
+    },
+    "head_output_semantics": {
+      "output_name": "output0",
+      "output_shape": [
+        1,
+        7,
+        8400
+      ],
+      "max_det": 300,
+      "postprocess": "no additional NMS/rematching in this diagnostic; YOLO26 fixed native row index",
+      "coordinate_or_packing": "accepted graph schema/structural audit is referenced; native-to-ONNX numeric comparison is measured separately"
+    },
+    "source_inspection_boundary": "Exporter and dataset/augmentation source hashes are recorded at runtime; source inspection is evidence of implementation, not proof of a producer call unless the corresponding call flag is true"
+  },
+  "checkpoint": {
+    "before": {
+      "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 6260963,
+      "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+    },
+    "after": {
+      "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 6260963,
+      "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+    },
+    "unchanged": true
+  },
+  "onnx": {
+    "before": {
+      "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 12266841,
+      "sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+    },
+    "after": {
+      "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 12266841,
+      "sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+    },
+    "unchanged": true,
+    "expected_sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+  },
+  "fixture_binding": {
+    "status": "matched",
+    "images": {
+      "train/images/00006.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00006.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 63138,
+          "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00006.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 63138,
+          "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00006.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 63138,
+            "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 0,
+            "expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+            "materialized_expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+          },
+          {
+            "selection": "U42",
+            "manifest_order": 0,
+            "expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+            "materialized_expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+          }
+        ]
+      },
+      "train/images/00009.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00009.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 120736,
+          "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00009.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 120736,
+          "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00009.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 120736,
+            "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 1,
+            "expected_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+            "materialized_expected_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+          }
+        ]
+      },
+      "train/images/00028.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00028.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 314856,
+          "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00028.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 314856,
+          "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00028.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 314856,
+            "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 2,
+            "expected_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde",
+            "materialized_expected_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+          }
+        ]
+      },
+      "train/images/00036.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00036.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 112746,
+          "sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00036.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 112746,
+          "sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00036.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 112746,
+            "sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 3,
+            "expected_sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce",
+            "materialized_expected_sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+          }
+        ]
+      },
+      "train/images/00054.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00054.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 119946,
+          "sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00054.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 119946,
+          "sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00054.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 119946,
+            "sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 4,
+            "expected_sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50",
+            "materialized_expected_sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+          }
+        ]
+      },
+      "train/images/00061.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00061.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 101216,
+          "sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00061.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 101216,
+          "sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00061.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 101216,
+            "sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 5,
+            "expected_sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1",
+            "materialized_expected_sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+          }
+        ]
+      },
+      "train/images/00098.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00098.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 137774,
+          "sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00098.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 137774,
+          "sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00098.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 137774,
+            "sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 6,
+            "expected_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb",
+            "materialized_expected_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+          }
+        ]
+      },
+      "train/images/00104.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00104.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 118496,
+          "sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00104.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 118496,
+          "sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00104.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 118496,
+            "sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 7,
+            "expected_sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f",
+            "materialized_expected_sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+          }
+        ]
+      },
+      "train/images/00029.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00029.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 82133,
+          "sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s43_n1024/images/00029.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 82133,
+          "sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+        },
+        "materialized_by_selection": {
+          "U43": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s43_n1024/images/00029.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 82133,
+            "sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U43",
+            "manifest_order": 0,
+            "expected_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c",
+            "materialized_expected_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+          }
+        ]
+      },
+      "train/images/00000.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00000.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 114276,
+          "sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/images/00000.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 114276,
+          "sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+        },
+        "materialized_by_selection": {
+          "U44": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/images/00000.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 114276,
+            "sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U44",
+            "manifest_order": 0,
+            "expected_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72",
+            "materialized_expected_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+          }
+        ]
+      }
+    },
+    "unique_image_count": 10
+  },
+  "fixture_binding_after": {
+    "status": "matched",
+    "images": {
+      "train/images/00006.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00006.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 63138,
+          "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00006.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 63138,
+          "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00006.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 63138,
+            "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 0,
+            "expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+            "materialized_expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+          },
+          {
+            "selection": "U42",
+            "manifest_order": 0,
+            "expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+            "materialized_expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+          }
+        ]
+      },
+      "train/images/00009.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00009.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 120736,
+          "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00009.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 120736,
+          "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00009.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 120736,
+            "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 1,
+            "expected_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+            "materialized_expected_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+          }
+        ]
+      },
+      "train/images/00028.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00028.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 314856,
+          "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00028.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 314856,
+          "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00028.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 314856,
+            "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 2,
+            "expected_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde",
+            "materialized_expected_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+          }
+        ]
+      },
+      "train/images/00036.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00036.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 112746,
+          "sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00036.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 112746,
+          "sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00036.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 112746,
+            "sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 3,
+            "expected_sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce",
+            "materialized_expected_sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+          }
+        ]
+      },
+      "train/images/00054.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00054.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 119946,
+          "sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00054.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 119946,
+          "sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00054.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 119946,
+            "sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 4,
+            "expected_sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50",
+            "materialized_expected_sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+          }
+        ]
+      },
+      "train/images/00061.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00061.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 101216,
+          "sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00061.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 101216,
+          "sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00061.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 101216,
+            "sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 5,
+            "expected_sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1",
+            "materialized_expected_sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+          }
+        ]
+      },
+      "train/images/00098.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00098.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 137774,
+          "sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00098.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 137774,
+          "sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00098.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 137774,
+            "sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 6,
+            "expected_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb",
+            "materialized_expected_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+          }
+        ]
+      },
+      "train/images/00104.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00104.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 118496,
+          "sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00104.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 118496,
+          "sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+        },
+        "materialized_by_selection": {
+          "U42": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00104.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 118496,
+            "sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U42",
+            "manifest_order": 7,
+            "expected_sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f",
+            "materialized_expected_sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+          }
+        ]
+      },
+      "train/images/00029.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00029.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 82133,
+          "sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s43_n1024/images/00029.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 82133,
+          "sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+        },
+        "materialized_by_selection": {
+          "U43": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s43_n1024/images/00029.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 82133,
+            "sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U43",
+            "manifest_order": 0,
+            "expected_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c",
+            "materialized_expected_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+          }
+        ]
+      },
+      "train/images/00000.jpg": {
+        "source": {
+          "path": "data/processed/cctsdb2021_clean/train/images/00000.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 114276,
+          "sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+        },
+        "materialized": {
+          "path": "data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/images/00000.jpg",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 114276,
+          "sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+        },
+        "materialized_by_selection": {
+          "U44": {
+            "path": "data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/images/00000.jpg",
+            "exists": true,
+            "regular_file": true,
+            "bytes": 114276,
+            "sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+          }
+        },
+        "selection_bindings": [
+          {
+            "selection": "U44",
+            "manifest_order": 0,
+            "expected_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72",
+            "materialized_expected_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+          }
+        ]
+      }
+    },
+    "unique_image_count": 10
+  },
+  "fixture_binding_unchanged": true,
+  "preprocess_traces": {
+    "train/images/00006.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00006.jpg",
+      "decoded": {
+        "shape": [
+          720,
+          1280,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "b3a85c10c97fb3b6641923c85e2a71e2f2e54cae4332a3740bc1c903033d921c"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          720,
+          1280
+        ],
+        "ratio": [
+          0.5,
+          0.5
+        ],
+        "new_unpad": [
+          640,
+          360
+        ],
+        "padding": {
+          "top": 140,
+          "bottom": 140,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "6227ecf5d9b4ceae34db50e25d0ec4b657e8b74a4aec1b7505c7f99317b29184"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "bytes_sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474"
+      },
+      "original_image_size_hw": [
+        720,
+        1280
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U42",
+      "image_id": "00006",
+      "expected_source_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+      "selection_bindings": [
+        {
+          "selection": "U42",
+          "manifest_order": 0,
+          "image_id": "00006",
+          "expected_source_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+        },
+        {
+          "selection": "U42",
+          "manifest_order": 0,
+          "image_id": "00006",
+          "expected_source_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+        }
+      ]
+    },
+    "train/images/00009.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00009.jpg",
+      "decoded": {
+        "shape": [
+          720,
+          1280,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "013a1c555169475a19c8cee71195cb0227516be591e0be33f31a59c9af2fe057"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          720,
+          1280
+        ],
+        "ratio": [
+          0.5,
+          0.5
+        ],
+        "new_unpad": [
+          640,
+          360
+        ],
+        "padding": {
+          "top": 140,
+          "bottom": 140,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "19195c3a6f4543d8b581d4d3bcb365fda1120daeea31fa1fddf269405c34b0c5"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "bytes_sha256": "357c0cc87ea2b4bfa56c1eca53bd54f5970bc1ea67b660d293a8bc4a9f62a9f0"
+      },
+      "original_image_size_hw": [
+        720,
+        1280
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U42",
+      "image_id": "00009",
+      "expected_source_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+      "selection_bindings": [
+        {
+          "selection": "U42",
+          "manifest_order": 1,
+          "image_id": "00009",
+          "expected_source_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+        }
+      ]
+    },
+    "train/images/00028.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00028.jpg",
+      "decoded": {
+        "shape": [
+          768,
+          1024,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "8f517c2a8007b5595579fbb85c0af4c041fd0552ebc5f5951cf9a2ec39187be0"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          768,
+          1024
+        ],
+        "ratio": [
+          0.625,
+          0.625
+        ],
+        "new_unpad": [
+          640,
+          480
+        ],
+        "padding": {
+          "top": 80,
+          "bottom": 80,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "5be88c6fd522458072090dab1324b4a6c52ba97d8b517c3e84ffcde9ec318549"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.01568627543747425,
+          1.0
+        ],
+        "bytes_sha256": "7b89184eac3c948ba0305d904e2b1e7b48e96d80bb13d4724abb2062b6286f29"
+      },
+      "original_image_size_hw": [
+        768,
+        1024
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U42",
+      "image_id": "00028",
+      "expected_source_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde",
+      "selection_bindings": [
+        {
+          "selection": "U42",
+          "manifest_order": 2,
+          "image_id": "00028",
+          "expected_source_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+        }
+      ]
+    },
+    "train/images/00036.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00036.jpg",
+      "decoded": {
+        "shape": [
+          768,
+          1024,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "5825cd6dd85c54951f13ee1282b7ebfba11481f3fc073158eebab865023a08a4"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          768,
+          1024
+        ],
+        "ratio": [
+          0.625,
+          0.625
+        ],
+        "new_unpad": [
+          640,
+          480
+        ],
+        "padding": {
+          "top": 80,
+          "bottom": 80,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "954fa1a387981c1de06ee2747c5c8f1007f262f262810523405e72dbad011d4e"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.007843137718737125,
+          1.0
+        ],
+        "bytes_sha256": "fdce2c807d29d3127c766aafacd8dceaf850b817273c5ed74da884a87ff05ee2"
+      },
+      "original_image_size_hw": [
+        768,
+        1024
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U42",
+      "image_id": "00036",
+      "expected_source_sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce",
+      "selection_bindings": [
+        {
+          "selection": "U42",
+          "manifest_order": 3,
+          "image_id": "00036",
+          "expected_source_sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+        }
+      ]
+    },
+    "train/images/00054.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00054.jpg",
+      "decoded": {
+        "shape": [
+          768,
+          1024,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "3712d1acbac6fb94c40396bd635f0c7967fbbc44c24c707aad142a351f153502"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          768,
+          1024
+        ],
+        "ratio": [
+          0.625,
+          0.625
+        ],
+        "new_unpad": [
+          640,
+          480
+        ],
+        "padding": {
+          "top": 80,
+          "bottom": 80,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "3d94a932d3fd23e02347e795b91ce9ca4840359921e12871c62f931c7b03ffc9"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.03529411926865578,
+          1.0
+        ],
+        "bytes_sha256": "3dfe153ee1c53ce203852906461be6d755f7ed64a221e998c131b3cde782d2e7"
+      },
+      "original_image_size_hw": [
+        768,
+        1024
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U42",
+      "image_id": "00054",
+      "expected_source_sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50",
+      "selection_bindings": [
+        {
+          "selection": "U42",
+          "manifest_order": 4,
+          "image_id": "00054",
+          "expected_source_sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+        }
+      ]
+    },
+    "train/images/00061.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00061.jpg",
+      "decoded": {
+        "shape": [
+          720,
+          1280,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "adf733b58308165e2e8521988633e14ed9d142b2a28978e198dd97a1f3af6fb3"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          720,
+          1280
+        ],
+        "ratio": [
+          0.5,
+          0.5
+        ],
+        "new_unpad": [
+          640,
+          360
+        ],
+        "padding": {
+          "top": 140,
+          "bottom": 140,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "a2dd78d21aac7a924463746bfb4a88dbccc5f86730c555ef352a8926fd70ca2f"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "bytes_sha256": "d3561a5525d594a6a48cee98819d29140b2fbe30252ac0b6dca928c8d515ed09"
+      },
+      "original_image_size_hw": [
+        720,
+        1280
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U42",
+      "image_id": "00061",
+      "expected_source_sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1",
+      "selection_bindings": [
+        {
+          "selection": "U42",
+          "manifest_order": 5,
+          "image_id": "00061",
+          "expected_source_sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+        }
+      ]
+    },
+    "train/images/00098.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00098.jpg",
+      "decoded": {
+        "shape": [
+          720,
+          1280,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "58f8089555f644a9d816c890d1534044120400f8193fbe78c84d250435d0b538"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          720,
+          1280
+        ],
+        "ratio": [
+          0.5,
+          0.5
+        ],
+        "new_unpad": [
+          640,
+          360
+        ],
+        "padding": {
+          "top": 140,
+          "bottom": 140,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "4c5aaf64858646d749eabe52ebbf1ee1c02df7223c28f0f3fb9d7ae15cfc88d3"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "bytes_sha256": "2eae963b3fd7f7ee906b5d23cb4ad43f2e36605713e97dadea95b0549706bd50"
+      },
+      "original_image_size_hw": [
+        720,
+        1280
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U42",
+      "image_id": "00098",
+      "expected_source_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb",
+      "selection_bindings": [
+        {
+          "selection": "U42",
+          "manifest_order": 6,
+          "image_id": "00098",
+          "expected_source_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+        }
+      ]
+    },
+    "train/images/00104.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00104.jpg",
+      "decoded": {
+        "shape": [
+          720,
+          1280,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "3b2c046e4a967afcbeec54377384b28a5ec9a3a18dbf05c13627d7f2a67f8a6c"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          720,
+          1280
+        ],
+        "ratio": [
+          0.5,
+          0.5
+        ],
+        "new_unpad": [
+          640,
+          360
+        ],
+        "padding": {
+          "top": 140,
+          "bottom": 140,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "cf367686adceac8078c2931e53e56fd6957089b5c2ab438642f5742876d34e2d"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "bytes_sha256": "6db3dc17716bd172484995dcbee44ef4cf5188adb0c0a638320444d1703a2b9d"
+      },
+      "original_image_size_hw": [
+        720,
+        1280
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U42",
+      "image_id": "00104",
+      "expected_source_sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f",
+      "selection_bindings": [
+        {
+          "selection": "U42",
+          "manifest_order": 7,
+          "image_id": "00104",
+          "expected_source_sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+        }
+      ]
+    },
+    "train/images/00029.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00029.jpg",
+      "decoded": {
+        "shape": [
+          720,
+          1280,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "2d12850f91036485ddb83003caa02c8c7da4123c03eb3ec7408bcba42983770c"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          720,
+          1280
+        ],
+        "ratio": [
+          0.5,
+          0.5
+        ],
+        "new_unpad": [
+          640,
+          360
+        ],
+        "padding": {
+          "top": 140,
+          "bottom": 140,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "bed1d8721947c3a1aff340169dcf36428da70d43023954078fd6dd760691bdbf"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.003921568859368563,
+          1.0
+        ],
+        "bytes_sha256": "7ea8f84ad5276693dc3c1b1f028e2d3fd4e0aa89074e430961ef96452d7ce384"
+      },
+      "original_image_size_hw": [
+        720,
+        1280
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U43",
+      "image_id": "00029",
+      "expected_source_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c",
+      "selection_bindings": [
+        {
+          "selection": "U43",
+          "manifest_order": 0,
+          "image_id": "00029",
+          "expected_source_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+        }
+      ]
+    },
+    "train/images/00000.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00000.jpg",
+      "decoded": {
+        "shape": [
+          768,
+          1024,
+          3
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "a7f72c8c4e15c6bfecb940a4e448bb3f93402cb3c6eda93570374917d4882295"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": true,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          768,
+          1024
+        ],
+        "ratio": [
+          0.625,
+          0.625
+        ],
+        "new_unpad": [
+          640,
+          480
+        ],
+        "padding": {
+          "top": 80,
+          "bottom": 80,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "transformed": {
+        "shape": [
+          640,
+          640,
+          3
+        ],
+        "dtype": "uint8",
+        "bytes_sha256": "c276576329e4f0118d31698b2eafb50940e4b559027bd3c44c6c8e8ae30b5fe3"
+      },
+      "tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "bytes_sha256": "0abfaddc4e95ae323c782d1656b77bbda681e6e65944239081a53632812119bd"
+      },
+      "original_image_size_hw": [
+        768,
+        1024
+      ],
+      "operations": [
+        "decode pinned BGR",
+        "LetterBox via BasePredictor.pre_transform",
+        "BGR_to_RGB",
+        "BHWC_to_BCHW",
+        "contiguous",
+        "uint8_to_float32",
+        "divide_by_255",
+        "batch_axis"
+      ],
+      "same_tensor_for_source_and_onnx": true,
+      "selection": "U44",
+      "image_id": "00000",
+      "expected_source_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72",
+      "selection_bindings": [
+        {
+          "selection": "U44",
+          "manifest_order": 0,
+          "image_id": "00000",
+          "expected_source_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+        }
+      ]
+    }
+  },
+  "calibration_preprocess_traces": {
+    "U42::train/images/00006.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00006.jpg",
+      "stage": "bounded_calibration_component_trace",
+      "producer_calls": [
+        "YOLODataset.load_image",
+        "LetterBox.__call__",
+        "Format._format_img_equivalent"
+      ],
+      "loader_dispatch": {
+        "Exporter.get_int8_calibration_dataloader": false,
+        "build_yolo_dataset": false,
+        "dataloader": false
+      },
+      "dataset_side_effects": {
+        "labels_read": false,
+        "image_cache_read": false,
+        "dataset_instantiated": false
+      },
+      "cache_isolation": {
+        "mechanism": "fresh private TemporaryDirectory candidate passed as YOLODataset.npy_files",
+        "isolated_npy_candidate": "/tmp/precision_head_calibration_trace_rwf4lxeb/00006.npy",
+        "isolated_candidate_exists_before_load": false,
+        "isolated_candidate_exists_after_load": false,
+        "scratch_deleted_after_trace": true,
+        "original_adjacent_npy_candidate": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00006.npy",
+        "original_adjacent_npy_used": false,
+        "original_adjacent_npy_deleted": false
+      },
+      "load_image": {
+        "rect_mode": true,
+        "resize_short": false,
+        "input_path_kind": "materialized calibration image",
+        "original_hw": [
+          720,
+          1280
+        ],
+        "resized_hw": [
+          360,
+          640
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "b60bca4cd771fcf69d2497c52356eaa6a7d723c85c1f99e44dde5b301e08c9b3"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": false,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          360,
+          640
+        ],
+        "ratio": [
+          1.0,
+          1.0
+        ],
+        "new_unpad": [
+          640,
+          360
+        ],
+        "padding": {
+          "top": 140,
+          "bottom": 140,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "formatted_uint8": {
+        "shape": [
+          3,
+          640,
+          640
+        ],
+        "dtype": "uint8",
+        "layout": "RGB_CHW",
+        "bytes_sha256": "15b5f68c72b17d6d232f030c6de314d368a5f44a2afa5c88dd9964095ab189ee"
+      },
+      "normalization": {
+        "applied": true,
+        "operation": "float32(rgb_chw) / 255.0",
+        "shape": [
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "bytes_sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474"
+      },
+      "calibration_trace_scope": "three accepted anchors only; no full calibration set, cache, test or negative-test data",
+      "selection": "U42",
+      "image_id": "00006",
+      "image": "train/images/00006.jpg",
+      "expected_source_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+      "materialized_expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+    },
+    "U43::train/images/00029.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_s43_n1024/images/00029.jpg",
+      "stage": "bounded_calibration_component_trace",
+      "producer_calls": [
+        "YOLODataset.load_image",
+        "LetterBox.__call__",
+        "Format._format_img_equivalent"
+      ],
+      "loader_dispatch": {
+        "Exporter.get_int8_calibration_dataloader": false,
+        "build_yolo_dataset": false,
+        "dataloader": false
+      },
+      "dataset_side_effects": {
+        "labels_read": false,
+        "image_cache_read": false,
+        "dataset_instantiated": false
+      },
+      "cache_isolation": {
+        "mechanism": "fresh private TemporaryDirectory candidate passed as YOLODataset.npy_files",
+        "isolated_npy_candidate": "/tmp/precision_head_calibration_trace_ilibne0p/00029.npy",
+        "isolated_candidate_exists_before_load": false,
+        "isolated_candidate_exists_after_load": false,
+        "scratch_deleted_after_trace": true,
+        "original_adjacent_npy_candidate": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_s43_n1024/images/00029.npy",
+        "original_adjacent_npy_used": false,
+        "original_adjacent_npy_deleted": false
+      },
+      "load_image": {
+        "rect_mode": true,
+        "resize_short": false,
+        "input_path_kind": "materialized calibration image",
+        "original_hw": [
+          720,
+          1280
+        ],
+        "resized_hw": [
+          360,
+          640
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "2146455c789f52cbe39d547f346100dc52f2e17ec47dd565feeec3b84109f656"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": false,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          360,
+          640
+        ],
+        "ratio": [
+          1.0,
+          1.0
+        ],
+        "new_unpad": [
+          640,
+          360
+        ],
+        "padding": {
+          "top": 140,
+          "bottom": 140,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "formatted_uint8": {
+        "shape": [
+          3,
+          640,
+          640
+        ],
+        "dtype": "uint8",
+        "layout": "RGB_CHW",
+        "bytes_sha256": "6f708493d2a092c49c055522c5fa1aaf29b3edaa673a54971a22d5ef081b1824"
+      },
+      "normalization": {
+        "applied": true,
+        "operation": "float32(rgb_chw) / 255.0",
+        "shape": [
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.003921568859368563,
+          1.0
+        ],
+        "bytes_sha256": "7ea8f84ad5276693dc3c1b1f028e2d3fd4e0aa89074e430961ef96452d7ce384"
+      },
+      "calibration_trace_scope": "three accepted anchors only; no full calibration set, cache, test or negative-test data",
+      "selection": "U43",
+      "image_id": "00029",
+      "image": "train/images/00029.jpg",
+      "expected_source_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c",
+      "materialized_expected_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c"
+    },
+    "U44::train/images/00000.jpg": {
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/images/00000.jpg",
+      "stage": "bounded_calibration_component_trace",
+      "producer_calls": [
+        "YOLODataset.load_image",
+        "LetterBox.__call__",
+        "Format._format_img_equivalent"
+      ],
+      "loader_dispatch": {
+        "Exporter.get_int8_calibration_dataloader": false,
+        "build_yolo_dataset": false,
+        "dataloader": false
+      },
+      "dataset_side_effects": {
+        "labels_read": false,
+        "image_cache_read": false,
+        "dataset_instantiated": false
+      },
+      "cache_isolation": {
+        "mechanism": "fresh private TemporaryDirectory candidate passed as YOLODataset.npy_files",
+        "isolated_npy_candidate": "/tmp/precision_head_calibration_trace_6u222vbp/00000.npy",
+        "isolated_candidate_exists_before_load": false,
+        "isolated_candidate_exists_after_load": false,
+        "scratch_deleted_after_trace": true,
+        "original_adjacent_npy_candidate": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/images/00000.npy",
+        "original_adjacent_npy_used": false,
+        "original_adjacent_npy_deleted": false
+      },
+      "load_image": {
+        "rect_mode": true,
+        "resize_short": false,
+        "input_path_kind": "materialized calibration image",
+        "original_hw": [
+          768,
+          1024
+        ],
+        "resized_hw": [
+          480,
+          640
+        ],
+        "dtype": "uint8",
+        "color_order": "BGR",
+        "bytes_sha256": "5a3685da916cdeb660d7dd885e5a8f3f46d20df8eccfb84c1ed8432c4c6d6035"
+      },
+      "letterbox": {
+        "new_shape": [
+          640,
+          640
+        ],
+        "auto": false,
+        "scale_fill": false,
+        "scaleup": false,
+        "center": true,
+        "stride": 32,
+        "padding_value": 114,
+        "interpolation": 1,
+        "orig_shape": [
+          480,
+          640
+        ],
+        "ratio": [
+          1.0,
+          1.0
+        ],
+        "new_unpad": [
+          640,
+          480
+        ],
+        "padding": {
+          "top": 80,
+          "bottom": 80,
+          "left": 0,
+          "right": 0
+        }
+      },
+      "formatted_uint8": {
+        "shape": [
+          3,
+          640,
+          640
+        ],
+        "dtype": "uint8",
+        "layout": "RGB_CHW",
+        "bytes_sha256": "a442a9e216a7e5e4863c26c2bc1af8770062f9f06b1f73059dfc0bee1b2295fc"
+      },
+      "normalization": {
+        "applied": true,
+        "operation": "float32(rgb_chw) / 255.0",
+        "shape": [
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "range": [
+          0.0,
+          1.0
+        ],
+        "bytes_sha256": "0abfaddc4e95ae323c782d1656b77bbda681e6e65944239081a53632812119bd"
+      },
+      "calibration_trace_scope": "three accepted anchors only; no full calibration set, cache, test or negative-test data",
+      "selection": "U44",
+      "image_id": "00000",
+      "image": "train/images/00000.jpg",
+      "expected_source_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72",
+      "materialized_expected_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72"
+    }
+  },
+  "native_head_contract": {
+    "head": {
+      "type": "Detect",
+      "index": 22,
+      "end2end": false
+    },
+    "parameters_dtype": "torch.float32",
+    "float_explicit": true
+  },
+  "model_stride": 32,
+  "native_output_contract": {
+    "representation": "tuple_tensor_plus_dict",
+    "debug_keys": [
+      "boxes",
+      "scores",
+      "feats"
+    ],
+    "shape": [
+      1,
+      7,
+      8400
+    ],
+    "dtype": "torch.float32"
+  },
+  "comparisons": [
+    {
+      "selection": "U42",
+      "manifest_order": 0,
+      "image": "train/images/00006.jpg",
+      "image_id": "00006",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "025247bc29e8bf13ed34e8e379a87f5a88db41774eb210523534bbea61856f85"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "9a8e2d918e2f86a9da794afb0cc3f9f52de8f487ef473bf0200782c1eafb51cc"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "pass",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "pass",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 33600,
+            "max_abs": 0.000396728515625,
+            "max_relative": 1.541386220007193e-05,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 6.103515625e-05,
+              "p99": 0.00010873794555664451,
+              "max": 0.000396728515625
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 1.5821657648851623e-06,
+              "p99": 3.222393607740737e-06,
+              "max": 1.541386220007193e-05
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 4.76837158203125e-07,
+            "max_relative": 6.794071364984387,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 5.238582456712493e-09,
+              "p95": 5.060559313818657e-08,
+              "p99": 7.606343430666113e-08,
+              "max": 4.76837158203125e-07
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 2.133300963446523,
+              "max": 6.794071364984387
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 0,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    },
+    {
+      "selection": "U42",
+      "manifest_order": 1,
+      "image": "train/images/00009.jpg",
+      "image_id": "00009",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "357c0cc87ea2b4bfa56c1eca53bd54f5970bc1ea67b660d293a8bc4a9f62a9f0"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "a44b379cbdc050e6bcb2f2dd3d145c5b0021de6396a97110f78a7fa5ba4dca26"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "9e4eb1efe425845bc2cac9ad2c0751fb209120fee82305649d2b813d732c67ec"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "fail",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "fail",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 2,
+            "element_count": 33600,
+            "max_abs": 0.00054931640625,
+            "max_relative": 0.0006751054852320675,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 6.103515625e-05,
+              "p99": 0.00018310546875,
+              "max": 0.00054931640625
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 2.104261584994951e-06,
+              "p99": 3.859798231701953e-06,
+              "max": 0.0006751054852320675
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": [
+              [
+                0,
+                1,
+                8004
+              ],
+              [
+                0,
+                1,
+                8014
+              ]
+            ]
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 1.1324882507324219e-06,
+            "max_relative": 5.7383719496477354,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 3.777072210553456e-09,
+              "p95": 4.7237512745823534e-08,
+              "p99": 7.201481562191245e-08,
+              "max": 1.1324882507324219e-06
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 2.046355972117281,
+              "max": 5.7383719496477354
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 2,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    },
+    {
+      "selection": "U42",
+      "manifest_order": 2,
+      "image": "train/images/00028.jpg",
+      "image_id": "00028",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "7b89184eac3c948ba0305d904e2b1e7b48e96d80bb13d4724abb2062b6286f29"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "7861779b79df0c7ce6f56cc0db6446ee2d997139aca903cd68cffd8336098b97"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "0637071fa58643832337834dd6f487f9c1597de29659053ab3b64bab93be3ea5"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "pass",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "pass",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 33600,
+            "max_abs": 0.000885009765625,
+            "max_relative": 3.456480035947392e-05,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 6.103515625e-05,
+              "p99": 0.00018310546875,
+              "max": 0.000885009765625
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 1.891936937136837e-06,
+              "p99": 4.558246302957329e-06,
+              "max": 3.456480035947392e-05
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 7.450580596923828e-07,
+            "max_relative": 5.247917581580183,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 3.1937403832671407e-09,
+              "p95": 4.8092751114836574e-08,
+              "p99": 7.398913821177187e-08,
+              "max": 7.450580596923828e-07
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.948995981195815,
+              "max": 5.247917581580183
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 0,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    },
+    {
+      "selection": "U42",
+      "manifest_order": 3,
+      "image": "train/images/00036.jpg",
+      "image_id": "00036",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "fdce2c807d29d3127c766aafacd8dceaf850b817273c5ed74da884a87ff05ee2"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "efa1e8c48c9df9ee8c85c1df2dc8bd4f2e26a27baa313a0e6db86e295af7b914"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "bac4fee100a66deb6f6c433013de4a8eeae41b97ba3884811527366a8787b2f0"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "pass",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "pass",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 33600,
+            "max_abs": 0.000946044921875,
+            "max_relative": 7.352580755845302e-05,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 6.103515625e-05,
+              "p99": 0.0001678466796875,
+              "max": 0.000946044921875
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 1.8393191931910965e-06,
+              "p99": 3.938631581739157e-06,
+              "max": 7.352580755845302e-05
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 1.3113021850585938e-06,
+            "max_relative": 5.68843999537552,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 4.052064017656676e-09,
+              "p95": 5.0271956553160624e-08,
+              "p99": 7.537397294754545e-08,
+              "max": 1.3113021850585938e-06
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 2.0065213758050517,
+              "max": 5.68843999537552
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 0,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    },
+    {
+      "selection": "U42",
+      "manifest_order": 4,
+      "image": "train/images/00054.jpg",
+      "image_id": "00054",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "3dfe153ee1c53ce203852906461be6d755f7ed64a221e998c131b3cde782d2e7"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "24cab59266c012b2af311663e924fa4073b14fe150c2789b32e1c1018fade33f"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "201825e8ba738e7f5d4cdfa97013708e940d4ac8f04880ea7a6b1400faaf2996"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "pass",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "pass",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 33600,
+            "max_abs": 0.00140380859375,
+            "max_relative": 2.6801508031518573e-05,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 9.1552734375e-05,
+              "p99": 0.000244140625,
+              "max": 0.00140380859375
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 2.529065446486068e-06,
+              "p99": 6.052649927725843e-06,
+              "max": 2.6801508031518573e-05
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 4.76837158203125e-07,
+            "max_relative": 5.674160895291135,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 3.2698591612145833e-09,
+              "p95": 4.617374980142586e-08,
+              "p99": 7.153319939945386e-08,
+              "max": 4.76837158203125e-07
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 1.8589585465592748,
+              "max": 5.674160895291135
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 0,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    },
+    {
+      "selection": "U42",
+      "manifest_order": 5,
+      "image": "train/images/00061.jpg",
+      "image_id": "00061",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "d3561a5525d594a6a48cee98819d29140b2fbe30252ac0b6dca928c8d515ed09"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "b358e53b7228f378ce9a13509a6906c0b25b8bd4ee19a517ca5a72eb6249b95e"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "d10bcda8bbaa89f9c24b1898d63674742f54fdef2b0c12237487d77602fda9c5"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "pass",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "pass",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 33600,
+            "max_abs": 0.00048828125,
+            "max_relative": 6.636580833554553e-05,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 6.103515625e-05,
+              "p99": 0.0001220703125,
+              "max": 0.00048828125
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 1.756168912837317e-06,
+              "p99": 3.5807037729029447e-06,
+              "max": 6.636580833554553e-05
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 4.172325134277344e-07,
+            "max_relative": 6.150775203611408,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 4.78427475414378e-09,
+              "p95": 5.086783438912334e-08,
+              "p99": 7.517050235605883e-08,
+              "max": 4.172325134277344e-07
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 2.050420330560201,
+              "max": 6.150775203611408
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 0,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    },
+    {
+      "selection": "U42",
+      "manifest_order": 6,
+      "image": "train/images/00098.jpg",
+      "image_id": "00098",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "2eae963b3fd7f7ee906b5d23cb4ad43f2e36605713e97dadea95b0549706bd50"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "b41a2e1363dcbdd01a80d80d1f65b2a5f59e894f5e95cf4f069628440c485c65"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "a98de32c9a0901b5982849265a83720b09e7a65460369074e8174fc1c837f99e"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "pass",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "pass",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 33600,
+            "max_abs": 0.000518798828125,
+            "max_relative": 0.00011114254536636624,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 6.103515625e-05,
+              "p99": 0.0001220703125,
+              "max": 0.000518798828125
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 1.763457252638286e-06,
+              "p99": 3.5937353430107188e-06,
+              "max": 0.00011114254536636624
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 2.980232238769531e-07,
+            "max_relative": 6.50781884717062,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 3.804366155435446e-09,
+              "p95": 4.8791995865826715e-08,
+              "p99": 7.39928002069234e-08,
+              "max": 2.980232238769531e-07
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 2.1378402573250432,
+              "max": 6.50781884717062
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 0,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    },
+    {
+      "selection": "U42",
+      "manifest_order": 7,
+      "image": "train/images/00104.jpg",
+      "image_id": "00104",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "6db3dc17716bd172484995dcbee44ef4cf5188adb0c0a638320444d1703a2b9d"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "442f5467cab06a4f28f9b770263130570cee459e30a37c9156b75c4ad662c126"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "9cec7f26577a35b2c62cc87d34a73ccb8842c988a4feac93cb58ba902a83a150"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "pass",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "pass",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 33600,
+            "max_abs": 0.00079345703125,
+            "max_relative": 2.6039729186816457e-05,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 6.103515625e-05,
+              "p99": 0.000152587890625,
+              "max": 0.00079345703125
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 1.990405432860042e-06,
+              "p99": 3.808576711418403e-06,
+              "max": 2.6039729186816457e-05
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 6.407499313354492e-07,
+            "max_relative": 4.928569030701867,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 3.4583972352564274e-09,
+              "p95": 4.730767741989436e-08,
+              "p99": 7.399000070407156e-08,
+              "max": 6.407499313354492e-07
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 2.0440712373059773,
+              "max": 4.928569030701867
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 0,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    }
+  ],
+  "forward_counts": {
+    "source_cpu_fp32": {
+      "attempted": 8,
+      "completed": 8
+    },
+    "onnx_cpu": {
+      "attempted": 8,
+      "completed": 8
+    }
+  },
+  "lifecycle": {
+    "status": "completed",
+    "stage": "completed",
+    "stage_history": [
+      {
+        "sequence": 0,
+        "stage": "child_started"
+      },
+      {
+        "sequence": 1,
+        "stage": "runtime_loading"
+      },
+      {
+        "sequence": 2,
+        "stage": "runtime_loaded"
+      },
+      {
+        "sequence": 3,
+        "stage": "binary_binding"
+      },
+      {
+        "sequence": 4,
+        "stage": "fixture_binding"
+      },
+      {
+        "sequence": 5,
+        "stage": "source_evidence"
+      },
+      {
+        "sequence": 6,
+        "stage": "model_loading"
+      },
+      {
+        "sequence": 7,
+        "stage": "head_validation"
+      },
+      {
+        "sequence": 8,
+        "stage": "head_validation_complete",
+        "head": {
+          "type": "Detect",
+          "index": 22,
+          "end2end": false
+        }
+      },
+      {
+        "sequence": 9,
+        "stage": "preprocess",
+        "image": "train/images/00006.jpg"
+      },
+      {
+        "sequence": 10,
+        "stage": "preprocess_complete",
+        "image": "train/images/00006.jpg"
+      },
+      {
+        "sequence": 11,
+        "stage": "preprocess",
+        "image": "train/images/00009.jpg"
+      },
+      {
+        "sequence": 12,
+        "stage": "preprocess_complete",
+        "image": "train/images/00009.jpg"
+      },
+      {
+        "sequence": 13,
+        "stage": "preprocess",
+        "image": "train/images/00028.jpg"
+      },
+      {
+        "sequence": 14,
+        "stage": "preprocess_complete",
+        "image": "train/images/00028.jpg"
+      },
+      {
+        "sequence": 15,
+        "stage": "preprocess",
+        "image": "train/images/00036.jpg"
+      },
+      {
+        "sequence": 16,
+        "stage": "preprocess_complete",
+        "image": "train/images/00036.jpg"
+      },
+      {
+        "sequence": 17,
+        "stage": "preprocess",
+        "image": "train/images/00054.jpg"
+      },
+      {
+        "sequence": 18,
+        "stage": "preprocess_complete",
+        "image": "train/images/00054.jpg"
+      },
+      {
+        "sequence": 19,
+        "stage": "preprocess",
+        "image": "train/images/00061.jpg"
+      },
+      {
+        "sequence": 20,
+        "stage": "preprocess_complete",
+        "image": "train/images/00061.jpg"
+      },
+      {
+        "sequence": 21,
+        "stage": "preprocess",
+        "image": "train/images/00098.jpg"
+      },
+      {
+        "sequence": 22,
+        "stage": "preprocess_complete",
+        "image": "train/images/00098.jpg"
+      },
+      {
+        "sequence": 23,
+        "stage": "preprocess",
+        "image": "train/images/00104.jpg"
+      },
+      {
+        "sequence": 24,
+        "stage": "preprocess_complete",
+        "image": "train/images/00104.jpg"
+      },
+      {
+        "sequence": 25,
+        "stage": "preprocess",
+        "image": "train/images/00029.jpg"
+      },
+      {
+        "sequence": 26,
+        "stage": "preprocess_complete",
+        "image": "train/images/00029.jpg"
+      },
+      {
+        "sequence": 27,
+        "stage": "preprocess",
+        "image": "train/images/00000.jpg"
+      },
+      {
+        "sequence": 28,
+        "stage": "preprocess_complete",
+        "image": "train/images/00000.jpg"
+      },
+      {
+        "sequence": 29,
+        "stage": "calibration_trace",
+        "image": "train/images/00006.jpg"
+      },
+      {
+        "sequence": 30,
+        "stage": "calibration_trace_complete",
+        "image": "train/images/00006.jpg"
+      },
+      {
+        "sequence": 31,
+        "stage": "calibration_trace",
+        "image": "train/images/00029.jpg"
+      },
+      {
+        "sequence": 32,
+        "stage": "calibration_trace_complete",
+        "image": "train/images/00029.jpg"
+      },
+      {
+        "sequence": 33,
+        "stage": "calibration_trace",
+        "image": "train/images/00000.jpg"
+      },
+      {
+        "sequence": 34,
+        "stage": "calibration_trace_complete",
+        "image": "train/images/00000.jpg"
+      },
+      {
+        "sequence": 35,
+        "stage": "onnx_session_setup"
+      },
+      {
+        "sequence": 36,
+        "stage": "onnx_session_ready"
+      },
+      {
+        "sequence": 37,
+        "stage": "source_forward",
+        "image": "train/images/00006.jpg",
+        "index": 0
+      },
+      {
+        "sequence": 38,
+        "stage": "source_forward_complete",
+        "image": "train/images/00006.jpg",
+        "index": 0
+      },
+      {
+        "sequence": 39,
+        "stage": "onnx_forward",
+        "image": "train/images/00006.jpg",
+        "index": 0
+      },
+      {
+        "sequence": 40,
+        "stage": "onnx_forward_complete",
+        "image": "train/images/00006.jpg",
+        "index": 0
+      },
+      {
+        "sequence": 41,
+        "stage": "comparison",
+        "image": "train/images/00006.jpg",
+        "index": 0
+      },
+      {
+        "sequence": 42,
+        "stage": "comparison_complete",
+        "image": "train/images/00006.jpg",
+        "index": 0
+      },
+      {
+        "sequence": 43,
+        "stage": "source_forward",
+        "image": "train/images/00009.jpg",
+        "index": 1
+      },
+      {
+        "sequence": 44,
+        "stage": "source_forward_complete",
+        "image": "train/images/00009.jpg",
+        "index": 1
+      },
+      {
+        "sequence": 45,
+        "stage": "onnx_forward",
+        "image": "train/images/00009.jpg",
+        "index": 1
+      },
+      {
+        "sequence": 46,
+        "stage": "onnx_forward_complete",
+        "image": "train/images/00009.jpg",
+        "index": 1
+      },
+      {
+        "sequence": 47,
+        "stage": "comparison",
+        "image": "train/images/00009.jpg",
+        "index": 1
+      },
+      {
+        "sequence": 48,
+        "stage": "comparison_complete",
+        "image": "train/images/00009.jpg",
+        "index": 1
+      },
+      {
+        "sequence": 49,
+        "stage": "source_forward",
+        "image": "train/images/00028.jpg",
+        "index": 2
+      },
+      {
+        "sequence": 50,
+        "stage": "source_forward_complete",
+        "image": "train/images/00028.jpg",
+        "index": 2
+      },
+      {
+        "sequence": 51,
+        "stage": "onnx_forward",
+        "image": "train/images/00028.jpg",
+        "index": 2
+      },
+      {
+        "sequence": 52,
+        "stage": "onnx_forward_complete",
+        "image": "train/images/00028.jpg",
+        "index": 2
+      },
+      {
+        "sequence": 53,
+        "stage": "comparison",
+        "image": "train/images/00028.jpg",
+        "index": 2
+      },
+      {
+        "sequence": 54,
+        "stage": "comparison_complete",
+        "image": "train/images/00028.jpg",
+        "index": 2
+      },
+      {
+        "sequence": 55,
+        "stage": "source_forward",
+        "image": "train/images/00036.jpg",
+        "index": 3
+      },
+      {
+        "sequence": 56,
+        "stage": "source_forward_complete",
+        "image": "train/images/00036.jpg",
+        "index": 3
+      },
+      {
+        "sequence": 57,
+        "stage": "onnx_forward",
+        "image": "train/images/00036.jpg",
+        "index": 3
+      },
+      {
+        "sequence": 58,
+        "stage": "onnx_forward_complete",
+        "image": "train/images/00036.jpg",
+        "index": 3
+      },
+      {
+        "sequence": 59,
+        "stage": "comparison",
+        "image": "train/images/00036.jpg",
+        "index": 3
+      },
+      {
+        "sequence": 60,
+        "stage": "comparison_complete",
+        "image": "train/images/00036.jpg",
+        "index": 3
+      },
+      {
+        "sequence": 61,
+        "stage": "source_forward",
+        "image": "train/images/00054.jpg",
+        "index": 4
+      },
+      {
+        "sequence": 62,
+        "stage": "source_forward_complete",
+        "image": "train/images/00054.jpg",
+        "index": 4
+      },
+      {
+        "sequence": 63,
+        "stage": "onnx_forward",
+        "image": "train/images/00054.jpg",
+        "index": 4
+      },
+      {
+        "sequence": 64,
+        "stage": "onnx_forward_complete",
+        "image": "train/images/00054.jpg",
+        "index": 4
+      },
+      {
+        "sequence": 65,
+        "stage": "comparison",
+        "image": "train/images/00054.jpg",
+        "index": 4
+      },
+      {
+        "sequence": 66,
+        "stage": "comparison_complete",
+        "image": "train/images/00054.jpg",
+        "index": 4
+      },
+      {
+        "sequence": 67,
+        "stage": "source_forward",
+        "image": "train/images/00061.jpg",
+        "index": 5
+      },
+      {
+        "sequence": 68,
+        "stage": "source_forward_complete",
+        "image": "train/images/00061.jpg",
+        "index": 5
+      },
+      {
+        "sequence": 69,
+        "stage": "onnx_forward",
+        "image": "train/images/00061.jpg",
+        "index": 5
+      },
+      {
+        "sequence": 70,
+        "stage": "onnx_forward_complete",
+        "image": "train/images/00061.jpg",
+        "index": 5
+      },
+      {
+        "sequence": 71,
+        "stage": "comparison",
+        "image": "train/images/00061.jpg",
+        "index": 5
+      },
+      {
+        "sequence": 72,
+        "stage": "comparison_complete",
+        "image": "train/images/00061.jpg",
+        "index": 5
+      },
+      {
+        "sequence": 73,
+        "stage": "source_forward",
+        "image": "train/images/00098.jpg",
+        "index": 6
+      },
+      {
+        "sequence": 74,
+        "stage": "source_forward_complete",
+        "image": "train/images/00098.jpg",
+        "index": 6
+      },
+      {
+        "sequence": 75,
+        "stage": "onnx_forward",
+        "image": "train/images/00098.jpg",
+        "index": 6
+      },
+      {
+        "sequence": 76,
+        "stage": "onnx_forward_complete",
+        "image": "train/images/00098.jpg",
+        "index": 6
+      },
+      {
+        "sequence": 77,
+        "stage": "comparison",
+        "image": "train/images/00098.jpg",
+        "index": 6
+      },
+      {
+        "sequence": 78,
+        "stage": "comparison_complete",
+        "image": "train/images/00098.jpg",
+        "index": 6
+      },
+      {
+        "sequence": 79,
+        "stage": "source_forward",
+        "image": "train/images/00104.jpg",
+        "index": 7
+      },
+      {
+        "sequence": 80,
+        "stage": "source_forward_complete",
+        "image": "train/images/00104.jpg",
+        "index": 7
+      },
+      {
+        "sequence": 81,
+        "stage": "onnx_forward",
+        "image": "train/images/00104.jpg",
+        "index": 7
+      },
+      {
+        "sequence": 82,
+        "stage": "onnx_forward_complete",
+        "image": "train/images/00104.jpg",
+        "index": 7
+      },
+      {
+        "sequence": 83,
+        "stage": "comparison",
+        "image": "train/images/00104.jpg",
+        "index": 7
+      },
+      {
+        "sequence": 84,
+        "stage": "comparison_complete",
+        "image": "train/images/00104.jpg",
+        "index": 7
+      },
+      {
+        "sequence": 85,
+        "stage": "post_forward_verification"
+      },
+      {
+        "sequence": 86,
+        "stage": "completed"
+      }
+    ],
+    "forward_counts": {
+      "source_cpu_fp32": {
+        "attempted": 8,
+        "completed": 8
+      },
+      "onnx_cpu": {
+        "attempted": 8,
+        "completed": 8
+      }
+    }
+  },
+  "audit_flags": {
+    "export_performed": false,
+    "build_performed": false,
+    "calibration_loader_called": false,
+    "calibration_component_called": true,
+    "gpu_used": false,
+    "scored_run_authorized": false
+  },
+  "created_utc": "2026-09-17T09:19:03.405768+00:00"
+}

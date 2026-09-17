@@ -1,0 +1,201 @@
+{
+  "selection": "U42",
+  "manifest_order": 2,
+  "image": "train/images/00028.jpg",
+  "image_id": "00028",
+  "input_tensor": {
+    "shape": [
+      1,
+      3,
+      640,
+      640
+    ],
+    "dtype": "float32",
+    "sha256": "7b89184eac3c948ba0305d904e2b1e7b48e96d80bb13d4724abb2062b6286f29"
+  },
+  "source_primary": {
+    "shape": [
+      1,
+      300,
+      6
+    ],
+    "dtype": "float32",
+    "sha256": "e6184e5045af5f22b3d62a3af45e6fb64be90333397cef10bd06a43292e3bf60"
+  },
+  "onnx_primary": {
+    "shape": [
+      1,
+      300,
+      6
+    ],
+    "dtype": "float32",
+    "sha256": "ce1c872b690f78452b5a1c90da1942ab9d3e6f8bef27cecafc69302b0562d9ca"
+  },
+  "same_verified_input": true,
+  "comparison": {
+    "status": "fail",
+    "domain": "yolo26n_native_detections_fixed_row",
+    "shape": [
+      1,
+      300,
+      6
+    ],
+    "channel_spans": {
+      "boxes": [
+        0,
+        4
+      ],
+      "score": [
+        4,
+        5
+      ],
+      "class_id": [
+        5,
+        6
+      ]
+    },
+    "channel_results": {
+      "boxes": {
+        "status": "fail",
+        "domain": "yolo26n_fixed_row_boxes",
+        "shape": [
+          1,
+          300,
+          4
+        ],
+        "dtype": "float32",
+        "rtol": 0.0001,
+        "atol": 1e-05,
+        "mismatch_count": 887,
+        "element_count": 1200,
+        "max_abs": 636.9425992965698,
+        "max_relative": 45575.97707834416,
+        "relative_infinite_count": 0,
+        "abs_quantiles": {
+          "element_count": 1200,
+          "finite_count": 1200,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 106.84413933753967,
+          "p95": 550.6992092132568,
+          "p99": 635.8211361527443,
+          "max": 636.9425992965698
+        },
+        "relative_quantiles": {
+          "element_count": 1200,
+          "finite_count": 1200,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 0.33230155553485063,
+          "p95": 30.03207449599329,
+          "p99": 1934.6445723188995,
+          "max": 45575.97707834416
+        },
+        "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+        "first_offenders": [
+          [
+            0,
+            23,
+            0
+          ],
+          [
+            0,
+            23,
+            1
+          ],
+          [
+            0,
+            23,
+            2
+          ],
+          [
+            0,
+            23,
+            3
+          ],
+          [
+            0,
+            24,
+            0
+          ],
+          [
+            0,
+            24,
+            1
+          ],
+          [
+            0,
+            24,
+            2
+          ],
+          [
+            0,
+            24,
+            3
+          ],
+          [
+            0,
+            42,
+            0
+          ],
+          [
+            0,
+            42,
+            1
+          ]
+        ]
+      },
+      "score": {
+        "status": "pass",
+        "domain": "yolo26n_fixed_row_scores",
+        "shape": [
+          1,
+          300,
+          1
+        ],
+        "dtype": "float32",
+        "rtol": 0.0001,
+        "atol": 1e-05,
+        "mismatch_count": 0,
+        "element_count": 300,
+        "max_abs": 1.1920928955078125e-07,
+        "max_relative": 0.0795415704055117,
+        "relative_infinite_count": 0,
+        "abs_quantiles": {
+          "element_count": 300,
+          "finite_count": 300,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 1.2243276614753995e-08,
+          "p95": 4.0547638491261756e-08,
+          "p99": 6.037525963620282e-08,
+          "max": 1.1920928955078125e-07
+        },
+        "relative_quantiles": {
+          "element_count": 300,
+          "finite_count": 300,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 0.011222622444461946,
+          "p95": 0.053863415410484984,
+          "p99": 0.07420973731336548,
+          "max": 0.0795415704055117
+        },
+        "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+        "first_offenders": []
+      }
+    },
+    "mismatch_count": 1022,
+    "element_count": 1800,
+    "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference",
+    "class_ids_exact": false,
+    "class_mismatch_count": 135,
+    "tie_count_reference_scores": 0,
+    "tie_count_observed_scores": 184,
+    "tie_handling": "fixed native row index; ties are reported and never rematched"
+  }
+}
