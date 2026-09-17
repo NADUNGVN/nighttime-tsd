@@ -293,16 +293,24 @@ def _selection_rows(selection: dict[str, Any], count: int | None = None) -> list
         materialized = materialized_bytes[index]
         if source.get("image") != image or materialized.get("image") != image:
             raise ValueError(f"Content binding row mismatch for {image}")
-        if source.get("source_sha256") != materialized.get("materialized_sha256") or source.get("bytes") != materialized.get("bytes"):
+        source_sha256 = source.get("image_sha256")
+        source_image_bytes = source.get("image_bytes")
+        materialized_sha256 = materialized.get("materialized_sha256")
+        materialized_image_bytes = materialized.get("bytes")
+        if not isinstance(source_sha256, str) or not isinstance(source_image_bytes, int):
+            raise ValueError(f"Canonical source image binding is incomplete for {image}")
+        if not isinstance(materialized_sha256, str) or not isinstance(materialized_image_bytes, int):
+            raise ValueError(f"Canonical materialized image binding is incomplete for {image}")
+        if source_sha256 != materialized_sha256 or source_image_bytes != materialized_image_bytes:
             raise ValueError(f"Source/materialization accepted hashes differ for {image}")
         rows.append({
             "selection": selection["id"],
             "manifest_order": index,
             "image": image,
             "image_id": image_id,
-            "expected_sha256": source.get("source_sha256"),
-            "expected_bytes": source.get("bytes"),
-            "materialized_expected_sha256": materialized.get("materialized_sha256"),
+            "expected_sha256": source_sha256,
+            "expected_bytes": source_image_bytes,
+            "materialized_expected_sha256": materialized_sha256,
             "rule": "first 8 distinct train image IDs in canonical U42 manifest order" if selection["id"] == FIXTURE_SELECTION and count == FIXTURE_COUNT else "first image in canonical train-only selection order",
         })
     if count is not None and len(rows) != count:

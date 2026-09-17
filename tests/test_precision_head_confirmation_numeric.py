@@ -21,11 +21,16 @@ import verify_precision_head_confirmation_numeric as numeric  # noqa: E402
 def _selection(selection_id="U42", count=8):
     images = [f"train/images/{index:05d}.jpg" for index in range(count)]
     source = [
-        {"image": image, "source_sha256": f"{index + 1:064x}", "bytes": 100 + index}
+        {"image": image, "image_sha256": f"{index + 1:064x}", "image_bytes": 100 + index}
         for index, image in enumerate(images)
     ]
     materialized = [
-        {"image": image, "source_sha256": row["source_sha256"], "materialized_sha256": row["source_sha256"], "bytes": row["bytes"]}
+        {
+            "image": image,
+            "source_sha256": row["image_sha256"],
+            "materialized_sha256": row["image_sha256"],
+            "bytes": row["image_bytes"],
+        }
         for image, row in zip(images, source)
     ]
     return {
@@ -43,8 +48,25 @@ class PrecisionHeadNumericTests(unittest.TestCase):
         self.assertEqual(plan["forward_image_count"], 8)
         self.assertEqual([row["image_id"] for row in plan["forward_images"]], [f"{index:05d}" for index in range(8)])
         self.assertEqual([row["selection"] for row in plan["preprocess_trace_images"]], ["U42", "U43", "U44"])
+        self.assertEqual(plan["forward_images"][0]["expected_sha256"], f"{1:064x}")
+        self.assertEqual(plan["forward_images"][0]["expected_bytes"], 100)
         self.assertEqual(numeric.LOCKED_TOLERANCES["float32"], {"rtol": 1e-4, "atol": 1e-5})
         self.assertTrue(plan["no_labels_read"])
+
+    def test_fixture_requires_canonical_source_image_binding_fields(self):
+        bad = _selection()
+        for row in bad["selection_audit"]["source_bytes"]:
+            row.pop("image_sha256")
+            row["source_sha256"] = "legacy-field"
+        with self.assertRaisesRegex(ValueError, "Canonical source image binding is incomplete"):
+            numeric._selection_rows(bad, 8)
+
+    def test_fixture_requires_canonical_materialized_image_binding_fields(self):
+        bad = _selection()
+        for row in bad["materialization"]["image_bytes"]:
+            row.pop("materialized_sha256")
+        with self.assertRaisesRegex(ValueError, "Canonical materialized image binding is incomplete"):
+            numeric._selection_rows(bad, 8)
 
     def test_fixture_rejects_non_train_or_reordered_content(self):
         bad = _selection()

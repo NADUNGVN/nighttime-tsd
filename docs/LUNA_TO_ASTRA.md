@@ -1918,3 +1918,33 @@ ba bounded calibration anchors; không GPU-idle guard, không `nohup`, không
 retry/resume/overwrite. Sau operator push artifact, Luna sẽ pull kiểm tra
 hash/provenance/provider/forward count/C1/C2/partial inventory và ghi
 addendum tiếp theo cho Astra. Exit 0 không tự động có nghĩa numeric PASS.
+
+## L2A-038 — sửa canonical source binding trong numeric runner
+
+Sau khi operator chạy conditional CPU command theo commit `e7f4fa7`, runner
+dừng trước numeric inference tại `_selection_rows()` với lỗi giả:
+`Source/materialization accepted hashes differ for train/images/00006.jpg`.
+Kiểm tra metadata producer thật cho thấy source và materialized đều trỏ tới
+hash `a4bdd9...` và 63138 bytes.
+
+Nguyên nhân là adapter đọc nhầm source record bằng các key của materialized
+record: code cũ tìm `source_sha256`/`bytes`, trong khi canonical producer ghi
+`selection_audit.source_bytes[].image_sha256`/`image_bytes`. Vì vậy source
+value bị đọc thành `None` và guard báo mismatch dù file không khác nhau.
+
+Đã sửa `_selection_rows()` để dùng trực tiếp canonical
+`image_sha256`/`image_bytes`, giữ `materialized_sha256`/`bytes` cho bản sao,
+kiểm tra thiếu field canonical là lỗi rõ ràng, và truyền hash/size canonical
+vào binding rows. Không sửa readiness, graph, checkpoint, ONNX, tolerance,
+numeric protocol hay nghiên cứu đã hoàn tất.
+
+Tests bổ sung dùng đúng schema producer thật và kiểm tra rằng legacy source
+keys không được chấp nhận. Numeric suite local: **26 tests, 23 PASS, 3
+explicit skips** do pinned runtime dependencies unavailable trên local; các
+skip là các test producer Ultralytics thật. Không chạy server/GPU, model
+forward, ONNX session, export, TensorRT, cache hoặc benchmark. Lệnh server
+trước đó không tạo numeric artifact vì dừng ở fixture planning.
+
+Đây là sửa lỗi implementation cần thiết trước bounded CPU run, không phải
+thay đổi numerical/input design. Operator chỉ được chạy lại sau khi pull
+commit mới và xác nhận output root vẫn absent; không rerun graph preparation.

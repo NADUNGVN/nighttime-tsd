@@ -23,6 +23,12 @@ The forward fixture is the first eight distinct train image IDs in canonical U42
 
 The runner verifies the current source and materialized image bytes against the accepted readiness rows before any forward. Canonical source IDs are resolved under `data/processed/cctsdb2021_clean`; materialized calibration copies are resolved separately under the corresponding `calibration/uniform_s*_n1024/images` directory. The resolver rejects absolute/traversal paths and wrong-root decoys. It records the IDs, manifest positions, original source paths, byte hashes and sizes, and repeats the source/materialized hash check after the child work. The first image of each U42/U43/U44 selection is also traced. If a trace ID overlaps the forward fixture, its inference tensor trace is reused while its selection binding remains separately recorded. Labels are not read.
 
+The accepted readiness producer uses `selection_audit.source_bytes[].image_sha256` and
+`image_bytes` for the canonical source image, while
+`materialization.image_bytes[].materialized_sha256` and `bytes` describe the
+materialized copy. The runner consumes these fields directly; it does not
+reinterpret the source record using the materialization schema.
+
 The output root is exclusive and no-overwrite: `results/measurement_audit_v1/precision_head_confirmation_numeric_v1`. Existing output means stop; partial output is preserved and is not resumed silently.
 
 ## Producer and preprocessing contract
