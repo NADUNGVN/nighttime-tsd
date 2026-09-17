@@ -2325,3 +2325,73 @@ Luna chưa sửa code sau run và chưa chạy lại. Astra cần quyết địn
 semantics/count trước bước tiếp theo; artifact hiện tại chỉ là bằng chứng
 failure/lifecycle và một phần structural ONNX diagnostic, không phải nghiệm
 thu localization chéo hai model.
+
+## L2A-044 — sửa native semantic adapter theo decoder Ultralytics thật
+
+Đã triển khai A2L-037 trong implementation commit
+`028a8b2bba80579262f63097d50f955f9aef90e9` (sẽ được push cùng entry bàn giao
+này). Entry A2L-037 được giữ nguyên; file checkpoint YOLOv8n đang modified
+không liên quan vẫn không được stage/restore và không được dùng trong test.
+
+### Thay đổi implementation
+
+- Runner chuyển sang study/output identity mới
+  `precision_head_numeric_localization_v2`, luôn giữ link tới numeric_v1 và
+  không overwrite/resume output cũ.
+- YOLOv8n dùng trực tiếp primary `[1,7,8400]` của ordinary forward: `0:4` là
+  decoded `xywh` trong không gian pixel 640x640, `4:7` là probabilities sau
+  sigmoid. Raw debug `boxes` `[1,64,8400]` và `scores` logits chỉ được lưu role
+  evidence, không bị reshape hoặc đổi tên thành decoded/probability.
+- YOLO26n giữ đúng dict `one2one`; gọi lại `_inference(one2one)` của cùng
+  `Detect` head đúng một lần trên CPU để decode raw4 thành `[1,7,8400]`
+  `xyxy`/probabilities, sau đó gọi `postprocess` đúng một lần và yêu cầu
+  primary `[1,300,6]` khớp exact. Anchors/strides/shape, flags, source/method
+  hashes và input/output summaries đều được ghi.
+- Guard reject non-finite/missing-feats, wrong coordinate/flags, double
+  sigmoid hoặc replay drift. Khi guard hoặc derived-ONNX invariance hỏng,
+  raw summaries vẫn được giữ nhưng cross-side endpoints mang trạng thái
+  `unresolved/not_admissible`; strict numeric_v2 `FAIL` không đổi.
+- Forward ceiling giữ nguyên: 2 ordinary native forwards + 3 ONNX sessions;
+  thêm riêng counter decoder replay=1 và postprocess replay=1 cho YOLO26n.
+
+### Tests và môi trường
+
+Môi trường CPU hiện có dùng để kiểm decoder thật trên tensor tổng hợp, không
+load/forward frozen checkpoint, không export/build/GPU/TensorRT:
+
+- Python 3.11.9, NumPy 2.4.2, Torch 2.8.0+cu129,
+  Ultralytics 8.4.102, pycocotools 2.0.10;
+- `CUDA_VISIBLE_DEVICES=-1`, real installed `Detect` decoder/postprocess;
+- localization adapter/integration: **19/19 PASS**;
+- numeric regression: **34/34 PASS**;
+- graph-audit regression: **4/4 PASS**;
+- `py_compile`: **PASS**.
+
+Critical tests cover real reg_max16/raw64 V8-like and reg_max1/raw4 V26-like
+producers, nonzero multiscale anchors/strides, negative/extreme logits/ties,
+wrong coordinate metadata, missing features, non-finite raw data, double
+sigmoid, wrong flags, decoder replay drift, Top-K/index mapping,
+instrumentation drift and model-scoped child failure state. Full suite 229
+tests was also exercised; one unrelated canonical-dev fixture test failed and
+one related fixture lookup errored because this local checkout lacks the
+canonical `data/processed/.../dev/images` contents. These are not reported as
+passes and do not arise from this adapter package.
+
+### Boundary and conditional operator command
+
+Luna did not run server/GPU or frozen-model localization. The server operator
+may run exactly one foreground CPU invocation only after pulling the pushed
+implementation and checking pinned binary/input hashes and the absent v2
+output. The exact pull/check commit is reported out-of-band after the
+documentation commit is pushed; the implementation commit above is the code
+hash to verify as its ancestor. Candidate command (new root, no retry):
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git merge-base --is-ancestor 028a8b2bba80579262f63097d50f955f9aef90e9 HEAD; echo $?)" = "0" && test ! -e results/measurement_audit_v1/precision_head_numeric_localization_v2 && test -f results/measurement_audit_v1/precision_head_confirmation_numeric_v2/numeric_manifest.json && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx && test -f results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && echo READY`
+
+`cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/analyze_precision_head_numeric_localization.py --numeric-root results/measurement_audit_v1/precision_head_confirmation_numeric_v2 --out-dir results/measurement_audit_v1/precision_head_numeric_localization_v2 --model all`
+
+The first line is read-only preflight plus output protection; the second is
+the sole foreground CPU run. It does not wait for GPU idle, export/rebuild,
+retry, run AP/test data or open a matrix. User pushes publishable JSON/MD/log
+artifacts after completion; Luna then pulls and audits v2 before any further
+research step.
