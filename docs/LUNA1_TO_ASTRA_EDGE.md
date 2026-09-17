@@ -1031,3 +1031,68 @@ The intended source-run location is the Linux main-server repository
 Actual source forward/export and any numerical PASS/FAIL remain pending the
 operator's one server run. **Git:** code, this report and the unchanged
 E2L1-012 inbox are pushed using `NADUNGVN`; stop after the source-bundle result.
+
+## L1A-013 — source-bundle integration repairs complete; conditional server GO
+
+**Status:** B1–B3 implementation and actual-runtime-boundary CPU tests are
+complete. No local dependency installation, frozen-checkpoint load/forward,
+export, inference, benchmark, E2 SSH or device operation was performed.
+
+Commit `5ad2eb166a0cf1a6c67edb1353ad6ee614453f83` repairs the source runner:
+
+- NumPy is part of the required prepared module contract and is bound in
+  `self.modules`; native conversion, native output packaging and ORT dispatch
+  are exercised through `UltralyticsSourceRuntime`.
+- The exporter receives a hash-verified `best.pt` inside its owned
+  `private/onnx_export/` workspace, follows the installed Ultralytics
+  `pt_path` sibling-output semantics, records separate export flags/counters,
+  and checks the exact resolved ONNX path plus source/private checkpoint hashes
+  before and after export.
+- Native model binding is CPU/eval/float32 and enforces the frozen YOLO11n
+  Detect/nc/class-order/end2end/export/training/xyxy/decoded-output contract.
+  ONNX validation enforces `images`/`output0`, opset 17, static float32
+  `[1,3,640,640]` to `[1,7,8400]`, and no Q/DQ/NMS wrappers.
+- `YOLO_AUTOINSTALL=false` is set before imports; Ultralytics is pinned to
+  `8.4.102`; Torch is set to intra-op 2/inter-op 1; ORT uses explicit
+  SessionOptions and only `CPUExecutionProvider`; executable HEAD and helper
+  hashes are recorded and explicit commit/dirty-worktree mismatches fail.
+- One contiguous little-endian float32 NumPy array supplies both saved input
+  bytes and runtime input. Decode, non-square LetterBox, padding, RGB/layout,
+  normalization and input hashes are recorded and byte equality is asserted
+  before each consumer.
+- Numerical comparison counts all mismatches, separates box/score counts and
+  maxima, caps examples at 20, rejects nonfinite/rehashed-invalid bytes, and
+  writes complete terminal provenance for numerical FAIL and partial failures.
+  Fixture/checkpoint before/after protection, attempted/completed counters,
+  exporter internal-forward preservation and terminal writer errors are tested.
+
+Verification after the commit: **82/82 edge tests PASS**, including 14 source
+bundle tests. The actual-runtime tests use the existing local measurement
+environment for NumPy `2.4.2`, Torch `2.8.0+cu129`, Ultralytics `8.4.102` and
+OpenCV `4.13.0` on deterministic non-square synthetic input; injected model,
+exporter, ONNX checker and ORT session doubles cover the missing external
+export/session boundaries. `py_compile`, `git diff --check`, and explicit
+HEAD/clean-executable-source provenance verification also pass. The original
+inputs, fixture order and comparison equation are unchanged.
+
+The local environment still lacks `onnx` and `onnxslim`, so the conditional GO
+is the single user-operated foreground CPU source-bundle run in the existing
+complete server environment. The old `05624d7` command is superseded and must
+not be run. After pushing this commit, run exactly once:
+
+    cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new
+    git fetch origin luna1/e2l1-006-jetson-adapter-smoke
+    test ! -e /tmp/luna1-e2l1-013-source
+    test ! -e /home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-012-source-v1
+    git worktree add --detach /tmp/luna1-e2l1-013-source 5ad2eb166a0cf1a6c67edb1353ad6ee614453f83
+    test "$(git -C /tmp/luna1-e2l1-013-source rev-parse HEAD)" = "5ad2eb166a0cf1a6c67edb1353ad6ee614453f83"
+    /home/ubuntu/Dung_TDTU/nighttime-tsd-new/local/g0_size_env/bin/python /tmp/luna1-e2l1-013-source/scripts/edge_readiness/e2_source_bundle.py --source-root /home/ubuntu/Dung_TDTU/nighttime-tsd-new --out-dir /home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-012-source-v1 --commit 5ad2eb166a0cf1a6c67edb1353ad6ee614453f83
+
+The command assumes the existing main-server interpreter already has all
+required dependencies; it installs nothing, retries nothing, uses no nohup or
+GPU-idle guard, and leaves the main worktree untouched. Publish only the new
+`public/` JSON/text evidence after reviewing it; retain private checkpoint,
+ONNX and tensor files on the server. Report any numerical FAIL honestly and
+stop for Astra review. **Git:** this entry, scoped code/tests and the
+unchanged E2L1-013 inbox are to be pushed with `NADUNGVN`; no E2 SSH/transfer,
+build, inference or benchmark is authorized here.
