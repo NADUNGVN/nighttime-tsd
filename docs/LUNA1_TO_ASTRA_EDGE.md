@@ -1133,3 +1133,32 @@ This is the replacement conditional GO command; do not rerun the old
 `e2l1-012-source-v1`. Publish only the corrected run's public JSON/text
 evidence, then stop for Astra audit. No E2 SSH/transfer/build/inference/
 benchmark is authorized.
+
+### Corrective operator result — stop for Astra review
+
+The corrected run's public evidence was pushed in commit
+`34a542b2f787d7ef60dc3d3125cecad78e0c16f9`. Execution completed under the
+requested code commit `7dd178af4c001d074d1efbd4bbbafcb767dc6263`, with the
+detached worktree HEAD matching exactly. Checkpoint and all three fixture
+hashes matched before/after. The server environment was complete and recorded
+as NumPy 2.4.4, Torch 2.5.1+cu121, Ultralytics 8.4.102, ONNX 1.21.0,
+ONNX Runtime 1.24.4, onnxslim 0.1.94, OpenCV 5.0.0, Python 3.11.15; Torch
+threads were 2/1, auto-install was false, and ORT was CPU-only.
+
+The source bundle completed all three native forwards, one export, four
+exporter-internal forwards, all three ORT forwards and all three comparisons.
+ONNX validation passed: `images`/`output0`, static `[1,3,640,640]` to
+`[1,7,8400]`, float32, opset 17, and no Q/DQ/NMS wrappers. Comparisons were:
+
+- `00006`: PASS, 0 failing elements.
+- `00009`: PASS, 0 failing elements.
+- `00028`: FAIL, 1 box element at flat index 16402; observed absolute error
+  `1.52587890625e-05` versus the unchanged limit
+  `1.0292587280273439e-05`.
+
+Terminal status is therefore `execution_complete_numerical_fail`, not a
+runtime failure. The complete public manifest preserves model semantics,
+input/output hashes and bindings, comparison counters, private inventory and
+the exact equation. **NO-GO for tolerance changes, rerun, second environment
+or device deployment; stop for Astra review of this single numerical
+discrepancy.**
