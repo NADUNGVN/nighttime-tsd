@@ -1246,3 +1246,108 @@ source re-export, additional allocation smoke, E2 SSH, transfer, build,
 inference, benchmark, package installation, device reset or configuration
 change is authorized. Publish only public JSON/text evidence after a later
 authorized run; Astra then audits and decides the next gate.
+
+## L1A-015 — repaired E2 dispatch boundary, bounded stages and cleanup evidence
+
+**Status:** local implementation and CPU/mock verification complete. No E2
+SSH, source retrieval/transfer, TensorRT import, engine build or
+deserialization, model inference, benchmark, installation or configuration
+change was performed.
+
+Executable repair commit: `1603732` (`fix(luna1): enforce bounded E2 model
+smoke lifecycle`). The unchanged Astra inbox entry E2L1-015 is included in
+that commit.
+
+### Repairs delivered
+
+- `load_source_bundle()` now checks the raw-byte SHA-256
+  `df2e81e943c471cb540dd837151e87f7799510b01c050be1b2d14e2869f760be` for
+  `results/edge_readiness_v1/e2l1-013-source-v2/public/manifest.json` from
+  accepted commit `34a542b2f787d7ef60dc3d3125cecad78e0c16f9`, before deriving
+  the ten-file private allowlist. Relocation preserves the original manifest
+  and each private-file hash; jointly edited manifest/reference bytes and a
+  same-ONNX wrong manifest are rejected.
+- E2 identity is checked before TensorRT/CUDA loading: SSH alias `nx`, host
+  `arar-desktop`, `aarch64`, and a device-tree model containing `Jetson Xavier
+  NX`, with expected and observed values recorded separately. Code provenance
+  records the executing Git revision and hashes for the runner and boundary
+  helpers; a caller label is not treated as provenance.
+- Real execution uses separate owned child processes for build and inference,
+  each with a finite positive independent deadline, its own process group,
+  durable JSONL stage events, and no retry/global kill. A timeout records
+  termination confirmation separately and leaves completion `unknown`; partial
+  target outputs and counters remain available to the parent failure artifact.
+  Adapter stage observers distinguish enqueue and D2H-copy attempted/completed
+  events at their actual boundary.
+- Cleanup attempts buffer, provider, stream and CUDA ownership in order even
+  if one close fails. The first parse/load/inference/copy error remains primary;
+  cleanup failures are attached separately. Cleanup-only failure remains
+  primary.
+
+### Verification boundary
+
+The focused E2 workflow suite is **16/16 PASS**. It covers canonical-manifest
+binding, wrong-host rejection before TensorRT import, a blocking CPU subprocess
+deadline with persisted timeout event and no retry, invalid timeout values,
+all-resource cleanup failure collection, parser/build/runtime contracts,
+partial enqueue failure, source strict FAIL coexisting with target PASS,
+output collision, and Python 3.8 AST/compile checks. `py_compile` and
+`git diff --check` pass. Full repository discovery was also attempted but is
+not a gate here: the local environment lacks existing `numpy`/`PIL` and one
+dataset fixture, causing unrelated import/fixture failures.
+
+### Replacement command sequence (proposed only; not run)
+
+The old L1A-014 command that invoked the SERVER-01 Python interpreter with
+`--target E2` is superseded and must not be reused. After separate review and
+GO, the operator must stage and transfer only this manifest/allowlist:
+
+    public/manifest.json
+    private/onnx_export/best.onnx
+    private/inputs/00006.bin
+    private/inputs/00009.bin
+    private/inputs/00028.bin
+    private/native_reference/00006.bin
+    private/native_reference/00009.bin
+    private/native_reference/00028.bin
+    private/onnx_reference/00006.bin
+    private/onnx_reference/00009.bin
+    private/onnx_reference/00028.bin
+
+Proposed source staging and local transfer, with the already accepted source
+bundle root supplied from the existing SERVER-01 inventory (no new server
+authority or private-file discovery):
+
+    SOURCE=<existing-accepted-e2l1-013-source-bundle>
+    STAGE=/tmp/luna1-e2l1-015-source-bundle
+    test ! -e "$STAGE" && mkdir -p "$STAGE/public" "$STAGE/private"
+    cp "$SOURCE/public/manifest.json" "$STAGE/public/manifest.json"
+    for f in onnx_export/best.onnx inputs/00006.bin inputs/00009.bin inputs/00028.bin native_reference/00006.bin native_reference/00009.bin native_reference/00028.bin onnx_reference/00006.bin onnx_reference/00009.bin onnx_reference/00028.bin; do mkdir -p "$STAGE/private/$(dirname "$f")"; cp "$SOURCE/private/$f" "$STAGE/private/$f"; done
+    sha256sum "$STAGE/public/manifest.json"
+    rsync -a --files-from=- "$STAGE/" <local-approved-transfer-root>/ <<'EOF'
+    public/manifest.json
+    private/onnx_export/best.onnx
+    private/inputs/00006.bin
+    private/inputs/00009.bin
+    private/inputs/00028.bin
+    private/native_reference/00006.bin
+    private/native_reference/00009.bin
+    private/native_reference/00028.bin
+    private/onnx_reference/00006.bin
+    private/onnx_reference/00009.bin
+    private/onnx_reference/00028.bin
+    EOF
+
+Then transfer the reviewed code commit separately and execute only on E2 with
+the existing Python 3.8 interpreter identified by the operator; the
+placeholder is intentional until that existing inventory is selected:
+
+    git archive --format=tar 1603732 scripts/edge_readiness configs/deployment | ssh nx 'mkdir -p /tmp/luna1-e2l1-015-code && tar -xf - -C /tmp/luna1-e2l1-015-code'
+    ssh nx 'test "$(hostname)" = arar-desktop && test "$(uname -m)" = aarch64 && grep -a "Jetson Xavier NX" /proc/device-tree/model && test ! -e /tmp/luna1-e2l1-015-model-smoke'
+    ssh nx '<E2_PYTHON_3_8> /tmp/luna1-e2l1-015-code/scripts/edge_readiness/e2_model_smoke.py --bundle-root <E2_SOURCE_BUNDLE> --manifest <E2_SOURCE_BUNDLE>/public/manifest.json --out-dir <E2_OUTPUT_ROOT> --target E2 --execute-real-device --commit 1603732 --build-timeout-seconds 900 --inference-timeout-seconds 180'
+
+The proposed run retains the existing one-build/three-sequential-enqueue
+limit, zero warmup/retry/benchmark, FP16 and 1 GiB workspace, exact frozen
+float32 input bytes, output0 `[1,7,8400]` contract, and frozen source/target
+comparison policies. This entry remains **NO-GO for the sequence above** until
+the combined review explicitly authorizes the real E2 run.
