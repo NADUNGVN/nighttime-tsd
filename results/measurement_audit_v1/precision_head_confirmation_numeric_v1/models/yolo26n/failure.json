@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_confirmation_numeric_v1",
+  "model": "yolo26n",
+  "status": "failed",
+  "numeric_status": "not_observed",
+  "error_type": "NumericUnresolved",
+  "error": "Native head identity differs for yolo26n",
+  "partial_files": [
+    "logs/yolov8n.log",
+    "models/yolov8n/failure.json",
+    "numeric_plan.json"
+  ],
+  "no_silent_resume": true,
+  "audit_flags": {
+    "export_performed": false,
+    "build_performed": false,
+    "calibration_loader_called": false,
+    "gpu_used": false,
+    "scored_run_authorized": false
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_confirmation_numeric_v1",
+  "model": "yolov8n",
+  "status": "failed",
+  "numeric_status": "not_observed",
+  "error_type": "NumericUnresolved",
+  "error": "Native head identity differs for yolov8n",
+  "partial_files": [
+    "numeric_plan.json"
+  ],
+  "no_silent_resume": true,
+  "audit_flags": {
+    "export_performed": false,
+    "build_performed": false,
+    "calibration_loader_called": false,
+    "gpu_used": false,
+    "scored_run_authorized": false
+  }
+}
