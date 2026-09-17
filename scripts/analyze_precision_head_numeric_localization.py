@@ -6,7 +6,10 @@ YOLOv8n/00009 and YOLO26n/00006.  It preserves the numeric_v2 strict result,
 uses one ordinary native forward per model, one original ONNX run per model,
 and one private derived-graph ONNX run for YOLO26n.  The derived graph only
 adds existing intermediate tensors as outputs; it does not edit nodes,
-weights, attributes or the accepted ONNX file.
+weights, attributes or the accepted ONNX file.  Native semantic extraction
+uses the installed decoder contract: V8 primary output is already decoded,
+while V26 replays the same head's decoder/postprocess on retained one2one
+tensors exactly once each.
 
 The parent does input/inventory checks without importing Torch, ONNX Runtime
 or ONNX.  Child failures are model-scoped.  Private arrays/derived ONNX are
@@ -17,6 +20,7 @@ from __future__ import annotations
 import argparse
 import copy
 import hashlib
+import inspect
 import json
 import os
 import subprocess
@@ -30,8 +34,8 @@ import numpy as np
 import verify_precision_head_confirmation_numeric as numeric
 
 
-STUDY = "precision_head_numeric_localization_v1"
-OUTPUT_ROOT_NAME = "precision_head_numeric_localization_v1"
+STUDY = "precision_head_numeric_localization_v2"
+OUTPUT_ROOT_NAME = "precision_head_numeric_localization_v2"
 NUMERIC_ROOT = Path("results/measurement_audit_v1/precision_head_confirmation_numeric_v2")
 NUMERIC_V1_ROOT = Path("results/measurement_audit_v1/precision_head_confirmation_numeric_v1")
 DEFAULT_OUTPUT = Path("results/measurement_audit_v1") / OUTPUT_ROOT_NAME
@@ -104,6 +108,10 @@ CANONICAL_NUMERIC_V2_HASHES = {
 
 class LocalizationUnresolved(RuntimeError):
     """Raised when the bounded localization cannot preserve an association."""
+
+    def __init__(self, message: str, evidence: dict[str, Any] | None = None) -> None:
+        super().__init__(message)
+        self.evidence = evidence or {}
 
 
 def read_json(path: Path) -> Any:
@@ -534,23 +542,141 @@ def build_plan(repo: Path, numeric_root: Path, *, file_evidence_fn=file_evidence
         "models": {model: numeric_plan["models"][model] for model in TARGETS},
         "canonical_numeric_v2_hashes": CANONICAL_NUMERIC_V2_HASHES,
         "numeric_v2_hash_representation": "canonical Git blob SHA256; checkout CRLF hashes must not be substituted",
-        "forward_contract": {"native_model_forwards": {"yolov8n": 1, "yolo26n": 1}, "onnx_original_session_runs": {"yolov8n": 1, "yolo26n": 1}, "onnx_derived_session_runs": {"yolov8n": 0, "yolo26n": 1}, "total_native": 2, "total_onnx": 3, "failure_policy": "preserve partial; no retry or automatic extra call"},
+        "forward_contract": {"native_model_forwards": {"yolov8n": 1, "yolo26n": 1}, "native_decoder_replays": {"yolov8n": 0, "yolo26n": 1}, "native_postprocess_replays": {"yolov8n": 0, "yolo26n": 1}, "onnx_original_session_runs": {"yolov8n": 1, "yolo26n": 1}, "onnx_derived_session_runs": {"yolov8n": 0, "yolo26n": 1}, "total_native_model_forwards": 2, "total_native_replays": 2, "total_onnx": 3, "failure_policy": "preserve partial; no retry or automatic extra call"},
         "diagnostic_cases": {"yolov8n": {"image_id": "00009", "selection": "U42", "purpose": "historical strict box offenders"}, "yolo26n": {"image_id": "00006", "selection": "U42", "purpose": "first canonical fixture; TopK/Gather localization"}},
         "audit_flags": {"export_performed": False, "tensorRT_imported": False, "build_performed": False, "accepted_onnx_modified": False, "gpu_used": False, "scored_run_authorized": False, "matrix_opened": False, "strict_verdict_changed": False},
         "no_overwrite": True,
     }
 
 
-def _extract_native_preselection(output: Any, model: str, np_module: Any = np) -> tuple[Any, Any, dict[str, Any]]:
+def _array_contract(value: Any, role: str, np_module: Any = np) -> tuple[Any, dict[str, Any]]:
+    array = to_numpy(value, np_module)
+    if array.dtype != np_module.dtype("float32"):
+        raise LocalizationUnresolved(f"{role} is not float32: {array.dtype}")
+    if not np_module.isfinite(array).all():
+        raise LocalizationUnresolved(f"{role} contains non-finite values")
+    return array, array_summary(array, role)
+
+
+def _head_flags(head: Any, model: str) -> dict[str, Any]:
+    flags = {
+        "end2end": bool(getattr(head, "end2end", False)),
+        "agnostic_nms": bool(getattr(head, "agnostic_nms", False)),
+        "single_cls": bool(getattr(head, "single_cls", False)),
+        "export": bool(getattr(head, "export", False)),
+        "dynamic": bool(getattr(head, "dynamic", False)),
+        "xyxy": bool(getattr(head, "xyxy", False)),
+        "nc": int(getattr(head, "nc", -1)),
+        "max_det": int(getattr(head, "max_det", -1)),
+        "reg_max": int(getattr(head, "reg_max", -1)),
+    }
+    expected = {"yolov8n": {"end2end": False, "agnostic_nms": False, "single_cls": False, "export": False, "xyxy": False, "nc": 3}, "yolo26n": {"end2end": True, "agnostic_nms": False, "single_cls": False, "export": False, "nc": 3}}
+    mismatches = {key: {"expected": value, "observed": flags[key]} for key, value in expected[model].items() if flags[key] != value}
+    if flags["max_det"] != 300:
+        mismatches["max_det"] = {"expected": 300, "observed": flags["max_det"]}
+    if mismatches:
+        raise LocalizationUnresolved(f"{model} native decoder flags are not the accepted contract: {mismatches}")
+    return flags
+
+
+def _head_state_snapshot(head: Any, np_module: Any = np) -> dict[str, Any]:
+    def value_record(value: Any, role: str) -> dict[str, Any]:
+        if value is None:
+            return {"role": role, "present": False}
+        if hasattr(value, "detach"):
+            array = to_numpy(value, np_module)
+            return {"role": role, "present": True, "shape": list(array.shape), "dtype": str(array.dtype), "sha256": sha256_bytes(np_module.ascontiguousarray(array).tobytes(order="C"))}
+        if isinstance(value, (tuple, list)):
+            return {"role": role, "present": True, "value": [int(item) if isinstance(item, (int, np.integer)) else float(item) if isinstance(item, (float, np.floating)) else str(item) for item in value]}
+        return {"role": role, "present": True, "value": str(value)}
+
+    return {"shape": value_record(getattr(head, "shape", None), "head.shape"), "anchors": value_record(getattr(head, "anchors", None), "head.anchors"), "strides": value_record(getattr(head, "strides", None), "head.strides")}
+
+
+def _head_method_evidence(head: Any) -> dict[str, Any]:
+    methods = ("forward_head", "_inference", "_get_decode_boxes", "decode_bboxes", "postprocess", "get_topk_index")
+    return {name: numeric.callable_source_evidence(f"{type(head).__module__}.{type(head).__name__}.{name}", getattr(type(head), name)) for name in methods}
+
+
+def _raw_debug_contract(branch: dict[str, Any], model: str, np_module: Any = np) -> dict[str, Any]:
+    required = ("boxes", "scores", "feats")
+    if any(key not in branch for key in required):
+        raise LocalizationUnresolved(f"{model} native returned branch lacks {required}")
+    raw_boxes = to_numpy(branch["boxes"], np_module)
+    raw_scores = to_numpy(branch["scores"], np_module)
+    if raw_boxes.ndim != 3 or raw_scores.ndim != 3 or raw_boxes.shape[0] != 1 or raw_scores.shape[0] != 1:
+        raise LocalizationUnresolved(f"{model} raw native tensors have invalid rank: boxes={raw_boxes.shape}, scores={raw_scores.shape}")
+    if not np_module.issubdtype(raw_boxes.dtype, np_module.number) or not np_module.isfinite(raw_boxes).all():
+        raise LocalizationUnresolved(f"{model} raw native box parameters are non-finite or non-numeric")
+    if not np_module.issubdtype(raw_scores.dtype, np_module.number) or not np_module.isfinite(raw_scores).all():
+        raise LocalizationUnresolved(f"{model} raw native class logits are non-finite or non-numeric")
+    if raw_scores.shape[1] != 3 or raw_boxes.shape[2] != 8400 or raw_scores.shape[2] != 8400:
+        raise LocalizationUnresolved(f"{model} raw native tensor shapes are not the accepted 8400-anchor layout: boxes={raw_boxes.shape}, scores={raw_scores.shape}")
+    feats = []
+    for index, value in enumerate(branch["feats"]):
+        array = to_numpy(value, np_module)
+        if not np_module.issubdtype(array.dtype, np_module.number) or not np_module.isfinite(array).all():
+            raise LocalizationUnresolved(f"{model} native feature map {index} is non-finite or non-numeric")
+        feats.append({"index": index, "shape": list(array.shape), "dtype": str(array.dtype), "finite": True, "sha256": sha256_bytes(np_module.ascontiguousarray(array).tobytes(order="C"))})
+    return {"raw_box_parameters": array_summary(raw_boxes, f"{model} native raw box parameters"), "raw_class_logits": array_summary(raw_scores, f"{model} native raw class logits"), "feature_maps": feats, "raw_roles": {"boxes": "regression parameters before installed DFL/anchor/stride decoder", "scores": "class logits before installed sigmoid", "feats": "retained head feature maps"}}
+
+
+def extract_native_semantic_preselection(output: Any, model: str, primary: Any, head: Any, torch_module: Any, np_module: Any, state: dict[str, Any]) -> tuple[Any, Any, dict[str, Any]]:
     if not isinstance(output, (tuple, list)) or len(output) != 2 or not isinstance(output[1], dict):
         raise LocalizationUnresolved(f"{model} native output is not the accepted tuple-plus-dict")
     debug = output[1]
     branch = debug if model == "yolov8n" else debug.get("one2one")
-    if not isinstance(branch, dict) or any(key not in branch for key in ("boxes", "scores")):
-        raise LocalizationUnresolved(f"{model} native returned branch lacks boxes/scores")
-    boxes, box_meta = normalize_preselection(branch["boxes"], 4, f"{model}.native.boxes", np_module)
-    scores, score_meta = normalize_preselection(branch["scores"], 3, f"{model}.native.class_probabilities", np_module)
-    return boxes, scores, {"capture_site": "ordinary frozen model forward returned head dictionary", "branch": "raw" if model == "yolov8n" else "one2one", "boxes": box_meta, "class_probabilities": score_meta, "debug_keys": list(debug.keys())}
+    if not isinstance(branch, dict):
+        raise LocalizationUnresolved(f"{model} native returned branch is not a dictionary")
+    raw = _raw_debug_contract(branch, model, np_module)
+    state["semantic_adapter"] = {"raw_debug": raw, "model": model, "cross_side_endpoints": "unresolved/not_admissible_until_native_self_consistency_and_onnx_invariance_pass"}
+    primary_array, primary_meta = _array_contract(primary, f"{model} native primary", np_module)
+    state["semantic_adapter"]["primary"] = primary_meta
+    flags = _head_flags(head, model)
+    if model == "yolov8n":
+        if list(primary_array.shape) != [1, 7, 8400]:
+            raise LocalizationUnresolved(f"YOLOv8 native decoded primary shape differs: {primary_array.shape}")
+        boxes = np_module.ascontiguousarray(primary_array[:, 0:4, :].transpose(0, 2, 1))
+        scores = np_module.ascontiguousarray(primary_array[:, 4:7, :].transpose(0, 2, 1))
+        if not np_module.isfinite(boxes).all() or not np_module.isfinite(scores).all() or float(scores.min()) < 0.0 or float(scores.max()) > 1.0:
+            raise LocalizationUnresolved("YOLOv8 native primary does not contain finite decoded boxes and [0,1] probabilities")
+        result = {"capture_site": "ordinary native forward primary tensor", "branch": "raw_debug_plus_decoded_primary", "primary": primary_meta, "decoded": {"boxes": array_summary(boxes, "yolov8n native decoded boxes"), "class_probabilities": array_summary(scores, "yolov8n native class probabilities")}, "box_format": "xywh", "coordinate_space": "640x640 input pixels", "score_semantics": "native primary post-sigmoid class probabilities", "flags": flags, "raw_debug": raw, "decoder_replay": {"attempted": 0, "completed": 0}, "postprocess_replay": {"attempted": 0, "completed": 0}, "method_evidence": _head_method_evidence(head), "semantic_admissibility": {"status": "native_self_consistency_pass", "cross_side_endpoints": "pending_onnx_invariance"}}
+        state["semantic_adapter"].update(result)
+        return boxes, scores, result
+
+    if list(primary_array.shape) != [1, 300, 6]:
+        raise LocalizationUnresolved(f"YOLO26 native primary shape differs: {primary_array.shape}")
+    raw_box_shape = tuple(to_numpy(branch["boxes"], np_module).shape)
+    expected_raw_channels = 4 * flags["reg_max"]
+    if raw_box_shape != (1, expected_raw_channels, 8400):
+        raise LocalizationUnresolved(f"YOLO26 raw box parameter shape does not match reg_max={flags['reg_max']}: {raw_box_shape}")
+    before_state = _head_state_snapshot(head, np_module)
+    state["forward_counts"]["native_decoder_replays"]["attempted"] += 1
+    stage(state, "native_decoder_replay", method="head._inference(one2one)", flags=flags)
+    with torch_module.no_grad():
+        decoded_tensor = head._inference(branch)
+    state["forward_counts"]["native_decoder_replays"]["completed"] += 1
+    decoded, decoded_meta = _array_contract(decoded_tensor, "yolo26n native decoder replay", np_module)
+    if list(decoded.shape) != [1, 7, 8400]:
+        raise LocalizationUnresolved(f"YOLO26 decoder replay shape differs: {decoded.shape}")
+    boxes = np_module.ascontiguousarray(decoded[:, 0:4, :].transpose(0, 2, 1))
+    scores = np_module.ascontiguousarray(decoded[:, 4:7, :].transpose(0, 2, 1))
+    if float(scores.min()) < 0.0 or float(scores.max()) > 1.0:
+        raise LocalizationUnresolved("YOLO26 installed decoder did not produce [0,1] class probabilities")
+    after_decode_state = _head_state_snapshot(head, np_module)
+    if before_state != after_decode_state:
+        raise LocalizationUnresolved(f"YOLO26 decoder replay changed anchors/strides/shape state: before={before_state}, after={after_decode_state}")
+    state["forward_counts"]["native_postprocess_replays"]["attempted"] += 1
+    stage(state, "native_postprocess_replay", method="head.postprocess(decoded.permute(0,2,1))")
+    with torch_module.no_grad():
+        replayed_primary_tensor = head.postprocess(decoded_tensor.permute(0, 2, 1))
+    state["forward_counts"]["native_postprocess_replays"]["completed"] += 1
+    replayed_primary, replayed_meta = _array_contract(replayed_primary_tensor, "yolo26n native postprocess replay", np_module)
+    if not np_module.array_equal(replayed_primary, primary_array):
+        raise LocalizationUnresolved("YOLO26 decoder/postprocess replay does not reproduce the ordinary-forward primary exactly")
+    result = {"capture_site": "ordinary native forward one2one raw dictionary plus installed same-head replay", "branch": "one2one", "primary": primary_meta, "decoded": {"boxes": array_summary(boxes, "yolo26n native decoded xyxy boxes"), "class_probabilities": array_summary(scores, "yolo26n native class probabilities")}, "box_format": "xyxy", "coordinate_space": "640x640 input pixels", "score_semantics": "same-head _inference output after installed sigmoid", "flags": flags, "raw_debug": raw, "decoder_replay": {"attempted": 1, "completed": 1, "method": "head._inference(one2one)", "input": {"boxes": raw["raw_box_parameters"], "scores": raw["raw_class_logits"]}, "output": decoded_meta, "state_before": before_state, "state_after": after_decode_state}, "postprocess_replay": {"attempted": 1, "completed": 1, "method": "head.postprocess(decoded.permute(0,2,1))", "output": replayed_meta, "exact_primary_match": True}, "method_evidence": _head_method_evidence(head), "semantic_admissibility": {"status": "native_self_consistency_pass", "cross_side_endpoints": "pending_onnx_invariance"}}
+    state["semantic_adapter"].update(result)
+    return boxes, scores, result
 
 
 def _session_run(runtime: dict[str, Any], onnx_path: Path, input_np: Any, output_names: list[str]) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -578,15 +704,36 @@ def _v26_onnx_selection(outputs: dict[str, Any]) -> dict[str, Any]:
     return selection
 
 
-def analyze_v8_case(native_primary: Any, native_boxes: Any, native_scores: Any, onnx_primary: Any, historical: dict[str, Any], np_module: Any = np) -> dict[str, Any]:
+def validate_native_semantic_metadata(meta: dict[str, Any] | None, model: str) -> dict[str, Any]:
+    """Fail closed if a producer adapter's coordinate/score roles are altered."""
+    if meta is None:
+        return {"status": "legacy_test_double_metadata_absent"}
+    if not isinstance(meta, dict):
+        raise LocalizationUnresolved(f"{model} semantic adapter metadata is not a mapping")
+    expected = {
+        "yolov8n": {"box_format": "xywh", "coordinate_space": "640x640 input pixels", "score_semantics": "native primary post-sigmoid class probabilities"},
+        "yolo26n": {"box_format": "xyxy", "coordinate_space": "640x640 input pixels", "score_semantics": "same-head _inference output after installed sigmoid"},
+    }[model]
+    mismatches = {key: {"expected": value, "observed": meta.get(key)} for key, value in expected.items() if meta.get(key) != value}
+    if mismatches:
+        raise LocalizationUnresolved(f"{model} semantic adapter metadata is not the accepted decoded/probability contract: {mismatches}")
+    admissibility = meta.get("semantic_admissibility", {})
+    if admissibility.get("status") not in {"native_self_consistency_pass", "admissible"}:
+        raise LocalizationUnresolved(f"{model} semantic self-consistency is not admissible: {admissibility}")
+    return {"status": "native_self_consistency_pass", "validated": True}
+
+
+def analyze_v8_case(native_primary: Any, native_boxes: Any, native_scores: Any, onnx_primary: Any, historical: dict[str, Any], native_pre_meta: dict[str, Any] | None = None, np_module: Any = np) -> dict[str, Any]:
+    semantic_validation = validate_native_semantic_metadata(native_pre_meta, "yolov8n")
     current = v8_offender_report(native_primary, onnx_primary, np_module)
     current["historical_numeric_v2_record"] = historical
-    current["native_preselection"] = {"boxes": array_summary(native_boxes, "native raw box tensor"), "class_probabilities": array_summary(native_scores, "native raw class score tensor"), "selection_stage": "not_applicable; YOLOv8 accepted primary is raw decoded fixed-anchor output"}
-    current["onnx_preselection"] = {"boxes": array_summary(np_module.asarray(onnx_primary)[:, 0:4, :].transpose(0, 2, 1), "ONNX raw box tensor"), "class_probabilities": array_summary(np_module.asarray(onnx_primary)[:, 4:7, :].transpose(0, 2, 1), "ONNX raw class score tensor"), "selection_stage": "not_applicable"}
+    current["native_preselection"] = {"boxes": array_summary(native_boxes, "native decoded box tensor"), "class_probabilities": array_summary(native_scores, "native post-sigmoid class probability tensor"), "semantic_adapter": native_pre_meta or {}, "semantic_validation": semantic_validation, "selection_stage": "not_applicable; YOLOv8 accepted primary is decoded fixed-anchor output"}
+    current["onnx_preselection"] = {"boxes": array_summary(np_module.asarray(onnx_primary)[:, 0:4, :].transpose(0, 2, 1), "ONNX decoded box tensor"), "class_probabilities": array_summary(np_module.asarray(onnx_primary)[:, 4:7, :].transpose(0, 2, 1), "ONNX post-sigmoid class probability tensor"), "score_semantics": "accepted ONNX output class probabilities", "selection_stage": "not_applicable"}
     return {"model": "yolov8n", "image_id": TARGETS["yolov8n"], "status": "completed", "numeric_status": "fail", "strict_verdict_preserved": True, "analysis": current, "forward_counts": {"native_model_forwards": 1, "onnx_original_session_runs": 1, "onnx_derived_session_runs": 0}}
 
 
-def analyze_v26_case(native_primary: Any, native_boxes: Any, native_scores: Any, original_outputs: dict[str, Any], derived_outputs: dict[str, Any], graph_contract: dict[str, Any], historical: dict[str, Any], *, torch_module: Any | None = None, topk_impl: Callable[..., tuple[Any, Any]] | None = None, np_module: Any = np) -> dict[str, Any]:
+def analyze_v26_case(native_primary: Any, native_boxes: Any, native_scores: Any, original_outputs: dict[str, Any], derived_outputs: dict[str, Any], graph_contract: dict[str, Any], historical: dict[str, Any], native_pre_meta: dict[str, Any] | None = None, *, torch_module: Any | None = None, topk_impl: Callable[..., tuple[Any, Any]] | None = None, np_module: Any = np) -> dict[str, Any]:
+    semantic_validation = validate_native_semantic_metadata(native_pre_meta, "yolo26n")
     onnx_primary = original_outputs["output0"]
     native_reconstructed = reconstruct_yolo26_selection(native_boxes, native_scores, torch_module=torch_module, topk_impl=topk_impl)
     onnx_boxes, _ = normalize_preselection(derived_outputs[V26_INTERNAL_OUTPUTS["preselection_boxes"]], 4, "yolo26n.onnx.boxes", np_module)
@@ -608,20 +755,27 @@ def analyze_v26_case(native_primary: Any, native_boxes: Any, native_scores: Any,
     reconstructed_native_compare = numeric.compare_primary("yolo26n", native_reconstructed["primary"], np_module.asarray(native_primary), np_module)
     reconstructed_onnx_compare = numeric.compare_primary("yolo26n", onnx_reconstructed["primary"], np_module.asarray(derived_outputs["output0"]), np_module)
     original_derived_exact = bool(np_module.array_equal(np_module.asarray(original_outputs["output0"]), np_module.asarray(derived_outputs["output0"])))
+    native_selection_alignment = compare_selection_alignment(native_reconstructed, onnx_selection)
+    same_anchor_comparison = compare_preselection(native_boxes, native_scores, onnx_boxes, onnx_scores, np_module)
+    cross_side_admissibility = {"status": "admissible" if original_derived_exact else "not_admissible", "reason": "native decoder/postprocess self-consistency and exact original-vs-derived output invariance passed" if original_derived_exact else "derived instrumentation changed original output; cross-side endpoints are unresolved", "endpoint_status": "admissible" if original_derived_exact else "unresolved/not_admissible"}
+    if not original_derived_exact:
+        native_selection_alignment = {**native_selection_alignment, "status": "unresolved", "admissibility": "not_admissible", "raw_observation": dict(native_selection_alignment)}
+        same_anchor_comparison = {**same_anchor_comparison, "status": "unresolved", "admissibility": "not_admissible", "raw_observation": dict(same_anchor_comparison)}
     return {
         "model": "yolo26n", "image_id": TARGETS["yolo26n"], "status": "completed", "numeric_status": "fail", "strict_verdict_preserved": True,
         "analysis": {
             "historical_numeric_v2_record": historical,
             "strict_rerun_comparison": numeric.compare_primary("yolo26n", np_module.asarray(native_primary), np_module.asarray(onnx_primary), np_module),
-            "native_preselection": {"boxes": array_summary(native_boxes, "native one2one decoded boxes"), "class_probabilities": array_summary(native_scores, "native one2one class probabilities"), "capture_site": "ordinary frozen model forward returned one2one head dictionary"},
+            "native_preselection": {"boxes": array_summary(native_boxes, "native one2one decoded xyxy boxes"), "class_probabilities": array_summary(native_scores, "native one2one post-sigmoid class probabilities"), "semantic_adapter": native_pre_meta or {}, "semantic_validation": semantic_validation, "capture_site": "ordinary frozen model forward returned one2one raw dictionary plus installed same-head decoder replay"},
             "onnx_preselection": {"boxes": array_summary(onnx_boxes, "ONNX pre-TopK decoded boxes"), "class_probabilities": array_summary(onnx_scores, "ONNX pre-TopK class probabilities"), "source_tensors": {key: array_summary(value, key) for key, value in derived_outputs.items() if key != "output0"}},
-            "same_anchor_comparison": compare_preselection(native_boxes, native_scores, onnx_boxes, onnx_scores, np_module),
+            "same_anchor_comparison": same_anchor_comparison,
             "native_selection": native_selection_summary,
             "onnx_selection": onnx_selection_summary,
-            "selection_alignment": compare_selection_alignment(native_reconstructed, onnx_selection),
+            "selection_alignment": native_selection_alignment,
             "reconstructed_outputs": {"native_from_own_tensors_and_reconstructed_indices": reconstructed_native_compare, "onnx_from_own_tensors_and_direct_indices": reconstructed_onnx_compare, "onnx_index_mapping": onnx_reconstructed["mapping_validation"], "onnx_stage2_value_consistency": onnx_reconstructed["stage2_value_consistency"], "onnx_direct_intermediate_consistency": direct_intermediate_consistency},
             "graph_trace": graph_contract,
             "instrumentation_sensitivity": {"status": "unchanged_exact" if original_derived_exact else "drift", "original_output_vs_derived_output_exact": original_derived_exact, "if_drift": "derived internals are not used as proof of original execution" if not original_derived_exact else None},
+            "cross_side_admissibility": cross_side_admissibility,
             "association_boundary": "exact anchor/class pairs only; no nearest-neighbor matching, rematching, score cutoff, NMS or row replacement",
         },
         "forward_counts": {"native_model_forwards": 1, "onnx_original_session_runs": 1, "onnx_derived_session_runs": 1},
@@ -629,7 +783,7 @@ def analyze_v26_case(native_primary: Any, native_boxes: Any, native_scores: Any,
 
 
 def new_child_state(model: str) -> dict[str, Any]:
-    return {"model": model, "status": "running", "stage": "not_started", "stage_history": [], "forward_counts": {"native_model_forwards": {"attempted": 0, "completed": 0}, "onnx_original_session_runs": {"attempted": 0, "completed": 0}, "onnx_derived_session_runs": {"attempted": 0, "completed": 0}}}
+    return {"model": model, "status": "running", "stage": "not_started", "stage_history": [], "forward_counts": {"native_model_forwards": {"attempted": 0, "completed": 0}, "native_decoder_replays": {"attempted": 0, "completed": 0}, "native_postprocess_replays": {"attempted": 0, "completed": 0}, "onnx_original_session_runs": {"attempted": 0, "completed": 0}, "onnx_derived_session_runs": {"attempted": 0, "completed": 0}}}
 
 
 def stage(state: dict[str, Any], name: str, **details: Any) -> None:
@@ -671,7 +825,7 @@ def child_report(repo: Path, plan: dict[str, Any], model: str, out_dir: Path, *,
         native_output = network(tensor)
     state["forward_counts"]["native_model_forwards"]["completed"] += 1
     native_primary, native_contract = numeric.extract_native_primary(native_output, model, runtime["np"])
-    native_boxes, native_scores, native_pre_meta = _extract_native_preselection(native_output, model, runtime["np"])
+    native_boxes, native_scores, native_pre_meta = extract_native_semantic_preselection(native_output, model, native_primary, network.model[-1], runtime["torch"], runtime["np"], state)
     stage(state, "native_forward_complete")
     input_np = runtime["np"].ascontiguousarray(tensor.detach().cpu().numpy())
     state["forward_counts"]["onnx_original_session_runs"]["attempted"] += 1
@@ -679,7 +833,7 @@ def child_report(repo: Path, plan: dict[str, Any], model: str, out_dir: Path, *,
     state["forward_counts"]["onnx_original_session_runs"]["completed"] += 1
     stage(state, "original_onnx_complete")
     if model == "yolov8n":
-        analysis = analyze_v8_case(native_primary, native_boxes, native_scores, original_outputs["output0"], plan["numeric_v2_target_records"][model], runtime["np"])
+        analysis = analyze_v8_case(native_primary, native_boxes, native_scores, original_outputs["output0"], plan["numeric_v2_target_records"][model], native_pre_meta, runtime["np"])
         graph_contract = None
         derived_outputs, derived_session = {}, None
     else:
@@ -696,7 +850,7 @@ def child_report(repo: Path, plan: dict[str, Any], model: str, out_dir: Path, *,
         derived_outputs, derived_session = _session_run(runtime, derived_path, input_np, deduped_names)
         state["forward_counts"]["onnx_derived_session_runs"]["completed"] += 1
         stage(state, "derived_onnx_complete")
-        analysis = analyze_v26_case(native_primary, native_boxes, native_scores, original_outputs, derived_outputs, graph_contract, plan["numeric_v2_target_records"][model], torch_module=runtime["torch"], np_module=runtime["np"])
+        analysis = analyze_v26_case(native_primary, native_boxes, native_scores, original_outputs, derived_outputs, graph_contract, plan["numeric_v2_target_records"][model], native_pre_meta, torch_module=runtime["torch"], np_module=runtime["np"])
     checkpoint_after = file_evidence_fn(repo, checkpoint_path)
     onnx_after = file_evidence_fn(repo, onnx_path)
     if checkpoint_before != checkpoint_after or onnx_before != onnx_after:
@@ -756,7 +910,7 @@ def run_parent(args: argparse.Namespace, repo: Path) -> int:
             row = read_json(failure_path)
         else:
             failed = True
-            row = {"schema_version": 1, "study": STUDY, "model": model, "status": "failed", "numeric_status": "fail_preserved_not_observed", "error_type": "ChildProcessError", "error": f"model child exited {result.returncode}", "stage": "child_process_exit_without_record", "stage_history": [], "forward_counts": new_child_state(model)["forward_counts"], "partial_files_scope": f"models/{model}/owned_paths_only", "partial_files": child_owned_files(output_root, model), "no_silent_resume": True}
+            row = {"schema_version": 1, "study": STUDY, "model": model, "status": "failed", "numeric_status": "fail_preserved_not_observed", "error_type": "ChildProcessError", "error": f"model child exited {result.returncode}", "stage": "child_process_exit_without_record", "stage_history": [], "forward_counts": new_child_state(model)["forward_counts"], "partial_files_scope": f"models/{model}/owned_paths_only", "partial_files": child_owned_files(output_root, model), "semantic_admissibility": {"status": "not_admissible", "cross_side_endpoints": "unresolved/not_admissible", "reason": "child exited without a semantic record"}, "no_silent_resume": True}
             write_json_no_overwrite(failure_path, row)
         if result.returncode != 0 or row.get("status") != "completed":
             failed = True
@@ -789,7 +943,7 @@ def run_child(args: argparse.Namespace) -> int:
         print(f"DONE MODEL {model}: {out_dir / 'localization_report.json'}")
         return 0
     except Exception as exc:
-        failure = {"schema_version": 1, "study": STUDY, "model": model, "image_id": TARGETS.get(model), "status": "failed", "numeric_status": "fail_preserved_not_observed", "error_type": type(exc).__name__, "error": str(exc), "stage": state["stage"], "stage_history": state["stage_history"], "forward_counts": state["forward_counts"], "partial_files_scope": f"models/{model}/owned_paths_only", "partial_files": child_owned_files(output_root, model), "no_silent_resume": True, "audit_flags": {"export_performed": False, "tensorRT_imported": False, "accepted_onnx_modified": False, "gpu_used": False, "scored_run_authorized": False, "matrix_opened": False}}
+        failure = {"schema_version": 1, "study": STUDY, "model": model, "image_id": TARGETS.get(model), "status": "failed", "numeric_status": "fail_preserved_not_observed", "error_type": type(exc).__name__, "error": str(exc), "stage": state["stage"], "stage_history": state["stage_history"], "forward_counts": state["forward_counts"], "partial_files_scope": f"models/{model}/owned_paths_only", "partial_files": child_owned_files(output_root, model), "semantic_admissibility": {"status": "not_admissible", "cross_side_endpoints": "unresolved/not_admissible", "reason": str(exc), "raw_observations": state.get("semantic_adapter", {})}, "no_silent_resume": True, "audit_flags": {"export_performed": False, "tensorRT_imported": False, "accepted_onnx_modified": False, "gpu_used": False, "scored_run_authorized": False, "matrix_opened": False}}
         write_json_no_overwrite(out_dir / "failure.json", failure)
         print(f"FAILED MODEL {model}: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1

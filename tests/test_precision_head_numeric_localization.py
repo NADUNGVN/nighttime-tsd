@@ -12,6 +12,13 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "scripts"))
 import analyze_precision_head_numeric_localization as localization  # noqa: E402
 
+try:
+    import torch
+    from ultralytics.nn.modules.head import Detect
+except ImportError:
+    torch = None
+    Detect = None
+
 
 def stable_topk(values, k):
     return localization.stable_topk_numpy(values, k)
@@ -48,7 +55,154 @@ def v26_capture(drift=False):
     return boxes.transpose(0, 2, 1), scores.transpose(0, 2, 1), native["primary"], {"output0": native["primary"]}, derived
 
 
+def real_detect(reg_max, end2end):
+    head = Detect(nc=3, reg_max=reg_max, end2end=end2end, ch=(16, 32, 64))
+    head.stride = torch.tensor([8.0, 16.0, 32.0])
+    head.export = False
+    head.dynamic = False
+    head.agnostic_nms = False
+    head.max_det = 300
+    if reg_max == 1:
+        head.dfl = torch.nn.Identity()
+    return head.float().eval()
+
+
+def real_payload(reg_max):
+    feats = [torch.full((1, 16, 80, 80), 0.25), torch.full((1, 32, 40, 40), 0.5), torch.full((1, 64, 20, 20), 0.75)]
+    boxes = torch.zeros((1, 4 * reg_max, 8400), dtype=torch.float32)
+    if reg_max > 1:
+        for side in range(4):
+            boxes[:, side * reg_max + side + 1, :] = 2.0
+            boxes[:, side * reg_max + side + 5, :] = -0.5
+    else:
+        boxes[:] = torch.linspace(-2.0, 2.0, 8400, dtype=torch.float32).reshape(1, 1, 8400)
+    scores = torch.linspace(-6.0, 6.0, 3 * 8400, dtype=torch.float32).reshape(1, 3, 8400)
+    return {"boxes": boxes, "scores": scores, "feats": feats}
+
+
 class PrecisionHeadLocalizationTests(unittest.TestCase):
+    @unittest.skipUnless(Detect is not None and torch is not None, "pinned Ultralytics CPU producer environment is unavailable")
+    def test_real_yolov8_decoder_primary_and_raw_roles(self):
+        head = real_detect(reg_max=16, end2end=False)
+        payload = real_payload(reg_max=16)
+        with torch.no_grad():
+            primary = head._inference(payload)
+        state = localization.new_child_state("yolov8n")
+        boxes, scores, meta = localization.extract_native_semantic_preselection((primary, payload), "yolov8n", primary, head, torch, np, state)
+        self.assertEqual(tuple(boxes.shape), (1, 8400, 4))
+        self.assertEqual(tuple(scores.shape), (1, 8400, 3))
+        self.assertTrue(np.isfinite(boxes).all())
+        self.assertTrue(np.isfinite(scores).all())
+        self.assertGreaterEqual(float(scores.min()), 0.0)
+        self.assertLessEqual(float(scores.max()), 1.0)
+        self.assertEqual(meta["raw_debug"]["raw_box_parameters"]["shape"], [1, 64, 8400])
+        self.assertEqual(meta["raw_debug"]["raw_roles"]["scores"], "class logits before installed sigmoid")
+        self.assertEqual(meta["box_format"], "xywh")
+        self.assertEqual(state["forward_counts"]["native_decoder_replays"]["completed"], 0)
+
+    @unittest.skipUnless(Detect is not None and torch is not None, "pinned Ultralytics CPU producer environment is unavailable")
+    def test_real_yolo26_decoder_replay_and_postprocess_are_exact(self):
+        head = real_detect(reg_max=1, end2end=True)
+        payload = real_payload(reg_max=1)
+        with torch.no_grad():
+            primary = head.postprocess(head._inference(payload).permute(0, 2, 1))
+        state = localization.new_child_state("yolo26n")
+        boxes, scores, meta = localization.extract_native_semantic_preselection((primary, {"one2one": payload}), "yolo26n", primary, head, torch, np, state)
+        self.assertEqual(tuple(boxes.shape), (1, 8400, 4))
+        self.assertEqual(tuple(scores.shape), (1, 8400, 3))
+        self.assertGreaterEqual(float(scores.min()), 0.0)
+        self.assertLessEqual(float(scores.max()), 1.0)
+        self.assertEqual(meta["raw_debug"]["raw_box_parameters"]["shape"], [1, 4, 8400])
+        self.assertEqual(meta["box_format"], "xyxy")
+        self.assertTrue(meta["postprocess_replay"]["exact_primary_match"])
+        self.assertEqual(state["forward_counts"]["native_decoder_replays"]["completed"], 1)
+        self.assertEqual(state["forward_counts"]["native_postprocess_replays"]["completed"], 1)
+        self.assertEqual(meta["decoder_replay"]["state_before"], meta["decoder_replay"]["state_after"])
+
+    @unittest.skipUnless(Detect is not None and torch is not None, "pinned Ultralytics CPU producer environment is unavailable")
+    def test_real_decoder_rejects_wrong_coordinate_or_agnostic_flags(self):
+        head = real_detect(reg_max=16, end2end=False)
+        payload = real_payload(reg_max=16)
+        with torch.no_grad():
+            primary = head._inference(payload)
+        head.xyxy = True
+        with self.assertRaises(localization.LocalizationUnresolved):
+            localization.extract_native_semantic_preselection((primary, payload), "yolov8n", primary, head, torch, np, localization.new_child_state("yolov8n"))
+        head = real_detect(reg_max=1, end2end=True)
+        payload = real_payload(reg_max=1)
+        with torch.no_grad():
+            primary = head.postprocess(head._inference(payload).permute(0, 2, 1))
+        head.agnostic_nms = True
+        with self.assertRaises(localization.LocalizationUnresolved):
+            localization.extract_native_semantic_preselection((primary, {"one2one": payload}), "yolo26n", primary, head, torch, np, localization.new_child_state("yolo26n"))
+
+    @unittest.skipUnless(Detect is not None and torch is not None, "pinned Ultralytics CPU producer environment is unavailable")
+    def test_decoder_replay_drift_suppresses_semantic_acceptance(self):
+        head = real_detect(reg_max=1, end2end=True)
+        payload = real_payload(reg_max=1)
+        original = head._inference
+        with torch.no_grad():
+            primary = head.postprocess(original(payload).permute(0, 2, 1))
+        calls = {"count": 0}
+
+        def drift(branch):
+            with torch.no_grad():
+                result = original(branch)
+            calls["count"] += 1
+            if calls["count"] == 1:
+                result = result.clone()
+                result[0, 0, :] += 1.0
+            return result
+
+        head._inference = drift
+        with self.assertRaises(localization.LocalizationUnresolved):
+            localization.extract_native_semantic_preselection((primary, {"one2one": payload}), "yolo26n", primary, head, torch, np, localization.new_child_state("yolo26n"))
+
+    @unittest.skipUnless(Detect is not None and torch is not None, "pinned Ultralytics CPU producer environment is unavailable")
+    def test_real_decoder_rejects_missing_features_nonfinite_raw_and_double_sigmoid(self):
+        head = real_detect(reg_max=16, end2end=False)
+        payload = real_payload(reg_max=16)
+        with torch.no_grad():
+            primary = head._inference(payload)
+        missing_feats = dict(payload)
+        del missing_feats["feats"]
+        with self.assertRaises(localization.LocalizationUnresolved):
+            localization.extract_native_semantic_preselection((primary, missing_feats), "yolov8n", primary, head, torch, np, localization.new_child_state("yolov8n"))
+
+        nonfinite = dict(payload)
+        nonfinite["scores"] = payload["scores"].clone()
+        nonfinite["scores"][0, 0, 0] = float("nan")
+        with self.assertRaises(localization.LocalizationUnresolved):
+            localization.extract_native_semantic_preselection((primary, nonfinite), "yolov8n", primary, head, torch, np, localization.new_child_state("yolov8n"))
+
+        head = real_detect(reg_max=1, end2end=True)
+        payload = real_payload(reg_max=1)
+        original = head._inference
+        with torch.no_grad():
+            primary = head.postprocess(original(payload).permute(0, 2, 1))
+
+        def double_sigmoid(branch):
+            with torch.no_grad():
+                result = original(branch).clone()
+            result[:, 4:7, :] = torch.sigmoid(result[:, 4:7, :])
+            return result
+
+        head._inference = double_sigmoid
+        state = localization.new_child_state("yolo26n")
+        with self.assertRaises(localization.LocalizationUnresolved):
+            localization.extract_native_semantic_preselection((primary, {"one2one": payload}), "yolo26n", primary, head, torch, np, state)
+        self.assertIn("raw_debug", state["semantic_adapter"])
+
+    def test_wrong_coordinate_metadata_is_rejected_before_cross_side_analysis(self):
+        metadata = {"box_format": "xyxy", "coordinate_space": "640x640 input pixels", "score_semantics": "native primary post-sigmoid class probabilities", "semantic_admissibility": {"status": "native_self_consistency_pass"}}
+        with self.assertRaises(localization.LocalizationUnresolved):
+            localization.validate_native_semantic_metadata(metadata, "yolov8n")
+
+    def test_v2_runner_root_preserves_v1_and_strict_verdict(self):
+        self.assertEqual(localization.STUDY, "precision_head_numeric_localization_v2")
+        self.assertEqual(localization.DEFAULT_OUTPUT.as_posix(), "results/measurement_audit_v1/precision_head_numeric_localization_v2")
+        self.assertEqual(localization.NUMERIC_V1_ROOT.as_posix(), "results/measurement_audit_v1/precision_head_confirmation_numeric_v1")
+
     def test_v8_offender_scalar_allowance_and_new_mismatch_count(self):
         reference = np.zeros((1, 7, 8400), dtype=np.float32)
         observed = reference.copy()
@@ -116,6 +270,8 @@ class PrecisionHeadLocalizationTests(unittest.TestCase):
         graph_contract = {"derived_file": {"path": "private/view.onnx", "sha256": "x", "bytes": 1}, "output_additions": localization.V26_INTERNAL_OUTPUTS}
         result = localization.analyze_v26_case(native_primary, native_boxes, native_scores, original, derived, graph_contract, {"comparison": {"status": "fail"}}, topk_impl=stable_topk)
         self.assertEqual(result["analysis"]["instrumentation_sensitivity"]["status"], "drift")
+        self.assertEqual(result["analysis"]["cross_side_admissibility"]["endpoint_status"], "unresolved/not_admissible")
+        self.assertEqual(result["analysis"]["same_anchor_comparison"]["status"], "unresolved")
         self.assertEqual(result["analysis"]["selection_alignment"]["same_selected_set"], True)
 
     def test_v26_localization_analysis_reconstructs_both_sides(self):
