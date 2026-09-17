@@ -615,7 +615,8 @@ RTX TensorRT engine is provenance only and is not transferable to E2.
 `[1,7,8400]` before decode/NMS. The policy distinguishes source
 `fp32_reference`, target `fp16` compute, and target binding/I/O `float32`.
 It uses `abs(reference-target) <= absolute + relative*abs(reference)`;
-boxes (`x,y,w,h`) use `5e-3/1e-2`, scores use `2e-3/1e-2`, all values must be
+decoded boxes (`x,y,w,h`) are pixels of the 640x640 letterboxed input and use
+`5e-3/1e-2`; scores use `2e-3/1e-2`, all values must be
 finite, and mismatch summaries are bounded. Score class order is pinned to
 `prohibitory`, `mandatory`, `warning`. These are pre-observation engineering
 thresholds, not an accuracy or precision bound.
@@ -645,7 +646,7 @@ energy remains unavailable.
 ### Verification and remaining prerequisites
 
     python -m unittest discover -s tests -p 'test_edge*.py' -v
-    Ran 51 tests ... OK
+    Ran 58 tests ... OK
     python -m py_compile scripts/edge_readiness/probe_e2_dependencies.py scripts/edge_readiness/jetson_runtime_provider.py scripts/edge_readiness/e2_source_fixture.py scripts/edge_readiness/e2_output_compare.py scripts/edge_readiness/e2_correctness_workflow.py tests/test_edge_e2_runtime.py
     git diff --check
 
@@ -656,7 +657,97 @@ engine binding/hash manifest, then a bounded correctness compare with final
 stream completion. No scored timing/power/energy result is claimed; telemetry
 collector lifecycle and clock conversion remain future prerequisites.
 
+### Post-review correction: asynchronous D2H completion
+
+Follow-up review reproduced a real boundary defect despite the previous
+`51/51` pass: the fake device completed with byte value `42`, but the bridge
+returned a zero payload because `OwnedBuffers.copy_device_to_host` snapshotted
+the destination before asynchronous copy completion. The fix keeps each
+mutable D2H destination pending and creates the immutable `HostTensor` only in
+`mark_outputs_ready`, after the adapter's
+`stream.synchronize("after_output_copy")`. The regression test now models that
+ordering and asserts the returned output contains `42`. This closes the
+buffer/runtime interface bug; it is not evidence of real CUDA correctness and
+does not change the **NO-GO edge inference** status.
+
 **Git:** branch `luna1/e2l1-006-jetson-adapter-smoke`; E2L1-008 code/docs,
 scoped evidence and this report are pushed in the completion commit using the
 established `NADUNGVN` account. No PR or merge; prior E2L1-005/E2L1-007
 artifacts and other worktrees remain untouched.
+
+## L1A-009 — asynchronous runtime-boundary repair
+
+**Status:** R1–R3 local repair complete; **NO-GO** for edge inference, CUDA
+allocation, engine deserialize/build, model transfer/forward, timing, energy,
+installation or device configuration. This correction addresses a correctness
+blocker discovered after the prior 51/51 result; it is not a GPU result.
+
+### R1 — D2H completion and per-call ownership
+
+`OwnedBuffers.copy_device_to_host` now retains the mutable destination instead
+of immediately converting it to immutable bytes. The adapter's existing
+`stream.synchronize("after_output_copy")` is the completion boundary; only
+then does `mark_outputs_ready` snapshot host payloads. `begin_inference` clears
+pending/ready/output state before H2D, so a failed second call cannot expose a
+previous output, and the owner rejects reuse after `free()` while keeping
+cleanup idempotent.
+
+The deferred CPU double queues D2H and writes `42` at synchronization, then
+writes `43` on the next call. The provider-plus-owner-plus-adapter regression
+asserts both values, proving the reproduced `42 → 0` stale-snapshot failure is
+closed at the interface boundary. Tests also cover output access before
+readiness, after free, partial allocation cleanup, descriptor mismatch and
+failed second call.
+
+### R2 — runtime-owned evidence and JSON-safe diagnostics
+
+`TensorRTProvider` now requires the imported TensorRT module's observed
+`__version__` to match the target profile before deserialization. It queries
+actual legacy binding/tensor locations, rejects missing/unknown location data
+and dynamic/host bindings through the existing descriptor validator, retains
+logger/runtime/engine/context lifetimes, rejects a null context and invokes
+the YOLO11n native `output0 [1,7,8400]` contract before adapter creation.
+The E2 Python environment still has no discoverable concrete CUDA owner
+(`pycuda`/`cuda.cudart` absent); `CudaMemoryOwner` therefore remains an
+injected contract tested by doubles, not a claim of installed real CUDA
+execution.
+
+The comparator now validates finite nonnegative tolerances and emits JSON-safe
+`null` fields plus explicit nonfinite counters/reasons; `json.dumps(...,
+allow_nan=False)` is covered. Box coordinates are documented as decoded `xywh`
+pixels in the 640x640 letterboxed input, separate from the three pinned score
+classes and from compute/I/O dtype labels.
+
+### R3 — bounded artifact/error behavior
+
+The staged workflow now binds the accepted deployment config SHA-256
+`86973fe56b850cb5b119773b402243d36a98809b894e8e8a13493fb0edd30628`, schema,
+YOLO11n model family and 640/3-channel input before reporting preflight. The
+source-artifact stage explicitly records model output/ONNX/forward as not
+executed. CLI failures write `failure.json` only inside a root created by that
+invocation; a second invocation against a successful or partial root refuses
+without mutation and preserves the original evidence.
+
+The probe implementation now uses E2 alias validation and a remote `timeout
+50s` child under a local timeout greater than 50 seconds. The retained
+E2L1-008 probe artifact was **not rerun**; its original 1.047-second evidence
+and hashes remain immutable, and the new remote-bound behavior is unclaimed
+for that historical capture.
+
+### Verification and handoff
+
+    python -m unittest discover -s tests -p 'test_edge*.py' -v
+    Ran 58 tests ... OK
+    python -m py_compile scripts/edge_readiness/jetson_adapter.py scripts/edge_readiness/jetson_runtime_provider.py scripts/edge_readiness/e2_output_compare.py scripts/edge_readiness/e2_correctness_workflow.py scripts/edge_readiness/probe_e2_dependencies.py tests/test_edge_e2_runtime.py
+    git diff --check
+
+No edge command was executed in this correction. The E2L1-009 inbox entry is
+committed unchanged. Remaining prerequisites are a separately authorized
+concrete CUDA-owner decision, target-local TensorRT 8.5.2.2 API/binding check,
+source reference/export, target-native engine and final synchronized smoke.
+Missing aligned power/clock evidence keeps energy unavailable and does not
+change the correctness NO-GO.
+
+**Git:** branch `luna1/e2l1-006-jetson-adapter-smoke`; correction commit/push
+uses the established `NADUNGVN` account. No PR or merge; historical results
+and other worktrees remain untouched.

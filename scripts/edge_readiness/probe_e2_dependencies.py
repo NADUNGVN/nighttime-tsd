@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import time
 from datetime import datetime, timezone
@@ -60,6 +61,7 @@ for name in names:
 print('__E2L1_PROBE__ end')
 PY
 '''
+REMOTE_CHILD_TIMEOUT_SECONDS = 50
 
 
 def script_sha256() -> str:
@@ -67,8 +69,12 @@ def script_sha256() -> str:
 
 
 def run_probe(output_root: Path, *, alias: str = "nx", timeout_seconds: int = 60) -> dict:
+    if alias != "nx" or not re.fullmatch(r"[A-Za-z0-9_-]+", alias):
+        raise ValueError("E2_ALIAS_REQUIRED")
+    if timeout_seconds <= REMOTE_CHILD_TIMEOUT_SECONDS:
+        raise ValueError("LOCAL_TIMEOUT_MUST_EXCEED_REMOTE_TIMEOUT")
     output_root.mkdir(parents=True, exist_ok=False)
-    command = ["ssh", "-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=yes", alias, "sh", "-s"]
+    command = ["ssh", "-T", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=yes", alias, "timeout", f"{REMOTE_CHILD_TIMEOUT_SECONDS}s", "sh", "-s"]
     started = time.monotonic_ns()
     try:
         completed = subprocess.run(command, input=REMOTE_SCRIPT.encode("utf-8"), capture_output=True, timeout=timeout_seconds, check=False)
@@ -86,7 +92,7 @@ def run_probe(output_root: Path, *, alias: str = "nx", timeout_seconds: int = 60
         "status": "timeout" if timed_out else ("ok" if completed.returncode == 0 else "remote_error"),
         "scope": "E2 only; read-only metadata/source discovery; no TensorRT/CUDA import or initialization",
         "alias": alias,
-        "sanitized_command": "ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes <alias> sh -s",
+        "sanitized_command": f"ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes <alias> timeout {REMOTE_CHILD_TIMEOUT_SECONDS}s sh -s",
         "command_sha256": hashlib.sha256(" ".join(command).encode("utf-8")).hexdigest(),
         "remote_script_sha256": script_sha256(),
         "returncode": completed.returncode,

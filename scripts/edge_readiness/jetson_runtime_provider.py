@@ -21,6 +21,7 @@ from edge_readiness.jetson_adapter import (
     HostTensor,
     JetsonRuntimeAdapter,
     expected_nbytes,
+    validate_yolo11n_native_output_contract,
 )
 
 
@@ -46,7 +47,9 @@ class OwnedBuffers:
         self._allocations: dict[str, DeviceTensor] = {}
         self._host_outputs: dict[str, HostTensor] = {}
         self._pending_outputs: set[str] = set()
+        self._pending_destinations: dict[str, bytearray] = {}
         self._ready = False
+        self._freed = False
         try:
             for binding in self.engine.bindings:
                 pointer = self.memory.allocate_device(expected_nbytes(binding.shape, binding.dtype), binding.name)
@@ -59,6 +62,14 @@ class OwnedBuffers:
 
     def copy_stream_handle(self) -> int:
         return self.stream_handle
+
+    def begin_inference(self) -> None:
+        if self._freed:
+            raise AdapterError("BUFFER_OWNER_FREED", "buffer owner cannot be reused after free")
+        self._host_outputs.clear()
+        self._pending_outputs.clear()
+        self._pending_destinations.clear()
+        self._ready = False
 
     def binding_buffers(self) -> dict[str, DeviceTensor]:
         return dict(self._allocations)
@@ -73,7 +84,11 @@ class OwnedBuffers:
             raise AdapterError("COPY_STREAM_MISMATCH", "D2H copy stream differs from owned stream")
         destination = bytearray(device.nbytes)
         self.memory.copy_device_to_host(device.device_pointer, destination, stream_handle)
-        self._host_outputs[device.name] = HostTensor(device.name, device.shape, device.dtype, device.nbytes, bytes(destination))
+        # The owner may enqueue an asynchronous D2H copy. Do not snapshot the
+        # destination here: at this point it can still contain its zero-fill.
+        # ``mark_outputs_ready`` is called by the adapter only after the
+        # runtime stream's completion boundary.
+        self._pending_destinations[device.name] = destination
         self._pending_outputs.add(device.name)
         self._ready = False
 
@@ -83,6 +98,19 @@ class OwnedBuffers:
         expected = {binding.name for binding in self.engine.output_bindings()}
         if self._pending_outputs != expected:
             raise AdapterError("OUTPUT_NOT_READY", "not every output copy completed")
+        if set(self._pending_destinations) != expected:
+            raise AdapterError("OUTPUT_NOT_READY", "not every output destination is staged")
+        self._host_outputs = {}
+        for binding in self.engine.output_bindings():
+            destination = self._pending_destinations[binding.name]
+            expected_size = expected_nbytes(binding.shape, binding.dtype)
+            if len(destination) != expected_size:
+                raise AdapterError("OUTPUT_CONTRACT_MISMATCH", "completed host destination size does not match engine binding", {"binding": binding.name})
+            # Snapshot only after stream completion. This is the ownership
+            # handoff from mutable async staging memory to an immutable result.
+            self._host_outputs[binding.name] = HostTensor(binding.name, binding.shape, binding.dtype, expected_size, bytes(destination))
+        self._pending_destinations.clear()
+        self._pending_outputs.clear()
         self._ready = True
 
     def output_tensors(self) -> dict[str, HostTensor]:
@@ -91,6 +119,8 @@ class OwnedBuffers:
         return {name: tensor for name, tensor in self._host_outputs.items() if name in {binding.name for binding in self.engine.output_bindings()}}
 
     def free(self) -> None:
+        if self._freed and not self._allocations:
+            return
         errors: list[Exception] = []
         for allocation in list(self._allocations.values()):
             try:
@@ -100,7 +130,9 @@ class OwnedBuffers:
         self._allocations.clear()
         self._host_outputs.clear()
         self._pending_outputs.clear()
+        self._pending_destinations.clear()
         self._ready = False
+        self._freed = True
         if errors:
             raise AdapterError("FREE_FAILED", "CUDA memory owner failed while releasing allocations", {"count": len(errors)})
 
@@ -112,10 +144,12 @@ class TensorRTProvider:
         self.config = config
         self._module_loader = module_loader or importlib.import_module
         self._trt: Any = None
+        self._logger: Any = None
         self._runtime: Any = None
         self._engine: Any = None
         self._context: Any = None
         self._descriptor: EngineDescriptor | None = None
+        self._native_output_contract: dict[str, Any] | None = None
 
     @property
     def loaded(self) -> bool:
@@ -129,12 +163,16 @@ class TensorRTProvider:
         self.config.validate()
         try:
             self._trt = self._module_loader("tensorrt")
-            logger = self._trt.Logger(self._trt.Logger.ERROR)
-            self._runtime = self._trt.Runtime(logger)
+            observed_runtime_version = _observed_runtime_version(self._trt)
+            if not observed_runtime_version.startswith(self.config.validate().expected_runtime_prefix):
+                raise AdapterError("RUNTIME_VERSION_MISMATCH", "imported TensorRT version does not match target profile", {"expected_prefix": self.config.validate().expected_runtime_prefix, "observed": observed_runtime_version})
+            self._logger = self._trt.Logger(self._trt.Logger.ERROR)
+            self._runtime = self._trt.Runtime(self._logger)
             self._engine = self._runtime.deserialize_cuda_engine(engine_bytes)
             if self._engine is None:
                 raise AdapterError("ENGINE_DESERIALIZE_FAILED", "TensorRT returned no engine")
             self._descriptor = self._describe_engine(engine_sha256)
+            self._native_output_contract = validate_yolo11n_native_output_contract(self._descriptor, self.config)
             return self._descriptor
         except AdapterError:
             self.close()
@@ -152,14 +190,18 @@ class TensorRTProvider:
                 name = str(self._engine.get_binding_name(index))
                 shape = tuple(int(dim) for dim in self._engine.get_binding_shape(index))
                 dtype = _dtype_name(self._engine.get_binding_dtype(index))
-                bindings.append(EngineBinding(name, "input" if self._engine.binding_is_input(index) else "output", shape, dtype, "device"))
+                location_method = getattr(self._engine, "get_location", None)
+                location = _location_name(location_method(index)) if callable(location_method) else _missing_location()
+                bindings.append(EngineBinding(name, "input" if self._engine.binding_is_input(index) else "output", shape, dtype, location))
         elif hasattr(self._engine, "num_io_tensors"):
             for index in range(int(self._engine.num_io_tensors)):
                 name = str(self._engine.get_tensor_name(index))
                 shape = tuple(int(dim) for dim in self._engine.get_tensor_shape(name))
                 dtype = _dtype_name(self._engine.get_tensor_dtype(name))
                 mode = str(self._engine.get_tensor_mode(name)).lower()
-                bindings.append(EngineBinding(name, "input" if "input" in mode else "output", shape, dtype, "device"))
+                location_method = getattr(self._engine, "get_tensor_location", None)
+                location = _location_name(location_method(name)) if callable(location_method) else _missing_location()
+                bindings.append(EngineBinding(name, "input" if "input" in mode else "output", shape, dtype, location))
         else:
             raise AdapterError("BINDING_API_UNAVAILABLE", "TensorRT engine exposes neither legacy nor named tensor introspection")
         descriptor = EngineDescriptor(self.config.runtime_version, engine_sha256.lower(), tuple(bindings))
@@ -171,14 +213,18 @@ class TensorRTProvider:
             raise AdapterError("ENGINE_NOT_LOADED", "load_engine is required before creating an adapter")
         if self._context is None:
             self._context = self._engine.create_execution_context()
+        if self._context is None:
+            raise AdapterError("EXECUTION_CONTEXT_UNAVAILABLE", "TensorRT returned no execution context")
         return JetsonRuntimeAdapter(self.config, self._descriptor, self._context, stream, buffers)
 
     def close(self) -> None:
         self._context = None
         self._engine = None
+        self._logger = None
         self._runtime = None
         self._trt = None
         self._descriptor = None
+        self._native_output_contract = None
 
     def __enter__(self) -> "TensorRTProvider":
         return self
@@ -194,3 +240,23 @@ def _dtype_name(value: Any) -> str:
     if "float" in text or "float32" in text:
         return "float32"
     raise AdapterError("UNSUPPORTED_ENGINE_DTYPE", "only float16 and float32 bindings are supported", {"observed": str(value)})
+
+
+def _observed_runtime_version(module: Any) -> str:
+    version = getattr(module, "__version__", None)
+    if not isinstance(version, str) or not version.strip():
+        raise AdapterError("RUNTIME_VERSION_UNAVAILABLE", "imported TensorRT module does not expose an observed version")
+    return version.strip()
+
+
+def _location_name(value: Any) -> str:
+    text = str(value).lower()
+    if "device" in text:
+        return "device"
+    if "host" in text:
+        return "host"
+    raise AdapterError("BINDING_LOCATION_UNKNOWN", "TensorRT returned an unknown binding location", {"observed": str(value)})
+
+
+def _missing_location() -> str:
+    raise AdapterError("BINDING_LOCATION_UNAVAILABLE", "TensorRT engine does not expose binding location introspection")

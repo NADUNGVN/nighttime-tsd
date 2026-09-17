@@ -159,8 +159,9 @@ class ContextLike(Protocol):
 
 
 class BufferManagerLike(Protocol):
-    """Owner contract: allocations and host staging outlive one infer call."""
+    """Owner contract: reset state before each call and publish after sync."""
 
+    def begin_inference(self) -> None: ...
     def copy_stream_handle(self) -> int: ...
     def binding_buffers(self) -> dict[str, DeviceTensor]: ...
     def copy_host_to_device(self, host: HostTensor, device: DeviceTensor, stream_handle: int) -> None: ...
@@ -238,6 +239,7 @@ class JetsonRuntimeAdapter:
         expected = expected_nbytes(input_binding.shape, input_binding.dtype)
         if host_input.name != input_binding.name or host_input.shape != input_binding.shape or host_input.dtype != input_binding.dtype or host_input.nbytes != expected or len(host_input.payload) != expected:
             raise AdapterError("INPUT_CONTRACT_MISMATCH", "host input does not match the engine input binding")
+        self.buffers.begin_inference()
         input_device = self._device_bindings[input_binding.name]
         self.synchronize("before_input_copy")
         try:
@@ -354,6 +356,11 @@ class MockBuffers:
 
     def copy_stream_handle(self) -> int:
         return self.stream_handle
+
+    def begin_inference(self) -> None:
+        self._pending_outputs.clear()
+        self._ready = False
+        self._host_outputs.clear()
 
     def binding_buffers(self) -> dict[str, DeviceTensor]:
         return dict(self.allocations or {})

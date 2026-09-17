@@ -1,4 +1,5 @@
 import hashlib
+import json
 import struct
 import sys
 import tempfile
@@ -63,11 +64,16 @@ class FakeEngine:
     def binding_is_input(self, index):
         return index == 0
 
+    def get_location(self, _index):
+        return "TensorLocation.DEVICE"
+
     def create_execution_context(self):
         return self.context
 
 
 class FakeTensorRT:
+    __version__ = "8.5.2.2"
+
     class Logger:
         ERROR = 0
 
@@ -91,6 +97,9 @@ class FakeMemory:
         self.allocations = []
         self.freed = []
         self.copies = []
+        self.pending_d2h = []
+        self.completion_value = 42
+        self.fail_h2d = False
 
     def allocate_device(self, nbytes, name):
         if self.fail_after is not None and len(self.allocations) >= self.fail_after:
@@ -101,11 +110,21 @@ class FakeMemory:
         return pointer
 
     def copy_host_to_device(self, payload, device_pointer, stream_handle):
+        if self.fail_h2d:
+            raise RuntimeError("injected H2D failure")
         self.copies.append(("h2d", len(payload), device_pointer, stream_handle))
 
     def copy_device_to_host(self, device_pointer, destination, stream_handle):
         self.copies.append(("d2h", len(destination), device_pointer, stream_handle))
-        destination[:] = bytes(len(destination))
+        self.pending_d2h.append(destination)
+
+    def complete_pending(self):
+        if not self.pending_d2h:
+            return
+        for destination in self.pending_d2h:
+            destination[:] = bytes([self.completion_value]) * len(destination)
+        self.pending_d2h.clear()
+        self.completion_value += 1
 
     def free_device(self, device_pointer):
         self.freed.append(device_pointer)
@@ -114,10 +133,13 @@ class FakeMemory:
 class FakeStream:
     handle = 13
 
-    def __init__(self):
+    def __init__(self, on_synchronize=None):
         self.stages = []
+        self.on_synchronize = on_synchronize
 
     def synchronize(self, stage):
+        if self.on_synchronize is not None:
+            self.on_synchronize()
         self.stages.append(stage)
 
 
@@ -135,8 +157,63 @@ class E2RuntimeProviderTests(unittest.TestCase):
         descriptor = provider.load_engine(engine_bytes, hashlib.sha256(engine_bytes).hexdigest())
         self.assertEqual(loaded, ["tensorrt"])
         self.assertEqual([binding.name for binding in descriptor.bindings], ["images", "output0"])
+        self.assertEqual(descriptor.runtime_version, "8.5.2.2")
+        self.assertTrue(all(binding.location == "device" for binding in descriptor.bindings))
         provider.close()
         self.assertFalse(provider.loaded)
+
+    def test_provider_rejects_missing_observed_runtime_version_before_deserialize(self):
+        class NoVersionTensorRT:
+            class Logger:
+                ERROR = 0
+
+                def __init__(self, _level):
+                    pass
+
+            class Runtime:
+                def __init__(self, _logger):
+                    raise AssertionError("deserialization must not start")
+
+        provider = TensorRTProvider(AdapterConfig("E2", "8.5.2.2"), module_loader=lambda _name: NoVersionTensorRT)
+        with self.assertRaisesRegex(AdapterError, "RUNTIME_VERSION_UNAVAILABLE"):
+            provider.load_engine(b"fake-engine", hashlib.sha256(b"fake-engine").hexdigest())
+
+    def test_provider_rejects_missing_binding_location(self):
+        class NoLocationEngine(FakeEngine):
+            get_location = None
+
+        class NoLocationTensorRT(FakeTensorRT):
+            __version__ = "8.5.2.2"
+
+            class Runtime:
+                def __init__(self, _logger):
+                    self.engine = NoLocationEngine()
+
+                def deserialize_cuda_engine(self, _bytes):
+                    return self.engine
+
+        provider = TensorRTProvider(AdapterConfig("E2", "8.5.2.2"), module_loader=lambda _name: NoLocationTensorRT)
+        with self.assertRaisesRegex(AdapterError, "BINDING_LOCATION_UNKNOWN|BINDING_LOCATION_UNAVAILABLE"):
+            provider.load_engine(b"fake-engine", hashlib.sha256(b"fake-engine").hexdigest())
+
+    def test_provider_rejects_null_execution_context(self):
+        class NullContextEngine(FakeEngine):
+            def create_execution_context(self):
+                return None
+
+        class NullContextTensorRT(FakeTensorRT):
+            class Runtime:
+                def __init__(self, _logger):
+                    self.engine = NullContextEngine()
+
+                def deserialize_cuda_engine(self, _bytes):
+                    return self.engine
+
+        provider = TensorRTProvider(AdapterConfig("E2", "8.5.2.2"), module_loader=lambda _name: NullContextTensorRT)
+        descriptor = provider.load_engine(b"fake-engine", hashlib.sha256(b"fake-engine").hexdigest())
+        buffers = OwnedBuffers(descriptor, FakeMemory(), stream_handle=13)
+        with self.assertRaisesRegex(AdapterError, "EXECUTION_CONTEXT_UNAVAILABLE"):
+            provider.create_adapter(FakeStream(), buffers)
 
     def test_real_bridge_uses_owned_allocations_and_frees_cleanly(self):
         engine_bytes = b"fake-engine"
@@ -144,18 +221,56 @@ class E2RuntimeProviderTests(unittest.TestCase):
         descriptor = provider.load_engine(engine_bytes, hashlib.sha256(engine_bytes).hexdigest())
         memory = FakeMemory()
         buffers = OwnedBuffers(descriptor, memory, stream_handle=13)
-        stream = FakeStream()
+        stream = FakeStream(on_synchronize=memory.complete_pending)
         adapter = provider.create_adapter(stream, buffers)
         host = make_host_tensor(descriptor.input_binding(), b"\0" * expected_nbytes((1, 3, 640, 640), "float32"))
         first = adapter.infer(host)
         second = adapter.infer(host)
         self.assertIsNot(first["output0"], second["output0"])
+        self.assertEqual(set(first["output0"].payload), {42})
+        self.assertEqual(set(second["output0"].payload), {43})
+        self.assertNotEqual(set(first["output0"].payload), {0})
         self.assertEqual(memory.copies[0][2], memory.allocations[0][2])
         self.assertEqual(memory.copies[-1][2], memory.allocations[1][2])
         self.assertEqual(len(first["output0"].payload), expected_nbytes((1, 7, 8400), "float32"))
         buffers.free()
         self.assertEqual(set(memory.freed), {allocation[2] for allocation in memory.allocations})
         provider.close()
+
+    def test_failed_second_call_cannot_expose_previous_output_and_free_rejects_reuse(self):
+        engine_bytes = b"fake-engine"
+        provider = TensorRTProvider(AdapterConfig("E2", "8.5.2.2"), module_loader=lambda _name: FakeTensorRT)
+        descriptor = provider.load_engine(engine_bytes, hashlib.sha256(engine_bytes).hexdigest())
+        memory = FakeMemory()
+        buffers = OwnedBuffers(descriptor, memory, stream_handle=13)
+        stream = FakeStream(on_synchronize=memory.complete_pending)
+        adapter = provider.create_adapter(stream, buffers)
+        host = make_host_tensor(descriptor.input_binding(), b"\0" * expected_nbytes((1, 3, 640, 640), "float32"))
+        adapter.infer(host)
+        memory.fail_h2d = True
+        with self.assertRaisesRegex(AdapterError, "COPY_H2D_FAILED"):
+            adapter.infer(host)
+        with self.assertRaisesRegex(AdapterError, "OUTPUT_NOT_READY"):
+            buffers.output_tensors()
+        buffers.free()
+        with self.assertRaisesRegex(AdapterError, "BUFFER_OWNER_FREED"):
+            adapter.infer(host)
+        provider.close()
+
+    def test_output_is_not_available_before_readiness_or_after_free(self):
+        descriptor = FakeEngineDescriptor()
+        buffers = OwnedBuffers(descriptor, FakeMemory(), stream_handle=13)
+        output = descriptor.output_bindings()[0]
+        device = buffers.binding_buffers()[output.name]
+        buffers.begin_inference()
+        buffers.copy_device_to_host(device, 13)
+        with self.assertRaisesRegex(AdapterError, "OUTPUT_NOT_READY"):
+            buffers.output_tensors()
+        buffers.mark_outputs_ready(13)
+        self.assertIn(output.name, buffers.output_tensors())
+        buffers.free()
+        with self.assertRaisesRegex(AdapterError, "OUTPUT_NOT_READY"):
+            buffers.output_tensors()
 
     def test_partial_allocation_frees_prior_buffers(self):
         descriptor = FakeEngineDescriptor()
@@ -260,6 +375,7 @@ class E2OutputComparatorTests(unittest.TestCase):
         self.assertEqual(result.nonfinite_target, 1)
         self.assertEqual(len(result.mismatches), 20)
         self.assertGreaterEqual(result.mismatch_count, 2)
+        json.dumps(result.as_dict(), allow_nan=False)
 
 
 class E2WorkflowTests(unittest.TestCase):
@@ -285,6 +401,36 @@ class E2WorkflowTests(unittest.TestCase):
             self.assertEqual(result["status"], "blocked_not_authorized")
             self.assertFalse(result["real_device_execution"])
             self.assertIn("TensorRT export/build", result["disabled_side_effects"])
+
+    def test_cli_records_fixture_failure_inside_new_root_and_does_not_mask_it(self):
+        from edge_readiness.e2_correctness_workflow import main
+
+        with tempfile.TemporaryDirectory(prefix="e2l1-009-workflow-") as temp_dir:
+            temp_root = Path(temp_dir)
+            output = temp_root / "failed-source"
+            source_root = temp_root / "missing-source"
+            self.assertEqual(main(["--stage", "source-artifacts", "--repo-root", str(ROOT), "--source-root", str(source_root), "--out-dir", str(output)]), 2)
+            failure = output / "failure.json"
+            self.assertTrue(failure.is_file())
+            self.assertIn("FIXTURE_MISSING", failure.read_text(encoding="utf-8"))
+            before = failure.read_bytes()
+            self.assertEqual(main(["--stage", "source-artifacts", "--repo-root", str(ROOT), "--source-root", str(source_root), "--out-dir", str(output)]), 2)
+            self.assertEqual(failure.read_bytes(), before)
+
+    def test_cli_rejects_second_invocation_without_mutating_success_root(self):
+        from edge_readiness.e2_correctness_workflow import main
+
+        source_root = Path(r"D:\Research\paper")
+        if not (source_root / "data/processed/cctsdb2021_clean/train/images/00006.jpg").exists():
+            self.skipTest("canonical local fixture source is not mounted")
+        with tempfile.TemporaryDirectory(prefix="e2l1-009-workflow-") as temp_dir:
+            output = Path(temp_dir) / "preflight"
+            args = ["--stage", "preflight", "--repo-root", str(ROOT), "--source-root", str(source_root), "--out-dir", str(output)]
+            self.assertEqual(main(args), 0)
+            before = sorted((path.relative_to(output).as_posix(), path.read_bytes()) for path in output.rglob("*" ) if path.is_file())
+            self.assertEqual(main(args), 2)
+            after = sorted((path.relative_to(output).as_posix(), path.read_bytes()) for path in output.rglob("*") if path.is_file())
+            self.assertEqual(after, before)
 
 
 if __name__ == "__main__":

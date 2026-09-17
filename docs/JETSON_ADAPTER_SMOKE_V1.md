@@ -247,7 +247,7 @@ calling FP16-compute/FP32-I/O a float32-compute reference. It uses the fixed
 equation `abs(reference-target) <= absolute + relative*abs(reference)`, with
 box tolerance `5e-3/1e-2` and score tolerance `2e-3/1e-2`, finite-value
 fail-closed handling and bounded mismatch summaries. The four box channels are
-`x,y,w,h` in the 640-input coordinate convention; the three score channels use
+decoded `x,y,w,h` in pixels of the 640x640 letterboxed input; the three score channels use
 the pinned class order `prohibitory`, `mandatory`, `warning`.
 
 The executable workflow is:
@@ -278,3 +278,16 @@ The E2L1-008 exact local writes are the four staged workflow manifests plus
 the source fixture manifest and the dependency probe manifest/stdout/stderr under
 `results/edge_readiness_v1/e2l1-008/`. No image, checkpoint, ONNX, engine or
 large tensor is committed.
+
+### Post-review asynchronous-copy correction
+
+The first CPU-double review exposed a real contract defect at the buffer/runtime
+boundary: an asynchronous D2H owner can enqueue a copy whose destination is
+still zero-filled when `copy_device_to_host` returns. The old bridge immediately
+snapshotted that destination, so a completed device value `42` could be
+returned as payload `0`. The bridge now retains the mutable destination until
+the adapter has called `stream.synchronize("after_output_copy")`; only then does
+`mark_outputs_ready` snapshot immutable `HostTensor` payloads. The regression
+double completes the queued copy at synchronization and asserts the returned
+payload contains `42`. This correction is CPU/mock evidence only and does not
+authorize E2 inference.

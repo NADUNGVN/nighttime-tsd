@@ -31,7 +31,7 @@ class ComparisonPolicy:
     box_tolerance: DomainTolerance = DomainTolerance(absolute=5e-3, relative=1e-2)
     score_tolerance: DomainTolerance = DomainTolerance(absolute=2e-3, relative=1e-2)
     class_order: tuple[str, ...] = CLASS_ORDER
-    coordinate_convention: str = "xywh normalized-to-640 input coordinates; channel order x,y,w,h"
+    coordinate_convention: str = "xywh in pixels of the 640x640 letterboxed input; channel order x,y,w,h"
     mismatch_limit: int = 20
 
     def as_dict(self) -> dict[str, object]:
@@ -54,11 +54,12 @@ class Mismatch:
     flat_index: int
     channel: int
     channel_kind: str
-    reference: float
-    target: float
-    absolute_error: float
-    relative_error: float
-    allowed_error: float
+    reference: float | None
+    target: float | None
+    absolute_error: float | None
+    relative_error: float | None
+    allowed_error: float | None
+    reason: str | None = None
 
 
 @dataclass
@@ -68,9 +69,9 @@ class ComparisonResult:
     mismatch_count: int
     nonfinite_reference: int
     nonfinite_target: int
-    max_absolute_error: float
-    max_relative_error: float
-    domain_summary: dict[str, dict[str, float | int]]
+    max_absolute_error: float | None
+    max_relative_error: float | None
+    domain_summary: dict[str, dict[str, object]]
     mismatches: list[Mismatch] = field(default_factory=list)
     policy: dict[str, object] = field(default_factory=dict)
 
@@ -96,7 +97,7 @@ def _validate_policy(policy: ComparisonPolicy) -> None:
     if policy.mismatch_limit < 0:
         raise ValueError("MISMATCH_LIMIT_INVALID")
     for name, tolerance in (("box", policy.box_tolerance), ("score", policy.score_tolerance)):
-        if tolerance.absolute < 0 or tolerance.relative < 0:
+        if not math.isfinite(tolerance.absolute) or not math.isfinite(tolerance.relative) or tolerance.absolute < 0 or tolerance.relative < 0:
             raise ValueError(f"{name.upper()}_TOLERANCE_INVALID")
 
 
@@ -109,14 +110,14 @@ def compare_output0(reference: Sequence[float], target: Sequence[float], policy:
 
     nonfinite_reference = sum(not math.isfinite(float(value)) for value in reference)
     nonfinite_target = sum(not math.isfinite(float(value)) for value in target)
-    domain_summary: dict[str, dict[str, float | int]] = {
-        "boxes": {"elements": 4 * OUTPUT_SHAPE[2], "mismatches": 0, "max_absolute_error": 0.0, "max_relative_error": 0.0},
-        "scores": {"elements": 3 * OUTPUT_SHAPE[2], "mismatches": 0, "max_absolute_error": 0.0, "max_relative_error": 0.0},
+    domain_summary: dict[str, dict[str, object]] = {
+        "boxes": {"elements": 4 * OUTPUT_SHAPE[2], "mismatches": 0, "nonfinite": 0, "max_absolute_error": 0.0, "max_relative_error": 0.0},
+        "scores": {"elements": 3 * OUTPUT_SHAPE[2], "mismatches": 0, "nonfinite": 0, "max_absolute_error": 0.0, "max_relative_error": 0.0},
     }
     mismatches: list[Mismatch] = []
     mismatch_count = 0
-    max_absolute_error = 0.0
-    max_relative_error = 0.0
+    max_absolute_error: float | None = 0.0
+    max_relative_error: float | None = 0.0
     for flat_index, (reference_value, target_value) in enumerate(zip(reference, target)):
         reference_float = float(reference_value)
         target_float = float(target_value)
@@ -124,25 +125,30 @@ def compare_output0(reference: Sequence[float], target: Sequence[float], policy:
         kind = "boxes" if channel < 4 else "scores"
         tolerance = policy.box_tolerance if kind == "boxes" else policy.score_tolerance
         if not (math.isfinite(reference_float) and math.isfinite(target_float)):
-            absolute_error = math.inf
-            relative_error = math.inf
-            allowed_error = math.nan
+            absolute_error = None
+            relative_error = None
+            allowed_error = None
+            reason = "+".join(name for name, value in (("NONFINITE_REFERENCE", reference_float), ("NONFINITE_TARGET", target_float)) if not math.isfinite(value))
             mismatch = True
         else:
             absolute_error = abs(reference_float - target_float)
             relative_error = absolute_error / max(abs(reference_float), 1e-12)
             allowed_error = tolerance.absolute + tolerance.relative * abs(reference_float)
+            reason = None
             mismatch = absolute_error > allowed_error
-        max_absolute_error = max(max_absolute_error, absolute_error)
-        max_relative_error = max(max_relative_error, relative_error)
         domain = domain_summary[kind]
-        domain["max_absolute_error"] = max(float(domain["max_absolute_error"]), absolute_error)
-        domain["max_relative_error"] = max(float(domain["max_relative_error"]), relative_error)
+        if absolute_error is None:
+            domain["nonfinite"] = int(domain["nonfinite"]) + 1
+        else:
+            max_absolute_error = max(float(max_absolute_error), absolute_error)
+            max_relative_error = max(float(max_relative_error), relative_error or 0.0)
+            domain["max_absolute_error"] = max(float(domain["max_absolute_error"]), absolute_error)
+            domain["max_relative_error"] = max(float(domain["max_relative_error"]), relative_error or 0.0)
         if mismatch:
             mismatch_count += 1
             domain["mismatches"] = int(domain["mismatches"]) + 1
             if len(mismatches) < policy.mismatch_limit:
-                mismatches.append(Mismatch(flat_index, channel, kind, reference_float, target_float, absolute_error, relative_error, allowed_error))
+                mismatches.append(Mismatch(flat_index, channel, kind, reference_float if math.isfinite(reference_float) else None, target_float if math.isfinite(target_float) else None, absolute_error, relative_error, allowed_error, reason))
 
     passed = nonfinite_reference == 0 and nonfinite_target == 0 and mismatch_count == 0
     return ComparisonResult(
