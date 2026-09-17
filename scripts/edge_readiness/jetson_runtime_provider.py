@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 from dataclasses import dataclass
-from typing import Any, Callable, Protocol
+from typing import Any, Callable, Optional, Protocol
 
 from edge_readiness.jetson_adapter import (
     AdapterConfig,
@@ -213,14 +213,14 @@ class TensorRTProvider:
         descriptor.validate(self.config)
         return descriptor
 
-    def create_adapter(self, stream: Any, buffers: OwnedBuffers) -> JetsonRuntimeAdapter:
+    def create_adapter(self, stream: Any, buffers: OwnedBuffers, stage_observer: Optional[Callable[[str], None]] = None) -> JetsonRuntimeAdapter:
         if self._engine is None or self._descriptor is None:
             raise AdapterError("ENGINE_NOT_LOADED", "load_engine is required before creating an adapter")
         if self._context is None:
             self._context = self._engine.create_execution_context()
         if self._context is None:
             raise AdapterError("EXECUTION_CONTEXT_UNAVAILABLE", "TensorRT returned no execution context")
-        return JetsonRuntimeAdapter(self.config, self._descriptor, self._context, stream, buffers)
+        return JetsonRuntimeAdapter(self.config, self._descriptor, self._context, stream, buffers, stage_observer=stage_observer)
 
     def close(self) -> None:
         self._context = None

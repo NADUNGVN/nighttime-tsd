@@ -10,7 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Callable, Optional, Protocol
 
 from edge_readiness.edge_errors import AdapterError
 
@@ -199,9 +199,10 @@ def validate_yolo11n_native_output_contract(engine: EngineDescriptor, config: Ad
 class JetsonRuntimeAdapter:
     """Narrow injected-runtime adapter; never allocates device addresses."""
 
-    def __init__(self, config: AdapterConfig, engine: EngineDescriptor, context: ContextLike, stream: StreamLike, buffers: BufferManagerLike):
+    def __init__(self, config: AdapterConfig, engine: EngineDescriptor, context: ContextLike, stream: StreamLike, buffers: BufferManagerLike, stage_observer: Optional[Callable[[str], None]] = None):
         engine.validate(config)
         self.config, self.engine, self.context, self.stream, self.buffers = config, engine, context, stream, buffers
+        self.stage_observer = stage_observer
         self.profile = config.validate()
         if buffers.copy_stream_handle() != stream.handle:
             raise AdapterError("COPY_STREAM_MISMATCH", "buffer copies and runtime synchronization must use the same stream", {"copy_stream": buffers.copy_stream_handle(), "runtime_stream": stream.handle})
@@ -222,6 +223,10 @@ class JetsonRuntimeAdapter:
                 raise AdapterError("BUFFER_LIFETIME_MISSING", "allocation owner and lifetime_id are required", {"binding": binding.name})
         self._device_bindings = dict(allocations)
 
+    def _observe(self, event: str) -> None:
+        if self.stage_observer is not None:
+            self.stage_observer(event)
+
     def synchronize(self, stage: str) -> None:
         self.stream.synchronize(stage)
 
@@ -233,14 +238,17 @@ class JetsonRuntimeAdapter:
         self.buffers.begin_inference()
         input_device = self._device_bindings[input_binding.name]
         self.synchronize("before_input_copy")
+        self._observe("h2d_copy_attempted")
         try:
             self.buffers.copy_host_to_device(host_input, input_device, self.stream.handle)
         except AdapterError:
             raise
         except Exception as exc:
             raise AdapterError("COPY_H2D_FAILED", "buffer owner rejected host-to-device copy") from exc
+        self._observe("h2d_copy_completed")
         self.synchronize("before_enqueue")
         pointers = [self._device_bindings[binding.name].device_pointer for binding in self.engine.bindings]
+        self._observe("enqueue_attempted")
         try:
             if self.profile.execution_api == "legacy_binding_execute_async_v2":
                 enqueue_result = self.context.execute_async_v2(pointers, self.stream.handle)
@@ -257,10 +265,13 @@ class JetsonRuntimeAdapter:
             raise AdapterError("ENQUEUE_FAILED", "runtime enqueue raised an exception") from exc
         if enqueue_result is not True:
             raise AdapterError("ENQUEUE_FAILED", "runtime enqueue did not return true")
+        self._observe("enqueue_completed")
         self.synchronize("after_enqueue")
         try:
             for binding in self.engine.output_bindings():
+                self._observe("d2h_copy_attempted")
                 self.buffers.copy_device_to_host(self._device_bindings[binding.name], self.stream.handle)
+                self._observe("d2h_copy_completed")
             self.synchronize("after_output_copy")
             self.buffers.mark_outputs_ready(self.stream.handle)
             outputs = self.buffers.output_tensors()

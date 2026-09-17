@@ -4,6 +4,7 @@ import json
 import struct
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -212,7 +213,7 @@ class ProductionFakeTarget:
 
     def preflight(self):
         self.calls.append("preflight")
-        return {"target_id": "E2", "runtime_version": "8.5.2.2", "execution_api": "legacy_binding_execute_async_v2"}
+        return {"target_id": "E2", "runtime_version": "8.5.2.2", "execution_api": "legacy_binding_execute_async_v2", "hostname": smoke.EXPECTED_HOSTNAME, "machine": smoke.EXPECTED_ARCHITECTURE, "hardware_model": smoke.EXPECTED_MODEL_TOKEN}
 
     def build(self, onnx_path, engine_path, workspace_bytes):
         self.calls.append("build")
@@ -281,11 +282,77 @@ def make_bundle(temp_root):
     manifest_path = public / "manifest.json"
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
     sha = lambda path: smoke.SOURCE_ONNX_SHA256 if path == onnx_path else hashlib.sha256(path.read_bytes()).hexdigest()
+    manifest_sha = hashlib.sha256(manifest_path.read_bytes()).hexdigest()
+    original_sha = smoke.CANONICAL_SOURCE_MANIFEST_SHA256
+    smoke.CANONICAL_SOURCE_MANIFEST_SHA256 = manifest_sha
     with patch.object(smoke, "file_sha256", side_effect=sha):
-        return smoke.load_source_bundle(manifest_path, root)
+        try:
+            bundle = smoke.load_source_bundle(manifest_path, root)
+            bundle.test_manifest_sha256 = manifest_sha
+            return bundle
+        finally:
+            smoke.CANONICAL_SOURCE_MANIFEST_SHA256 = original_sha
 
 
 class ModelSmokeTests(unittest.TestCase):
+    def test_manifest_bytes_are_canonical_even_when_onnx_reference_is_unchanged(self):
+        with tempfile.TemporaryDirectory() as temp:
+            bundle = make_bundle(temp)
+            manifest = json.loads(bundle.manifest_path.read_text(encoding="utf-8"))
+            manifest["operator_note"] = "edited"
+            bundle.manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(AdapterError, "SOURCE_MANIFEST_HASH_MISMATCH"):
+                smoke.load_source_bundle(bundle.manifest_path, bundle.root)
+
+    def test_target_identity_rejects_before_tensor_rt_import(self):
+        calls = []
+        identity = smoke._target_identity()
+        identity["observed"]["hostname"] = "server-host"
+        runtime = smoke.E2TensorRTRuntime(module_loader=lambda name: calls.append(name))
+        with patch.object(smoke, "_target_identity", return_value=identity):
+            with self.assertRaisesRegex(AdapterError, "TARGET_IDENTITY_MISMATCH"):
+                runtime.preflight()
+        self.assertEqual(calls, [])
+
+    def test_owned_stage_timeout_is_bounded_and_does_not_claim_completion(self):
+        with tempfile.TemporaryDirectory() as temp:
+            event_path = Path(temp) / "events.jsonl"
+            started = time.monotonic()
+            with self.assertRaisesRegex(AdapterError, "STAGE_TIMEOUT") as context:
+                smoke.run_bounded_process([sys.executable, "-c", "import time; time.sleep(5)"], 0.15, "inference", event_path)
+            self.assertLess(time.monotonic() - started, 3.0)
+            self.assertEqual(context.exception.details["completion"], "unknown")
+            self.assertTrue(context.exception.details["termination_confirmed"])
+            events = event_path.read_text(encoding="utf-8")
+            self.assertIn('"event": "timeout"', events)
+
+    def test_invalid_timeout_is_rejected_before_dispatch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            for value in (0, -1, float("nan"), float("inf")):
+                with self.assertRaisesRegex(AdapterError, "TIMEOUT_INVALID"):
+                    smoke.run_bounded_process([sys.executable, "-c", "raise SystemExit(99)"], value, "build", Path(temp) / (str(value) + ".jsonl"))
+
+    def test_cleanup_attempts_every_resource_and_reports_all_failures(self):
+        calls = []
+
+        class Resource:
+            def __init__(self, name, method):
+                self.name, self.method = name, method
+
+            def free(self):
+                calls.append(self.name)
+                raise RuntimeError(self.name)
+
+            def close(self):
+                calls.append(self.name)
+                raise RuntimeError(self.name)
+
+        execution = smoke._OwnedTargetExecution(None, None, Resource("buffers", "free"), Resource("provider", "close"), Resource("stream", "close"), Resource("cuda", "close"))
+        with self.assertRaisesRegex(AdapterError, "TARGET_CLEANUP_FAILED") as context:
+            execution.close()
+        self.assertEqual(calls, ["buffers", "provider", "stream", "cuda"])
+        self.assertEqual([item["resource"] for item in context.exception.details["errors"]], calls)
+
     def test_allowlist_is_exactly_ten_private_files_and_source_fail_is_preserved(self):
         with tempfile.TemporaryDirectory() as temp:
             bundle = make_bundle(temp)
@@ -302,8 +369,9 @@ class ModelSmokeTests(unittest.TestCase):
             manifest["records"]["00006"]["input"]["path"] = str(root / "private" / "inputs" / ".." / "native_reference" / "00006.bin")
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             with self.assertRaisesRegex(AdapterError, "BUNDLE_PATH_TRAVERSAL"):
-                with patch.object(smoke, "file_sha256", side_effect=lambda path: smoke.SOURCE_ONNX_SHA256 if path.suffix == ".onnx" else hashlib.sha256(path.read_bytes()).hexdigest()):
-                    smoke.load_source_bundle(manifest_path, root)
+                with patch.object(smoke, "CANONICAL_SOURCE_MANIFEST_SHA256", hashlib.sha256(manifest_path.read_bytes()).hexdigest()):
+                    with patch.object(smoke, "file_sha256", side_effect=lambda path: smoke.SOURCE_ONNX_SHA256 if path.suffix == ".onnx" else hashlib.sha256(path.read_bytes()).hexdigest()):
+                        smoke.load_source_bundle(manifest_path, root)
 
     def test_allowlist_rejects_bytes_tampered_after_manifest_creation(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -313,8 +381,9 @@ class ModelSmokeTests(unittest.TestCase):
             payload[0] ^= 1
             input_path.write_bytes(bytes(payload))
             with self.assertRaisesRegex(AdapterError, "BUNDLE_TENSOR_HASH_MISMATCH"):
-                with patch.object(smoke, "file_sha256", side_effect=lambda path: smoke.SOURCE_ONNX_SHA256 if path.suffix == ".onnx" else hashlib.sha256(path.read_bytes()).hexdigest()):
-                    smoke.load_source_bundle(bundle.manifest_path, bundle.root)
+                with patch.object(smoke, "CANONICAL_SOURCE_MANIFEST_SHA256", bundle.test_manifest_sha256):
+                    with patch.object(smoke, "file_sha256", side_effect=lambda path: smoke.SOURCE_ONNX_SHA256 if path.suffix == ".onnx" else hashlib.sha256(path.read_bytes()).hexdigest()):
+                        smoke.load_source_bundle(bundle.manifest_path, bundle.root)
 
     def test_builder_uses_parser_fp16_and_bounded_workspace(self):
         trt = FakeTensorRT()
