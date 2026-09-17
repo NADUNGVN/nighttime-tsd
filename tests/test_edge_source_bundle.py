@@ -368,6 +368,41 @@ print(json.dumps({"native_bytes": native.nbytes, "ort_bytes": ort.nbytes, "equal
         self.assertEqual(environment["auto_install_control"], "false")
         self.assertEqual(environment["torch_threads"], {"intra_op": 2, "interop": 1})
 
+    def test_actual_runtime_accepts_integer_bookkeeping_buffers_but_requires_float_parameters(self):
+        class Tensor:
+            def __init__(self, dtype, floating):
+                self.device = "cpu"
+                self.dtype = dtype
+                self._floating = floating
+
+            def is_floating_point(self):
+                return self._floating
+
+        class Model:
+            training = True
+
+            def to(self, device):
+                self.device = device
+                return self
+
+            def eval(self):
+                self.training = False
+                return self
+
+            def parameters(self):
+                return [Tensor("torch.float32", True)]
+
+            def buffers(self):
+                return [Tensor("torch.int64", False)]
+
+        fake_model = Model()
+        fake_ultralytics = types.SimpleNamespace(YOLO=lambda _path: types.SimpleNamespace(model=fake_model))
+        runtime = bundle.UltralyticsSourceRuntime()
+        runtime.modules = {"ultralytics": fake_ultralytics}
+        loaded = runtime.load_model(Path("best.pt"))
+        self.assertIs(loaded.model, fake_model)
+        self.assertFalse(fake_model.training)
+
 
 if __name__ == "__main__":
     unittest.main()

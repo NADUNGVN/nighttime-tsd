@@ -252,10 +252,17 @@ class UltralyticsSourceRuntime:
         model.model.to("cpu")
         model.model.eval()
         parameters = list(model.model.parameters()) if hasattr(model.model, "parameters") else []
-        tensors = parameters + (list(model.model.buffers()) if hasattr(model.model, "buffers") else [])
-        invalid = [{"device": str(tensor.device), "dtype": str(tensor.dtype)} for tensor in tensors if str(tensor.device) != "cpu" or str(tensor.dtype) != "torch.float32"]
+        buffers = list(model.model.buffers()) if hasattr(model.model, "buffers") else []
+        tensors = parameters + buffers
+        invalid = []
+        for tensor in tensors:
+            device_invalid = str(tensor.device) != "cpu"
+            floating = bool(tensor.is_floating_point()) if hasattr(tensor, "is_floating_point") else str(tensor.dtype).startswith("torch.float")
+            dtype_invalid = floating and str(tensor.dtype) != "torch.float32"
+            if device_invalid or dtype_invalid:
+                invalid.append({"device": str(tensor.device), "dtype": str(tensor.dtype), "floating": floating})
         if invalid:
-            raise SourceBundleError("NATIVE_MODEL_DEVICE_DTYPE_MISMATCH", "native model parameters/buffers are not CPU float32", {"invalid": invalid[:20]})
+            raise SourceBundleError("NATIVE_MODEL_DEVICE_DTYPE_MISMATCH", "native model parameters and floating buffers are not CPU float32", {"invalid": invalid[:20]})
         if not parameters:
             raise SourceBundleError("NATIVE_MODEL_EMPTY", "native model exposes no parameters to verify CPU float32 binding")
         return model
