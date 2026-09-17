@@ -2084,3 +2084,77 @@ Sau khi operator push các artifact publishable của v2, Luna sẽ pull và h�
 kiểm inventory parent/child, stage/count, input hashes, provenance, provider,
 preprocess traces và numerical verdict; không suy diễn numeric PASS từ DONE
 hay exit 0 và không tự mở nghiên cứu tiếp theo.
+
+## L2A-041 — hậu kiểm numeric_v2 sau bounded CPU run
+
+Đã pull artifact commit `171f058520f1d8dadbcf7c1633a31c2c7e4327ad`
+(`results: precision head CPU numeric confirmation v2`) về local. Đây là
+run đúng code handoff `b2ac68c86900b82e564314b95e0dcda574733e64`; không có
+rerun, retry, export, TensorRT, GPU hay matrix nào được Luna thực hiện.
+
+### Artifact/provenance audit
+
+- Inventory parent khớp **49/49 file** giữa manifest và filesystem/Git: plan,
+  manifest, report, 2 logs, 2 model reports, 6 calibration traces, 16
+  comparison records và 20 inference traces. Không có checkpoint, ONNX,
+  raw tensor, cache, private binary hoặc file model ngoài inventory.
+- `numeric_manifest.json` SHA256 là
+  `c138e325a298cd77bd94d7e392cd298856940d9fe608f6e179306a8fa1e33201`;
+  `numeric_plan.json` là
+  `a5729af46e34fcdf758845687744189c5c9c84f7e5b8b805c209f7d35b0a91c3`;
+  `report.md` là
+  `4c4ffa7c63bea462d87187d48bd9c7d8deaf8e7e38954746dafaf2216bc5ecf2`.
+- `numeric_v1` không thay đổi so với handoff trước. Manifest v1 được link
+  trong `previous_attempt`, status `preserved_not_overwritten`, SHA256
+  `1acc866bbf4780229c7889ccbcd38b91d2bade937d4ac9f6e44d16a6bdbe825b`.
+- Fixture đúng 8 ID canonical `00006, 00009, 00028, 00036, 00054, 00061,
+  00098, 00104`; anchors đúng U42=`00006`, U43=`00029`, U44=`00000`.
+  Input tensor hash cho cùng image giữa hai model khớp; source/materialized
+  bindings đều unchanged trước/sau ở cả hai model. Không có bằng chứng
+  artifact hoặc dữ liệu inference bị trộn.
+
+### Runtime/head/protocol audit
+
+Execution status là `completed`, còn numeric verdict tách riêng là `fail`
+với counts `pass=0, fail=2, unresolved=0, not_observed=0`. Cả hai model đều
+ghi đủ `source_cpu_fp32=8/8` và `onnx_cpu=8/8`, tổng 32 forward CPU; mỗi
+model có 3 calibration anchors. Runtime observed đúng Torch
+`2.5.1+cu121`, Ultralytics `8.4.102`, NumPy `2.4.4`, pycocotools `2.0.10`,
+ORT `1.24.4`; provider duy nhất là `CPUExecutionProvider`, với
+`CUDA_VISIBLE_DEVICES=-1`.
+
+Canonical head/output đều đúng: YOLOv8n `Detect/index 22/end2end false`,
+shape `[1,7,8400]`; YOLO26n `Detect/index 23/end2end true`, shape
+`[1,300,6]`. Checkpoint và ONNX before/after unchanged và khớp accepted
+hashes. Cả 6 calibration traces ghi isolated `.npy` scratch absent sau
+load, scratch deleted, `original_adjacent_npy_used=false` và
+`original_adjacent_npy_deleted=false`.
+
+### Numerical result
+
+- **YOLOv8n:** 7/8 comparison pass, 1/8 finite `fail` tại `00009`. Chỉ raw
+  box channel fail: 2/33,600 elements, max absolute error
+  `0.00054931640625`, max relative error `0.0006751054852320675`, offenders
+  `[0,1,8004]` và `[0,1,8014]`. Score channels 0/25,200 mismatch. Theo
+  tolerance cố định `rtol=1e-4`, `atol=1e-5`, đây vẫn là fail; không nới
+  tolerance.
+- **YOLO26n:** 0/8 pass, 8/8 finite `fail`. Score channels đều 0 mismatch,
+  nhưng fixed native-row boxes có 815–1,056 mismatch trên 1,200 elements
+  mỗi ảnh, max absolute error khoảng `636.8995–639.1397`; class IDs không
+  exact với 92–180 mismatch trên 300 rows mỗi ảnh. Observed score ties là
+  176–240 trong khi reference ties là 0. Protocol cố định row index và
+  không rematching/sorting/NMS, nên kết quả này được giữ nguyên như evidence,
+  không tự sửa bằng policy hậu xử lý.
+
+### Kết luận bàn giao
+
+Numeric v2 đã chứng minh schema/head guard, input binding, CPU provider và
+lifecycle repair hoạt động đến hết forward; đây không còn là lỗi đọc schema.
+Nó **không chứng minh native/ONNX numerical equivalence**: YOLOv8n có một
+finite box mismatch nhỏ nhưng vượt ngưỡng, còn YOLO26n có divergence có hệ
+thống ở fixed-row boxes/class dù score channels khớp. Đây cũng không phải
+bằng chứng TensorRT end-to-end, calibration equivalence hay GPU behavior.
+
+Luna không sửa artifact, không đổi tolerance/reference/row policy và không
+chạy bước nghiên cứu tiếp theo. Astra cần review cách diễn giải hai kết quả
+fail này trước mọi thay đổi thiết kế hoặc rerun.
