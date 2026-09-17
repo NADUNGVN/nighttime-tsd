@@ -1351,3 +1351,79 @@ limit, zero warmup/retry/benchmark, FP16 and 1 GiB workspace, exact frozen
 float32 input bytes, output0 `[1,7,8400]` contract, and frozen source/target
 comparison policies. This entry remains **NO-GO for the sequence above** until
 the combined review explicitly authorizes the real E2 run.
+
+## L1A-016 — canonical Git binding, archive provenance and production-child evidence repair
+
+**Status:** local CPU/mock implementation and verification complete; E2 and
+SERVER-01 remain NO-GO. No SSH, source transfer, TensorRT/CUDA load, engine
+build/deserialization, model inference, benchmark, installation or device
+configuration was performed in this entry.
+
+Implementation commit: `6cce03e7125dd507702f168f98ec99fe0a8189c8`.
+The E2L1-016 inbox is included unchanged in that commit.
+
+### P1 — canonical source artifact
+
+The source binding is now the raw Git blob from accepted commit
+`34a542b2f787d7ef60dc3d3125cecad78e0c16f9`. The exact blob is 20,346 bytes
+with SHA-256
+`60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08`.
+The production constant and regression now use this value without newline
+normalization or test-time hash substitution. The original manifest bytes
+remain required before deriving the ten-file allowlist; private tensor hashes
+and finite float32 contracts remain enforced.
+
+### P2 — archive-safe code provenance
+
+The runner now supports `e2l1-code-export-v1`: a reviewed full 40-character
+commit plus exact SHA-256 hashes for the runner, comparison, adapter, provider,
+CUDA owner and error helper. `create_code_export_manifest()` creates it, and
+`code_provenance(..., archive_manifest_path=...)` verifies executing bytes
+without calling Git. This is recorded as `reviewed_archive_manifest`, not
+observed `git HEAD`. A normal checkout may use `git_head`, but `--commit` uses
+the exact full revision. Provenance is present in public plan, success
+manifest and failure evidence; changed helper bytes are rejected before
+runtime work.
+
+### P3/P4 — child lifecycle and evidence
+
+The parent now exercises the same child-stage contract used for production E2:
+child build and inference return durable result JSON plus JSONL events,
+including parser/build boundaries and per-enqueue/D2H-copy counters. Parent
+failure handling reconciles result/event files, counters and private partial
+output hashes on every exit. Parent deadline/termination facts are never
+replaced by a child result error.
+
+Timeout teardown is bounded at every wait/drain step. On POSIX, TERM then KILL
+are sent to the owned process group/session; termination confirmation and
+cleanup-unconfirmed are separate fields. No retry or unrelated-process kill is
+performed. Cleanup preserves generic or structured primary errors, records all
+cleanup failures, and reports cleanup-only failure as primary.
+
+### Verification
+
+The focused workflow suite is **21/21 PASS**. It includes the raw Git blob
+regression, a real no-`.git` archive rehearsal with changed-helper rejection,
+child parse/build success and parse-success/build-failure counters, parent
+production-child success, timeout partial-output/counter reconciliation,
+bounded timeout escalation, identity-before-runtime, cleanup aggregation,
+manifest tamper rejection, and Python 3.8 compile/AST checks. The operator-
+reported edge regression is **99/99 PASS**. Repository-wide discovery remains
+separately environment-limited by pre-existing missing `numpy`/`PIL` and
+dataset fixtures; those unrelated tests are not counted as E2 evidence.
+
+### Package rehearsal and gate
+
+The supported route is a scoped archive plus export manifest; no `.git`
+directory is required on E2. The reviewed package revision is concrete:
+`6cce03e7125dd507702f168f98ec99fe0a8189c8`. The export manifest binds the
+six required helper files and is passed with `--archive-manifest`; the runner
+verifies the extracted bytes before runtime work.
+
+The exact existing E2 Python 3.8 interpreter path and accepted transferred
+source-bundle root are still operator inputs. Therefore no placeholder command
+is authorized for execution and no new server/device authority is inferred.
+The L1A-015 source staging/transfer allowlist, FP16/1 GiB workspace,
+three-enqueue, zero-warmup, zero-retry and frozen comparison policies remain
+unchanged. Real E2/server transfer/build/inference stays **NO-GO** pending
+combined review and those two path confirmations.
