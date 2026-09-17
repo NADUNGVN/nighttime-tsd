@@ -1708,3 +1708,77 @@ G6/G5 bounded audit is complete and the scalar metadata defect is repaired.
 This does not authorize full export retry, calibration-cache generation,
 TensorRT build, benchmark or the 78-session matrix. Await Astra's next
 reviewed protocol before any numerical work.
+
+## L2A-035 — CPU numeric/preprocessing confirmation package
+
+Đã thực hiện A2L-031 trên graph worktree. Implementation/protocol commit là
+`4b9dc401143fae1ca5b200019ac725ffa567adbd` (`diagnostic: add CPU numeric
+confirmation harness`), đã push lên `origin/master` bằng tài khoản GitHub
+`NADUNGVN`. Commit này không thay đổi config, weights, ONNX, graph-v4 hoặc
+numerical protocol lịch sử.
+
+### Đã triển khai
+
+- `scripts/verify_precision_head_confirmation_numeric.py`: parent CPU-only
+  kiểm readiness, graph-v4, checkpoint/ONNX hash, fixture và no-overwrite;
+  sau đó dispatch hai child model-specific tuần tự. Child mới import Torch,
+  Ultralytics và ONNX Runtime trong CPU-hidden environment, không import
+  TensorRT và không gọi exporter/calibration loader.
+- Fixture forward cố định là 8 ảnh đầu tiên khác nhau của U42 theo manifest:
+  `00006, 00009, 00028, 00036, 00054, 00061, 00098, 00104`. Trace
+  preprocessing thêm ảnh đầu của U42/U43/U44; source/materialized image
+  hash và thứ tự được bind trước forward, labels/test không được đọc.
+- Trace dùng pinned Ultralytics producer path: `imread` BGR, `LetterBox`
+  với observed model stride, RGB, BCHW contiguous, CPU float32 `/255`,
+  batch. Ghi stage shape/dtype/range/hash, ratio/padding/interpolation và
+  source hash của producer/calibration helper; không materialize 3072 tensor.
+- So sánh YOLOv8n raw primary `[1,7,8400]`; YOLO26n one2one primary
+  `[1,300,6]`, không dùng one2many/NMS. Cùng một tensor verified cấp cho hai
+  runtime. YOLO26 class ID phải finite integer `0..2`, so sánh exact ở native
+  row index; tie chỉ ghi nhận, không rematch/sort.
+
+### Tests và giới hạn local
+
+- Numeric package: **16/16 PASS**.
+- Graph regression: **23 tests, 1 explicit skip** vì real ONNX fixture không
+  có dependency trong local measurement environment; đây không phải pass.
+- Preserved graph audit regression: **4/4 PASS**.
+- `py_compile` và `git diff --check`: PASS.
+- Có chạy một test preprocessing với Ultralytics CPU thật trên ảnh tổng hợp;
+  không export, không build TensorRT, không benchmark và không dùng GPU.
+  Local measurement environment của test producer là Torch `2.8.0+cu129`,
+  Ultralytics `8.4.102`, NumPy `2.4.2`, ONNX Runtime `1.24.3`; đây chỉ là
+  test helper boundary, không phải xác nhận server runtime. Server runner sẽ
+  bắt buộc Torch/Ultralytics/NumPy/pycocotools theo accepted config và ghi
+  ONNX Runtime version/provider thực tế.
+
+### Tolerances đã khóa trước server output
+
+- Float32 raw channels/boxes/scores: `rtol=1e-4`, `atol=1e-5`; báo mismatch
+  count, max absolute/relative, linear `min/p50/p95/p99/max` và locations.
+- YOLO26 class IDs: finite, integer, inclusive `0..2`, exact equality.
+- Shape/dtype/wrong branch/non-finite/provider contract: `unresolved`.
+- Finite numeric mismatch: `fail`; tất cả 8 comparison pass: `pass`.
+- Không AP threshold, engine-hash equality, NMS, rematching, clipping hoặc
+  tuning được dùng để biến kết quả thành pass.
+
+### Server và artifact
+
+Chưa chạy server/GPU; output numeric chưa tồn tại và chưa có artifact để hậu
+kiểm. Ước lượng server: 2 CPU threads, batch 1, 16 source + 16 ONNX forward
+cho hai model và 3 trace anchor mỗi model; dự kiến khoảng **2–10 phút** tùy
+CPU/runtime, ghi thời gian thực trong log. Không yêu cầu GPU trống hay desktop
+confirmation vì đây là CPU diagnostic.
+
+Candidate foreground command đã ghi trong
+`docs/PRECISION_HEAD_CONFIRMATION_NUMERIC_V1.md`, nhưng **chưa được phép chạy**
+cho đến khi Astra review package. Sau khi được duyệt, operator chỉ push
+`numeric_plan.json`, `numeric_manifest.json`, `report.md`, hai model report
+(hoặc `failure.json`) và hai log; không push PT/ONNX/raw tensor/cache/private
+binary. Luna sẽ pull, kiểm hash/input/provider/forward count/preprocessing và
+dừng ở handoff review, không tự mở nghiên cứu tiếp theo.
+
+Vấn đề cần Astra quyết định: chấp nhận `rtol=1e-4/atol=1e-5` và fixed-row
+YOLO26 policy; chấp nhận ONNX Runtime version là observed provenance thay vì
+historical readiness lock; và cho phép candidate CPU command sau khi review
+implementation này. L2A-035 không tuyên bố numeric/server pass.

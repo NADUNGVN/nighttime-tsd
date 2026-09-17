@@ -1138,3 +1138,82 @@ The six additional end2end operators are accepted as a **provisional structural 
 ### Handoff
 
 Luna fixes G4, adds complete index tests and the bounded diagnostic path if needed, updates protocol, records **L2A-031**, and pushes scoped files including this entry. Provide exact CPU diagnostic commands and artifact staging paths, not a v3 full-export command. After operator diagnostic artifacts, append a separate evidence report for Astra. Full export v3, calibration-cache generation, 84 builders/78 captures and all-15 scaling remain NO-GO pending that review. Do not repeat successful v8 export merely to investigate v26 naming. Edge Luna1 work is independent. Astra leaves this file unstaged; Luna owns commit/push.
+
+## A2L-030 — accept G5 collection; resolve missing scalar metadata, not a model change
+
+Review 2026-09-17: artifact commit `5b410204d12751845c9f6f38b7d9d4c883ab8c5e`, report `5ff517e71bc96d0580b006dc3a05dbd669b8c492`, implementation `ab8dbfb`. Astra reran graph + diagnostic tests **24/24 PASS**. Exactly five Git artifacts; per-model reports equal the corresponding manifest objects. Four recorded source/config hashes match canonical code at ab8dbfb. ONNX before/after hash and size equality is present for both models; no local binary exists to independently rehash. No export/forward/GPU/TensorRT was run by Astra.
+
+**ACCEPT audit-only evidence collection.** v8 structural mapping verified; v26 source-to-Conv matches now complete (bbox9/class15), with one remaining structural error at `/model.23/Mod`. This is not evidence of numerical model failure. GO bounded local loader repair and subsequent operator CPU re-audit of the same binaries; no full export, no scored matrix.
+
+### G6 — the direct failure is missing constant shape metadata
+
+Actual v3 artifact records Mod inputs `/model.23/TopK_1_output_1` shape `[1,300]` and `/model.23/Constant_20_output_0` shape `null`, output `[1,300]`, `fmod=0`. The second input has recorded constant value **3**. `_load_onnx` reads initializer values but `graph_tensor_shapes`/dtype collection only walk graph input/output/value_info; initializer metadata can therefore be omitted. Do not replace unknown shapes with scalars globally.
+
+Astra replayed the exact Mod node and recorded constant through `_downstream_semantic_audit`: null shape reproduces `mod_semantics_unresolved`; adding only `shape=[]` to this constant in memory makes the isolated structural check pass. This is a JSON-based diagnostic, not binary verification or producer numeric equivalence. Local reviewer environment lacks ONNX, so a real-protobuf fixture was not executed by Astra.
+
+Official ONNX references checked for this diagnosis: [Mod version13, applicable at opset17](https://onnx.ai/onnx/operators/onnx__Mod.html#mod-13) supports multidirectional broadcasting; [ONNX IR tensor/static-shape definition](https://onnx.ai/onnx/repo-docs/IR.html#static-tensor-shapes) distinguishes explicit scalar `[]` from missing/unknown rank. Scalar3 modulo on nonnegative integer class-selection indices is consistent with extracting one of three class indices, but full selection/output equivalence remains to be validated, not inferred from shape alone.
+
+Luna implementation scope:
+
+1. Collect initializer and Constant tensor **actual dims and data_type** from protobuf into shape/dtype metadata, preserving explicit `[]`, `[1]`, zero dimensions, and missing rank as different cases. Handle metadata conflicts explicitly instead of silently overriding. Do not derive dims from a flattened value list or hardcode `/Constant_20` as scalar. Preserve existing numerical graph and binary bytes.
+2. Persist small constant metadata and Mod input/output types/value/lineage evidence in the diagnostic. Verify the observed supported integer mode and divisor against the actual three-class contract; unknown types/controls remain unresolved. Do not relax unknown-op or shape rules globally. Static structural acceptance is not numeric certification.
+3. Tests: scalar initializer3 + `[1,300]` indices; one-element vector; missing shape; zero dimension; conflicting metadata; wrong/zero divisor; unsupported mode/type; real checker/shape-inference synthetic ONNX fixture when existing local dependencies permit. No frozen-model export, no auto-install to get this test. Keep explicit skips reported rather than treating them as passes. Retain all G4 index/ambiguity tests.
+4. After local tests pass, GO operator-run **same audit-only helper** against unchanged v2 binaries, output `results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/`, exclusive fresh output, CPU hidden/foreground. Bind expected v8 ONNX `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603` and v26 `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc` before and after; mismatch stops. No forward/export/cache/build/scoring or v2/v3 overwrite. This entry authorizes that bounded re-audit after the fix/tests, not a new full export; Luna supplies one-line commands, user runs server and pushes artifacts.
+
+### Correct L2A-032 hash wording without rewriting historical artifacts
+
+All five SHA256 values quoted in L2A-032 match **Windows working-tree CRLF bytes**, not canonical Git blobs. Astra computed the canonical hashes from raw `git show 5b410204:<path>` bytes:
+
+| Relative file | Canonical Git blob SHA256 |
+|---|---|
+| audit_plan.json | b6a4ec4ba2e122cf988915dd3103f0e80c2967849499c4c0fab98f0629e9e9d6 |
+| graph_audit_manifest.json | e7aaa6a80158b1b341aee0867b4adf870bbb6b3b07fa47d704d8b70f8ec69d8d |
+| models/yolov8n/graph_audit.json | 588364af696fc53953b9a00bc1d89eb55cad349e667ffded789c31627f76dd04 |
+| models/yolo26n/graph_audit.json | 0112682f9295b65d9d3d371a85e6c09b76fd9946e508109b6d354407bbe175ab |
+| report.md | 60341ba0aa8547e29e23f14eb5a64df391a41eb3d56cabaf3b1fb25021509f84 |
+
+Append a correction distinguishing canonical Git, local checkout and server bytes. Do not claim direct original-server file-byte equality without a server file hash inventory; internal ONNX hash observations and matching recorded code hashes remain valid evidence. No mass line-ending rewrite or global Git config change needed.
+
+Luna records **L2A-033** for implementation/tests/hash correction and exact diagnostic command, then an artifact addendum after operator run. Push scoped files including this entry. No additional full-export gate cycle is needed for this bounded read-only-input diagnostic. Next numerical/preprocess/TRT work needs a separate reviewed package; plan it in parallel if useful but do not execute it automatically. Astra leaves the handoff unstaged.
+
+## A2L-031 — accept graph-v4 structural gate; implement bounded CPU numerical/preprocessing verification
+
+Review 2026-09-17: artifact `6780b813c5f1cb2d915b72832eedd79525eaecbd`, implementation `0210a26`, report `a292c956a5ea8ba21c7b5ff727c62de3dc7e5dc3` / L2A-034. Astra independently verified all **5 canonical artifact SHA256 values** against the report; both standalone model reports equal their manifest entries; all4 recorded implementation/config hashes match canonical code. Both models record mapping verified, no mapping errors and expected/before/after ONNX hashes equal. YOLO26 Mod has explicit scalar3/int64, fmod0 and compatible integer input/output lineage. Astra reran graph/diagnostic suite: **27 run, 26 passed, 1 explicit skip** (local ONNX dependency absent). No local real-protobuf execution, frozen-model forward, server SSH or GPU execution was performed by Astra.
+
+**ACCEPT G5/G6 and close the structural graph-mapping gate for these exact ONNX binaries.** Do not repeat graph exports/audits absent a changed input or new concrete issue. Acceptance is structural, not proof of source-output numerical equivalence, calibration preprocessing equivalence or TensorRT execution. Preserve v2/v3/v4 and existing frozen weights unchanged.
+
+### Next task: one complete implementation + protocol package, not another report-only round
+
+Owner main Luna. **GO local code/CPU fixture tests/protocol; actual frozen-model numerical execution remains server-operator work after Astra implementation review.** This package must cover both CPU numerical checks and preprocessing evidence, so the operator can eventually run one foreground command rather than a sequence of separate experiments. No TensorRT import/parser/build in this package, no new ONNX export, cache generation, AP evaluation or bootstrap. No official test or negative-test image/label reads.
+
+Proposed owned files: `scripts/verify_precision_head_confirmation_numeric.py`, dedicated tests, `docs/PRECISION_HEAD_CONFIRMATION_NUMERIC_V1.md`, additive config if needed. Reuse audited helpers without invoking their GPU/export lifecycle or changing accepted historical helper/config hashes to make results pass. Keep parent CPU-only and model-specific isolated children. Existing config/schedule remains84 builders/78 scored captures; this CPU diagnostic is separately accounted and does not open them.
+
+### Inputs and fixed workload
+
+- Bind accepted readiness and graph-v4 commit/files, exact frozen checkpoints and the two accepted ONNX hashes from A2L-030. Verify actual bytes before/after; no substitute export or model download. Recheck required current source/runtime versions and CPU execution provider availability; no dependency auto-install or fallback to GPU. CPU-only does not require GPU idle.
+- Use a small deterministic fixture of **the first8 distinct train image IDs in canonical U42 manifest order**, bound to accepted train-only materialization/content hashes, for both models. No image/label/outcome-based selection. Record IDs, original image sizes, content hashes and selection rule before any forward. Do not claim this small fixture is a dataset-wide accuracy test.
+- Preprocessing trace additionally covers the first image in each of U42/U43/U44 using the actual pinned producer path. Reuse tensor traces when IDs coincide, but keep selection bindings. Inspect full list ordering through metadata if needed; do not materialize all3072 calibration tensors just to resolve the recipe. No calibration cache is created.
+
+### P1 — preprocessing equivalence and concrete recipe
+
+Trace actual decode/color order, resize/letterbox ratio and padding, interpolation/rounding, layout, dtype/range/normalization, batch shape and deterministic ordering. Bind exact source/version hashes of functions used. Capture stage shapes/dtypes and tensor-byte hashes; retain small diagnostic tensors server-side only where needed. Compare the tensor supplied to the source reference with that supplied to ONNX; they must be the same verified tensor for the numerical comparison.
+
+Do not assume a conventional LetterBox recipe matches the pinned Ultralytics producer. Inspect the real code path and separate calibration loader preprocessing from dev/inference preprocessing; if they legitimately differ, record both and the intended eventual pipeline. Do not silently change preprocessing to force parity or call unresolved fields verified. The old `uniform_build_repeat.prepare` invokes exports/environment logic: never dispatch it as a convenient loader. Use scoped producer functionality and no writable cache side effects in original data directories; private scratch if unavoidable.
+
+### P2 — source FP32 versus existing ONNX on CPU
+
+Implement PyTorch CPU reference and explicitly selected ONNX CPU runtime, both eval/no-grad, same input tensor, pinned versions/providers/options. Work on an in-memory/private reference only; preserve checkpoint and graph bytes. Distinguish native head output from export-mode output. Inspect the pinned export semantics (including fusion, output packing, coordinate convention and end2end behavior) and record any reference-side export-mode flags needed for a like-for-like comparison. No regeneration of the ONNX is authorized. Do not compare v8 raw channels with post-NMS detections, or v26 one2many debug output with its one2one primary output.
+
+For v8 record raw `[1,7,8400]` channel-wise box/score differences; for v26 record `[1,300,6]` detections and class/score/box differences. Define ranking/tie handling before results: raw row comparison must be retained, and any justified tie-aware matching is separately reported, class-aware and one-to-one, not arbitrary rematching to hide changed outputs. Preserve confidence and max-det semantics; no double NMS or model-policy tuning. Coordinates may be outside image bounds before native clipping: validate at the correct pipeline stage, do not silently clamp raw output just to meet the earlier declared `[0,640]` assumption. Clarify any stage-specific validator correction in this package.
+
+Protocol must propose exact numerical tolerances, comparison domains, finite/dtype/class/integer requirements, and pass/unresolved/fail rules **before server outputs are observed**, with justification. No equality-of-engine-hash requirement and no AP threshold for this diagnostic. Report maxima/quantiles/counts and offending locations, not only allclose. Any tie-dependent ambiguity remains explicit. Shape or aggregate mAP equality alone cannot certify equivalence. Small CPU synthetic fixtures may exercise matching/math; frozen-model forward still waits for server authorization.
+
+### Outputs, tests and handoff
+
+Exclusive new root proposed `results/measurement_audit_v1/precision_head_confirmation_numeric_v1/`, manifest linking all reviewed inputs/code, fixture plan, actual provider/environment, source/ONNX hash observations, preprocessing traces, per-model/per-image comparison summaries and complete failure diagnostics. Small tensors/raw outputs may remain private server artifacts with hashes; JSON/report/log and explicit file inventory are publishable. Record forward counts separately; `export_performed=false`, `build_performed=false`, `scored_run_authorized=false`. Do not promote graph-only fields retroactively in earlier artifacts.
+
+Tests should cover real helper boundaries with CPU stubs, identical tensor input to both paths, provider/weight/ONNX/fixture mismatches, wrong native-output branch, same-shape numerical corruption, ranking ties and wrong classes, finite values, preprocessing discrepancies, no-overwrite, partial failure persistence, no-export/build dispatch and CPU parent/child lifecycle. Test intentional failures as well as success. Missing ONNX fixture dependency is an explicit skip, not pass; dataset-dependent old suite failures remain distinguished from scoped test results. Do not spend this task rewriting unrelated tests or older studies.
+
+Luna writes **L2A-035** with implementation commit, tests (pass/fail/skip separately), locked proposed tolerances, CPU resource/time estimate, exact candidate foreground command and scoped artifact instructions. Include this entry and previously unstaged Astra instructions in the scoped push, without modifying their content. **Do not give a command as authorized for execution until Astra reviews this complete package.** User runs server; Luna cannot SSH. Astra owns review/gates, Luna implementation/push.
+
+Luna1 continues E2L1-006 local Jetson adapter/smoke package independently; no new edge task needed from this graph acceptance. No device build/inference or78-scored matrix is authorized by A2L-031. After numerical/preprocess evidence is accepted, TensorRT compatibility and bounded pilot can be considered together rather than automatically scaling.
