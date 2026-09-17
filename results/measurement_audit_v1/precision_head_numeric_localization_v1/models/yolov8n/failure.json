@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_numeric_localization_v1",
+  "model": "yolov8n",
+  "image_id": "00009",
+  "status": "failed",
+  "numeric_status": "fail_preserved_not_observed",
+  "error_type": "LocalizationUnresolved",
+  "error": "yolov8n.native.boxes has no channel axis 4: [1, 64, 8400]",
+  "stage": "head_validated",
+  "stage_history": [
+    {
+      "sequence": 0,
+      "stage": "child_started"
+    },
+    {
+      "sequence": 1,
+      "stage": "runtime_loading"
+    },
+    {
+      "sequence": 2,
+      "stage": "runtime_loaded"
+    },
+    {
+      "sequence": 3,
+      "stage": "binary_binding"
+    },
+    {
+      "sequence": 4,
+      "stage": "preprocessed",
+      "image": "train/images/00009.jpg"
+    },
+    {
+      "sequence": 5,
+      "stage": "head_validated",
+      "head": {
+        "type": "Detect",
+        "index": 22,
+        "end2end": false
+      }
+    }
+  ],
+  "forward_counts": {
+    "native_model_forwards": {
+      "attempted": 1,
+      "completed": 1
+    },
+    "onnx_original_session_runs": {
+      "attempted": 0,
+      "completed": 0
+    },
+    "onnx_derived_session_runs": {
+      "attempted": 0,
+      "completed": 0
+    }
+  },
+  "partial_files_scope": "models/yolov8n/owned_paths_only",
+  "partial_files": [],
+  "no_silent_resume": true,
+  "audit_flags": {
+    "export_performed": false,
+    "tensorRT_imported": false,
+    "accepted_onnx_modified": false,
+    "gpu_used": false,
+    "scored_run_authorized": false,
+    "matrix_opened": false
+  }
+}

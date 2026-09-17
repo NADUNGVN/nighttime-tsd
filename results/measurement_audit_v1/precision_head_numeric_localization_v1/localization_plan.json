@@ -1,0 +1,2483 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_numeric_localization_v1",
+  "status": "dispatching_two_bounded_cases",
+  "output_root": "results/measurement_audit_v1/precision_head_numeric_localization_v1",
+  "numeric_v2_root": "results/measurement_audit_v1/precision_head_confirmation_numeric_v2",
+  "numeric_v1_root": "results/measurement_audit_v1/precision_head_confirmation_numeric_v1",
+  "numeric_v2_execution_commit": "b2ac68c86900b82e564314b95e0dcda574733e64",
+  "numeric_v2_strict_verdict": {
+    "status": "fail",
+    "counts": {
+      "pass": 0,
+      "fail": 2,
+      "unresolved": 0,
+      "not_observed": 0
+    },
+    "execution_and_numeric_are_separate": true
+  },
+  "numeric_v2_target_records": {
+    "yolov8n": {
+      "selection": "U42",
+      "manifest_order": 1,
+      "image": "train/images/00009.jpg",
+      "image_id": "00009",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "357c0cc87ea2b4bfa56c1eca53bd54f5970bc1ea67b660d293a8bc4a9f62a9f0"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "a44b379cbdc050e6bcb2f2dd3d145c5b0021de6396a97110f78a7fa5ba4dca26"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "dtype": "float32",
+        "sha256": "9e4eb1efe425845bc2cac9ad2c0751fb209120fee82305649d2b813d732c67ec"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "fail",
+        "domain": "yolov8n_raw_primary_fixed_channel_spans",
+        "shape": [
+          1,
+          7,
+          8400
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "scores": [
+            4,
+            7
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "fail",
+            "domain": "yolov8n_raw_boxes_channels",
+            "shape": [
+              1,
+              4,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 2,
+            "element_count": 33600,
+            "max_abs": 0.00054931640625,
+            "max_relative": 0.0006751054852320675,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 6.103515625e-05,
+              "p99": 0.00018310546875,
+              "max": 0.00054931640625
+            },
+            "relative_quantiles": {
+              "element_count": 33600,
+              "finite_count": 33600,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 2.104261584994951e-06,
+              "p99": 3.859798231701953e-06,
+              "max": 0.0006751054852320675
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": [
+              [
+                0,
+                1,
+                8004
+              ],
+              [
+                0,
+                1,
+                8014
+              ]
+            ]
+          },
+          "scores": {
+            "status": "pass",
+            "domain": "yolov8n_raw_score_channels",
+            "shape": [
+              1,
+              3,
+              8400
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 25200,
+            "max_abs": 1.1324882507324219e-06,
+            "max_relative": 5.7383719496477354,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 3.777072210553456e-09,
+              "p95": 4.7237512745823534e-08,
+              "p99": 7.201481562191245e-08,
+              "max": 1.1324882507324219e-06
+            },
+            "relative_quantiles": {
+              "element_count": 25200,
+              "finite_count": 25200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 1.0,
+              "p95": 1.0,
+              "p99": 2.046355972117281,
+              "max": 5.7383719496477354
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 2,
+        "element_count": 58800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference"
+      }
+    },
+    "yolo26n": {
+      "selection": "U42",
+      "manifest_order": 0,
+      "image": "train/images/00006.jpg",
+      "image_id": "00006",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          300,
+          6
+        ],
+        "dtype": "float32",
+        "sha256": "97caa7efc9c14f2ff922e11fa7934ae169746f2d825b9f518146a54bded25592"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          300,
+          6
+        ],
+        "dtype": "float32",
+        "sha256": "e11c28fa7d129067d23d6ca2a3bcd4f82b166a01032e22b8274b3e579b892e65"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "fail",
+        "domain": "yolo26n_native_detections_fixed_row",
+        "shape": [
+          1,
+          300,
+          6
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "score": [
+            4,
+            5
+          ],
+          "class_id": [
+            5,
+            6
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "fail",
+            "domain": "yolo26n_fixed_row_boxes",
+            "shape": [
+              1,
+              300,
+              4
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 1056,
+            "element_count": 1200,
+            "max_abs": 639.1396698951721,
+            "max_relative": 45738.84515864052,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 1200,
+              "finite_count": 1200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 162.7695083618164,
+              "p95": 581.5872869014739,
+              "p99": 636.8470858955384,
+              "max": 639.1396698951721
+            },
+            "relative_quantiles": {
+              "element_count": 1200,
+              "finite_count": 1200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.614497907968214,
+              "p95": 254.62970911103972,
+              "p99": 2884.1369278780567,
+              "max": 45738.84515864052
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": [
+              [
+                0,
+                10,
+                0
+              ],
+              [
+                0,
+                10,
+                1
+              ],
+              [
+                0,
+                10,
+                2
+              ],
+              [
+                0,
+                10,
+                3
+              ],
+              [
+                0,
+                11,
+                0
+              ],
+              [
+                0,
+                11,
+                1
+              ],
+              [
+                0,
+                11,
+                2
+              ],
+              [
+                0,
+                11,
+                3
+              ],
+              [
+                0,
+                21,
+                0
+              ],
+              [
+                0,
+                21,
+                1
+              ]
+            ]
+          },
+          "score": {
+            "status": "pass",
+            "domain": "yolo26n_fixed_row_scores",
+            "shape": [
+              1,
+              300,
+              1
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 300,
+            "max_abs": 6.849541023257188e-08,
+            "max_relative": 0.09944547297735831,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 300,
+              "finite_count": 300,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 1.6410695025115274e-10,
+              "p50": 1.2551197414722992e-08,
+              "p95": 3.9372102378365524e-08,
+              "p99": 5.5195556569742614e-08,
+              "max": 6.849541023257188e-08
+            },
+            "relative_quantiles": {
+              "element_count": 300,
+              "finite_count": 300,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 6.317618657039795e-08,
+              "p50": 0.021477954950796005,
+              "p95": 0.07546253527290037,
+              "p99": 0.09622291251707601,
+              "max": 0.09944547297735831
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 1236,
+        "element_count": 1800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference",
+        "class_ids_exact": false,
+        "class_mismatch_count": 180,
+        "tie_count_reference_scores": 0,
+        "tie_count_observed_scores": 240,
+        "tie_handling": "fixed native row index; ties are reported and never rematched"
+      }
+    }
+  },
+  "numeric_v2_model_records": {
+    "yolov8n": {
+      "numeric_status": "fail",
+      "forward_counts": {
+        "source_cpu_fp32": {
+          "attempted": 8,
+          "completed": 8
+        },
+        "onnx_cpu": {
+          "attempted": 8,
+          "completed": 8
+        }
+      },
+      "head": {
+        "type": "Detect",
+        "index": 22,
+        "end2end": false
+      }
+    },
+    "yolo26n": {
+      "numeric_status": "fail",
+      "forward_counts": {
+        "source_cpu_fp32": {
+          "attempted": 8,
+          "completed": 8
+        },
+        "onnx_cpu": {
+          "attempted": 8,
+          "completed": 8
+        }
+      },
+      "head": {
+        "type": "Detect",
+        "index": 23,
+        "end2end": true
+      }
+    }
+  },
+  "fixture": {
+    "yolov8n": {
+      "selection": "U42",
+      "manifest_order": 1,
+      "image": "train/images/00009.jpg",
+      "image_id": "00009",
+      "expected_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+      "expected_bytes": 120736,
+      "materialized_expected_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+      "rule": "first 8 distinct train image IDs in canonical U42 manifest order"
+    },
+    "yolo26n": {
+      "selection": "U42",
+      "manifest_order": 0,
+      "image": "train/images/00006.jpg",
+      "image_id": "00006",
+      "expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+      "expected_bytes": 63138,
+      "materialized_expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+      "rule": "first 8 distinct train image IDs in canonical U42 manifest order"
+    }
+  },
+  "models": {
+    "yolov8n": {
+      "checkpoint": {
+        "expected": {
+          "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+          "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+          "bytes": 6260963
+        },
+        "observed": {
+          "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 6260963,
+          "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+        }
+      },
+      "onnx": {
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+        "expected_sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603",
+        "before": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 12266841,
+          "sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+        }
+      },
+      "graph_contract": {
+        "audit_model_report": "precision_head_confirmation_graph_audit_v4/models/yolov8n/graph_audit.json",
+        "mapping_status": "verified",
+        "output_shape": [
+          1,
+          7,
+          8400
+        ]
+      },
+      "accepted_contract": {
+        "label": "yolov8n",
+        "checkpoint": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+        "expected_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+        "expected_bytes": 6260963,
+        "checkpoint_exists": true,
+        "checkpoint_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+        "checkpoint_bytes": 6260963,
+        "device": "cpu",
+        "probe_requested": true,
+        "export_performed": false,
+        "tensorrt_imported": false,
+        "gpu_used": false,
+        "mapping_status": "pytorch_structure_verified_onnx_deferred",
+        "runtime_compatibility": {
+          "status": "cpu_probe_supported",
+          "native_head_probe_supported": true,
+          "supported_ultralytics": "8.4.102",
+          "observed_cpu_packages": {
+            "torch": "2.5.1+cu121",
+            "ultralytics": "8.4.102",
+            "numpy": "2.4.4",
+            "pycocotools": "2.0.10"
+          },
+          "expected_server_packages": {
+            "torch": "2.5.1+cu121",
+            "ultralytics": "8.4.102",
+            "numpy": "2.4.4",
+            "pycocotools": "2.0.10"
+          },
+          "package_mismatches": [],
+          "missing_packages": [],
+          "blocking_errors": [],
+          "server_runtime_status": "not_verified_by_cpu_readiness",
+          "server_gpu_cuda_tensorrt_observed": false,
+          "server_runtime_note": "Torch/NumPy/package differences are recorded separately; no CUDA or TensorRT verification is inferred here."
+        },
+        "status": "verified",
+        "errors": [],
+        "head": {
+          "type": "Detect",
+          "index": 22,
+          "end2end": false,
+          "available_branches": [
+            "cv2",
+            "cv3"
+          ]
+        },
+        "active_branches": [
+          "cv2",
+          "cv3"
+        ],
+        "inactive_branches": [],
+        "active_convolution_mapping": {
+          "cv2": [
+            {
+              "name": "model.22.cv2.0.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv2.0.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv2.0.2",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv2.1.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 128,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv2.1.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv2.1.2",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv2.2.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 256,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv2.2.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv2.2.2",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            }
+          ],
+          "cv3": [
+            {
+              "name": "model.22.cv3.0.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv3.0.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv3.0.2",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 3,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv3.1.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 128,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv3.1.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv3.1.2",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 3,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv3.2.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 256,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv3.2.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.22.cv3.2.2",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 3,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            }
+          ]
+        },
+        "mapping_hash": "e6e92e5808a444d1c7207b823d617be39ee1cb08ea9bc29629104d51ca5374a7",
+        "forward_summary": {
+          "kind": "tuple",
+          "length": 2,
+          "items": [
+            {
+              "kind": "tensor",
+              "shape": [
+                1,
+                7,
+                8400
+              ],
+              "dtype": "torch.float32"
+            },
+            {
+              "kind": "dict",
+              "keys": [
+                "boxes",
+                "scores",
+                "feats"
+              ],
+              "values": {
+                "boxes": {
+                  "kind": "tensor",
+                  "shape": [
+                    1,
+                    64,
+                    8400
+                  ],
+                  "dtype": "torch.float32"
+                },
+                "scores": {
+                  "kind": "tensor",
+                  "shape": [
+                    1,
+                    3,
+                    8400
+                  ],
+                  "dtype": "torch.float32"
+                },
+                "feats": {
+                  "kind": "list",
+                  "length": 3,
+                  "items": [
+                    {
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        64,
+                        80,
+                        80
+                      ],
+                      "dtype": "torch.float32"
+                    },
+                    {
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        128,
+                        40,
+                        40
+                      ],
+                      "dtype": "torch.float32"
+                    },
+                    {
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        256,
+                        20,
+                        20
+                      ],
+                      "dtype": "torch.float32"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        "head_output_evidence": {
+          "head_type": "Detect",
+          "head_index": 22,
+          "end2end": false,
+          "active_branches": [
+            "cv2",
+            "cv3"
+          ],
+          "inactive_branches": [],
+          "output_kind": "decoded_raw_plus_head_dict",
+          "primary_output_shape": [
+            1,
+            7,
+            8400
+          ],
+          "primary_output_dtype": "torch.float32",
+          "debug_paths": [
+            "boxes",
+            "scores",
+            "feats"
+          ],
+          "boxes_shape": [
+            1,
+            64,
+            8400
+          ],
+          "scores_shape": [
+            1,
+            3,
+            8400
+          ],
+          "feature_shapes": [
+            [
+              1,
+              64,
+              80,
+              80
+            ],
+            [
+              1,
+              128,
+              40,
+              40
+            ],
+            [
+              1,
+              256,
+              20,
+              20
+            ]
+          ],
+          "postprocess": "none_in_model_head_output",
+          "nms": "not_in_model_head_output",
+          "primary_output_representation": "tuple_tensor_plus_dict",
+          "active_convolution_mapping": {
+            "cv2": [
+              {
+                "name": "model.22.cv2.0.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv2.0.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv2.0.2",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv2.1.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 128,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv2.1.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv2.1.2",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv2.2.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 256,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv2.2.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv2.2.2",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              }
+            ],
+            "cv3": [
+              {
+                "name": "model.22.cv3.0.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv3.0.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv3.0.2",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 3,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv3.1.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 128,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv3.1.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv3.1.2",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 3,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv3.2.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 256,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv3.2.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.22.cv3.2.2",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 3,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              }
+            ]
+          },
+          "mapping_status": "pytorch_structure_verified_onnx_deferred"
+        },
+        "probe": {
+          "method": "Ultralytics frozen PyTorch model CPU eval/no_grad dummy input",
+          "input_shape": [
+            1,
+            3,
+            640,
+            640
+          ],
+          "input_dtype": "torch.float32",
+          "parameters_on_cpu": true,
+          "cuda_calls": false
+        },
+        "constraints": {
+          "bbox_fp32_requested": "deferred_to_server_onnx_prepare",
+          "classification_fp32_requested": "deferred_to_server_onnx_prepare",
+          "effective_precision": "unknown"
+        }
+      },
+      "reference_semantics": {
+        "model": "yolov8n",
+        "native_reference": {
+          "mode": "frozen PyTorch model.model.to(cpu).float().eval() under torch.no_grad",
+          "dtype": "explicit float32 primary output",
+          "head_contract": {
+            "head_type": "Detect",
+            "head_index": 22,
+            "end2end": false
+          },
+          "forward_counts": {
+            "native_primary": 0,
+            "export_reference": 0
+          },
+          "fusion": "not_reproduced_in_native_reference; any historical exporter fusion belongs to the ONNX artifact and is not inferred from numeric agreement"
+        },
+        "accepted_export_settings": {
+          "format": "onnx",
+          "imgsz": 640,
+          "batch": 1,
+          "opset": 17,
+          "simplify": true,
+          "dynamic": false,
+          "half": false,
+          "device": "cpu",
+          "task": "detect"
+        },
+        "observed_onnx_schema": {
+          "inputs": [
+            {
+              "name": "images",
+              "shape": [
+                1,
+                3,
+                640,
+                640
+              ],
+              "dtype": "float32"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "output0",
+              "shape": [
+                1,
+                7,
+                8400
+              ],
+              "dtype": "float32"
+            }
+          ],
+          "opset_imports": [
+            {
+              "domain": "",
+              "version": 17
+            }
+          ],
+          "static_shapes": true,
+          "dynamic_shape_observed": false,
+          "float_graph_expected": true,
+          "quantization_nodes": []
+        },
+        "head_output_semantics": {
+          "output_name": "output0",
+          "output_shape": [
+            1,
+            7,
+            8400
+          ],
+          "max_det": 300,
+          "postprocess": "no additional NMS/rematching in this diagnostic; YOLO26 fixed native row index",
+          "coordinate_or_packing": "accepted graph schema/structural audit is referenced; native-to-ONNX numeric comparison is measured separately"
+        },
+        "source_inspection_boundary": "Exporter and dataset/augmentation source hashes are recorded at runtime; source inspection is evidence of implementation, not proof of a producer call unless the corresponding call flag is true"
+      }
+    },
+    "yolo26n": {
+      "checkpoint": {
+        "expected": {
+          "path": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+          "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e",
+          "bytes": 5399038
+        },
+        "observed": {
+          "path": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 5399038,
+          "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e"
+        }
+      },
+      "onnx": {
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx",
+        "expected_sha256": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc",
+        "before": {
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx",
+          "exists": true,
+          "regular_file": true,
+          "bytes": 9806783,
+          "sha256": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc"
+        }
+      },
+      "graph_contract": {
+        "audit_model_report": "precision_head_confirmation_graph_audit_v4/models/yolo26n/graph_audit.json",
+        "mapping_status": "verified",
+        "output_shape": [
+          1,
+          300,
+          6
+        ]
+      },
+      "accepted_contract": {
+        "label": "yolo26n",
+        "checkpoint": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+        "expected_sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e",
+        "expected_bytes": 5399038,
+        "checkpoint_exists": true,
+        "checkpoint_sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e",
+        "checkpoint_bytes": 5399038,
+        "device": "cpu",
+        "probe_requested": true,
+        "export_performed": false,
+        "tensorrt_imported": false,
+        "gpu_used": false,
+        "mapping_status": "pytorch_structure_verified_onnx_deferred",
+        "runtime_compatibility": {
+          "status": "cpu_probe_supported",
+          "native_head_probe_supported": true,
+          "supported_ultralytics": "8.4.102",
+          "observed_cpu_packages": {
+            "torch": "2.5.1+cu121",
+            "ultralytics": "8.4.102",
+            "numpy": "2.4.4",
+            "pycocotools": "2.0.10"
+          },
+          "expected_server_packages": {
+            "torch": "2.5.1+cu121",
+            "ultralytics": "8.4.102",
+            "numpy": "2.4.4",
+            "pycocotools": "2.0.10"
+          },
+          "package_mismatches": [],
+          "missing_packages": [],
+          "blocking_errors": [],
+          "server_runtime_status": "not_verified_by_cpu_readiness",
+          "server_gpu_cuda_tensorrt_observed": false,
+          "server_runtime_note": "Torch/NumPy/package differences are recorded separately; no CUDA or TensorRT verification is inferred here."
+        },
+        "status": "verified",
+        "errors": [],
+        "head": {
+          "type": "Detect",
+          "index": 23,
+          "end2end": true,
+          "available_branches": [
+            "cv2",
+            "cv3",
+            "one2one_cv2",
+            "one2one_cv3"
+          ]
+        },
+        "active_branches": [
+          "one2one_cv2",
+          "one2one_cv3"
+        ],
+        "inactive_branches": [
+          "cv2",
+          "cv3"
+        ],
+        "active_convolution_mapping": {
+          "one2one_cv2": [
+            {
+              "name": "model.23.one2one_cv2.0.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 16,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv2.0.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 16,
+              "out_channels": 16,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv2.0.2",
+              "module_type": "Conv2d",
+              "in_channels": 16,
+              "out_channels": 4,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv2.1.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 128,
+              "out_channels": 16,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv2.1.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 16,
+              "out_channels": 16,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv2.1.2",
+              "module_type": "Conv2d",
+              "in_channels": 16,
+              "out_channels": 4,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv2.2.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 256,
+              "out_channels": 16,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv2.2.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 16,
+              "out_channels": 16,
+              "groups": 1,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv2.2.2",
+              "module_type": "Conv2d",
+              "in_channels": 16,
+              "out_channels": 4,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            }
+          ],
+          "one2one_cv3": [
+            {
+              "name": "model.23.one2one_cv3.0.0.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.0.0.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.0.1.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.0.1.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.0.2",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 3,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.1.0.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 128,
+              "out_channels": 128,
+              "groups": 128,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.1.0.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 128,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.1.1.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.1.1.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.1.2",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 3,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.2.0.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 256,
+              "out_channels": 256,
+              "groups": 256,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.2.0.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 256,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.2.1.0.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.2.1.1.conv",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 64,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "name": "model.23.one2one_cv3.2.2",
+              "module_type": "Conv2d",
+              "in_channels": 64,
+              "out_channels": 3,
+              "groups": 1,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "stride": [
+                1,
+                1
+              ]
+            }
+          ]
+        },
+        "mapping_hash": "f601ce7fa822931d172f464ea9870dd45f05f8ed1e8f6f747e57c867033727c1",
+        "forward_summary": {
+          "kind": "tuple",
+          "length": 2,
+          "items": [
+            {
+              "kind": "tensor",
+              "shape": [
+                1,
+                300,
+                6
+              ],
+              "dtype": "torch.float32"
+            },
+            {
+              "kind": "dict",
+              "keys": [
+                "one2many",
+                "one2one"
+              ],
+              "values": {
+                "one2many": {
+                  "kind": "dict",
+                  "keys": [
+                    "boxes",
+                    "scores",
+                    "feats"
+                  ],
+                  "values": {
+                    "boxes": {
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        4,
+                        8400
+                      ],
+                      "dtype": "torch.float32"
+                    },
+                    "scores": {
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        3,
+                        8400
+                      ],
+                      "dtype": "torch.float32"
+                    },
+                    "feats": {
+                      "kind": "list",
+                      "length": 3,
+                      "items": [
+                        {
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            64,
+                            80,
+                            80
+                          ],
+                          "dtype": "torch.float32"
+                        },
+                        {
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            128,
+                            40,
+                            40
+                          ],
+                          "dtype": "torch.float32"
+                        },
+                        {
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            256,
+                            20,
+                            20
+                          ],
+                          "dtype": "torch.float32"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "one2one": {
+                  "kind": "dict",
+                  "keys": [
+                    "boxes",
+                    "scores",
+                    "feats"
+                  ],
+                  "values": {
+                    "boxes": {
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        4,
+                        8400
+                      ],
+                      "dtype": "torch.float32"
+                    },
+                    "scores": {
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        3,
+                        8400
+                      ],
+                      "dtype": "torch.float32"
+                    },
+                    "feats": {
+                      "kind": "list",
+                      "length": 3,
+                      "items": [
+                        {
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            64,
+                            80,
+                            80
+                          ],
+                          "dtype": "torch.float32"
+                        },
+                        {
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            128,
+                            40,
+                            40
+                          ],
+                          "dtype": "torch.float32"
+                        },
+                        {
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            256,
+                            20,
+                            20
+                          ],
+                          "dtype": "torch.float32"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "head_output_evidence": {
+          "head_type": "Detect",
+          "head_index": 23,
+          "end2end": true,
+          "active_branches": [
+            "one2one_cv2",
+            "one2one_cv3"
+          ],
+          "inactive_branches": [
+            "cv2",
+            "cv3"
+          ],
+          "output_kind": "end2end_topk_detections_plus_head_dict",
+          "primary_output_shape": [
+            1,
+            300,
+            6
+          ],
+          "primary_output_dtype": "torch.float32",
+          "debug_paths": [
+            "one2many",
+            "one2one"
+          ],
+          "boxes_shape": [
+            1,
+            4,
+            8400
+          ],
+          "scores_shape": [
+            1,
+            3,
+            8400
+          ],
+          "feature_shapes": [
+            [
+              1,
+              64,
+              80,
+              80
+            ],
+            [
+              1,
+              128,
+              40,
+              40
+            ],
+            [
+              1,
+              256,
+              20,
+              20
+            ]
+          ],
+          "postprocess": "topk_300_detections_in_model_head_output",
+          "nms": "postprocess_only_as_defined_by_locked_ultralytics_runtime",
+          "primary_output_representation": "tuple_tensor_plus_dict",
+          "active_convolution_mapping": {
+            "one2one_cv2": [
+              {
+                "name": "model.23.one2one_cv2.0.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 16,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv2.0.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 16,
+                "out_channels": 16,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv2.0.2",
+                "module_type": "Conv2d",
+                "in_channels": 16,
+                "out_channels": 4,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv2.1.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 128,
+                "out_channels": 16,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv2.1.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 16,
+                "out_channels": 16,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv2.1.2",
+                "module_type": "Conv2d",
+                "in_channels": 16,
+                "out_channels": 4,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv2.2.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 256,
+                "out_channels": 16,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv2.2.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 16,
+                "out_channels": 16,
+                "groups": 1,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv2.2.2",
+                "module_type": "Conv2d",
+                "in_channels": 16,
+                "out_channels": 4,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              }
+            ],
+            "one2one_cv3": [
+              {
+                "name": "model.23.one2one_cv3.0.0.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.0.0.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.0.1.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.0.1.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.0.2",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 3,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.1.0.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 128,
+                "out_channels": 128,
+                "groups": 128,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.1.0.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 128,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.1.1.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.1.1.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.1.2",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 3,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.2.0.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 256,
+                "out_channels": 256,
+                "groups": 256,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.2.0.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 256,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.2.1.0.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.2.1.1.conv",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 64,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "name": "model.23.one2one_cv3.2.2",
+                "module_type": "Conv2d",
+                "in_channels": 64,
+                "out_channels": 3,
+                "groups": 1,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "stride": [
+                  1,
+                  1
+                ]
+              }
+            ]
+          },
+          "mapping_status": "pytorch_structure_verified_onnx_deferred"
+        },
+        "probe": {
+          "method": "Ultralytics frozen PyTorch model CPU eval/no_grad dummy input",
+          "input_shape": [
+            1,
+            3,
+            640,
+            640
+          ],
+          "input_dtype": "torch.float32",
+          "parameters_on_cpu": true,
+          "cuda_calls": false
+        },
+        "constraints": {
+          "bbox_fp32_requested": "deferred_to_server_onnx_prepare",
+          "classification_fp32_requested": "deferred_to_server_onnx_prepare",
+          "effective_precision": "unknown"
+        }
+      },
+      "reference_semantics": {
+        "model": "yolo26n",
+        "native_reference": {
+          "mode": "frozen PyTorch model.model.to(cpu).float().eval() under torch.no_grad",
+          "dtype": "explicit float32 primary output",
+          "head_contract": {
+            "head_type": "Detect",
+            "head_index": 23,
+            "end2end": true
+          },
+          "forward_counts": {
+            "native_primary": 0,
+            "export_reference": 0
+          },
+          "fusion": "not_reproduced_in_native_reference; any historical exporter fusion belongs to the ONNX artifact and is not inferred from numeric agreement"
+        },
+        "accepted_export_settings": {
+          "format": "onnx",
+          "imgsz": 640,
+          "batch": 1,
+          "opset": 17,
+          "simplify": true,
+          "dynamic": false,
+          "half": false,
+          "device": "cpu",
+          "task": "detect"
+        },
+        "observed_onnx_schema": {
+          "inputs": [
+            {
+              "name": "images",
+              "shape": [
+                1,
+                3,
+                640,
+                640
+              ],
+              "dtype": "float32"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "output0",
+              "shape": [
+                1,
+                300,
+                6
+              ],
+              "dtype": "float32"
+            }
+          ],
+          "opset_imports": [
+            {
+              "domain": "",
+              "version": 17
+            }
+          ],
+          "static_shapes": true,
+          "dynamic_shape_observed": false,
+          "float_graph_expected": true,
+          "quantization_nodes": []
+        },
+        "head_output_semantics": {
+          "output_name": "output0",
+          "output_shape": [
+            1,
+            300,
+            6
+          ],
+          "max_det": 300,
+          "postprocess": "no additional NMS/rematching in this diagnostic; YOLO26 fixed native row index",
+          "coordinate_or_packing": "accepted graph schema/structural audit is referenced; native-to-ONNX numeric comparison is measured separately"
+        },
+        "source_inspection_boundary": "Exporter and dataset/augmentation source hashes are recorded at runtime; source inspection is evidence of implementation, not proof of a producer call unless the corresponding call flag is true"
+      }
+    }
+  },
+  "canonical_numeric_v2_hashes": {
+    "numeric_manifest.json": "0d28fc3261ad4fa42baa8459c449c50e98777f9c3a43123f288109159523787d",
+    "numeric_plan.json": "05216d73d69b0a9f5d621aee2fbd3a444d5e6cdc9a11050a4c6a709970c06831",
+    "report.md": "5bcb70399bb634e6e449ea54ad36850405dae6e19d574afb259e88f74abb56eb"
+  },
+  "numeric_v2_hash_representation": "canonical Git blob SHA256; checkout CRLF hashes must not be substituted",
+  "forward_contract": {
+    "native_model_forwards": {
+      "yolov8n": 1,
+      "yolo26n": 1
+    },
+    "onnx_original_session_runs": {
+      "yolov8n": 1,
+      "yolo26n": 1
+    },
+    "onnx_derived_session_runs": {
+      "yolov8n": 0,
+      "yolo26n": 1
+    },
+    "total_native": 2,
+    "total_onnx": 3,
+    "failure_policy": "preserve partial; no retry or automatic extra call"
+  },
+  "diagnostic_cases": {
+    "yolov8n": {
+      "image_id": "00009",
+      "selection": "U42",
+      "purpose": "historical strict box offenders"
+    },
+    "yolo26n": {
+      "image_id": "00006",
+      "selection": "U42",
+      "purpose": "first canonical fixture; TopK/Gather localization"
+    }
+  },
+  "audit_flags": {
+    "export_performed": false,
+    "tensorRT_imported": false,
+    "build_performed": false,
+    "accepted_onnx_modified": false,
+    "gpu_used": false,
+    "scored_run_authorized": false,
+    "matrix_opened": false,
+    "strict_verdict_changed": false
+  },
+  "no_overwrite": true,
+  "repo_head": "c732a4f0a8cf41b7bc72f966250f05860e3708b4"
+}

@@ -1,0 +1,2564 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_numeric_localization_v1",
+  "model": "yolo26n",
+  "image_id": "00006",
+  "status": "completed",
+  "numeric_status": "fail",
+  "strict_numeric_v2_verdict": "fail_preserved",
+  "runtime": {
+    "expected_from_config": {
+      "torch": "2.5.1+cu121",
+      "ultralytics": "8.4.102",
+      "numpy": "2.4.4",
+      "pycocotools": "2.0.10"
+    },
+    "observed": {
+      "torch": "2.5.1+cu121",
+      "ultralytics": "8.4.102",
+      "numpy": "2.4.4",
+      "onnxruntime": "1.24.4",
+      "pycocotools": "2.0.10"
+    },
+    "cuda_visible_devices": "-1",
+    "mode": "CPUExecutionProvider; CUDA hidden"
+  },
+  "producer_source_evidence": {
+    "inference_producer": [
+      {
+        "label": "ultralytics.data.loaders.imread",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/utils/patches.py",
+        "source_sha256": "74ca0c734016352aef39a340636814117cc80692c1d67640fb773d9ddf8d5978",
+        "source_bytes": 1356
+      },
+      {
+        "label": "ultralytics.data.augment.LetterBox.__init__",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "8462cf07d17034a0971f12ffb2f66074c2ffa538c98b1263efa21557b333be09",
+        "source_bytes": 1665
+      },
+      {
+        "label": "ultralytics.data.augment.LetterBox.get_params",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "79839dbd1b1bea969c49c0f5440f7de1c7677b4a03dffba8de0a36075fb412a5",
+        "source_bytes": 1877
+      },
+      {
+        "label": "ultralytics.data.augment.LetterBox.apply_image",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "cc1764596f98740609403e032a2ccf47a785059058ed55077b259d90c8dcd5e1",
+        "source_bytes": 1301
+      },
+      {
+        "label": "ultralytics.engine.predictor.BasePredictor.pre_transform",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/predictor.py",
+        "source_sha256": "a8afc59dbc2d158ea8c553fd7a6c8fb00107652127ad7765effa0d4b560cb6ba",
+        "source_bytes": 693
+      },
+      {
+        "label": "ultralytics.engine.predictor.BasePredictor.preprocess",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/predictor.py",
+        "source_sha256": "feee028f3d5d1ce1cd03a223331f44d712dc898606f3a3c3311b395d2c281fd7",
+        "source_bytes": 943
+      },
+      {
+        "label": "ultralytics.data.augment.Format._format_img",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "1fed3cb6c543c42d1a180c5c11e51bdaa39d12b1db06983b460426cd4ee9e031",
+        "source_bytes": 1272
+      }
+    ],
+    "calibration_producer_source": [
+      {
+        "label": "calibration helper source",
+        "module": "ultralytics.engine.exporter",
+        "path": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "sha256": "e00736ab18868bc66b4429b246d117d55714d78d7e674ee8e53dfc96ce2724e6",
+        "bytes": 85675
+      },
+      {
+        "label": "dataset source",
+        "module": "ultralytics.data.dataset",
+        "path": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/dataset.py",
+        "sha256": "2cc6156013aac5f631171fe5c93f03c69d4821fa0b44c8c6aad8d70cc22d0ed1",
+        "bytes": 51280
+      },
+      {
+        "label": "augmentation source",
+        "module": "ultralytics.data.augment",
+        "path": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "sha256": "f211edb54b7bc92a90f7e3e2faa886844ed8328c46d549d24a42e7c974dcde90",
+        "bytes": 137982
+      },
+      {
+        "label": "ultralytics.engine.exporter.Exporter.get_int8_calibration_dataloader",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "source_sha256": "c3083ef89201276d5ea73e217846a0ddcaeed92b4909f75a2545c4ef2016b44c",
+        "source_bytes": 2189
+      },
+      {
+        "label": "ultralytics.engine.exporter.Exporter.__init__",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "source_sha256": "703de664efcc94bd1e0125eb027d74ca96185d8af880efcc549403dbb3acd8d9",
+        "source_bytes": 579
+      },
+      {
+        "label": "ultralytics.engine.exporter.Exporter.export_onnx",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/engine/exporter.py",
+        "source_sha256": "1d6dc7e396ae244fb10c65a3061b695f18d1d5090009060514b0e09ceb37792e",
+        "source_bytes": 999
+      },
+      {
+        "label": "ultralytics.data.dataset.YOLODataset.load_image",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/base.py",
+        "source_sha256": "92b174f9d47137bb9cc5d14618d88c8b4212345f26b48441141b922d341d112a",
+        "source_bytes": 3695
+      },
+      {
+        "label": "ultralytics.data.dataset.YOLODataset.build_transforms",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/dataset.py",
+        "source_sha256": "9d258d2fdbe6351f88243c2bcfb82ec8182e19c065414a9087ee04c3cc0f3691",
+        "source_bytes": 1214
+      },
+      {
+        "label": "ultralytics.data.build.build_yolo_dataset",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/build.py",
+        "source_sha256": "cc30939a9a049a201481a43b84f1b41eea32f0e68bfe57aba3bbada5c9433e49",
+        "source_bytes": 1346
+      },
+      {
+        "label": "ultralytics.data.augment.Format._format_img",
+        "source_file": "/home/ubuntu/miniconda3/envs/nighttime-tsd/lib/python3.11/site-packages/ultralytics/data/augment.py",
+        "source_sha256": "1fed3cb6c543c42d1a180c5c11e51bdaa39d12b1db06983b460426cd4ee9e031",
+        "source_bytes": 1272
+      },
+      {
+        "label": "repository calibration helper",
+        "path": "scripts/uniform_build_repeat.py"
+      }
+    ],
+    "calibration_loader_called": false,
+    "calibration_component_called": true,
+    "calibration_recipe_status": "source_inspected_scoped_image_trace; calibration loader dispatch forbidden",
+    "export_semantics_status": "accepted_settings_and_observed_ONNX_schema_recorded; native_reference_is_not_an_export_copy"
+  },
+  "onnx_original_session": {
+    "providers_observed": [
+      "CPUExecutionProvider"
+    ],
+    "providers_requested": [
+      "CPUExecutionProvider"
+    ],
+    "output_names": [
+      "output0"
+    ],
+    "session_output_names": [
+      "output0"
+    ]
+  },
+  "onnx_accepted": {
+    "before": {
+      "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 9806783,
+      "sha256": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc"
+    },
+    "after": {
+      "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 9806783,
+      "sha256": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc"
+    },
+    "unchanged": true
+  },
+  "checkpoint": {
+    "before": {
+      "path": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 5399038,
+      "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e"
+    },
+    "after": {
+      "path": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 5399038,
+      "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e"
+    },
+    "unchanged": true
+  },
+  "fixture_binding": {
+    "source": {
+      "path": "data/processed/cctsdb2021_clean/train/images/00006.jpg",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 63138,
+      "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+    },
+    "materialized": {
+      "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00006.jpg",
+      "exists": true,
+      "regular_file": true,
+      "bytes": 63138,
+      "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+    }
+  },
+  "preprocess_trace": {
+    "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/data/processed/cctsdb2021_clean/train/images/00006.jpg",
+    "decoded": {
+      "shape": [
+        720,
+        1280,
+        3
+      ],
+      "dtype": "uint8",
+      "color_order": "BGR",
+      "bytes_sha256": "b3a85c10c97fb3b6641923c85e2a71e2f2e54cae4332a3740bc1c903033d921c"
+    },
+    "letterbox": {
+      "new_shape": [
+        640,
+        640
+      ],
+      "auto": false,
+      "scale_fill": false,
+      "scaleup": true,
+      "center": true,
+      "stride": 32,
+      "padding_value": 114,
+      "interpolation": 1,
+      "orig_shape": [
+        720,
+        1280
+      ],
+      "ratio": [
+        0.5,
+        0.5
+      ],
+      "new_unpad": [
+        640,
+        360
+      ],
+      "padding": {
+        "top": 140,
+        "bottom": 140,
+        "left": 0,
+        "right": 0
+      }
+    },
+    "transformed": {
+      "shape": [
+        640,
+        640,
+        3
+      ],
+      "dtype": "uint8",
+      "bytes_sha256": "6227ecf5d9b4ceae34db50e25d0ec4b657e8b74a4aec1b7505c7f99317b29184"
+    },
+    "tensor": {
+      "shape": [
+        1,
+        3,
+        640,
+        640
+      ],
+      "dtype": "float32",
+      "range": [
+        0.0,
+        1.0
+      ],
+      "bytes_sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474"
+    },
+    "original_image_size_hw": [
+      720,
+      1280
+    ],
+    "operations": [
+      "decode pinned BGR",
+      "LetterBox via BasePredictor.pre_transform",
+      "BGR_to_RGB",
+      "BHWC_to_BCHW",
+      "contiguous",
+      "uint8_to_float32",
+      "divide_by_255",
+      "batch_axis"
+    ],
+    "same_tensor_for_source_and_onnx": true
+  },
+  "native_head_contract": {
+    "head": {
+      "type": "Detect",
+      "index": 23,
+      "end2end": true
+    },
+    "parameters_dtype": "torch.float32",
+    "float_explicit": true
+  },
+  "native_output_contract": {
+    "representation": "tuple_tensor_plus_dict",
+    "debug_keys": [
+      "one2many",
+      "one2one"
+    ],
+    "shape": [
+      1,
+      300,
+      6
+    ],
+    "dtype": "torch.float32"
+  },
+  "native_preselection_capture": {
+    "capture_site": "ordinary frozen model forward returned head dictionary",
+    "branch": "one2one",
+    "boxes": {
+      "role": "yolo26n.native.boxes",
+      "original": {
+        "role": "yolo26n.native.boxes",
+        "shape": [
+          1,
+          4,
+          8400
+        ],
+        "dtype": "float32",
+        "element_count": 33600,
+        "finite_count": 33600,
+        "zero_count": 0,
+        "sha256": "783aea62202f597789363ff66aff3a3839b67129ef556df8af269bf80e60f549",
+        "min": -0.5677768588066101,
+        "max": 6.258068561553955,
+        "p50": 1.6116389036178589,
+        "mean": 1.8389334678649902
+      },
+      "normalized": {
+        "role": "yolo26n.native.boxes",
+        "shape": [
+          1,
+          8400,
+          4
+        ],
+        "dtype": "float32",
+        "element_count": 33600,
+        "finite_count": 33600,
+        "zero_count": 0,
+        "sha256": "f21b08977b94e1c55ba43ff9b0c9057ef30a9ba3b4fe28804748f636c06587be",
+        "min": -0.5677768588066101,
+        "max": 6.258068561553955,
+        "p50": 1.6116389036178589,
+        "mean": 1.8389334678649902
+      },
+      "layout": "BCHW-like channel-first to BNC"
+    },
+    "class_probabilities": {
+      "role": "yolo26n.native.class_probabilities",
+      "original": {
+        "role": "yolo26n.native.class_probabilities",
+        "shape": [
+          1,
+          3,
+          8400
+        ],
+        "dtype": "float32",
+        "element_count": 25200,
+        "finite_count": 25200,
+        "zero_count": 0,
+        "sha256": "f6515a207904bcaf749910b34526f1d4a4dfa9883846e57eaaa04beb3bfbfac3",
+        "min": -79.79215240478516,
+        "max": 2.8147358894348145,
+        "p50": -19.637798309326172,
+        "mean": -20.051645278930664
+      },
+      "normalized": {
+        "role": "yolo26n.native.class_probabilities",
+        "shape": [
+          1,
+          8400,
+          3
+        ],
+        "dtype": "float32",
+        "element_count": 25200,
+        "finite_count": 25200,
+        "zero_count": 0,
+        "sha256": "613964a7e942f6f2c046c41287d3365f47431965196bedbd1846aab1a12f3252",
+        "min": -79.79215240478516,
+        "max": 2.8147358894348145,
+        "p50": -19.637798309326172,
+        "mean": -20.051645278930664
+      },
+      "layout": "BCHW-like channel-first to BNC"
+    },
+    "debug_keys": [
+      "one2many",
+      "one2one"
+    ]
+  },
+  "analysis": {
+    "historical_numeric_v2_record": {
+      "selection": "U42",
+      "manifest_order": 0,
+      "image": "train/images/00006.jpg",
+      "image_id": "00006",
+      "input_tensor": {
+        "shape": [
+          1,
+          3,
+          640,
+          640
+        ],
+        "dtype": "float32",
+        "sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474"
+      },
+      "source_primary": {
+        "shape": [
+          1,
+          300,
+          6
+        ],
+        "dtype": "float32",
+        "sha256": "97caa7efc9c14f2ff922e11fa7934ae169746f2d825b9f518146a54bded25592"
+      },
+      "onnx_primary": {
+        "shape": [
+          1,
+          300,
+          6
+        ],
+        "dtype": "float32",
+        "sha256": "e11c28fa7d129067d23d6ca2a3bcd4f82b166a01032e22b8274b3e579b892e65"
+      },
+      "same_verified_input": true,
+      "comparison": {
+        "status": "fail",
+        "domain": "yolo26n_native_detections_fixed_row",
+        "shape": [
+          1,
+          300,
+          6
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "score": [
+            4,
+            5
+          ],
+          "class_id": [
+            5,
+            6
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "fail",
+            "domain": "yolo26n_fixed_row_boxes",
+            "shape": [
+              1,
+              300,
+              4
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 1056,
+            "element_count": 1200,
+            "max_abs": 639.1396698951721,
+            "max_relative": 45738.84515864052,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 1200,
+              "finite_count": 1200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 162.7695083618164,
+              "p95": 581.5872869014739,
+              "p99": 636.8470858955384,
+              "max": 639.1396698951721
+            },
+            "relative_quantiles": {
+              "element_count": 1200,
+              "finite_count": 1200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.614497907968214,
+              "p95": 254.62970911103972,
+              "p99": 2884.1369278780567,
+              "max": 45738.84515864052
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": [
+              [
+                0,
+                10,
+                0
+              ],
+              [
+                0,
+                10,
+                1
+              ],
+              [
+                0,
+                10,
+                2
+              ],
+              [
+                0,
+                10,
+                3
+              ],
+              [
+                0,
+                11,
+                0
+              ],
+              [
+                0,
+                11,
+                1
+              ],
+              [
+                0,
+                11,
+                2
+              ],
+              [
+                0,
+                11,
+                3
+              ],
+              [
+                0,
+                21,
+                0
+              ],
+              [
+                0,
+                21,
+                1
+              ]
+            ]
+          },
+          "score": {
+            "status": "pass",
+            "domain": "yolo26n_fixed_row_scores",
+            "shape": [
+              1,
+              300,
+              1
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 300,
+            "max_abs": 6.849541023257188e-08,
+            "max_relative": 0.09944547297735831,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 300,
+              "finite_count": 300,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 1.6410695025115274e-10,
+              "p50": 1.2551197414722992e-08,
+              "p95": 3.9372102378365524e-08,
+              "p99": 5.5195556569742614e-08,
+              "max": 6.849541023257188e-08
+            },
+            "relative_quantiles": {
+              "element_count": 300,
+              "finite_count": 300,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 6.317618657039795e-08,
+              "p50": 0.021477954950796005,
+              "p95": 0.07546253527290037,
+              "p99": 0.09622291251707601,
+              "max": 0.09944547297735831
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 1236,
+        "element_count": 1800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference",
+        "class_ids_exact": false,
+        "class_mismatch_count": 180,
+        "tie_count_reference_scores": 0,
+        "tie_count_observed_scores": 240,
+        "tie_handling": "fixed native row index; ties are reported and never rematched"
+      }
+    },
+    "strict_rerun_comparison": {
+      "status": "fail",
+      "domain": "yolo26n_native_detections_fixed_row",
+      "shape": [
+        1,
+        300,
+        6
+      ],
+      "channel_spans": {
+        "boxes": [
+          0,
+          4
+        ],
+        "score": [
+          4,
+          5
+        ],
+        "class_id": [
+          5,
+          6
+        ]
+      },
+      "channel_results": {
+        "boxes": {
+          "status": "fail",
+          "domain": "yolo26n_fixed_row_boxes",
+          "shape": [
+            1,
+            300,
+            4
+          ],
+          "dtype": "float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "mismatch_count": 1056,
+          "element_count": 1200,
+          "max_abs": 639.1396698951721,
+          "max_relative": 45738.84515864052,
+          "relative_infinite_count": 0,
+          "abs_quantiles": {
+            "element_count": 1200,
+            "finite_count": 1200,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 162.7695083618164,
+            "p95": 581.5872869014739,
+            "p99": 636.8470858955384,
+            "max": 639.1396698951721
+          },
+          "relative_quantiles": {
+            "element_count": 1200,
+            "finite_count": 1200,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 0.614497907968214,
+            "p95": 254.62970911103972,
+            "p99": 2884.1369278780567,
+            "max": 45738.84515864052
+          },
+          "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+          "first_offenders": [
+            [
+              0,
+              10,
+              0
+            ],
+            [
+              0,
+              10,
+              1
+            ],
+            [
+              0,
+              10,
+              2
+            ],
+            [
+              0,
+              10,
+              3
+            ],
+            [
+              0,
+              11,
+              0
+            ],
+            [
+              0,
+              11,
+              1
+            ],
+            [
+              0,
+              11,
+              2
+            ],
+            [
+              0,
+              11,
+              3
+            ],
+            [
+              0,
+              21,
+              0
+            ],
+            [
+              0,
+              21,
+              1
+            ]
+          ]
+        },
+        "score": {
+          "status": "pass",
+          "domain": "yolo26n_fixed_row_scores",
+          "shape": [
+            1,
+            300,
+            1
+          ],
+          "dtype": "float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "mismatch_count": 0,
+          "element_count": 300,
+          "max_abs": 6.849541023257188e-08,
+          "max_relative": 0.09944547297735831,
+          "relative_infinite_count": 0,
+          "abs_quantiles": {
+            "element_count": 300,
+            "finite_count": 300,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 1.6410695025115274e-10,
+            "p50": 1.2551197414722992e-08,
+            "p95": 3.9372102378365524e-08,
+            "p99": 5.5195556569742614e-08,
+            "max": 6.849541023257188e-08
+          },
+          "relative_quantiles": {
+            "element_count": 300,
+            "finite_count": 300,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 6.317618657039795e-08,
+            "p50": 0.021477954950796005,
+            "p95": 0.07546253527290037,
+            "p99": 0.09622291251707601,
+            "max": 0.09944547297735831
+          },
+          "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+          "first_offenders": []
+        }
+      },
+      "mismatch_count": 1236,
+      "element_count": 1800,
+      "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference",
+      "class_ids_exact": false,
+      "class_mismatch_count": 180,
+      "tie_count_reference_scores": 0,
+      "tie_count_observed_scores": 240,
+      "tie_handling": "fixed native row index; ties are reported and never rematched"
+    },
+    "native_preselection": {
+      "boxes": {
+        "role": "native one2one decoded boxes",
+        "shape": [
+          1,
+          8400,
+          4
+        ],
+        "dtype": "float32",
+        "element_count": 33600,
+        "finite_count": 33600,
+        "zero_count": 0,
+        "sha256": "f21b08977b94e1c55ba43ff9b0c9057ef30a9ba3b4fe28804748f636c06587be",
+        "min": -0.5677768588066101,
+        "max": 6.258068561553955,
+        "p50": 1.6116389036178589,
+        "mean": 1.8389334678649902
+      },
+      "class_probabilities": {
+        "role": "native one2one class probabilities",
+        "shape": [
+          1,
+          8400,
+          3
+        ],
+        "dtype": "float32",
+        "element_count": 25200,
+        "finite_count": 25200,
+        "zero_count": 0,
+        "sha256": "613964a7e942f6f2c046c41287d3365f47431965196bedbd1846aab1a12f3252",
+        "min": -79.79215240478516,
+        "max": 2.8147358894348145,
+        "p50": -19.637798309326172,
+        "mean": -20.051645278930664
+      },
+      "capture_site": "ordinary frozen model forward returned one2one head dictionary"
+    },
+    "onnx_preselection": {
+      "boxes": {
+        "role": "ONNX pre-TopK decoded boxes",
+        "shape": [
+          1,
+          8400,
+          4
+        ],
+        "dtype": "float32",
+        "element_count": 33600,
+        "finite_count": 33600,
+        "zero_count": 0,
+        "sha256": "0f76275ac6df93a284a51d91903db34b64c93240b0cdaba900821c35c8c262a2",
+        "min": -99.66671752929688,
+        "max": 785.9183959960938,
+        "p50": 320.2298583984375,
+        "mean": 319.4195861816406
+      },
+      "class_probabilities": {
+        "role": "ONNX pre-TopK class probabilities",
+        "shape": [
+          1,
+          8400,
+          3
+        ],
+        "dtype": "float32",
+        "element_count": 25200,
+        "finite_count": 25200,
+        "zero_count": 20050,
+        "sha256": "ede3408fb164dde46f74dd3eccbb28946dae07154ccf092a5c3bef2262010c74",
+        "min": 0.0,
+        "max": 0.9434670209884644,
+        "p50": 0.0,
+        "mean": 3.746512811630964e-05
+      },
+      "source_tensors": {
+        "/model.23/Concat_3_output_0": {
+          "role": "/model.23/Concat_3_output_0",
+          "shape": [
+            1,
+            7,
+            8400
+          ],
+          "dtype": "float32",
+          "element_count": 58800,
+          "finite_count": 58800,
+          "zero_count": 20050,
+          "sha256": "36c8a0f06fa13c243e3a3c60faa246172c34180f8f45c35f4b2929703f4f9e2b",
+          "min": -99.66671752929688,
+          "max": 785.9183959960938,
+          "p50": 78.59606170654297,
+          "mean": 182.52549743652344
+        },
+        "/model.23/Transpose_output_0": {
+          "role": "/model.23/Transpose_output_0",
+          "shape": [
+            1,
+            8400,
+            7
+          ],
+          "dtype": "float32",
+          "element_count": 58800,
+          "finite_count": 58800,
+          "zero_count": 20050,
+          "sha256": "bc210aef905050432fe627de9034bf23f7928917b525eabb83419e78c45e110c",
+          "min": -99.66671752929688,
+          "max": 785.9183959960938,
+          "p50": 78.59606170654297,
+          "mean": 182.5255126953125
+        },
+        "/model.23/Split_output_0": {
+          "role": "/model.23/Split_output_0",
+          "shape": [
+            1,
+            8400,
+            4
+          ],
+          "dtype": "float32",
+          "element_count": 33600,
+          "finite_count": 33600,
+          "zero_count": 0,
+          "sha256": "0f76275ac6df93a284a51d91903db34b64c93240b0cdaba900821c35c8c262a2",
+          "min": -99.66671752929688,
+          "max": 785.9183959960938,
+          "p50": 320.2298583984375,
+          "mean": 319.4195861816406
+        },
+        "/model.23/Split_output_1": {
+          "role": "/model.23/Split_output_1",
+          "shape": [
+            1,
+            8400,
+            3
+          ],
+          "dtype": "float32",
+          "element_count": 25200,
+          "finite_count": 25200,
+          "zero_count": 20050,
+          "sha256": "ede3408fb164dde46f74dd3eccbb28946dae07154ccf092a5c3bef2262010c74",
+          "min": 0.0,
+          "max": 0.9434670209884644,
+          "p50": 0.0,
+          "mean": 3.746512811630964e-05
+        },
+        "/model.23/TopK_output_0": {
+          "role": "/model.23/TopK_output_0",
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "float32",
+          "element_count": 300,
+          "finite_count": 300,
+          "zero_count": 0,
+          "sha256": "e992bd8a7308bcf50ebbdb8f3452fa4e0453dac36aec9194f0efc96f55cd8bbe",
+          "min": 2.384185791015625e-07,
+          "max": 0.9434670209884644,
+          "p50": 3.5762786865234375e-07,
+          "mean": 0.003145594149827957
+        },
+        "/model.23/TopK_output_1": {
+          "role": "/model.23/TopK_output_1",
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "int64",
+          "element_count": 300,
+          "finite_count": 300,
+          "zero_count": 1,
+          "sha256": "fea32d041eb9da4a8be9b56e13ca8f853a9058458ed517d89ef34f9bd0892e20",
+          "min": 0.0,
+          "max": 7999.0,
+          "p50": 4868.5,
+          "mean": 4577.41
+        },
+        "/model.23/TopK_1_output_0": {
+          "role": "/model.23/TopK_1_output_0",
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "float32",
+          "element_count": 300,
+          "finite_count": 300,
+          "zero_count": 0,
+          "sha256": "671a79934aba62dd8f14cb94ba9ff2ddc89bb660c233259f92005ce1432893e7",
+          "min": 2.682209014892578e-07,
+          "max": 0.9434670209884644,
+          "p50": 4.172325134277344e-07,
+          "mean": 0.0031457687728106976
+        },
+        "/model.23/TopK_1_output_1": {
+          "role": "/model.23/TopK_1_output_1",
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "int64",
+          "element_count": 300,
+          "finite_count": 300,
+          "zero_count": 1,
+          "sha256": "22560e8016bfb07b38f286552ba2ac82f2d401d5e79c9c610559023a71e5c6ff",
+          "min": 0.0,
+          "max": 668.0,
+          "p50": 266.5,
+          "mean": 289.81
+        },
+        "/model.23/GatherElements_output_0": {
+          "role": "/model.23/GatherElements_output_0",
+          "shape": [
+            1,
+            300,
+            3
+          ],
+          "dtype": "float32",
+          "element_count": 900,
+          "finite_count": 900,
+          "zero_count": 138,
+          "sha256": "6591ad382d70caec5b075b97f62d489d6c40f4577c96a87820414ffe9a9a1011",
+          "min": 0.0,
+          "max": 0.9434670209884644,
+          "p50": 1.7881393432617188e-07,
+          "mean": 0.00104866165202111
+        },
+        "/model.23/Add_2_output_0": {
+          "role": "/model.23/Add_2_output_0",
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "int64",
+          "element_count": 300,
+          "finite_count": 300,
+          "zero_count": 3,
+          "sha256": "06eb4281fe17d8c8a1cca57532543dcdcc95958c00b7e64a9a0b8de920d8864b",
+          "min": 0.0,
+          "max": 222.0,
+          "p50": 88.5,
+          "mean": 96.31
+        },
+        "/model.23/Mod_output_0": {
+          "role": "/model.23/Mod_output_0",
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "int64",
+          "element_count": 300,
+          "finite_count": 300,
+          "zero_count": 104,
+          "sha256": "95bfc8bcf253017a3b99597fceeddda6dcdb7637bcdf477bf07b318c84412624",
+          "min": 0.0,
+          "max": 2.0,
+          "p50": 1.0,
+          "mean": 0.88
+        },
+        "/model.23/Expand_1_output_0": {
+          "role": "/model.23/Expand_1_output_0",
+          "shape": [
+            1,
+            300,
+            1
+          ],
+          "dtype": "int64",
+          "element_count": 300,
+          "finite_count": 300,
+          "zero_count": 1,
+          "sha256": "35152e3e0bdd0dee28f88f90bd4ccc6a30ac724f9406cb35ca544aa70f9814a5",
+          "min": 0.0,
+          "max": 7999.0,
+          "p50": 4669.5,
+          "mean": 4441.32
+        },
+        "/model.23/GatherElements_1_output_0": {
+          "role": "/model.23/GatherElements_1_output_0",
+          "shape": [
+            1,
+            300,
+            4
+          ],
+          "dtype": "float32",
+          "element_count": 1200,
+          "finite_count": 1200,
+          "zero_count": 0,
+          "sha256": "8f3e3194ebd701a059e0b9ba3e518daa70c3a60bddd413a2ce7b01b70fce39be",
+          "min": -1.2642898559570312,
+          "max": 644.6116333007812,
+          "p50": 303.57452392578125,
+          "mean": 310.4063720703125
+        }
+      }
+    },
+    "same_anchor_comparison": {
+      "association": "same anchor index in each model's own pre-selection tensor; no cross-model anchor invention",
+      "boxes": {
+        "status": "fail",
+        "domain": "yolo26_same_anchor_decoded_boxes",
+        "shape": [
+          1,
+          8400,
+          4
+        ],
+        "dtype": "float32",
+        "rtol": 0.0001,
+        "atol": 1e-05,
+        "mismatch_count": 33600,
+        "element_count": 33600,
+        "max_abs": 780.8584461212158,
+        "max_relative": 4842590.713053676,
+        "relative_infinite_count": 0,
+        "abs_quantiles": {
+          "element_count": 33600,
+          "finite_count": 33600,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.005511045455932617,
+          "p50": 318.9509763419628,
+          "p95": 611.1168586552143,
+          "p99": 639.4276924368739,
+          "max": 780.8584461212158
+        },
+        "relative_quantiles": {
+          "element_count": 33600,
+          "finite_count": 33600,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0020235983580952693,
+          "p50": 185.06355121606742,
+          "p95": 1295.712718815289,
+          "p99": 4742.386058398734,
+          "max": 4842590.713053676
+        },
+        "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+        "first_offenders": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            0,
+            3
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            0,
+            1,
+            3
+          ],
+          [
+            0,
+            2,
+            0
+          ],
+          [
+            0,
+            2,
+            1
+          ]
+        ]
+      },
+      "class_probabilities": {
+        "status": "fail",
+        "domain": "yolo26_same_anchor_class_probabilities",
+        "shape": [
+          1,
+          8400,
+          3
+        ],
+        "dtype": "float32",
+        "rtol": 0.0001,
+        "atol": 1e-05,
+        "mismatch_count": 25200,
+        "element_count": 25200,
+        "max_abs": 79.79215240478516,
+        "max_relative": 1.0000015940389861,
+        "relative_infinite_count": 0,
+        "abs_quantiles": {
+          "element_count": 25200,
+          "finite_count": 25200,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 1.87126886844635,
+          "p50": 19.637797355651855,
+          "p95": 25.510041522979733,
+          "p99": 28.983006782531728,
+          "max": 79.79215240478516
+        },
+        "relative_quantiles": {
+          "element_count": 25200,
+          "finite_count": 25200,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.6648115283107758,
+          "p50": 1.0,
+          "p95": 1.0000000074440505,
+          "p99": 1.0000000198364414,
+          "max": 1.0000015940389861
+        },
+        "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+        "first_offenders": [
+          [
+            0,
+            0,
+            0
+          ],
+          [
+            0,
+            0,
+            1
+          ],
+          [
+            0,
+            0,
+            2
+          ],
+          [
+            0,
+            1,
+            0
+          ],
+          [
+            0,
+            1,
+            1
+          ],
+          [
+            0,
+            1,
+            2
+          ],
+          [
+            0,
+            2,
+            0
+          ],
+          [
+            0,
+            2,
+            1
+          ],
+          [
+            0,
+            2,
+            2
+          ],
+          [
+            0,
+            3,
+            0
+          ]
+        ]
+      },
+      "same_anchor_numerical_error": {
+        "boxes": true,
+        "class_probabilities": true
+      },
+      "logit_probability_boundary": "only mapped class probabilities are compared; raw logits are not compared to sigmoid probabilities"
+    },
+    "native_selection": {
+      "source": "reconstructed from native returned preselection tensors with installed PyTorch topk",
+      "stage1_count": 300,
+      "stage2_count": 300,
+      "stage1_index_summary": {
+        "role": "stage1 original-anchor candidates",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 1,
+        "sha256": "3d1a9a94b81551cb1791a3c4c9e996efc3616730b98529250ebedec3523780c9",
+        "min": 0.0,
+        "max": 7999.0,
+        "p50": 5310.5,
+        "mean": 4653.393333333333
+      },
+      "stage2_flat_index_summary": {
+        "role": "stage2 flattened class indices",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 1,
+        "sha256": "a1752cbfc03c09490ef42d0ae47f830f68c93c36d93ca675d2c08e06c79c6187",
+        "min": 0.0,
+        "max": 662.0,
+        "p50": 274.5,
+        "mean": 293.49
+      },
+      "anchor_rank_summary": {
+        "role": "stage2 selected anchor rank",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 3,
+        "sha256": "3151f2d2d22b51f45460355c175203c82854b348b56c70c78af407dba5fed6ca",
+        "min": 0.0,
+        "max": 220.0,
+        "p50": 91.5,
+        "mean": 97.53666666666666
+      },
+      "class_id_summary": {
+        "role": "stage2 selected class id",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 106,
+        "sha256": "5a75f833cc159aa830bfebc2e2885b59f2b4f9541d35fe515a7f7c2bb7dbb3c5",
+        "min": 0.0,
+        "max": 2.0,
+        "p50": 1.0,
+        "mean": 0.88
+      },
+      "original_anchor_summary": {
+        "role": "stage2 original anchor indices",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 1,
+        "sha256": "0016bb7d4655fe5f5a58f31b9385fddfa0266437ccf6748165950daa9d841c5b",
+        "min": 0.0,
+        "max": 7999.0,
+        "p50": 4706.0,
+        "mean": 4461.416666666667
+      },
+      "first_pairs": [
+        {
+          "anchor": 3370,
+          "class_id": 1
+        },
+        {
+          "anchor": 3370,
+          "class_id": 0
+        },
+        {
+          "anchor": 3370,
+          "class_id": 2
+        },
+        {
+          "anchor": 3199,
+          "class_id": 1
+        },
+        {
+          "anchor": 3450,
+          "class_id": 1
+        },
+        {
+          "anchor": 2559,
+          "class_id": 1
+        },
+        {
+          "anchor": 3119,
+          "class_id": 1
+        },
+        {
+          "anchor": 3279,
+          "class_id": 1
+        },
+        {
+          "anchor": 234,
+          "class_id": 1
+        },
+        {
+          "anchor": 3600,
+          "class_id": 1
+        }
+      ],
+      "pair_set_sha256": "1d0354e6aa3dbd60ed52da0bdf14f103f12b01a32efa6a7be74ea54a5dcae542"
+    },
+    "onnx_selection": {
+      "source": "direct ONNX TopK/Gather/Div/Mod outputs from private derived graph",
+      "stage1_count": 300,
+      "stage2_count": 300,
+      "stage1_index_summary": {
+        "role": "stage1 original-anchor candidates",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 1,
+        "sha256": "fea32d041eb9da4a8be9b56e13ca8f853a9058458ed517d89ef34f9bd0892e20",
+        "min": 0.0,
+        "max": 7999.0,
+        "p50": 4868.5,
+        "mean": 4577.41
+      },
+      "stage2_flat_index_summary": {
+        "role": "stage2 flattened class indices",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 1,
+        "sha256": "22560e8016bfb07b38f286552ba2ac82f2d401d5e79c9c610559023a71e5c6ff",
+        "min": 0.0,
+        "max": 668.0,
+        "p50": 266.5,
+        "mean": 289.81
+      },
+      "anchor_rank_summary": {
+        "role": "stage2 selected anchor rank",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 3,
+        "sha256": "06eb4281fe17d8c8a1cca57532543dcdcc95958c00b7e64a9a0b8de920d8864b",
+        "min": 0.0,
+        "max": 222.0,
+        "p50": 88.5,
+        "mean": 96.31
+      },
+      "class_id_summary": {
+        "role": "stage2 selected class id",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 104,
+        "sha256": "95bfc8bcf253017a3b99597fceeddda6dcdb7637bcdf477bf07b318c84412624",
+        "min": 0.0,
+        "max": 2.0,
+        "p50": 1.0,
+        "mean": 0.88
+      },
+      "original_anchor_summary": {
+        "role": "stage2 original anchor indices",
+        "shape": [
+          1,
+          300,
+          1
+        ],
+        "dtype": "int64",
+        "element_count": 300,
+        "finite_count": 300,
+        "zero_count": 1,
+        "sha256": "35152e3e0bdd0dee28f88f90bd4ccc6a30ac724f9406cb35ca544aa70f9814a5",
+        "min": 0.0,
+        "max": 7999.0,
+        "p50": 4669.5,
+        "mean": 4441.32
+      },
+      "first_pairs": [
+        {
+          "anchor": 3370,
+          "class_id": 1
+        },
+        {
+          "anchor": 3370,
+          "class_id": 0
+        },
+        {
+          "anchor": 3370,
+          "class_id": 2
+        },
+        {
+          "anchor": 3199,
+          "class_id": 1
+        },
+        {
+          "anchor": 3450,
+          "class_id": 1
+        },
+        {
+          "anchor": 2559,
+          "class_id": 1
+        },
+        {
+          "anchor": 3119,
+          "class_id": 1
+        },
+        {
+          "anchor": 3279,
+          "class_id": 1
+        },
+        {
+          "anchor": 234,
+          "class_id": 1
+        },
+        {
+          "anchor": 3600,
+          "class_id": 1
+        }
+      ],
+      "pair_set_sha256": "96e48459f246caa08b0008a65077dce0b5662f1dbab026e6fbc5afc57a1b5ae7"
+    },
+    "selection_alignment": {
+      "status": "resolved",
+      "native_count": 300,
+      "onnx_count": 300,
+      "overlap_count": 278,
+      "native_unique_count": 300,
+      "onnx_unique_count": 300,
+      "same_selected_set": false,
+      "same_selected_set_permutation": false,
+      "same_order": false,
+      "different_selected_set_membership": true,
+      "native_only_examples": [
+        {
+          "anchor": 320,
+          "class_id": 2
+        },
+        {
+          "anchor": 645,
+          "class_id": 1
+        },
+        {
+          "anchor": 1680,
+          "class_id": 2
+        },
+        {
+          "anchor": 1705,
+          "class_id": 0
+        },
+        {
+          "anchor": 1950,
+          "class_id": 0
+        },
+        {
+          "anchor": 3591,
+          "class_id": 1
+        },
+        {
+          "anchor": 4789,
+          "class_id": 1
+        },
+        {
+          "anchor": 5200,
+          "class_id": 2
+        },
+        {
+          "anchor": 5668,
+          "class_id": 0
+        },
+        {
+          "anchor": 6079,
+          "class_id": 0
+        }
+      ],
+      "onnx_only_examples": [
+        {
+          "anchor": 214,
+          "class_id": 0
+        },
+        {
+          "anchor": 227,
+          "class_id": 2
+        },
+        {
+          "anchor": 1692,
+          "class_id": 0
+        },
+        {
+          "anchor": 1704,
+          "class_id": 0
+        },
+        {
+          "anchor": 1920,
+          "class_id": 2
+        },
+        {
+          "anchor": 2239,
+          "class_id": 2
+        },
+        {
+          "anchor": 3919,
+          "class_id": 1
+        },
+        {
+          "anchor": 4556,
+          "class_id": 1
+        },
+        {
+          "anchor": 4860,
+          "class_id": 1
+        },
+        {
+          "anchor": 4880,
+          "class_id": 1
+        }
+      ],
+      "association_rule": "exact (original_anchor,class_id) pair; no nearest-neighbor/rematching"
+    },
+    "reconstructed_outputs": {
+      "native_from_own_tensors_and_reconstructed_indices": {
+        "status": "fail",
+        "domain": "yolo26n_native_detections_fixed_row",
+        "shape": [
+          1,
+          300,
+          6
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "score": [
+            4,
+            5
+          ],
+          "class_id": [
+            5,
+            6
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "fail",
+            "domain": "yolo26n_fixed_row_boxes",
+            "shape": [
+              1,
+              300,
+              4
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 1200,
+            "element_count": 1200,
+            "max_abs": 643.8234065175056,
+            "max_relative": 211611.78263740914,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 1200,
+              "finite_count": 1200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.016925781965255737,
+              "p50": 290.78152427077293,
+              "p95": 639.5678228735924,
+              "p99": 640.0883963108063,
+              "max": 643.8234065175056
+            },
+            "relative_quantiles": {
+              "element_count": 1200,
+              "finite_count": 1200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.03824484037921406,
+              "p50": 160.46650059547386,
+              "p95": 2589.457566488549,
+              "p99": 14137.33206691366,
+              "max": 211611.78263740914
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                0,
+                1
+              ],
+              [
+                0,
+                0,
+                2
+              ],
+              [
+                0,
+                0,
+                3
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                1,
+                1
+              ],
+              [
+                0,
+                1,
+                2
+              ],
+              [
+                0,
+                1,
+                3
+              ],
+              [
+                0,
+                2,
+                0
+              ],
+              [
+                0,
+                2,
+                1
+              ]
+            ]
+          },
+          "score": {
+            "status": "fail",
+            "domain": "yolo26n_fixed_row_scores",
+            "shape": [
+              1,
+              300,
+              1
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 300,
+            "element_count": 300,
+            "max_abs": 15.1372330471321,
+            "max_relative": 1.0000015931210173,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 300,
+              "finite_count": 300,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 1.8712689280509949,
+              "p50": 14.684543075316213,
+              "p95": 15.106628168411337,
+              "p99": 15.129883205120475,
+              "max": 15.1372330471321
+            },
+            "relative_quantiles": {
+              "element_count": 300,
+              "finite_count": 300,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.664811549486704,
+              "p50": 1.000000028248106,
+              "p95": 1.000000214955453,
+              "p99": 1.0000007485051954,
+              "max": 1.0000015931210173
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": [
+              [
+                0,
+                0,
+                0
+              ],
+              [
+                0,
+                1,
+                0
+              ],
+              [
+                0,
+                2,
+                0
+              ],
+              [
+                0,
+                3,
+                0
+              ],
+              [
+                0,
+                4,
+                0
+              ],
+              [
+                0,
+                5,
+                0
+              ],
+              [
+                0,
+                6,
+                0
+              ],
+              [
+                0,
+                7,
+                0
+              ],
+              [
+                0,
+                8,
+                0
+              ],
+              [
+                0,
+                9,
+                0
+              ]
+            ]
+          }
+        },
+        "mismatch_count": 1500,
+        "element_count": 1800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference",
+        "class_ids_exact": true,
+        "class_mismatch_count": 0,
+        "tie_count_reference_scores": 0,
+        "tie_count_observed_scores": 0,
+        "tie_handling": "fixed native row index; ties are reported and never rematched"
+      },
+      "onnx_from_own_tensors_and_direct_indices": {
+        "status": "pass",
+        "domain": "yolo26n_native_detections_fixed_row",
+        "shape": [
+          1,
+          300,
+          6
+        ],
+        "channel_spans": {
+          "boxes": [
+            0,
+            4
+          ],
+          "score": [
+            4,
+            5
+          ],
+          "class_id": [
+            5,
+            6
+          ]
+        },
+        "channel_results": {
+          "boxes": {
+            "status": "pass",
+            "domain": "yolo26n_fixed_row_boxes",
+            "shape": [
+              1,
+              300,
+              4
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 1200,
+            "max_abs": 0.0,
+            "max_relative": 0.0,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 1200,
+              "finite_count": 1200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "relative_quantiles": {
+              "element_count": 1200,
+              "finite_count": 1200,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          },
+          "score": {
+            "status": "pass",
+            "domain": "yolo26n_fixed_row_scores",
+            "shape": [
+              1,
+              300,
+              1
+            ],
+            "dtype": "float32",
+            "rtol": 0.0001,
+            "atol": 1e-05,
+            "mismatch_count": 0,
+            "element_count": 300,
+            "max_abs": 0.0,
+            "max_relative": 0.0,
+            "relative_infinite_count": 0,
+            "abs_quantiles": {
+              "element_count": 300,
+              "finite_count": 300,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "relative_quantiles": {
+              "element_count": 300,
+              "finite_count": 300,
+              "infinite_count": 0,
+              "nan_count": 0,
+              "min": 0.0,
+              "p50": 0.0,
+              "p95": 0.0,
+              "p99": 0.0,
+              "max": 0.0
+            },
+            "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+            "first_offenders": []
+          }
+        },
+        "mismatch_count": 0,
+        "element_count": 1800,
+        "tolerance_order": "observed first, reference second in numpy.isclose(observed, reference, rtol, atol); relative scale is reference",
+        "class_ids_exact": true,
+        "class_mismatch_count": 0,
+        "tie_count_reference_scores": 240,
+        "tie_count_observed_scores": 240,
+        "tie_handling": "fixed native row index; ties are reported and never rematched"
+      },
+      "onnx_index_mapping": {
+        "status": "exact",
+        "class_formula": "flat_index % 3",
+        "anchor_rank_formula": "flat_index // 3",
+        "original_anchor_formula": "stage1_indices[anchor_rank]",
+        "checked_count": 300
+      },
+      "onnx_stage2_value_consistency": {
+        "status": "pass",
+        "domain": "yolo26_stage2_value_reconstruction",
+        "shape": [
+          1,
+          300
+        ],
+        "dtype": "float32",
+        "rtol": 0.0001,
+        "atol": 1e-05,
+        "mismatch_count": 0,
+        "element_count": 300,
+        "max_abs": 0.0,
+        "max_relative": 0.0,
+        "relative_infinite_count": 0,
+        "abs_quantiles": {
+          "element_count": 300,
+          "finite_count": 300,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "relative_quantiles": {
+          "element_count": 300,
+          "finite_count": 300,
+          "infinite_count": 0,
+          "nan_count": 0,
+          "min": 0.0,
+          "p50": 0.0,
+          "p95": 0.0,
+          "p99": 0.0,
+          "max": 0.0
+        },
+        "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+        "first_offenders": []
+      },
+      "onnx_direct_intermediate_consistency": {
+        "selected_class_scores": {
+          "status": "pass",
+          "domain": "yolo26_direct_selected_class_scores",
+          "shape": [
+            1,
+            300,
+            3
+          ],
+          "dtype": "float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "mismatch_count": 0,
+          "element_count": 900,
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "relative_infinite_count": 0,
+          "abs_quantiles": {
+            "element_count": 900,
+            "finite_count": 900,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "max": 0.0
+          },
+          "relative_quantiles": {
+            "element_count": 900,
+            "finite_count": 900,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "max": 0.0
+          },
+          "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+          "first_offenders": []
+        },
+        "selected_boxes": {
+          "status": "pass",
+          "domain": "yolo26_direct_selected_boxes",
+          "shape": [
+            1,
+            300,
+            4
+          ],
+          "dtype": "float32",
+          "rtol": 0.0001,
+          "atol": 1e-05,
+          "mismatch_count": 0,
+          "element_count": 1200,
+          "max_abs": 0.0,
+          "max_relative": 0.0,
+          "relative_infinite_count": 0,
+          "abs_quantiles": {
+            "element_count": 1200,
+            "finite_count": 1200,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "max": 0.0
+          },
+          "relative_quantiles": {
+            "element_count": 1200,
+            "finite_count": 1200,
+            "infinite_count": 0,
+            "nan_count": 0,
+            "min": 0.0,
+            "p50": 0.0,
+            "p95": 0.0,
+            "p99": 0.0,
+            "max": 0.0
+          },
+          "comparison_equation": "abs(observed-reference) <= atol + rtol*abs(reference)",
+          "first_offenders": []
+        },
+        "association": "stage1 original-anchor indices only; no rematching"
+      }
+    },
+    "graph_trace": {
+      "model": "yolo26n",
+      "original_output_name": "output0",
+      "output_additions": {
+        "preselection_merged": "/model.23/Concat_3_output_0",
+        "preselection_transposed": "/model.23/Transpose_output_0",
+        "preselection_boxes": "/model.23/Split_output_0",
+        "preselection_scores": "/model.23/Split_output_1",
+        "stage1_values": "/model.23/TopK_output_0",
+        "stage1_indices": "/model.23/TopK_output_1",
+        "stage2_values": "/model.23/TopK_1_output_0",
+        "stage2_indices": "/model.23/TopK_1_output_1",
+        "selected_class_scores": "/model.23/GatherElements_output_0",
+        "selected_anchor_rank": "/model.23/Add_2_output_0",
+        "selected_class_id": "/model.23/Mod_output_0",
+        "selected_anchor_indices": "/model.23/Expand_1_output_0",
+        "selected_boxes": "/model.23/GatherElements_1_output_0"
+      },
+      "trace_nodes": [
+        {
+          "name": "/model.23/Concat_3",
+          "op_type": "Concat",
+          "inputs": [
+            "/model.23/Mul_2_output_0",
+            "/model.23/Sigmoid_output_0"
+          ],
+          "outputs": [
+            "/model.23/Concat_3_output_0"
+          ],
+          "attributes": {
+            "axis": 1
+          }
+        },
+        {
+          "name": "/model.23/Transpose",
+          "op_type": "Transpose",
+          "inputs": [
+            "/model.23/Concat_3_output_0"
+          ],
+          "outputs": [
+            "/model.23/Transpose_output_0"
+          ],
+          "attributes": {
+            "perm": [
+              0,
+              2,
+              1
+            ]
+          }
+        },
+        {
+          "name": "/model.23/Split",
+          "op_type": "Split",
+          "inputs": [
+            "/model.23/Transpose_output_0",
+            "onnx::Split_727"
+          ],
+          "outputs": [
+            "/model.23/Split_output_0",
+            "/model.23/Split_output_1"
+          ],
+          "attributes": {
+            "axis": -1
+          }
+        },
+        {
+          "name": "/model.23/ReduceMax",
+          "op_type": "ReduceMax",
+          "inputs": [
+            "/model.23/Split_output_1"
+          ],
+          "outputs": [
+            "/model.23/ReduceMax_output_0"
+          ],
+          "attributes": {
+            "axes": [
+              -1
+            ],
+            "keepdims": 0
+          }
+        },
+        {
+          "name": "/model.23/TopK",
+          "op_type": "TopK",
+          "inputs": [
+            "/model.23/ReduceMax_output_0",
+            "/model.23/Constant_15_output_0"
+          ],
+          "outputs": [
+            "/model.23/TopK_output_0",
+            "/model.23/TopK_output_1"
+          ],
+          "attributes": {
+            "axis": -1,
+            "largest": 1,
+            "sorted": 1
+          }
+        },
+        {
+          "name": "/model.23/GatherElements",
+          "op_type": "GatherElements",
+          "inputs": [
+            "/model.23/Split_output_1",
+            "/model.23/Tile_output_0"
+          ],
+          "outputs": [
+            "/model.23/GatherElements_output_0"
+          ],
+          "attributes": {
+            "axis": 1
+          }
+        },
+        {
+          "name": "/model.23/Flatten",
+          "op_type": "Flatten",
+          "inputs": [
+            "/model.23/GatherElements_output_0"
+          ],
+          "outputs": [
+            "/model.23/Flatten_output_0"
+          ],
+          "attributes": {
+            "axis": 1
+          }
+        },
+        {
+          "name": "/model.23/TopK_1",
+          "op_type": "TopK",
+          "inputs": [
+            "/model.23/Flatten_output_0",
+            "/model.23/Constant_15_output_0"
+          ],
+          "outputs": [
+            "/model.23/TopK_1_output_0",
+            "/model.23/TopK_1_output_1"
+          ],
+          "attributes": {
+            "axis": -1,
+            "largest": 1,
+            "sorted": 1
+          }
+        },
+        {
+          "name": "/model.23/Div_1",
+          "op_type": "Div",
+          "inputs": [
+            "/model.23/TopK_1_output_1",
+            "/model.23/Constant_20_output_0"
+          ],
+          "outputs": [
+            "/model.23/Add_2_output_0"
+          ],
+          "attributes": {}
+        },
+        {
+          "name": "/model.23/Mod",
+          "op_type": "Mod",
+          "inputs": [
+            "/model.23/TopK_1_output_1",
+            "/model.23/Constant_20_output_0"
+          ],
+          "outputs": [
+            "/model.23/Mod_output_0"
+          ],
+          "attributes": {
+            "fmod": 0
+          }
+        },
+        {
+          "name": "/model.23/Gather_3",
+          "op_type": "Gather",
+          "inputs": [
+            "/model.23/Flatten_1_output_0",
+            "/model.23/Add_2_output_0"
+          ],
+          "outputs": [
+            "/model.23/Expand_1_output_0"
+          ],
+          "attributes": {
+            "axis": 0
+          }
+        },
+        {
+          "name": "/model.23/GatherElements_1",
+          "op_type": "GatherElements",
+          "inputs": [
+            "/model.23/Split_output_0",
+            "/model.23/Tile_1_output_0"
+          ],
+          "outputs": [
+            "/model.23/GatherElements_1_output_0"
+          ],
+          "attributes": {
+            "axis": 1
+          }
+        },
+        {
+          "name": "/model.23/Concat_6",
+          "op_type": "Concat",
+          "inputs": [
+            "/model.23/GatherElements_1_output_0",
+            "/model.23/Unsqueeze_1_output_0",
+            "/model.23/Cast_2_output_0"
+          ],
+          "outputs": [
+            "output0"
+          ],
+          "attributes": {
+            "axis": -1
+          }
+        }
+      ],
+      "lineage": {
+        "/model.23/Concat_3": [
+          "/model.23/Concat_3_output_0"
+        ],
+        "/model.23/Transpose": [
+          "/model.23/Transpose_output_0"
+        ],
+        "/model.23/Split": [
+          "/model.23/Split_output_0",
+          "/model.23/Split_output_1"
+        ],
+        "/model.23/TopK": [
+          "/model.23/TopK_output_0",
+          "/model.23/TopK_output_1"
+        ],
+        "/model.23/GatherElements": [
+          "/model.23/GatherElements_output_0"
+        ],
+        "/model.23/TopK_1": [
+          "/model.23/TopK_1_output_0",
+          "/model.23/TopK_1_output_1"
+        ],
+        "/model.23/Div_1": [
+          "/model.23/Add_2_output_0"
+        ],
+        "/model.23/Mod": [
+          "/model.23/Mod_output_0"
+        ],
+        "/model.23/Gather_3": [
+          "/model.23/Expand_1_output_0"
+        ],
+        "/model.23/GatherElements_1": [
+          "/model.23/GatherElements_1_output_0"
+        ],
+        "/model.23/Concat_6": [
+          "output0"
+        ]
+      },
+      "topk_contract": {
+        "/model.23/TopK": {
+          "axis": -1,
+          "largest": 1,
+          "sorted": 1
+        },
+        "/model.23/TopK_1": {
+          "axis": -1,
+          "largest": 1,
+          "sorted": 1
+        }
+      },
+      "flattening_contract": {
+        "class_count": 3,
+        "stage1": "TopK(ReduceMax(class_probability), k=300, axis=-1)",
+        "stage2": "TopK(flatten(selected_class_probabilities), k=300, axis=-1)",
+        "class_index": "flat_index % 3",
+        "anchor_rank": "flat_index // 3",
+        "original_anchor": "Gather(stage1_indices, anchor_rank)"
+      },
+      "tensor_metadata": {
+        "preselection_merged": {
+          "shape": [
+            1,
+            7,
+            8400
+          ],
+          "dtype": "float32"
+        },
+        "preselection_transposed": {
+          "shape": [
+            1,
+            8400,
+            7
+          ],
+          "dtype": "float32"
+        },
+        "preselection_boxes": {
+          "shape": [
+            1,
+            8400,
+            4
+          ],
+          "dtype": "float32"
+        },
+        "preselection_scores": {
+          "shape": [
+            1,
+            8400,
+            3
+          ],
+          "dtype": "float32"
+        },
+        "stage1_values": {
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "float32"
+        },
+        "stage1_indices": {
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "int64"
+        },
+        "stage2_values": {
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "float32"
+        },
+        "stage2_indices": {
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "int64"
+        },
+        "selected_class_scores": {
+          "shape": [
+            1,
+            300,
+            3
+          ],
+          "dtype": "float32"
+        },
+        "selected_anchor_rank": {
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "int64"
+        },
+        "selected_class_id": {
+          "shape": [
+            1,
+            300
+          ],
+          "dtype": "int64"
+        },
+        "selected_anchor_indices": {
+          "shape": [
+            1,
+            300,
+            1
+          ],
+          "dtype": "int64"
+        },
+        "selected_boxes": {
+          "shape": [
+            1,
+            300,
+            4
+          ],
+          "dtype": "float32"
+        }
+      },
+      "score_semantics": "preselection_scores are the accepted post-Sigmoid class probabilities from the merged float32 graph; raw logits are not compared to probabilities",
+      "instrumentation": "existing intermediate tensors exposed as additional graph outputs; nodes/weights/attributes unchanged",
+      "added_output_names": [
+        "/model.23/Concat_3_output_0",
+        "/model.23/Transpose_output_0",
+        "/model.23/Split_output_0",
+        "/model.23/Split_output_1",
+        "/model.23/TopK_output_0",
+        "/model.23/TopK_output_1",
+        "/model.23/TopK_1_output_0",
+        "/model.23/TopK_1_output_1",
+        "/model.23/GatherElements_output_0",
+        "/model.23/Add_2_output_0",
+        "/model.23/Mod_output_0",
+        "/model.23/Expand_1_output_0",
+        "/model.23/GatherElements_1_output_0"
+      ],
+      "derived_file": {
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_numeric_localization_v1/models/yolo26n/private/yolo26n_localization_view.onnx",
+        "bytes": 9807424,
+        "sha256": "d86941d35b5273f69a0d6c3716f1ac8d4929d54bdea95eb3d5032fec33982c1e"
+      }
+    },
+    "instrumentation_sensitivity": {
+      "status": "unchanged_exact",
+      "original_output_vs_derived_output_exact": true,
+      "if_drift": null
+    },
+    "association_boundary": "exact anchor/class pairs only; no nearest-neighbor matching, rematching, score cutoff, NMS or row replacement"
+  },
+  "private_artifacts": [
+    {
+      "path": "models/yolo26n/private/yolo26n_localization_view.onnx",
+      "retention": "server_private_not_publishable",
+      "bytes": 9807424,
+      "sha256": "d86941d35b5273f69a0d6c3716f1ac8d4929d54bdea95eb3d5032fec33982c1e"
+    }
+  ],
+  "forward_counts": {
+    "native_model_forwards": {
+      "attempted": 1,
+      "completed": 1
+    },
+    "onnx_original_session_runs": {
+      "attempted": 1,
+      "completed": 1
+    },
+    "onnx_derived_session_runs": {
+      "attempted": 1,
+      "completed": 1
+    }
+  },
+  "lifecycle": {
+    "status": "completed",
+    "stage": "completed",
+    "stage_history": [
+      {
+        "sequence": 0,
+        "stage": "child_started"
+      },
+      {
+        "sequence": 1,
+        "stage": "runtime_loading"
+      },
+      {
+        "sequence": 2,
+        "stage": "runtime_loaded"
+      },
+      {
+        "sequence": 3,
+        "stage": "binary_binding"
+      },
+      {
+        "sequence": 4,
+        "stage": "preprocessed",
+        "image": "train/images/00006.jpg"
+      },
+      {
+        "sequence": 5,
+        "stage": "head_validated",
+        "head": {
+          "type": "Detect",
+          "index": 23,
+          "end2end": true
+        }
+      },
+      {
+        "sequence": 6,
+        "stage": "native_forward_complete"
+      },
+      {
+        "sequence": 7,
+        "stage": "original_onnx_complete"
+      },
+      {
+        "sequence": 8,
+        "stage": "derived_onnx_complete"
+      },
+      {
+        "sequence": 9,
+        "stage": "completed"
+      }
+    ],
+    "forward_counts": {
+      "native_model_forwards": {
+        "attempted": 1,
+        "completed": 1
+      },
+      "onnx_original_session_runs": {
+        "attempted": 1,
+        "completed": 1
+      },
+      "onnx_derived_session_runs": {
+        "attempted": 1,
+        "completed": 1
+      }
+    }
+  },
+  "audit_flags": {
+    "export_performed": false,
+    "tensorRT_imported": false,
+    "accepted_onnx_modified": false,
+    "gpu_used": false,
+    "scored_run_authorized": false,
+    "matrix_opened": false
+  },
+  "created_utc": "2026-09-17T15:01:05.694507+00:00"
+}
