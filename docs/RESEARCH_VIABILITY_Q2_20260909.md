@@ -203,6 +203,16 @@ Không nên lập danh sách journal Q2 từ các website tổng hợp rồi m�
 
 Nếu sau audit không có quan sát hoặc quyết định triển khai vượt khỏi prior art, cần dừng tăng số model/device và xem lại đóng góp trước khi chi thêm thời gian. Nếu có bằng chứng lặp lại, evaluator đáng tin và hardware study giải thích được trade-off, có cơ sở xây dựng bản thảo hướng journal Q2; đó vẫn là triển vọng có điều kiện, không phải cam kết xuất bản.
 
+### 8.1. Bảng trạng thái bằng chứng tại mốc source/export bridge
+
+| Nhóm bằng chứng | Trạng thái | Cách diễn giải được phép |
+|---|---|---|
+| Kết quả YOLO11n đã hoàn tất | Step A Uniform ba build, precision-head ablation và latency 39 phiên đã có artifact/provenance; Step A được nghiệm thu có giới hạn | Chỉ là bằng chứng mô tả cho YOLO11n trong các protocol tương ứng; không đại diện cho mọi họ/model |
+| Chẩn đoán source/ONNX âm tính đã chấp nhận | Numeric v1/v2 và localization v1/v2 của YOLOv8n/YOLO26n giữ verdict `FAIL`; lỗi semantics đã được khoanh vùng nhưng không nới tolerance | Đây là bằng chứng âm tính/giới hạn về raw-output agreement; không gọi là lỗi calibration, không gọi là TensorRT end-to-end |
+| Cross-model và edge evidence còn chờ | Native-FP32 versus accepted-ONNX-FP32 dev bridge cho YOLOv8n/YOLO26n mới ở mức protocol/implementation, chưa chạy full dev; cross-device accuracy/energy chưa có bộ hoàn chỉnh | Chưa được báo cáo AP source/export hoặc kết luận deployment; chỉ mở sau review contract và các gate tiếp theo |
+
+Bridge source/export là một review gate bổ sung sau localization diagnostics, không phải tiêu chí preregistered ban đầu. Không dùng nó để xóa hoặc thay verdict `FAIL` lịch sử.
+
 ## 9. Hồ sơ nguồn và giới hạn thẩm định
 
 Mốc thẩm định: 09/09/2026. Local repository tại commit `88045db`; báo cáo không thay đổi code, checkpoint, protocol đang chạy hoặc kết quả lịch sử. Các nhận xét code là kiểm tra tĩnh; chưa thực hiện lại inference hoặc xác minh toàn bộ dữ liệu raw trên server.
