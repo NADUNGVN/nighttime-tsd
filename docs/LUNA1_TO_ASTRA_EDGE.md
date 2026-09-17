@@ -409,3 +409,61 @@ reviewed power measurement scope.
 **Git:** branch `luna1/e2l1-005-telemetry-feasibility` in worktree
 `D:/Research/paper-luna-edge-002`; commit/push follows after final local checks.
 No automatic PR or merge.
+
+## L1A-006 — local Jetson adapter and protocol smoke package
+
+**Status:** local implementation and CPU/mock protocol validation complete;
+**NO-GO** for device execution, model transfer, TensorRT export/build,
+inference, benchmark, installation, or device configuration changes.
+
+Implemented on branch `luna1/e2l1-006-jetson-adapter-smoke`:
+
+- `scripts/edge_readiness/jetson_adapter.py` defines a narrow injected-runtime
+  contract with structured boundary errors, batch-1/640 I/O validation,
+  explicit float16/float32 byte sizing, host/device buffer records, and
+  synchronization checkpoints around copies and enqueue.
+- E2 Xavier NX is the proposed first smoke target. E3 AGX Xavier is the
+  subsequent TensorRT 8.5.2.2 compatibility candidate. E5 Orin Nano Super is
+  the TensorRT 10.3.0 named-address/v3 candidate. These API paths are proposed
+  from the observed inventory and still require target validation.
+- `docs/JETSON_ADAPTER_SMOKE_V1.md` freezes the YOLO11n engineering reference
+  checkpoint SHA-256
+  `3e5fc7a2148c16539cd9fb7cc7cacd81a4eec1dfc28143cdf9b6dcd872ba4ab8`, keeps
+  the server RTX engine as provenance only, specifies preprocessing,
+  postprocessing/no-double-NMS, pre-declared output checks/tolerances, the
+  train-only deterministic fixture, allowed resources, stop conditions, and
+  future artifact layout. Version-specific API references are the official
+  [TensorRT 8.5.3 release notes](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-853/pdf/TensorRT-Release-Notes.pdf),
+  [TensorRT 10.3 Developer Guide](https://docs.nvidia.com/deeplearning/tensorrt/archives/tensorrt-1030/pdf/TensorRT-Developer-Guide.pdf),
+  [8.x to 10.x migration patterns](https://docs.nvidia.com/deeplearning/tensorrt/latest/api/migration/tensorrt-8x-to-10x-c-api-patterns.html),
+  and [TensorRT Python API documentation](https://docs.nvidia.com/deeplearning/tensorrt/latest/inference-library/python-api-docs.html).
+- `tests/test_jetson_adapter.py` covers proposed-plan boundaries, target/runtime
+  and checkpoint rejection, E2 binding-list execution, E5 named-address/v3
+  execution, byte/input validation, enqueue failure, synchronization ordering,
+  and deterministic fixture order/content binding.
+
+### Verification
+
+The complete local edge suite was run after this package was added:
+
+    python -m unittest discover -s tests -p 'test_edge*.py' -v
+    Ran 34 tests ... OK
+
+The adapter and existing edge modules also pass `py_compile`, and
+`git diff --check` passes. No GPU runtime was imported; no SSH connection,
+device command, engine build, model load, forward pass, or benchmark was run
+for L1A-006. The accepted L1A-005 telemetry artifacts remain immutable,
+including the disclosed E2 cumulative 31.109-second two-attempt deviation.
+
+### Remaining prerequisites and handoff
+
+Before any device-side smoke, Astra must authorize the target and confirm
+target-local runtime/API availability, disk/dependency budget, target-native
+engine provenance, binding/output contract, final stream/event completion,
+timestamp/clock evidence, and the future output tolerance manifest. A missing
+power boundary or clock alignment makes energy unavailable; it does not block a
+separately labelled correctness/latency smoke. E3/E5 are not scored arms by
+this package, and no official-test/AP result is implied.
+
+**Git:** branch `luna1/e2l1-006-jetson-adapter-smoke`; scoped commit/push follows
+after final checks. No PR or merge.
