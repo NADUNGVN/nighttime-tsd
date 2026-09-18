@@ -535,3 +535,31 @@ Unchanged budget: one FP16-enabled build from the accepted ONNX, workspace1GiB, 
 On success or failure, preserve all public evidence and private partials. After a timeout/disconnect, inspect the existing owned run state read-only and report unknown completion; never rerun automatically. Stop after this one run and publish only public JSON/JSONL/Markdown/log evidence. The first real model result is an engineering smoke, not deployment-accuracy or paper-performance validation.
 
 Append **L1A-017** with repair/tests and staging/dispatch prerequisites before execution, then an execution/artifact-audit addendum after the bounded run. Report actual versus mocked/POSIX-specific coverage honestly. Push this unchanged inbox and scoped work using NADUNGVN; Astra leaves it unstaged. **Immediate GO local repairs plus scoped staging/read-only E2; conditional GO one smoke only under C4; NO-GO benchmark or further experiment.** Main Luna proceeds independently with local two-model TensorRT feasibility preparation.
+
+## E2L1-018 — staging handoff: connectivity and private-source archive, no new experiment
+
+Review 2026-09-18: executable `b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4`, report `f3bd42469fbfca9b448fdce88f42de901885cf8c`. Astra reran **106/106 edge tests PASS** and independently compared all six provenance helpers plus __init__.py in `D:/Research/luna1-e2l1-017-code-b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4-blob` to the raw Git blobs of that executable commit: **7/7 exact**. Archive provenance verification succeeds without Git metadata; code-export-manifest.json SHA256 matches **aa136f72b9d395569e70944e1c67d1dbd1bdb23621912f9dfbed856297764507**. Local tests/package verification are not E2 numerical execution or proof of POSIX process-group behavior. Correct the inherited104/104 number when reporting this revision.
+
+The concrete present blockers in L1A-017 are (1) nx SSH connection timed out, and (2) the ten private source binaries are not local. No real build/inference started. **Keep the existing E2L1-017 conditional one-smoke scope; do not create another code study or allocation smoke merely while waiting.** The production real-device subprocess path is the authorized path, not the mock fallback. Once connectivity/source and all C4 prerequisites are verified, that existing conditional authorization applies; no new scientific permission request is needed. Unresolved prerequisite/tests must still be reported rather than declared satisfied.
+
+### User-operated SERVER-01 packaging
+
+Send the user the following foreground commands, each as one line. They only package the existing accepted source bundle; no inference/export/build, Git push of binaries, or server SSH by Luna1. First inspect existence and canonical manifest hash:
+
+```bash
+(cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2 && test "$(sha256sum public/manifest.json | cut -d ' ' -f 1)" = 60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08 && test -f private/onnx_export/best.onnx && for f in private/inputs/00006.bin private/inputs/00009.bin private/inputs/00028.bin private/native_reference/00006.bin private/native_reference/00009.bin private/native_reference/00028.bin private/onnx_reference/00006.bin private/onnx_reference/00009.bin private/onnx_reference/00028.bin; do test -f "$f" || exit 1; done && echo SOURCE_PRESENT)
+```
+
+Only after SOURCE_PRESENT, create one new scoped archive. The subshell's noclobber prevents overwriting an existing archive; tar lists exactly11 approved entries. If creation fails, preserve the partial and report; do not reuse it as complete or delete it automatically.
+
+```bash
+(set -C; cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2 && tar -czf - public/manifest.json private/onnx_export/best.onnx private/inputs/00006.bin private/inputs/00009.bin private/inputs/00028.bin private/native_reference/00006.bin private/native_reference/00009.bin private/native_reference/00028.bin private/onnx_reference/00006.bin private/onnx_reference/00009.bin private/onnx_reference/00028.bin > /tmp/luna1-e2l1-017-source-v2.tar.gz) && sha256sum /tmp/luna1-e2l1-017-source-v2.tar.gz
+```
+
+The user supplies this archive and its printed SHA256 through an approved download/transfer location and tells Luna1 the local path. Do not put it in public Git/Git LFS. This packaging check does not replace validating all private bytes against the canonical manifest. Luna1 verifies archive hash, exact member allowlist, no symlink/traversal/directory escape, extracts to a fresh owned staging root, and uses the accepted source loader to check every binary before E2 transfer. If an archive member is a link or unexpected, stop; do not dereference arbitrary paths. Preserve raw manifest bytes and recheck hashes on the target.
+
+### Connectivity and handoff
+
+Ask the user to confirm E2 is powered/reachable from the lab network/VPN and whether its address changed. Do not assume a timeout means the device or SSH service is broken. No port scanning, network reconfiguration or unapproved host substitution. After connectivity is restored, a bounded read-only retry of the existing nx probe is permitted; this is not a model retry. Resolve actual Python3.8 executable and fresh owned paths before the staged command. Keep complete public probe stdout/stderr/exit evidence and the exact packaged executable commit.
+
+Append **L1A-018** with source-archive state, connectivity state, verified package/source hashes and observed interpreter/path prerequisites. If still blocked, identify the user action needed; no repeated implementation rounds are required for a missing network route or missing private archive. If the existing C4 one-smoke conditions are fulfilled and the smoke runs, add its actual result/counters/comparisons/partials and stop for Astra review. No automatic retry after a model timeout, no benchmark or further device. Commit/push this unchanged inbox and scoped public evidence through NADUNGVN. Astra leaves this entry unstaged; no source packaging, transfer or SSH was performed by Astra.

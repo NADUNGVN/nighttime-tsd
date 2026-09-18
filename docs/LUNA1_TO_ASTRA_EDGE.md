@@ -1500,3 +1500,60 @@ exactly three ordered application enqueues (`00006`, `00009`, `00028`), with
 round is required for that exact smoke, but this entry is currently **HOLD**
 because the two concrete prerequisites above are unmet. No automatic rerun is
 permitted after timeout/disconnect.
+
+## L1A-018 — E2 connectivity restored; source archive handoff remains pending
+
+**Status:** local package and read-only E2 staging checks are complete. The
+conditional C4 smoke remains **HOLD** because the user-operated SERVER-01
+source archive has not yet been supplied. No E2 build, deserialization,
+inference, benchmark, allocation, installation or configuration change was
+performed.
+
+Implementation remains `b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4`; report and
+inbox changes are pushed in the current branch. The operator-reported edge
+regression is **106/106 PASS**; local focused tests remain **23/23 PASS**.
+
+### Connectivity result
+
+The initial `nx` SSH timeout was reproduced. After the lab route became
+available, one bounded read-only retry through the existing `nx` alias
+(`192.168.10.93`) succeeded. Observed output:
+
+    hostname: arar-desktop
+    architecture: aarch64
+    device-tree model: NVIDIA Jetson Xavier NX Developer Kit
+    Python: /usr/bin/python3.8, Python 3.8.10
+    /tmp filesystem: /dev/mmcblk0p1, 122054784 KiB total, 97123816 KiB available, 17% used
+    /tmp/luna1-e2l1-017-code: absent
+    /tmp/luna1-e2l1-017-source: absent
+    /tmp/luna1-e2l1-017-model-smoke: absent
+
+A bounded process-name check found no `trtexec`, `tensorrt`,
+`e2_model_smoke`, `python3.8` or `cuda` process. The observed process summary
+was not used as an isolation/latency claim. No route, VPN, SSH configuration
+or device state was changed by Luna1.
+
+### Package/source result
+
+The canonical code package remains
+`D:/Research/luna1-e2l1-017-code-b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4-blob`.
+Its export manifest SHA-256 is
+`aa136f72b9d395569e70944e1c67d1dbd1bdb23621912f9dfbed856297764507`, with
+7/7 raw Git file comparisons passing. The first Windows tar extraction was
+discarded from the execution plan because it converted LF to CRLF; the valid
+package was rebuilt directly from `git cat-file blob` bytes.
+
+The local source path still has only public files and no private/allowlisted
+source binaries. Luna1 did not access SERVER-01. The user must run the two
+foreground commands already specified in E2L1-018: first verify the recorded
+source root and canonical manifest SHA-256, then create exactly one
+`/tmp/luna1-e2l1-017-source-v2.tar.gz` containing the manifest, ONNX and nine
+reference/input binaries. The user supplies that archive and its SHA-256 via an
+approved transfer location; it must not be committed or uploaded to Git.
+
+Once supplied, Luna1 will verify archive SHA-256, exactly 11 members, no links
+or traversal, raw manifest bytes and all private hashes, then transfer only the
+verified scoped package to fresh absent E2 paths. C4 then permits exactly one
+foreground smoke: one FP16/1 GiB build and three ordered enqueues with the
+900s/180s child deadlines. Until the archive is supplied and reverified, no
+smoke dispatch is authorized by the conditional gate.
