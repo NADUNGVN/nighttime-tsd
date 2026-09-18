@@ -267,12 +267,14 @@ class JetsonRuntimeAdapter:
             raise AdapterError("ENQUEUE_FAILED", "runtime enqueue did not return true")
         self._observe("enqueue_completed")
         self.synchronize("after_enqueue")
+        self._observe("enqueue_synchronized")
         try:
             for binding in self.engine.output_bindings():
                 self._observe("d2h_copy_attempted")
                 self.buffers.copy_device_to_host(self._device_bindings[binding.name], self.stream.handle)
                 self._observe("d2h_copy_completed")
             self.synchronize("after_output_copy")
+            self._observe("d2h_copy_synchronized")
             self.buffers.mark_outputs_ready(self.stream.handle)
             outputs = self.buffers.output_tensors()
         except AdapterError:

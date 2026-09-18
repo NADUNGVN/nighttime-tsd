@@ -127,12 +127,15 @@ class SmokeCounters:
     engine_load_completed: int = 0
     enqueues_attempted: int = 0
     enqueues_completed: int = 0
+    enqueues_synchronized: int = 0
     output_copies_attempted: int = 0
     output_copies_completed: int = 0
+    output_copies_synchronized: int = 0
     comparisons_attempted: int = 0
     comparisons_completed: int = 0
+    unknown_completions: List[str] = field(default_factory=list)
 
-    def as_dict(self) -> Dict[str, int]:
+    def as_dict(self) -> Dict[str, Any]:
         return dict(self.__dict__)
 
 
@@ -174,13 +177,14 @@ def file_sha256(path: Path) -> str:
 
 
 PROVENANCE_FILES = ("scripts/edge_readiness/e2_model_smoke.py", "scripts/edge_readiness/e2_output_compare.py", "scripts/edge_readiness/jetson_adapter.py", "scripts/edge_readiness/jetson_runtime_provider.py", "scripts/edge_readiness/cuda_runtime_owner.py", "scripts/edge_readiness/edge_errors.py")
+PACKAGE_FILES = ("scripts/edge_readiness/__init__.py",)
 
 
 def create_code_export_manifest(commit: str, code_root: Optional[Path] = None) -> Dict[str, Any]:
     if not isinstance(commit, str) or len(commit) != 40 or any(character not in "0123456789abcdefABCDEF" for character in commit):
         raise ModelSmokeError("CODE_REVISION_INVALID", "code export manifest requires a full 40-character hexadecimal revision")
     root = (code_root or Path(__file__).resolve().parents[2]).resolve()
-    return {"schema_version": "e2l1-code-export-v1", "commit": commit.lower(), "files": {relative: file_sha256(root / relative) for relative in PROVENANCE_FILES}}
+    return {"schema_version": "e2l1-code-export-v1", "commit": commit.lower(), "files": {relative: file_sha256(root / relative) for relative in PROVENANCE_FILES}, "package_files": {relative: file_sha256(root / relative) for relative in PACKAGE_FILES}}
 
 
 def code_provenance(requested_commit: str = "unknown", archive_manifest_path: Optional[Path] = None, code_root: Optional[Path] = None) -> Dict[str, Any]:
@@ -196,10 +200,17 @@ def code_provenance(requested_commit: str = "unknown", archive_manifest_path: Op
         recorded_files = archive_manifest.get("files")
         if not isinstance(recorded_files, dict) or set(recorded_files) != set(PROVENANCE_FILES):
             raise ModelSmokeError("CODE_ARCHIVE_MANIFEST_INVALID", "reviewed archive manifest must bind exactly the required helper files")
+        recorded_package_files = archive_manifest.get("package_files")
+        if not isinstance(recorded_package_files, dict) or set(recorded_package_files) != set(PACKAGE_FILES):
+            raise ModelSmokeError("CODE_ARCHIVE_MANIFEST_INVALID", "reviewed archive manifest must include required package initialization files")
         observed_files = {relative: file_sha256(code_root / relative) for relative in PROVENANCE_FILES}
         mismatches = {relative: {"expected": recorded_files[relative], "observed": observed_files[relative]} for relative in PROVENANCE_FILES if recorded_files[relative] != observed_files[relative]}
         if mismatches:
             raise ModelSmokeError("CODE_ARCHIVE_BYTES_MISMATCH", "executing archive bytes differ from the reviewed export manifest", {"mismatches": mismatches})
+        observed_package_files = {relative: file_sha256(code_root / relative) for relative in PACKAGE_FILES}
+        package_mismatches = {relative: {"expected": recorded_package_files[relative], "observed": observed_package_files[relative]} for relative in PACKAGE_FILES if recorded_package_files[relative] != observed_package_files[relative]}
+        if package_mismatches:
+            raise ModelSmokeError("CODE_ARCHIVE_BYTES_MISMATCH", "executing package initialization bytes differ from the reviewed export manifest", {"mismatches": package_mismatches})
         reviewed_commit = archive_manifest["commit"]
         if requested_commit not in {"", "unknown", reviewed_commit}:
             raise ModelSmokeError("CODE_REVISION_MISMATCH", "requested code revision differs from reviewed archive revision", {"requested_commit": requested_commit, "reviewed_commit": reviewed_commit})
@@ -358,9 +369,14 @@ def _collect_parser_errors(parser: Any) -> List[str]:
 
 
 class TensorRTOnnxBuilder:
-    def __init__(self, module_loader: Optional[Callable[[str], Any]] = None) -> None:
+    def __init__(self, module_loader: Optional[Callable[[str], Any]] = None, stage_observer: Optional[Callable[[str], None]] = None) -> None:
         self.module_loader = module_loader or importlib.import_module
+        self.stage_observer = stage_observer
         self.last_event: Dict[str, Any] = {}
+
+    def _observe(self, event: str) -> None:
+        if self.stage_observer is not None:
+            self.stage_observer(event)
 
     def build(self, onnx_path: Path, engine_path: Path, workspace_bytes: int = WORKSPACE_BYTES) -> EngineArtifact:
         if engine_path.exists():
@@ -379,12 +395,14 @@ class TensorRTOnnxBuilder:
                 flags = 1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
             network = builder.create_network(flags)
             parser = trt.OnnxParser(network, logger)
+            self._observe("parser_attempted")
             parsed = parser.parse_from_file(str(onnx_path))
             if parsed is not True:
                 errors = _collect_parser_errors(parser)
                 self.last_event = {"parser_errors": errors}
                 raise ModelSmokeError("ONNX_PARSE_FAILED", "TensorRT ONNX parser rejected the accepted source ONNX", {"parser_errors": errors})
             self.last_event = {"parser_errors": [], "parser_completed": True}
+            self._observe("parser_completed")
             config = builder.create_builder_config()
             if hasattr(config, "set_memory_pool_limit") and hasattr(trt, "MemoryPoolType"):
                 config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, workspace_bytes)
@@ -398,6 +416,7 @@ class TensorRTOnnxBuilder:
             if hasattr(trt, "BuilderFlag") and hasattr(config, "clear_flag") and hasattr(trt.BuilderFlag, "TF32"):
                 config.clear_flag(trt.BuilderFlag.TF32)
                 flags_record["tf32_disabled"] = True
+            self._observe("build_attempted")
             serialized = builder.build_serialized_network(network, config)
             if serialized is None:
                 raise ModelSmokeError("ENGINE_BUILD_FAILED", "TensorRT returned no serialized engine")
@@ -409,6 +428,7 @@ class TensorRTOnnxBuilder:
                 handle.write(payload)
             digest = hashlib.sha256(payload).hexdigest()
             self.last_event = {"parser_errors": [], "parser_completed": True, "build_completed": True, "builder_flags": flags_record, "logger_lifetime": "held through parser and builder", "engine_sha256": digest}
+            self._observe("build_completed")
             return EngineArtifact(engine_path.resolve(), digest, len(payload), runtime_version, {"builder_flags": flags_record, "parser_errors": [], "source_onnx_sha256": SOURCE_ONNX_SHA256})
         except AdapterError:
             raise
@@ -690,27 +710,24 @@ def _child_stage_main(argv: List[str]) -> int:
     parser.add_argument("--commit", default="unknown")
     parser.add_argument("--archive-manifest", type=Path)
     args = parser.parse_args(argv)
-    counters = {"parse_attempted": 0, "parse_completed": 0, "build_attempted": 0, "build_completed": 0, "engine_load_attempted": 0, "engine_load_completed": 0, "enqueues_attempted": 0, "enqueues_completed": 0, "output_copies_attempted": 0, "output_copies_completed": 0}
+    counters = {"parse_attempted": 0, "parse_completed": 0, "build_attempted": 0, "build_completed": 0, "engine_load_attempted": 0, "engine_load_completed": 0, "enqueues_attempted": 0, "enqueues_completed": 0, "enqueues_synchronized": 0, "output_copies_attempted": 0, "output_copies_completed": 0, "output_copies_synchronized": 0}
+    builder = None
+
+    def record_stage_event(event: str) -> None:
+        mapping = {"parser_attempted": "parse_attempted", "parser_completed": "parse_completed", "build_attempted": "build_attempted", "build_completed": "build_completed", "engine_load_attempted": "engine_load_attempted", "engine_load_completed": "engine_load_completed", "enqueue_attempted": "enqueues_attempted", "enqueue_completed": "enqueues_completed", "enqueue_synchronized": "enqueues_synchronized", "d2h_copy_attempted": "output_copies_attempted", "d2h_copy_completed": "output_copies_completed", "d2h_copy_synchronized": "output_copies_synchronized"}
+        if event in mapping:
+            counters[mapping[event]] += 1
+        _append_stage_event(args.events, {"event": event, "stage": args.child_stage, "counters": dict(counters)})
     try:
         _append_stage_event(args.events, {"event": "started", "stage": args.child_stage})
         code_provenance(args.commit, args.archive_manifest)
-        def observe(event: str) -> None:
-            mapping = {"enqueue_attempted": "enqueues_attempted", "enqueue_completed": "enqueues_completed", "d2h_copy_attempted": "output_copies_attempted", "d2h_copy_completed": "output_copies_completed"}
-            if event in mapping:
-                counters[mapping[event]] += 1
-            _append_stage_event(args.events, {"event": event, "stage": args.child_stage, "counters": dict(counters)})
-        runtime = E2TensorRTRuntime(stage_observer=observe)
+        runtime = E2TensorRTRuntime(stage_observer=record_stage_event)
         runtime.preflight()
-        builder = None
         if args.child_stage == "build":
-            counters["parse_attempted"] = 1
-            counters["build_attempted"] = 1
-            builder = TensorRTOnnxBuilder()
+            builder = TensorRTOnnxBuilder(stage_observer=record_stage_event)
             artifact = builder.build(args.onnx.resolve(), args.engine.resolve(), WORKSPACE_BYTES)
-            counters["parse_completed"] = 1 if builder.last_event.get("parser_completed") else 0
-            counters["build_completed"] = 1 if builder.last_event.get("build_completed") else 0
-            _append_stage_event(args.events, {"event": "parser_completed", "stage": "build", "counters": dict(counters)})
-            _append_stage_event(args.events, {"event": "build_completed", "stage": "build", "counters": dict(counters)})
+            counters["parse_completed"] = max(counters["parse_completed"], 1 if builder.last_event.get("parser_completed") else 0)
+            counters["build_completed"] = max(counters["build_completed"], 1 if builder.last_event.get("build_completed") else 0)
             payload = {"path": str(artifact.path), "sha256": artifact.sha256, "nbytes": artifact.nbytes, "runtime_version": artifact.runtime_version, "build_contract": artifact.build_contract, "counters": counters}
         else:
             bundle = load_source_bundle(args.manifest, args.bundle_root)
@@ -718,9 +735,9 @@ def _child_stage_main(argv: List[str]) -> int:
             if hashlib.sha256(payload_bytes).hexdigest() != args.engine_sha256:
                 raise ModelSmokeError("ENGINE_HASH_MISMATCH", "engine bytes changed before child load")
             artifact = EngineArtifact(args.engine.resolve(), args.engine_sha256, len(payload_bytes), runtime.runtime_version, {"source_onnx_sha256": SOURCE_ONNX_SHA256})
-            counters["engine_load_attempted"] = 1
+            record_stage_event("engine_load_attempted")
             execution = runtime.open_execution(artifact)
-            counters["engine_load_completed"] = 1
+            record_stage_event("engine_load_completed")
             outputs: Dict[str, Dict[str, Any]] = {}
             primary = None
             try:
@@ -830,6 +847,28 @@ class ModelSmokeRunner:
             if events_path.is_file():
                 try:
                     event_text = events_path.read_text(encoding="utf-8")
+                    valid_rows = []
+                    invalid_rows = []
+                    for line_number, line in enumerate(event_text.splitlines(), 1):
+                        try:
+                            row = json.loads(line)
+                            if not isinstance(row, dict):
+                                raise ValueError("event row is not an object")
+                            valid_rows.append(row)
+                            _merge_counter_dict(self.counters, row.get("counters"))
+                        except (ValueError, TypeError):
+                            invalid_rows.append(line_number)
+                    if invalid_rows:
+                        stage_snapshot["truncated_or_invalid_rows"] = invalid_rows
+                    if any(row.get("event") == "timeout" for row in valid_rows) or (not result_path.is_file() and valid_rows):
+                        if self.counters.parse_attempted > self.counters.parse_completed and "parse_completion" not in self.counters.unknown_completions:
+                            self.counters.unknown_completions.append("parse_completion")
+                        if self.counters.build_attempted > self.counters.build_completed and "build_completion" not in self.counters.unknown_completions:
+                            self.counters.unknown_completions.append("build_completion")
+                        if self.counters.enqueues_attempted > self.counters.enqueues_completed and "enqueue_completion" not in self.counters.unknown_completions:
+                            self.counters.unknown_completions.append("enqueue_completion")
+                        if self.counters.output_copies_attempted > self.counters.output_copies_completed and "output_copy_completion" not in self.counters.unknown_completions:
+                            self.counters.unknown_completions.append("output_copy_completion")
                     stage_snapshot["events"] = {"sha256": file_sha256(events_path), "bytes": events_path.stat().st_size, "content": event_text[-16000:]}
                 except OSError as exc:
                     stage_snapshot["events_error"] = str(exc)

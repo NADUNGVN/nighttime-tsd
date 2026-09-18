@@ -305,12 +305,12 @@ class ModelSmokeTests(unittest.TestCase):
     def test_archive_provenance_works_without_git_and_rejects_changed_helper(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp) / "export"
-            for relative in smoke.PROVENANCE_FILES:
+            for relative in smoke.PROVENANCE_FILES + smoke.PACKAGE_FILES:
                 destination = root / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(ROOT / relative, destination)
             archive_manifest = Path(temp) / "code-export.json"
-            payload = {"schema_version": "e2l1-code-export-v1", "commit": "34a542b2f787d7ef60dc3d3125cecad78e0c16f9", "files": {relative: smoke.file_sha256(root / relative) for relative in smoke.PROVENANCE_FILES}}
+            payload = {"schema_version": "e2l1-code-export-v1", "commit": "34a542b2f787d7ef60dc3d3125cecad78e0c16f9", "files": {relative: smoke.file_sha256(root / relative) for relative in smoke.PROVENANCE_FILES}, "package_files": {relative: smoke.file_sha256(root / relative) for relative in smoke.PACKAGE_FILES}}
             archive_manifest.write_text(json.dumps(payload), encoding="utf-8")
             observed = smoke.code_provenance(payload["commit"], archive_manifest, root)
             self.assertEqual(observed["provenance_mode"], "reviewed_archive_manifest")
@@ -365,7 +365,14 @@ class ModelSmokeTests(unittest.TestCase):
             class ChildBuilder:
                 last_event = {"parser_completed": True, "build_completed": True}
 
+                def __init__(self, stage_observer=None):
+                    self.stage_observer = stage_observer
+                    self.last_event = {"parser_completed": True, "build_completed": True}
+
                 def build(self, onnx_path, engine_path, workspace):
+                    for event in ("parser_attempted", "parser_completed", "build_attempted", "build_completed"):
+                        if self.stage_observer:
+                            self.stage_observer(event)
                     engine_path.write_bytes(b"engine")
                     return smoke.EngineArtifact(engine_path, hashlib.sha256(b"engine").hexdigest(), 6, "8.5.2.2", {"fp16_enabled": True})
 
@@ -380,7 +387,15 @@ class ModelSmokeTests(unittest.TestCase):
             class FailingBuilder(ChildBuilder):
                 last_event = {"parser_completed": True, "build_completed": False}
 
+                def __init__(self, stage_observer=None):
+                    super().__init__(stage_observer)
+                    self.last_event = {"parser_completed": True, "build_completed": False}
+
                 def build(self, onnx_path, engine_path, workspace):
+                    if self.stage_observer:
+                        self.stage_observer("parser_attempted")
+                        self.stage_observer("parser_completed")
+                        self.stage_observer("build_attempted")
                     raise smoke.ModelSmokeError("ENGINE_BUILD_FAILED", "injected build failure")
 
             with patch.object(smoke, "E2TensorRTRuntime", ChildRuntime), patch.object(smoke, "TensorRTOnnxBuilder", FailingBuilder):
@@ -411,6 +426,41 @@ class ModelSmokeTests(unittest.TestCase):
             self.assertEqual(failure["attempted_completed"]["enqueues_attempted"], 2)
             self.assertEqual(failure["provenance"]["target_outputs"]["00006"]["completion"], "partial")
             self.assertTrue(failure["error"]["details"]["termination_confirmed"])
+
+    def test_event_only_timeout_reconciles_counters_and_unknown_completion(self):
+        with tempfile.TemporaryDirectory() as temp:
+            bundle = make_bundle(temp)
+            event_path = Path(temp) / "out" / "private" / "inference_events.jsonl"
+
+            class EventOnlyChild:
+                def build(self, source_bundle, engine_path, timeout_seconds):
+                    engine_path.parent.mkdir(parents=True, exist_ok=True)
+                    engine_path.write_bytes(b"engine")
+                    return smoke.EngineArtifact(engine_path, hashlib.sha256(b"engine").hexdigest(), 6, "8.5.2.2", {}), {"parse_attempted": 1, "parse_completed": 1, "build_attempted": 1, "build_completed": 1}, engine_path.parent / "build_events.jsonl"
+
+                def infer(self, source_bundle, engine, target_dir, timeout_seconds):
+                    target_dir.mkdir(parents=True)
+                    (target_dir / "00006.bin").write_bytes(source_bundle.onnx_outputs["00006"].path.read_bytes())
+                    event_path.parent.mkdir(parents=True, exist_ok=True)
+                    event_path.write_text(json.dumps({"event": "enqueue_attempted", "counters": {"engine_load_attempted": 1, "engine_load_completed": 1, "enqueues_attempted": 1, "enqueues_completed": 0}}) + "\n", encoding="utf-8")
+                    raise smoke.TargetTimeout("STAGE_TIMEOUT", "event-only timeout", {"termination_confirmed": True, "completion": "unknown"})
+
+            code, failure = smoke.ModelSmokeRunner(bundle, Path(temp) / "out", ProductionFakeTarget([]), execute=True, stage_executor=EventOnlyChild()).run()
+            self.assertEqual(code, 2)
+            self.assertEqual(failure["attempted_completed"]["enqueues_attempted"], 1)
+            self.assertIn("enqueue_completion", failure["attempted_completed"]["unknown_completions"])
+            self.assertIn("enqueue_attempted", failure["provenance"]["stage_evidence_snapshot"]["inference"]["events"]["content"])
+
+    def test_child_preflight_failures_write_original_structured_result(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            result = root / "result.json"
+            events = root / "events.jsonl"
+            with patch.object(smoke, "code_provenance", side_effect=smoke.ModelSmokeError("CODE_ARCHIVE_BYTES_MISMATCH", "injected provenance failure")):
+                self.assertEqual(smoke._child_stage_main(["--child-stage", "build", "--onnx", str(root / "missing.onnx"), "--engine", str(root / "engine.plan"), "--result", str(result), "--events", str(events)]), 2)
+            payload = json.loads(result.read_text(encoding="utf-8"))
+            self.assertEqual(payload["error"]["code"], "CODE_ARCHIVE_BYTES_MISMATCH")
+            self.assertEqual(payload["counters"]["build_attempted"], 0)
 
     def test_manifest_bytes_are_canonical_even_when_onnx_reference_is_unchanged(self):
         with tempfile.TemporaryDirectory() as temp:
