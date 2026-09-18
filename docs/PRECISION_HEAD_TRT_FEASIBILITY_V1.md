@@ -90,19 +90,28 @@ The child performs this fixed chain for each model:
 4. parse/build/deserialize one private TensorRT engine with the locked flags;
 5. enqueue the same input once per fixture, synchronize completion, validate
    shape/dtype/finite output and record output hashes;
-6. apply only the locked model-specific application route for bounded
-   diagnostics.
+6. freeze the contiguous raw TensorRT/ORT arrays and their hashes before
+   applying any consumer;
+7. pass independent copies to the locked model-specific application route for
+   bounded diagnostics, then verify that the frozen arrays and input bytes are
+   unchanged.
 
 Hard validity requires identity/hash/input/output semantics, successful parse,
 successful build and deserialization, successful dispatch/completion and
-finite outputs. A failure writes model-scoped `failure.json` and preserves
-partial JSON/JSONL/log files; there is no silent resume and no retry.
+finite outputs. Parser/build/dispatch attempted and completed counters are
+persisted in `child_state.json` as work proceeds. A failure writes
+model-scoped `failure.json` and preserves partial JSON/JSONL/log/state files;
+there is no silent resume and no retry. If a child times out and termination
+cannot be independently confirmed, the parent records an
+`unknown_after_timeout` state and stops further GPU child dispatch.
 
 Raw TensorRT/ORT arrays, checkpoints, ONNX binaries and engine binaries are
 never publishable. JSONL records contain hashes, shapes, dtypes, finite flags,
-ordered detections and the descriptive raw-output comparison. No AP, official
-test or timing statistic is computed by this smoke. Each child materializes the
-exact input bytes and the one ORT reference bytes in its private temporary
+ordered detections and the descriptive raw-output comparison. Raw output units
+are recorded separately: YOLOv8n boxes/probabilities and YOLO26n
+boxes/confidence/class IDs at fixed row indices. No AP, official test or timing
+statistic is computed by this smoke. Each child materializes the exact input
+bytes and the one ORT reference bytes in its private temporary
 directory, records their byte/hash evidence, and deletes that directory after
 the model finishes.
 
@@ -141,8 +150,12 @@ After a reviewed server run, push only these files under
 
 - `smoke_plan.json`, `smoke_manifest.json`, `report.md`;
 - `logs/yolov8n.log` and `logs/yolo26n.log`;
-- for each model, `model_report.json` or `failure.json`,
+- for each model, `child_state.json`, `model_report.json` or `failure.json`,
   `smoke_records.jsonl` and `preprocess_trace.jsonl`.
+
+The final manifest inventory is written after the manifest/report and includes
+all terminal publishable JSON/JSONL/Markdown/log/state files. A timeout or
+failure inventory remains model-scoped and is not replaced by a later retry.
 
 Luna will audit the canonical Git blobs, inventory, model order, exact call
 counters, identity/hash bindings, parser/builder/engine IO, ORT provider,
@@ -153,7 +166,8 @@ historical FAIL verdicts and will not open a scored matrix automatically.
 
 Local verification covers only pure contract checks and external runtime
 doubles for builder/parser/engine IO, provider rejection, GPU identity,
-two-child orchestration, timeout and partial preservation. Local tests do not
+two-model child lifecycle, raw immutability, pointer binding, non-finite output,
+second-image failure, timeout and terminal inventory semantics. Local tests do not
 import TensorRT, import CUDA, load a frozen model, execute real ORT graphs,
 build an engine, use a GPU or install packages. Passing these tests is not
 TensorRT end-to-end verification.

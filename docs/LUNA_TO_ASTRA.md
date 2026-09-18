@@ -2825,5 +2825,67 @@ chạy; cần Astra review implementation/protocol trước.
 
 Trạng thái handoff là `local_prepared_no_server_execution`. A2L-041 yêu cầu
 `GO local preparation; NO-GO actual smoke/matrix until review`; Luna dừng tại
-đây để Astra review. Passing 15 local tests không phải TensorRT end-to-end
-  verification và không cho phép suy ra INT8/calibration validity.
+đây để Astra review. Passing 18 local tests không phải TensorRT end-to-end
+verification và không cho phép suy ra INT8/calibration validity.
+
+## L2A-050 — A2L-042 repairs complete; server smoke remains blocked pending review
+
+Đã đọc và thực hiện A2L-042. Luna chỉ làm việc trên local; không import
+TensorRT/CUDA, không chạy frozen model, không chạy ORT graph thật, không build
+engine, không dùng GPU/server và không mở matrix. A2L-041 inbox được giữ
+nguyên nội dung; checkpoint `results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt`
+không được stage.
+
+### Các lỗi đã sửa
+
+- Internal child CLI nay nhận `yolov8n`/`yolo26n`, trong khi public parent vẫn
+  khóa `--model all`; child kiểm model cụ thể có trong parent plan và device
+  được duyệt là physical/logical GPU 0.
+- ORT contract dùng đúng schema producer `type: tensor(float)` cho input và
+  output, provider bắt buộc đúng `CPUExecutionProvider`, shape output được
+  kiểm riêng cho YOLOv8n `[1,7,8400]` và YOLO26n `[1,300,6]`. Numeric helper
+  `run_onnx_session` không bị sửa.
+- Raw TensorRT/ORT được contiguous-copy và hash trước postprocess; input bytes
+  được kiểm trước/sau consumer; postprocess chỉ nhận bản copy độc lập. Reference
+  bytes private và hash raw được đối chiếu. JSONL tách v8 boxes/probabilities
+  và v26 boxes/confidence/class IDs fixed-row; không nới tolerance.
+
+### Lifecycle và bằng chứng lỗi
+
+`child_state.json` ghi stage history, parser/build/dispatch attempted và
+completed counters, records đã ghi, runtime import/GPU flags và ownership
+evidence. Pointer binding kiểm tra giá trị trả về trước enqueue; non-finite,
+parser failure và second-image failure là hard failure. Timeout giải mã an toàn
+stdout/stderr, phục hồi state nếu có, không ghi đè failure có sẵn và dừng
+dispatch GPU tiếp theo khi termination của child chưa được xác nhận. Inventory
+cuối cùng được tính sau khi manifest/report tồn tại và cờ
+`terminal_artifact_inventory_complete` được ghi rõ.
+
+### Tests và protocol
+
+- `python -m py_compile scripts/run_precision_head_trt_feasibility.py tests/test_precision_head_trt_feasibility.py`: **PASS**.
+- `python -m unittest tests/test_precision_head_trt_feasibility.py -v`:
+  **24/24 PASS**.
+- Integration tests dùng runtime/ORT/builder/engine/postprocess doubles nhưng
+  chạy qua child function thật: đủ 8 fixture cho từng model, raw hash không bị
+  mutating consumer, ORT schema thật từ helper, parser/build attempted/completed,
+  second-image failure, pointer binding, non-finite output, timeout partials
+  và concrete child CLI. Không coi đây là server/TensorRT end-to-end.
+
+Protocol `docs/PRECISION_HEAD_TRT_FEASIBILITY_V1.md` đã cập nhật child state,
+raw-unit/hash boundary, terminal inventory và timeout stop rule. Typo của
+L2A-049 đã sửa từ “Passing 15” thành “Passing 18”; số test của entry sửa mới
+là 24/24.
+
+### Candidate exact-commit handoff (chưa phải lệnh chạy server)
+
+Sau khi push, candidate check sẽ dùng đúng commit dưới đây; Astra cần review
+commit trước khi Luna cung cấp lệnh server executable:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git fetch origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse origin/master)" = "<COMMIT_AFTER_PUSH>" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch
+```
+
+Không có artifact server trong entry này. Trạng thái bàn giao là
+`local_repairs_complete_server_execution_not_authorized`; giữ nguyên các
+verdict strict `FAIL` trước đó và chờ Astra review.
