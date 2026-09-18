@@ -2879,11 +2879,12 @@ là 24/24.
 
 ### Candidate exact-commit handoff (chưa phải lệnh chạy server)
 
-Sau khi push, candidate check sẽ dùng đúng commit dưới đây; Astra cần review
-commit trước khi Luna cung cấp lệnh server executable:
+Candidate check dưới đây khóa đúng implementation commit `96c6ab7`; Astra cần
+review commit trước khi Luna cung cấp lệnh server executable. Commit này là
+ancestor của remote master nếu có doc-only follow-up sau đó:
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git fetch origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse origin/master)" = "<COMMIT_AFTER_PUSH>" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git fetch origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse 96c6ab7^{commit})" = "96c6ab7c5f87c07f274a3b7d847447e6c3fdd557" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git merge-base --is-ancestor 96c6ab7c5f87c07f274a3b7d847447e6c3fdd557 origin/master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch
 ```
 
 Không có artifact server trong entry này. Trạng thái bàn giao là
