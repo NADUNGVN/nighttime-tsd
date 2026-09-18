@@ -209,7 +209,8 @@ Nếu sau audit không có quan sát hoặc quyết định triển khai vượt
 |---|---|---|
 | Kết quả YOLO11n đã hoàn tất | Step A Uniform ba build, precision-head ablation và latency 39 phiên đã có artifact/provenance; Step A được nghiệm thu có giới hạn | Chỉ là bằng chứng mô tả cho YOLO11n trong các protocol tương ứng; không đại diện cho mọi họ/model |
 | Chẩn đoán source/ONNX âm tính đã chấp nhận | Numeric v1/v2 và localization v1/v2 của YOLOv8n/YOLO26n giữ verdict `FAIL`; lỗi semantics đã được khoanh vùng nhưng không nới tolerance | Đây là bằng chứng âm tính/giới hạn về raw-output agreement; không gọi là lỗi calibration, không gọi là TensorRT end-to-end |
-| Cross-model và edge evidence còn chờ | Native-FP32 versus accepted-ONNX-FP32 dev bridge cho YOLOv8n/YOLO26n mới ở mức protocol/implementation, chưa chạy full dev; cross-device accuracy/energy chưa có bộ hoàn chỉnh | Chưa được báo cáo AP source/export hoặc kết luận deployment; chỉ mở sau review contract và các gate tiếp theo |
+| Cross-model và edge evidence còn chờ | Native-FP32 versus accepted-ONNX-FP32 dev bridge cho YOLOv8n/YOLO26n đã hoàn tất trên full dev với giới hạn mô tả; cross-device accuracy/energy chưa có bộ hoàn chỉnh | Được phép báo cáo drift source/export đã quan sát với giới hạn; không gọi là TensorRT end-to-end, không xóa strict FAIL lịch sử |
+| TensorRT feasibility boundary còn chờ | Runner/protocol/tests local cho smoke FP16 hai model đã chuẩn bị; chưa parse/build/execute server và chưa mở matrix | Chỉ mở sau review implementation/protocol; FP16 flag không chứng minh mọi layer FP16, không phải bằng chứng INT8/calibration |
 
 Bridge source/export là một review gate bổ sung sau localization diagnostics, không phải tiêu chí preregistered ban đầu. Không dùng nó để xóa hoặc thay verdict `FAIL` lịch sử.
 

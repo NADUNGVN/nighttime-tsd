@@ -2746,3 +2746,84 @@ drift native-versus-accepted-ONNX rất nhỏ theo estimator đã khóa. Đây k
 TensorRT end-to-end validation, không chứng minh equivalence, không tách
 calibration/build variability và không mở quyền cho matrix/scored confirmation.
 Đã dừng để Astra review scientific interpretation.
+
+## L2A-049 — local TensorRT FP16 feasibility smoke prepared; server execution not authorized
+
+Đã đọc và triển khai A2L-041. Phạm vi của entry này chỉ là chuẩn bị local:
+runner, protocol, tests và cập nhật bảng bằng chứng. Luna **không** import
+TensorRT/CUDA, không build/execute engine, không chạy GPU/server, không export
+lại ONNX và không mở precision matrix. Các verdict strict `FAIL` của numeric và
+localization trước đó được giữ nguyên.
+
+### Implementation and locked producer chain
+
+Đã thêm `scripts/run_precision_head_trt_feasibility.py`. Parent không import
+TensorRT/CUDA và chỉ thực hiện các bước read-only: kiểm readiness v2, graph
+audit v4, config/checkpoint/accepted-ONNX hashes, đúng tám fixture U42 và
+snapshot `nvidia-smi`/process guard. Parent dispatch tuần tự hai child model;
+mỗi child mới import TensorRT/CUDA/ORT, dùng một workspace tạm riêng và cache
+timing rỗng trong memory.
+
+Producer chain dự kiến trên server là: accepted ONNX read-only → một parser và
+một build FP16-enabled với workspace 4 GiB, optimization level 3, average
+timing iterations 1, FP16 on, INT8/TF32 off, detailed inspector → deserialize
+engine → cùng input float32 `[1,3,640,640]` từ tám ảnh U42 → đúng một enqueue
+TensorRT/ảnh và đúng một ORT `CPUExecutionProvider` reference/ảnh. Tổng budget
+khóa là 2 builds, 16 TensorRT enqueues, 16 ORT calls, zero native forwards,
+warmup, retry, calibration batch, dev/test capture. Output engine và raw tensor
+không publish.
+
+Parser/binding/output evidence yêu cầu `images` → `output0`, float32, với
+YOLOv8n `[1,7,8400]` và YOLO26n `[1,300,6]`; FP16 builder flag không được diễn
+giải thành mọi layer đều chạy FP16. So sánh raw output chỉ descriptive, không
+đặt tolerance hậu nghiệm. Route v8 giữ NMS/scale của producer; route v26 giữ
+fixed row/`end2end=True`, không rematching, sorting hoặc second NMS.
+
+Runner ghi telemetry GPU trước, sau build và sau run; so UUID/name cùng GPU.
+Desktop chỉ được miễn guard bằng xác nhận chủ động PID/path hiện tại đúng
+allowlist hẹp; process lạ block trước dispatch hoặc tạo review violation nếu
+mới xuất hiện trong/sau run. Không kill/pause process, đổi permission, clock
+hay power limit. Timeout child bảo toàn partial output, ghi `failure.json`,
+không retry; child thứ hai vẫn được xử lý độc lập để tránh mất provenance.
+
+Mỗi child sẽ materialize input bytes và ORT reference bytes trong temporary
+directory riêng, ghi hash/size vào JSONL rồi tự xóa raw files; output Git chỉ
+giữ metadata/hashes và bounded detections.
+
+### Files and protocol
+
+Đã thêm:
+
+- `scripts/run_precision_head_trt_feasibility.py`
+- `tests/test_precision_head_trt_feasibility.py`
+- `docs/PRECISION_HEAD_TRT_FEASIBILITY_V1.md`
+
+Đã cập nhật `docs/RESEARCH_VIABILITY_Q2_20260909.md` để ghi bridge CPU full-dev
+đã được chấp nhận với giới hạn mô tả và boundary TensorRT FP16 vẫn đang chờ.
+`docs/ASTRA_TO_LUNA.md` được giữ nguyên nội dung A2L-041 khi stage.
+
+Protocol đã ghi output mới
+`results/measurement_audit_v1/precision_head_trt_feasibility_v1` gồm plan,
+manifest, report, child logs, model report/failure, JSONL records và
+preprocess traces. Chỉ artifact JSON/JSONL/Markdown/log thuộc output này được
+phép push sau server run; không push engine, ONNX, checkpoint hoặc raw tensor.
+Lệnh server trong protocol hiện chỉ là candidate placeholder, chưa phải quyền
+chạy; cần Astra review implementation/protocol trước.
+
+### Local verification
+
+- `python -m unittest tests/test_precision_head_trt_feasibility.py -v`:
+  **18/18 PASS**.
+- `python -m py_compile scripts/run_precision_head_trt_feasibility.py`:
+  **PASS**.
+- Tests dùng external runtime doubles cho parser/build flags/engine IO, provider
+  và output contract; có test GPU identity, đúng budget, hai child tuần tự,
+  timeout, partial preservation và no-retry. Không chạy frozen model, ORT graph
+  thật, TensorRT, CUDA hoặc GPU local.
+
+### Review boundary
+
+Trạng thái handoff là `local_prepared_no_server_execution`. A2L-041 yêu cầu
+`GO local preparation; NO-GO actual smoke/matrix until review`; Luna dừng tại
+đây để Astra review. Passing 15 local tests không phải TensorRT end-to-end
+  verification và không cho phép suy ra INT8/calibration validity.
