@@ -1427,3 +1427,76 @@ The L1A-015 source staging/transfer allowlist, FP16/1 GiB workspace,
 three-enqueue, zero-warmup, zero-retry and frozen comparison policies remain
 unchanged. Real E2/server transfer/build/inference stays **NO-GO** pending
 combined review and those two path confirmations.
+
+## L1A-017 — final child-failure repair, canonical package staging and conditional smoke gate
+
+**Status:** C1/C2 local repairs and package preparation complete. The
+conditional one-smoke GO was **not entered** because the authorized read-only
+E2 check could not connect and the scoped private source bundle was not
+available locally. No E2 build/inference/benchmark or SERVER-01 access was
+performed.
+
+Implementation commit: `b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4`, pushed on
+`luna1/e2l1-006-jetson-adapter-smoke` using NADUNGVN. The local focused suite
+is **23/23 PASS**; the operator-reported edge regression is **104/104 PASS**.
+
+### C1/C2 repairs
+
+- Child cleanup/counter state is initialized before provenance and runtime
+  preflight, so provenance or identity/runtime failure writes its original
+  structured error JSON with zero model calls; it cannot become an
+  `UnboundLocalError`.
+- Event rows are reconciled even when the child result JSON is absent. Valid
+  counters are merged from durable JSONL events, a truncated/invalid final row
+  is retained as evidence but never treated as completion, and incomplete
+  enqueue/copy/parse/build completion is marked unknown. Parser and builder
+  dispatch/completion events are emitted at their actual builder boundaries;
+  enqueue acceptance remains distinct from stream synchronization.
+- The parent production-child path and child entrypoint are covered with
+  injected CPU doubles, including three distinguishable outputs, second-stage
+  failure, event-only timeout, partial output preservation, and structured
+  pre-runtime failure. Generic primary errors plus cleanup failures remain
+  separate, and cleanup-only failure is primary.
+- Deadline teardown remains bounded through TERM/KILL escalation; leader/group
+  termination confirmation and cleanup-unconfirmed are separate facts.
+
+### Package evidence
+
+The reviewed executable revision is the full commit above. A fresh package was
+materialized outside the worktree from canonical Git blob bytes (the Windows
+`tar.exe` CRLF conversion path was not used):
+
+    D:\Research\luna1-e2l1-017-code-b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4-blob
+
+The package export manifest SHA-256 is
+`aa136f72b9d395569e70944e1c67d1dbd1bdb23621912f9dfbed856297764507`.
+Independent comparison of all six provenance helpers plus
+`scripts/edge_readiness/__init__.py` against `git cat-file blob` for the exact
+commit is **PASS**. The package contains no `.git`; execution must pass
+`--archive-manifest` and the same full 40-character `--commit`.
+
+The accepted source manifest remains the 20,346-byte raw Git blob with SHA-256
+`60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08`. The local
+working source path has only its public files; `private/` and all ten scoped
+private binaries are absent, so no source package was fabricated or re-exported.
+
+### Read-only E2 staging check and gate
+
+I issued one bounded read-only check through the existing `nx` alias for host,
+architecture, device-tree model, Python 3.8, `/tmp` disk, competing process
+summary and fresh owned paths. It resolved to `192.168.10.93:22` but ended with
+`Connection timed out`; therefore the observed interpreter/path/workload facts
+are **unresolved**, not inferred from the inventory. No retry, install, reset,
+configuration change, allocation or model operation was attempted.
+
+The user must supply the narrowly scoped source archive from the recorded
+SERVER-01 root `/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-013-source-v2`, preserving the original manifest bytes and exactly the ten private allowlisted files. The user-only SERVER-01 read-only existence/hash check and packaging command remain the required next input; if that root is absent, report that exact fact. No checkpoint, raw image, credential or whole-repository transfer is allowed.
+
+After the E2 read-only check succeeds, the source/package hashes are verified
+on both sides, and the exact E2 Python 3.8 interpreter and fresh paths are
+known, C4 authorizes exactly one foreground diagnostic: one FP16/1 GiB build and
+exactly three ordered application enqueues (`00006`, `00009`, `00028`), with
+900-second build and 180-second inference deadlines. No additional permission
+round is required for that exact smoke, but this entry is currently **HOLD**
+because the two concrete prerequisites above are unmet. No automatic rerun is
+permitted after timeout/disconnect.
