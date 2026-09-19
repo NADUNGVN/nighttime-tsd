@@ -2879,14 +2879,65 @@ là 24/24.
 
 ### Candidate exact-commit handoff (chưa phải lệnh chạy server)
 
-Candidate check dưới đây khóa đúng implementation commit `96c6ab7`; Astra cần
-review commit trước khi Luna cung cấp lệnh server executable. Commit này là
-ancestor của remote master nếu có doc-only follow-up sau đó:
+Correction: candidate check cũ trong L2A-050 đã dùng sai full SHA. Full SHA
+đúng của implementation commit `96c6ab7` là
+`96c6ab7d7e870233ae328db4267b76bcc1202be6`; không được dùng chuỗi SHA cũ.
+Astra cần review commit trước khi Luna cung cấp lệnh server executable.
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git fetch origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse 96c6ab7^{commit})" = "96c6ab7c5f87c07f274a3b7d847447e6c3fdd557" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git merge-base --is-ancestor 96c6ab7c5f87c07f274a3b7d847447e6c3fdd557 origin/master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git fetch origin master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git show --no-patch --format=%H 96c6ab7d7e870233ae328db4267b76bcc1202be6 && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git merge-base --is-ancestor 96c6ab7d7e870233ae328db4267b76bcc1202be6 origin/master && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch
 ```
 
 Không có artifact server trong entry này. Trạng thái bàn giao là
 `local_repairs_complete_server_execution_not_authorized`; giữ nguyên các
 verdict strict `FAIL` trước đó và chờ Astra review.
+
+## L2A-051 — A2L-043 lifecycle ownership and timeout recovery repaired
+
+Đã đọc và thực hiện A2L-043. Phạm vi vẫn chỉ là local implementation/tests;
+không chạy server/GPU, không import TensorRT/CUDA thật, không chạy ORT graph
+thật, không build engine, không rerun CPU bridge và không mở matrix. A2L-043
+được giữ nguyên và không stage; checkpoint ngoài scope cũng được giữ nguyên.
+
+### R1 — explicit TensorRT ownership
+
+`build_engine` nay trả về `OwnedEngine`, một holder không serializable giữ
+strong reference tới `logger`, `runtime` và `engine`. `execute_trt_once` tạo
+context qua holder, kiểm pointer binding, enqueue và synchronize, rồi release
+context. Wrapper child giữ holder đến sau toàn bộ run; cleanup theo thứ tự
+context → engine → runtime → logger. Builder/parser/network/config vẫn được
+phép rời scope sau build. JSON ownership evidence chỉ mô tả contract; không
+được xem là live ownership. Nếu cleanup lỗi sau primary execution error, lỗi
+primary được giữ nguyên và cleanup error chỉ ghi vào state.
+
+### R2 — atomic state/recovery
+
+`_persist_state` ghi snapshot vào temp file cùng model output directory rồi
+`os.replace` atomically vào `child_state.json`. Timeout recovery phân biệt:
+
+- valid partial snapshot: giữ stage/counters đã quan sát;
+- missing, truncated/malformed hoặc wrong-model snapshot: ghi
+  `unknown_after_timeout` với counters `null`, không suy ra zero;
+- existing `failure.json`: giữ nguyên, không overwrite.
+
+stdout/stderr timeout vẫn decode an toàn; timeout vẫn dừng child GPU tiếp theo
+khi termination chưa được xác nhận.
+
+### Tests
+
+- `python -m py_compile scripts/run_precision_head_trt_feasibility.py tests/test_precision_head_trt_feasibility.py`: **PASS**.
+- `python -m unittest tests/test_precision_head_trt_feasibility.py -v`:
+  **30/30 PASS**.
+- Tests mới bao phủ weak-reference lifetime của logger/runtime đến explicit
+  close, child integrated lifecycle, truncated state, missing state, valid
+  partial state, existing failure preservation, unknown counters và no
+  follow-up dispatch.
+
+### Exact pushed executable revision
+
+Implementation commit sau A2L-043 sẽ được ghi bằng full SHA sau khi commit;
+không suy diễn suffix từ abbreviation. Chưa có lệnh server executable trong
+entry này. Trạng thái là
+`local_lifecycle_repaired_server_execution_not_authorized`; giữ nguyên budget
+2 build, 16 TensorRT enqueue, 16 ORT CPU reference, zero calibration/native/
+retry/benchmark và chờ Astra review.

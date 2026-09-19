@@ -62,6 +62,14 @@ when exposed by the runtime. “FP16 enabled” is only a builder setting; the
 report must not claim that every layer executed in FP16. The engine bytes are
 private and are not an artifact for cross-device reuse.
 
+The child uses a non-serializable `OwnedEngine` holder for the TensorRT
+dependency chain. It strongly owns `logger`, `runtime`, and `engine` while
+contexts are created, pointer-bound, enqueued and synchronized. Each context
+is released after synchronization; final cleanup releases context, engine,
+runtime and logger in dependency order. JSON evidence records this ownership
+contract but does not substitute for the live references. A primary execution
+error is preserved if cleanup also reports an error.
+
 The intended server environment is the already reviewed environment:
 
 `torch 2.5.1+cu121`, `ultralytics 8.4.102`, `tensorrt 10.16.1.11`,
@@ -104,6 +112,13 @@ model-scoped `failure.json` and preserves partial JSON/JSONL/log/state files;
 there is no silent resume and no retry. If a child times out and termination
 cannot be independently confirmed, the parent records an
 `unknown_after_timeout` state and stops further GPU child dispatch.
+
+State snapshots are written to a temporary file in the same owned model
+directory and atomically replaced into `child_state.json`. Recovery accepts a
+valid partial snapshot, but treats a missing, truncated, malformed or wrong-
+model snapshot as unknown rather than inventing zero counters. The original
+state bytes remain available for audit, and an existing `failure.json` is
+never overwritten.
 
 Raw TensorRT/ORT arrays, checkpoints, ONNX binaries and engine binaries are
 never publishable. JSONL records contain hashes, shapes, dtypes, finite flags,
@@ -156,6 +171,11 @@ After a reviewed server run, push only these files under
 The final manifest inventory is written after the manifest/report and includes
 all terminal publishable JSON/JSONL/Markdown/log/state files. A timeout or
 failure inventory remains model-scoped and is not replaced by a later retry.
+
+The executable revision must be bound by a full SHA after review. A server
+operator must check out that exact revision (not merely an ancestor check)
+before the run; the run command remains unauthorized until Astra supplies the
+reviewed full SHA and current server preflight confirmations.
 
 Luna will audit the canonical Git blobs, inventory, model order, exact call
 counters, identity/hash bindings, parser/builder/engine IO, ORT provider,

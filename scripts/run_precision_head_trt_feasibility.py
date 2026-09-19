@@ -102,6 +102,54 @@ class FeasibilityUnresolved(RuntimeError):
     """Raised when feasibility evidence cannot satisfy the hard contract."""
 
 
+class OwnedEngine:
+    """Strong owner for the TensorRT logger/runtime/engine dependency chain.
+
+    TensorRT objects are intentionally kept out of JSON evidence. The holder
+    owns the logger and runtime for as long as the engine and any active
+    execution context are used, then releases them in dependency order.
+    """
+
+    def __init__(self, engine: Any, runtime: Any, logger: Any) -> None:
+        self.engine = engine
+        self.runtime = runtime
+        self.logger = logger
+        self._active_contexts: list[Any] = []
+        self.closed = False
+
+    def create_execution_context(self) -> Any:
+        if self.closed or self.engine is None:
+            raise FeasibilityUnresolved("TensorRT owned engine is already closed")
+        context = self.engine.create_execution_context()
+        self._active_contexts.append(context)
+        return context
+
+    def release_execution_context(self, context: Any) -> None:
+        if context in self._active_contexts:
+            self._active_contexts.remove(context)
+
+    def close(self) -> None:
+        if self.closed:
+            return
+        if self._active_contexts:
+            raise FeasibilityUnresolved("TensorRT context remained active during owner cleanup")
+        # Contexts must be released before the engine, then runtime, then logger.
+        self.engine = None
+        self.runtime = None
+        self.logger = None
+        self.closed = True
+
+
+    def __enter__(self) -> "OwnedEngine":
+        if self.closed:
+            raise FeasibilityUnresolved("TensorRT owned engine is already closed")
+        return self
+
+    def __exit__(self, _exc_type: Any, _exc_value: Any, _traceback: Any) -> bool:
+        self.close()
+        return False
+
+
 GPU_PROCESS_GUARD_VERSION = "operator-confirmed-nvidia-smi-path-v1"
 DESKTOP_ALLOWLIST = {
     "snapd-desktop-integration": "/snap/snapd-desktop-integration/<numeric-revision>/usr/bin/snapd-desktop-integration",
@@ -498,7 +546,7 @@ def _parser_errors(parser: Any) -> list[str]:
     return errors
 
 
-def build_engine(trt: Any, onnx_path: Path, model: str, state: dict[str, Any] | None = None) -> tuple[Any, dict[str, Any]]:
+def build_engine(trt: Any, onnx_path: Path, model: str, state: dict[str, Any] | None = None) -> tuple[OwnedEngine, dict[str, Any]]:
     """Build one private engine with the locked flags; never writes the engine."""
     logger = trt.Logger(trt.Logger.VERBOSE)
     builder = trt.Builder(logger)
@@ -537,21 +585,30 @@ def build_engine(trt: Any, onnx_path: Path, model: str, state: dict[str, Any] | 
         raise FeasibilityUnresolved(f"TensorRT build returned no serialized engine for {model}")
     serialized_bytes = bytes(serialized)
     runtime = trt.Runtime(logger)
-    engine = runtime.deserialize_cuda_engine(serialized)
-    if engine is None:
-        raise FeasibilityUnresolved(f"TensorRT runtime could not deserialize engine for {model}")
-    engine_contract = engine_io_contract(engine)
-    engine_binding = validate_io_contract(model, engine_contract, "engine")
-    inspector = engine.create_engine_inspector()
-    inspector_json = None
+    owned_engine = OwnedEngine(engine=None, runtime=runtime, logger=logger)
     try:
-        inspector_json = inspector.get_engine_information(trt.LayerInformationFormat.JSON)
-    except Exception as exc:  # inspector availability is recorded, not silently treated as layer precision proof
-        inspector_json = {"unavailable": type(exc).__name__ + ": " + str(exc)}
-    if state is not None:
-        state["build_completed"] = True
-        _persist_state(state)
-    return engine, {
+        engine = runtime.deserialize_cuda_engine(serialized)
+        if engine is None:
+            raise FeasibilityUnresolved(f"TensorRT runtime could not deserialize engine for {model}")
+        owned_engine.engine = engine
+        engine_contract = engine_io_contract(engine)
+        engine_binding = validate_io_contract(model, engine_contract, "engine")
+        inspector = engine.create_engine_inspector()
+        inspector_json = None
+        try:
+            inspector_json = inspector.get_engine_information(trt.LayerInformationFormat.JSON)
+        except Exception as exc:  # inspector availability is recorded, not silently treated as layer precision proof
+            inspector_json = {"unavailable": type(exc).__name__ + ": " + str(exc)}
+        if state is not None:
+            state["build_completed"] = True
+            _persist_state(state)
+    except Exception as primary_error:
+        try:
+            owned_engine.close()
+        except Exception:
+            pass
+        raise
+    return owned_engine, {
         "parser": {"parse_returned_true": parsed, "errors": errors, "io": parser_binding},
         "builder": {"settings": dict(BUILD_SETTINGS), "flags_observed": flag_observed, "timing_cache": "created from empty bytes and not serialized/reused", "serialized_engine": {"bytes": len(serialized_bytes), "sha256": sha256_bytes(serialized_bytes), "published": False}},
         "engine": {"io": engine_binding, "inspector_format": "JSON", "inspector": inspector_json, "fp16_all_layers_not_inferred": True},
@@ -597,18 +654,21 @@ def descriptive_raw_semantics(np: Any, reference: Any, observed: Any, model: str
     return result
 
 
-def execute_trt_once(engine: Any, runtime: dict[str, Any], input_np: Any, model: str, device: int) -> Any:
+def execute_trt_once(engine: OwnedEngine, runtime: dict[str, Any], input_np: Any, model: str, device: int) -> Any:
     torch = runtime["torch"]
     np = runtime["np"]
     input_tensor = torch.as_tensor(input_np, dtype=torch.float32, device=torch.device(f"cuda:{device}"))
     output_tensor = torch.empty(tuple(EXPECTED_OUTPUT_SHAPES[model]), dtype=torch.float32, device=input_tensor.device)
     context = engine.create_execution_context()
-    bind_tensor_addresses(context, model, int(input_tensor.data_ptr()), int(output_tensor.data_ptr()))
-    stream = torch.cuda.current_stream(input_tensor.device)
-    if not bool(context.execute_async_v3(stream.cuda_stream)):
-        raise FeasibilityUnresolved(f"TensorRT execute_async_v3 returned false for {model}")
-    torch.cuda.synchronize(input_tensor.device)
-    return _finite_output(np, output_tensor.detach().cpu().numpy(), model, "TensorRT")
+    try:
+        bind_tensor_addresses(context, model, int(input_tensor.data_ptr()), int(output_tensor.data_ptr()))
+        stream = torch.cuda.current_stream(input_tensor.device)
+        if not bool(context.execute_async_v3(stream.cuda_stream)):
+            raise FeasibilityUnresolved(f"TensorRT execute_async_v3 returned false for {model}")
+        torch.cuda.synchronize(input_tensor.device)
+        return _finite_output(np, output_tensor.detach().cpu().numpy(), model, "TensorRT")
+    finally:
+        engine.release_execution_context(context)
 
 
 def bind_tensor_addresses(context: Any, model: str, input_ptr: int, output_ptr: int) -> None:
@@ -652,7 +712,7 @@ def _public_trace(trace: dict[str, Any], row: dict[str, Any], repo: Path) -> dic
 
 
 def _child_state(model: str) -> dict[str, Any]:
-    return {"model": model, "status": "running", "stage": "not_started", "stage_history": [], "forward_counts": {"trt_application_enqueue": {"attempted": 0, "completed": 0}, "onnx_cpu_reference_call": {"attempted": 0, "completed": 0}, "native_forward": {"attempted": 0, "completed": 0}}, "records_written": 0, "parser_attempted": False, "parser_completed": False, "build_attempted": False, "build_completed": False, "dispatch_attempted": 0, "dispatch_completed": 0, "tensorrt_imported": False, "tensorrt_build_performed": False, "gpu_used": False}
+    return {"model": model, "status": "running", "stage": "not_started", "stage_history": [], "forward_counts": {"trt_application_enqueue": {"attempted": 0, "completed": 0}, "onnx_cpu_reference_call": {"attempted": 0, "completed": 0}, "native_forward": {"attempted": 0, "completed": 0}}, "records_written": 0, "parser_attempted": False, "parser_completed": False, "build_attempted": False, "build_completed": False, "dispatch_attempted": 0, "dispatch_completed": 0, "tensorrt_imported": False, "tensorrt_build_performed": False, "gpu_used": False, "ownership_status": "not_acquired"}
 
 
 def _persist_state(state: dict[str, Any]) -> None:
@@ -662,7 +722,16 @@ def _persist_state(state: dict[str, Any]) -> None:
     path = Path(path_value)
     path.parent.mkdir(parents=True, exist_ok=True)
     public = {key: value for key, value in state.items() if not key.startswith("_")}
-    path.write_text(json.dumps(public, ensure_ascii=False, allow_nan=False, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    payload = json.dumps(public, ensure_ascii=False, allow_nan=False, indent=2, sort_keys=True) + "\n"
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=path.parent)
+    os.close(descriptor)
+    temporary = Path(temporary_name)
+    try:
+        temporary.write_text(payload, encoding="utf-8", newline="\n")
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
 
 
 def _stage(state: dict[str, Any], stage: str, **details: Any) -> None:
@@ -681,10 +750,33 @@ def _owned_files(output_root: Path, model: str) -> list[str]:
 def child_failure(plan: dict[str, Any], model: str, state: dict[str, Any], exc: Exception, output_root: Path) -> dict[str, Any]:
     state["status"] = "failed"
     _persist_state(state)
-    return {"schema_version": SCHEMA_VERSION, "study": STUDY, "model": model, "status": "failed", "validity": "blocked_not_interpretable", "error_type": type(exc).__name__, "error": str(exc), "stage": state["stage"], "stage_history": state["stage_history"], "forward_counts": state["forward_counts"], "records_written": state["records_written"], "partial_files": _owned_files(output_root, model), "partial_files_scope": f"models/{model}/owned_paths_only", "no_silent_resume": True, "no_retry": True, "audit_flags": {"export_performed": False, "onnx_modified": False, "tensorrt_imported": bool(state.get("tensorrt_imported")), "tensorrt_build_performed": bool(state.get("tensorrt_build_performed")), "gpu_used": bool(state.get("gpu_used")), "calibration_loader_called": False, "native_forward": False, "official_test_accessed": False, "training_performed": False, "matrix_opened": False, "scored_run_authorized": False}}
+    return {"schema_version": SCHEMA_VERSION, "study": STUDY, "model": model, "status": "failed", "validity": "blocked_not_interpretable", "error_type": type(exc).__name__, "error": str(exc), "stage": state["stage"], "completion_status": state.get("completion_status", "observed_failure"), "state_recovery": state.get("state_recovery", {"status": "observed_in_memory_state"}), "stage_history": state["stage_history"], "forward_counts": state["forward_counts"], "records_written": state["records_written"], "partial_files": _owned_files(output_root, model), "partial_files_scope": f"models/{model}/owned_paths_only", "no_silent_resume": True, "no_retry": True, "audit_flags": {"export_performed": False, "onnx_modified": False, "tensorrt_imported": bool(state.get("tensorrt_imported")), "tensorrt_build_performed": bool(state.get("tensorrt_build_performed")), "gpu_used": bool(state.get("gpu_used")), "calibration_loader_called": False, "native_forward": False, "official_test_accessed": False, "training_performed": False, "matrix_opened": False, "scored_run_authorized": False}}
 
 
 def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path, state: dict[str, Any] | None = None, runtime_loader: Callable[..., dict[str, Any]] = runtime_loader, snapshot_fn: Callable[..., dict[str, Any]] = snapshot_gpu) -> dict[str, Any]:
+    state = state or _child_state(model)
+    primary_error: Exception | None = None
+    try:
+        return _run_model_child_impl(repo, plan, model, out_dir, state=state, runtime_loader=runtime_loader, snapshot_fn=snapshot_fn)
+    except Exception as exc:
+        primary_error = exc
+        raise
+    finally:
+        owner = state.pop("_engine_owner", None)
+        if owner is not None:
+            try:
+                owner.close()
+                state["ownership_status"] = "released_after_final_synchronize"
+            except Exception as cleanup_error:
+                state["ownership_status"] = "release_failed"
+                state["cleanup_error"] = {"type": type(cleanup_error).__name__, "error": str(cleanup_error)}
+                _persist_state(state)
+                if primary_error is None:
+                    raise
+        _persist_state(state)
+
+
+def _run_model_child_impl(repo: Path, plan: dict[str, Any], model: str, out_dir: Path, state: dict[str, Any], runtime_loader: Callable[..., dict[str, Any]], snapshot_fn: Callable[..., dict[str, Any]]) -> dict[str, Any]:
     state = state or _child_state(model)
     out_dir.mkdir(parents=True, exist_ok=True)
     state["state_path"] = str(out_dir / "child_state.json")
@@ -724,6 +816,8 @@ def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path,
     with tempfile.TemporaryDirectory(prefix=f"{STUDY}_{model}_") as scratch:
         scratch_path = Path(scratch)
         engine, build_evidence = build_engine(runtime["trt"], onnx_path, model, state=state)
+        state["_engine_owner"] = engine
+        state["ownership_status"] = "owned_engine_active"
         state["tensorrt_build_performed"] = True
         _persist_state(state)
         _stage(state, "build_complete", engine_sha256=build_evidence["builder"]["serialized_engine"]["sha256"])
@@ -819,12 +913,25 @@ def _write_text_if_absent(path: Path, value: str) -> None:
 
 
 def _state_from_disk(path: Path, model: str) -> dict[str, Any]:
-    if not path.is_file():
+    def unknown(reason: str) -> dict[str, Any]:
         state = _child_state(model)
-        state["completion_status"] = "unknown_after_timeout"
+        unknown_counts = {name: {"attempted": None, "completed": None} for name in state["forward_counts"]}
+        state.update({"status": "unknown_after_timeout", "stage": "unknown_after_timeout", "completion_status": "unknown_after_timeout", "state_recovery": {"status": "unknown", "reason": reason}, "forward_counts": unknown_counts, "dispatch_attempted": None, "dispatch_completed": None, "records_written": None})
         return state
-    state = read_json(path)
+
+    if not path.is_file():
+        return unknown("state_file_missing")
+    try:
+        state = read_json(path)
+    except (OSError, json.JSONDecodeError) as exc:
+        return unknown(f"state_file_unreadable:{type(exc).__name__}")
+    if not isinstance(state, dict) or state.get("model") != model:
+        return unknown("state_file_wrong_model_or_shape")
+    required = {"stage", "stage_history", "forward_counts", "records_written"}
+    if not required.issubset(state):
+        return unknown("state_file_missing_lifecycle_fields")
     state["completion_status"] = "unknown_after_timeout"
+    state["state_recovery"] = {"status": "valid_partial_state", "reason": "timeout_recovered_from_atomic_snapshot"}
     return state
 
 

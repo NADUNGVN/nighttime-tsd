@@ -6,6 +6,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import weakref
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -471,6 +472,7 @@ class PrecisionHeadTrtFeasibilityTests(unittest.TestCase):
                     self.assertEqual(state["forward_counts"]["trt_application_enqueue"]["completed"], 8)
                     self.assertEqual(state["forward_counts"]["onnx_cpu_reference_call"]["attempted"], 8)
                     self.assertEqual(state["forward_counts"]["onnx_cpu_reference_call"]["completed"], 8)
+                    self.assertEqual(state["ownership_status"], "released_after_final_synchronize")
                 finally:
                     smoke.EXPECTED_ONNX_SHA256[model] = old_sha
 
@@ -584,24 +586,91 @@ class PrecisionHeadTrtFeasibilityTests(unittest.TestCase):
     def test_external_fake_runtime_build_records_parser_flags_and_engine_io(self):
         with tempfile.TemporaryDirectory() as tmp:
             engine, evidence = smoke.build_engine(FakeTrt, Path(tmp) / "accepted.onnx", "yolov8n")
-        self.assertIsInstance(engine, FakeEngine)
+        self.assertIsInstance(engine, smoke.OwnedEngine)
+        self.assertIsInstance(engine.engine, FakeEngine)
         self.assertEqual(evidence["builder"]["flags_observed"], {"FP16": True, "INT8": False, "TF32": False})
         self.assertEqual(evidence["parser"]["io"]["observed"]["output"]["shape"], [1, 7, 8400])
         self.assertFalse(evidence["builder"]["serialized_engine"]["published"])
         self.assertEqual(FakeTrt.Builder.last_config.workspace, 4 << 30)
         self.assertTrue(FakeTrt.Builder.last_config.timing_cache_empty)
         self.assertFalse(FakeTrt.Builder.last_config.ignore_mismatch)
+        engine.close()
 
     def test_external_fake_runtime_build_covers_yolo26_fixed_row_output(self):
         with tempfile.TemporaryDirectory() as tmp:
-            _engine, evidence = smoke.build_engine(FakeYolo26Trt, Path(tmp) / "accepted.onnx", "yolo26n")
+            engine, evidence = smoke.build_engine(FakeYolo26Trt, Path(tmp) / "accepted.onnx", "yolo26n")
         self.assertEqual(evidence["parser"]["io"]["observed"]["output"]["shape"], [1, 300, 6])
         self.assertEqual(evidence["engine"]["io"]["observed"]["output"]["shape"], [1, 300, 6])
+        engine.close()
 
     def test_parser_failure_is_hard_failure_with_error(self):
         with self.assertRaises(smoke.FeasibilityUnresolved) as raised:
             smoke.build_engine(FailingParserTrt, Path("accepted.onnx"), "yolov8n")
         self.assertIn("synthetic parser failure", str(raised.exception))
+
+    def test_owned_engine_keeps_logger_and_runtime_until_explicit_close(self):
+        class LifetimeTrt(FakeTrt):
+            logger_ref = None
+            runtime_ref = None
+
+            class Logger(FakeTrt.Logger):
+                def __init__(self, level):
+                    super().__init__(level)
+                    LifetimeTrt.logger_ref = weakref.ref(self)
+
+            class Runtime(FakeTrt.Runtime):
+                def __init__(self, logger):
+                    super().__init__(logger)
+                    LifetimeTrt.runtime_ref = weakref.ref(self)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            owned, _evidence = smoke.build_engine(LifetimeTrt, Path(tmp) / "accepted.onnx", "yolov8n")
+            self.assertIsNotNone(LifetimeTrt.logger_ref())
+            self.assertIsNotNone(LifetimeTrt.runtime_ref())
+            owned.close()
+            self.assertTrue(owned.closed)
+        import gc
+        gc.collect()
+        self.assertIsNone(LifetimeTrt.logger_ref())
+        self.assertIsNone(LifetimeTrt.runtime_ref())
+
+    def test_build_failure_releases_runtime_and_logger(self):
+        class FailingRuntimeTrt(FakeTrt):
+            logger_ref = None
+            runtime_ref = None
+
+            class Logger(FakeTrt.Logger):
+                def __init__(self, level):
+                    super().__init__(level)
+                    FailingRuntimeTrt.logger_ref = weakref.ref(self)
+
+            class Runtime(FakeTrt.Runtime):
+                def __init__(self, logger):
+                    super().__init__(logger)
+                    FailingRuntimeTrt.runtime_ref = weakref.ref(self)
+
+                def deserialize_cuda_engine(self, _serialized):
+                    return None
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(smoke.FeasibilityUnresolved):
+                smoke.build_engine(FailingRuntimeTrt, Path(tmp) / "accepted.onnx", "yolov8n")
+        import gc
+        gc.collect()
+        self.assertIsNone(FailingRuntimeTrt.logger_ref())
+        self.assertIsNone(FailingRuntimeTrt.runtime_ref())
+
+    def test_primary_child_error_survives_cleanup_error(self):
+        class CleanupFailure:
+            def close(self):
+                raise RuntimeError("synthetic cleanup failure")
+
+        state = smoke._child_state("yolov8n")
+        state["_engine_owner"] = CleanupFailure()
+        with patch.object(smoke, "_run_model_child_impl", side_effect=RuntimeError("synthetic primary failure")):
+            with self.assertRaisesRegex(RuntimeError, "synthetic primary failure"):
+                smoke.run_model_child(Path("."), {}, "yolov8n", Path("."), state=state)
+        self.assertEqual(state["cleanup_error"]["error"], "synthetic cleanup failure")
 
     def test_parent_module_does_not_import_tensor_rt(self):
         tree = ast.parse(Path(smoke.__file__).read_text(encoding="utf-8"))
@@ -657,6 +726,65 @@ class PrecisionHeadTrtFeasibilityTests(unittest.TestCase):
         self.assertTrue(any(path.endswith("models/yolov8n/partial.jsonl") for path in first["partial_files"]))
         self.assertTrue(first["no_silent_resume"])
         self.assertTrue(first["no_retry"])
+
+    def test_timeout_with_truncated_state_preserves_corruption_and_reports_unknown_counters(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"
+            root.mkdir()
+            plan = {"output_root": "out", "models": {}, "runtime_requirements": {"logical_cuda_index": 0}}
+
+            def fake_run(command, **_kwargs):
+                model_dir = root / "models" / command[command.index("--model") + 1]
+                (model_dir / "child_state.json").write_text('{"stage":', encoding="utf-8")
+                raise subprocess.TimeoutExpired(command, 17, output=b"partial stdout", stderr=b"partial stderr")
+
+            rows, failed = smoke.dispatch_children(Path(tmp), plan, root, ["yolov8n", "yolo26n"], 17, run_fn=fake_run)
+            failure = json.loads((root / "models" / "yolov8n" / "failure.json").read_text(encoding="utf-8"))
+            state_bytes = (root / "models" / "yolov8n" / "child_state.json").read_text(encoding="utf-8")
+        self.assertTrue(failed)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(state_bytes, '{"stage":')
+        self.assertEqual(failure["completion_status"], "unknown_after_timeout")
+        self.assertIsNone(failure["forward_counts"]["trt_application_enqueue"]["attempted"])
+        self.assertEqual(failure["state_recovery"]["status"], "unknown")
+
+    def test_timeout_with_valid_partial_state_preserves_observed_counters(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"
+            root.mkdir()
+            plan = {"output_root": "out", "models": {}, "runtime_requirements": {"logical_cuda_index": 0}}
+
+            def fake_run(command, **_kwargs):
+                model_dir = root / "models" / command[command.index("--model") + 1]
+                state = smoke._child_state("yolov8n")
+                state.update({"stage": "build", "records_written": 1, "forward_counts": {"trt_application_enqueue": {"attempted": 2, "completed": 2}, "onnx_cpu_reference_call": {"attempted": 1, "completed": 1}, "native_forward": {"attempted": 0, "completed": 0}}})
+                (model_dir / "child_state.json").write_text(json.dumps(state), encoding="utf-8")
+                raise subprocess.TimeoutExpired(command, 17, output=b"partial", stderr=b"")
+
+            rows, failed = smoke.dispatch_children(Path(tmp), plan, root, ["yolov8n", "yolo26n"], 17, run_fn=fake_run)
+            failure = rows[0]
+        self.assertTrue(failed)
+        self.assertEqual(failure["state_recovery"]["status"], "valid_partial_state")
+        self.assertEqual(failure["forward_counts"]["trt_application_enqueue"], {"attempted": 2, "completed": 2})
+        self.assertEqual(failure["records_written"], 1)
+
+    def test_timeout_does_not_overwrite_existing_failure_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "out"
+            root.mkdir()
+            plan = {"output_root": "out", "models": {}, "runtime_requirements": {"logical_cuda_index": 0}}
+            existing = {"model": "yolov8n", "status": "failed", "error": "existing-terminal-record"}
+
+            def fake_run(command, **_kwargs):
+                model_dir = root / "models" / command[command.index("--model") + 1]
+                (model_dir / "failure.json").write_text(json.dumps(existing), encoding="utf-8")
+                raise subprocess.TimeoutExpired(command, 17, output=b"partial", stderr=b"")
+
+            rows, failed = smoke.dispatch_children(Path(tmp), plan, root, ["yolov8n", "yolo26n"], 17, run_fn=fake_run)
+            preserved = json.loads((root / "models" / "yolov8n" / "failure.json").read_text(encoding="utf-8"))
+        self.assertTrue(failed)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(preserved, existing)
 
 
 if __name__ == "__main__":
