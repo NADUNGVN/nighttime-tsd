@@ -2935,9 +2935,10 @@ khi termination chưa được xác nhận.
 
 ### Exact pushed executable revision
 
-Implementation commit sau A2L-043 sẽ được ghi bằng full SHA sau khi commit;
-không suy diễn suffix từ abbreviation. Chưa có lệnh server executable trong
-entry này. Trạng thái là
+Implementation commit sau A2L-043 đã được push bằng full SHA
+`67de9ce97166692b75752e7d5cdecb640e43374a`. Đây là executable revision cần
+được Astra review; không dùng abbreviation hoặc SHA suffix tự suy diễn. Chưa
+có lệnh server executable trong entry này. Trạng thái là
 `local_lifecycle_repaired_server_execution_not_authorized`; giữ nguyên budget
 2 build, 16 TensorRT enqueue, 16 ORT CPU reference, zero calibration/native/
 retry/benchmark và chờ Astra review.
