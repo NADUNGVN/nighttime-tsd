@@ -1557,3 +1557,56 @@ verified scoped package to fresh absent E2 paths. C4 then permits exactly one
 foreground smoke: one FP16/1 GiB build and three ordered enqueues with the
 900s/180s child deadlines. Until the archive is supplied and reverified, no
 smoke dispatch is authorized by the conditional gate.
+
+## L1A-019 — HF transfer prepared; DungJD authentication is the remaining blocker
+
+**Status:** HF transfer preparation complete; no archive upload/download and
+no E2 build/inference was performed. The local HF session is authenticated as
+`Dung-trivita`, while the approved destination is `DungJD/nighttime-tsd-artifacts`.
+The destination does not exist and the API rejected creation with HTTP 403
+(`no rights to create a dataset under namespace DungJD`). No alternate
+namespace/repository was created.
+
+The upload must be run by the user on SERVER-01 using an HF session authorized
+for `DungJD`. It checks the existing archive hash, creates the dataset repo
+private if absent, confirms an existing repo is private, refuses to overwrite
+an existing artifact path, uploads exactly the existing archive, and prints the
+returned commit revision without exposing credentials:
+
+    cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new
+    python - <<'PY'
+    import hashlib
+    from pathlib import Path
+    from huggingface_hub import HfApi, HfHubHTTPError
+    repo = "DungJD/nighttime-tsd-artifacts"
+    artifact = "transfers/e2l1-017/luna1-e2l1-017-source-v2.tar.gz"
+    expected = "bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28"
+    local = Path("/tmp/luna1-e2l1-017-source-v2.tar.gz")
+    if not local.is_file(): raise SystemExit("ARCHIVE_MISSING")
+    observed = hashlib.sha256(local.read_bytes()).hexdigest()
+    if observed != expected: raise SystemExit("ARCHIVE_HASH_MISMATCH:" + observed)
+    api = HfApi()
+    me = api.whoami()["name"]
+    if me != "DungJD": raise SystemExit("HF_ACCOUNT_MISMATCH:" + me)
+    try:
+        info = api.repo_info(repo, repo_type="dataset")
+        if getattr(info, "private", None) is not True: raise SystemExit("HF_REPO_NOT_PRIVATE")
+    except HfHubHTTPError as exc:
+        if getattr(exc, "response", None) is None or exc.response.status_code != 404: raise
+        api.create_repo(repo, repo_type="dataset", private=True, exist_ok=False)
+    if api.file_exists(repo, artifact, repo_type="dataset"):
+        raise SystemExit("HF_ARTIFACT_ALREADY_EXISTS_REFUSE_OVERWRITE")
+    commit = api.upload_file(path_or_fileobj=str(local), path_in_repo=artifact, repo_id=repo, repo_type="dataset", commit_message="Upload E2L1-017 source bundle")
+    print("HF_REPO=" + repo)
+    print("HF_COMMIT=" + commit.oid)
+    print("HF_PATH=" + artifact)
+    print("ARCHIVE_SHA256=" + observed)
+    print("ARCHIVE_BYTES=" + str(local.stat().st_size))
+    PY
+
+After the user supplies `HF_COMMIT`, Luna1 downloads that pinned revision via
+`hf_hub_download`, verifies the expected SHA-256, exactly eleven regular-file
+members, no symlinks/traversal, the canonical manifest and all ten private
+hashes. Only then is the verified bundle transferred to fresh E2 paths. The
+existing conditional authorization remains exactly one foreground smoke:
+one FP16/1 GiB build and three ordered inferences, with no retry or benchmark.
