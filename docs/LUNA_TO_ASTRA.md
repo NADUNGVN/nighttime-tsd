@@ -2974,9 +2974,9 @@ TensorRT thật, ORT graph thật, CPU bridge, Jetson hay matrix.
 
 ### Conditional GO and operator boundary
 
-Implementation revision: `67de9ce97166692b75752e7d5cdecb640e43374a`.
-Documentation/L2A revision: `5039228b3f6767a9b455daaf8ad19408f54ef5c5`.
-Hai commit đã được push lên remote `NADUNGVN/nighttime-tsd.git`. Conditional
+Implementation revision: `23f73cccf85867456869ab6477061aa059ae811b`.
+Đây là full SHA của commit chứa toàn bộ sửa A2L-044; không dùng SHA rút gọn.
+Commit đã được push lên remote `NADUNGVN/nighttime-tsd.git`. Conditional
 GO chỉ áp dụng cho **một** foreground smoke đúng budget đã khóa; không phải
 GO cho benchmark, scored matrix, INT8 hoặc nghiên cứu tiếp theo.
 
@@ -2987,5 +2987,45 @@ Lệnh runner cuối cùng phải được điền desktop/background confirmati
 snapshot hiện tại; không dùng PID lịch sử. Nếu xuất hiện process không được
 phân loại hoặc output đã tồn tại, dừng và báo lại.
 
-L2A-052 chưa có artifact server. Sau khi operator chạy xong hoặc failure,
-chỉ push artifact scoped; Luna sẽ hậu kiểm và dừng để review tiếp.
+### Exact server handoff
+
+Các lệnh dưới đây không dùng SSH, không reset/clean working tree, không kill
+process và không thay đổi clock/power/permission. Lệnh pull/check xác minh
+đúng bytes của runner, helper, readiness helper và config so với full SHA; nó
+không coi ancestor-only là đủ:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "23f73cccf85867456869ab6477061aa059ae811b" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git diff --exit-code 23f73cccf85867456869ab6477061aa059ae811b -- scripts/run_precision_head_trt_feasibility.py scripts/verify_precision_head_confirmation_numeric.py scripts/prepare_precision_head_confirmation.py configs/precision_head_confirmation_v1.json docs/PRECISION_HEAD_TRT_FEASIBILITY_V1.md && test ! -e results/measurement_audit_v1/precision_head_trt_feasibility_v1 && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch
+```
+
+Sau đó operator chạy snapshot mới sau đây và gửi nguyên output để Luna kiểm
+tra GPU UUID/name/driver, process rows, environment, frozen-checkpoint/accepted
+ONNX/config hashes và output absent. Không dùng PID lịch sử:
+
+```bash
+hostname && nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader && for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | awk '$1 ~ /^[0-9]+$/ {print $1}'); do printf 'PID %s | ' "$p"; ps -o user=,comm=,args= -p "$p"; done && conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python -c "import importlib.metadata as m,numpy as np,torch,ultralytics,tensorrt as trt; print({'torch':torch.__version__,'ultralytics':ultralytics.__version__,'tensorrt':trt.__version__,'numpy':np.__version__,'pycocotools':m.version('pycocotools'),'cuda':torch.version.cuda,'available':torch.cuda.is_available(),'gpu':torch.cuda.get_device_name(0) if torch.cuda.is_available() else None})" && sha256sum configs/precision_head_confirmation_v1.json results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx && if [ -e results/measurement_audit_v1/precision_head_trt_feasibility_v1 ]; then echo OUTPUT_EXISTS; else echo OUTPUT_ABSENT; fi
+```
+
+Chỉ khi snapshot xác nhận không có workload compute mới/unknown và output
+`OUTPUT_ABSENT`, operator chạy đúng một foreground command dưới đây, điền
+`PID=PATH` hiện tại cho từng desktop row đã chủ động xác nhận. Nếu có process
+Python/build/inference khác, không thêm confirmation để lách guard; dừng và
+báo lại. Nếu desktop path hiện tại không đọc được qua `/proc`, dùng path exact
+từ `nvidia-smi`/`ps` và ghi rõ phương thức đó trong snapshot; không tuyên bố
+đã xác minh qua `/proc`.
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && test ! -e results/measurement_audit_v1/precision_head_trt_feasibility_v1 && local/g0_size_env/bin/python scripts/run_precision_head_trt_feasibility.py --readiness-root results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 --graph-audit-root results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4 --onnx-root results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2 --out-dir results/measurement_audit_v1/precision_head_trt_feasibility_v1 --model all --device 0 --confirm-desktop-process CURRENT_PID=CURRENT_ALLOWLISTED_PATH
+```
+
+Lệnh trên là smoke duy nhất: 2 model, 2 build độc lập/model, 16 TensorRT
+enqueue, 16 ORT CPU reference call, không calibration/native/retry/benchmark.
+Không dùng `nohup`. Sau khi hoàn tất hoặc failure, operator chỉ push artifact
+scoped gồm manifest/plan, report hoặc failure, child states, JSONL và log theo
+allowlist của protocol; không push engine/ONNX/checkpoint/raw tensor/cache.
+Luna sẽ pull, kiểm đủ 2 model/2 build, provenance, telemetry và lifecycle,
+rồi dừng ở review.
+
+L2A-052 chưa có artifact server. Trạng thái là
+`conditional_smoke_go_pending_fresh_server_snapshot`; đây là điều kiện vận
+hành, không phải yêu cầu Astra duyệt thêm thiết kế.
