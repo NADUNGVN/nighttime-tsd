@@ -654,7 +654,7 @@ def descriptive_raw_semantics(np: Any, reference: Any, observed: Any, model: str
     return result
 
 
-def execute_trt_once(engine: OwnedEngine, runtime: dict[str, Any], input_np: Any, model: str, device: int) -> Any:
+def execute_trt_once(engine: OwnedEngine, runtime: dict[str, Any], input_np: Any, model: str, device: int, state: dict[str, Any] | None = None) -> Any:
     torch = runtime["torch"]
     np = runtime["np"]
     input_tensor = torch.as_tensor(input_np, dtype=torch.float32, device=torch.device(f"cuda:{device}"))
@@ -666,9 +666,13 @@ def execute_trt_once(engine: OwnedEngine, runtime: dict[str, Any], input_np: Any
         if not bool(context.execute_async_v3(stream.cuda_stream)):
             raise FeasibilityUnresolved(f"TensorRT execute_async_v3 returned false for {model}")
         torch.cuda.synchronize(input_tensor.device)
+        if state is not None:
+            state["synchronization_completed"] = True
+            state["synchronization_completed_count"] += 1
         return _finite_output(np, output_tensor.detach().cpu().numpy(), model, "TensorRT")
     finally:
         engine.release_execution_context(context)
+        context = None
 
 
 def bind_tensor_addresses(context: Any, model: str, input_ptr: int, output_ptr: int) -> None:
@@ -712,7 +716,13 @@ def _public_trace(trace: dict[str, Any], row: dict[str, Any], repo: Path) -> dic
 
 
 def _child_state(model: str) -> dict[str, Any]:
-    return {"model": model, "status": "running", "stage": "not_started", "stage_history": [], "forward_counts": {"trt_application_enqueue": {"attempted": 0, "completed": 0}, "onnx_cpu_reference_call": {"attempted": 0, "completed": 0}, "native_forward": {"attempted": 0, "completed": 0}}, "records_written": 0, "parser_attempted": False, "parser_completed": False, "build_attempted": False, "build_completed": False, "dispatch_attempted": 0, "dispatch_completed": 0, "tensorrt_imported": False, "tensorrt_build_performed": False, "gpu_used": False, "ownership_status": "not_acquired"}
+    return {"model": model, "status": "running", "stage": "not_started", "stage_history": [], "forward_counts": {"trt_application_enqueue": {"attempted": 0, "completed": 0}, "onnx_cpu_reference_call": {"attempted": 0, "completed": 0}, "native_forward": {"attempted": 0, "completed": 0}}, "records_written": 0, "parser_attempted": False, "parser_completed": False, "build_attempted": False, "build_completed": False, "dispatch_attempted": 0, "dispatch_completed": 0, "tensorrt_imported": False, "tensorrt_build_performed": False, "gpu_used": False, "ownership_status": "not_acquired", "owner_release_status": "not_attempted", "synchronization_completed": False, "synchronization_completed_count": 0}
+
+
+def _tri_state(value: Any) -> bool | None:
+    if value is None:
+        return None
+    return bool(value)
 
 
 def _persist_state(state: dict[str, Any]) -> None:
@@ -750,7 +760,7 @@ def _owned_files(output_root: Path, model: str) -> list[str]:
 def child_failure(plan: dict[str, Any], model: str, state: dict[str, Any], exc: Exception, output_root: Path) -> dict[str, Any]:
     state["status"] = "failed"
     _persist_state(state)
-    return {"schema_version": SCHEMA_VERSION, "study": STUDY, "model": model, "status": "failed", "validity": "blocked_not_interpretable", "error_type": type(exc).__name__, "error": str(exc), "stage": state["stage"], "completion_status": state.get("completion_status", "observed_failure"), "state_recovery": state.get("state_recovery", {"status": "observed_in_memory_state"}), "stage_history": state["stage_history"], "forward_counts": state["forward_counts"], "records_written": state["records_written"], "partial_files": _owned_files(output_root, model), "partial_files_scope": f"models/{model}/owned_paths_only", "no_silent_resume": True, "no_retry": True, "audit_flags": {"export_performed": False, "onnx_modified": False, "tensorrt_imported": bool(state.get("tensorrt_imported")), "tensorrt_build_performed": bool(state.get("tensorrt_build_performed")), "gpu_used": bool(state.get("gpu_used")), "calibration_loader_called": False, "native_forward": False, "official_test_accessed": False, "training_performed": False, "matrix_opened": False, "scored_run_authorized": False}}
+    return {"schema_version": SCHEMA_VERSION, "study": STUDY, "model": model, "status": "failed", "validity": "blocked_not_interpretable", "error_type": type(exc).__name__, "error": str(exc), "stage": state["stage"], "completion_status": state.get("completion_status", "observed_failure"), "state_recovery": state.get("state_recovery", {"status": "observed_in_memory_state"}), "stage_history": state["stage_history"], "forward_counts": state["forward_counts"], "records_written": state["records_written"], "lifecycle": {"owner_release_status": state.get("owner_release_status"), "ownership_status": state.get("ownership_status"), "synchronization_completed": state.get("synchronization_completed"), "synchronization_completed_count": state.get("synchronization_completed_count")}, "partial_files": _owned_files(output_root, model), "partial_files_scope": f"models/{model}/owned_paths_only", "no_silent_resume": True, "no_retry": True, "audit_flags": {"export_performed": False, "onnx_modified": False, "tensorrt_imported": _tri_state(state.get("tensorrt_imported")), "tensorrt_build_performed": _tri_state(state.get("tensorrt_build_performed")), "gpu_used": _tri_state(state.get("gpu_used")), "calibration_loader_called": False, "native_forward": False, "official_test_accessed": False, "training_performed": False, "matrix_opened": False, "scored_run_authorized": False}}
 
 
 def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path, state: dict[str, Any] | None = None, runtime_loader: Callable[..., dict[str, Any]] = runtime_loader, snapshot_fn: Callable[..., dict[str, Any]] = snapshot_gpu) -> dict[str, Any]:
@@ -764,10 +774,13 @@ def run_model_child(repo: Path, plan: dict[str, Any], model: str, out_dir: Path,
     finally:
         owner = state.pop("_engine_owner", None)
         if owner is not None:
+            state["owner_release_status"] = "attempted"
             try:
                 owner.close()
-                state["ownership_status"] = "released_after_final_synchronize"
+                state["owner_release_status"] = "released"
+                state["ownership_status"] = "released"
             except Exception as cleanup_error:
+                state["owner_release_status"] = "release_failed"
                 state["ownership_status"] = "release_failed"
                 state["cleanup_error"] = {"type": type(cleanup_error).__name__, "error": str(cleanup_error)}
                 _persist_state(state)
@@ -815,8 +828,9 @@ def _run_model_child_impl(repo: Path, plan: dict[str, Any], model: str, out_dir:
     _stage(state, "build")
     with tempfile.TemporaryDirectory(prefix=f"{STUDY}_{model}_") as scratch:
         scratch_path = Path(scratch)
-        engine, build_evidence = build_engine(runtime["trt"], onnx_path, model, state=state)
-        state["_engine_owner"] = engine
+        owned_engine, build_evidence = build_engine(runtime["trt"], onnx_path, model, state=state)
+        state["_engine_owner"] = owned_engine
+        owned_engine = None
         state["ownership_status"] = "owned_engine_active"
         state["tensorrt_build_performed"] = True
         _persist_state(state)
@@ -844,8 +858,13 @@ def _run_model_child_impl(repo: Path, plan: dict[str, Any], model: str, out_dir:
                 _stage(state, "execution", image=row["image"], order=index)
                 state["forward_counts"]["trt_application_enqueue"]["attempted"] += 1
                 state["dispatch_attempted"] += 1
+                state["synchronization_completed"] = False
                 _persist_state(state)
-                trt_output = execute_trt_once(engine, runtime, input_np, model, device)
+                engine_for_call = state["_engine_owner"]
+                try:
+                    trt_output = execute_trt_once(engine_for_call, runtime, input_np, model, device, state=state)
+                finally:
+                    engine_for_call = None
                 state["forward_counts"]["trt_application_enqueue"]["completed"] += 1
                 state["dispatch_completed"] += 1
                 _persist_state(state)
@@ -916,7 +935,7 @@ def _state_from_disk(path: Path, model: str) -> dict[str, Any]:
     def unknown(reason: str) -> dict[str, Any]:
         state = _child_state(model)
         unknown_counts = {name: {"attempted": None, "completed": None} for name in state["forward_counts"]}
-        state.update({"status": "unknown_after_timeout", "stage": "unknown_after_timeout", "completion_status": "unknown_after_timeout", "state_recovery": {"status": "unknown", "reason": reason}, "forward_counts": unknown_counts, "dispatch_attempted": None, "dispatch_completed": None, "records_written": None})
+        state.update({"status": "unknown_after_timeout", "stage": "unknown_after_timeout", "completion_status": "unknown_after_timeout", "state_recovery": {"status": "unknown", "reason": reason}, "forward_counts": unknown_counts, "dispatch_attempted": None, "dispatch_completed": None, "records_written": None, "parser_attempted": None, "parser_completed": None, "build_attempted": None, "build_completed": None, "tensorrt_imported": None, "tensorrt_build_performed": None, "gpu_used": None, "ownership_status": "unknown", "owner_release_status": "unknown", "synchronization_completed": None, "synchronization_completed_count": None})
         return state
 
     if not path.is_file():
@@ -1031,6 +1050,7 @@ def run_child(args: argparse.Namespace) -> int:
     state = _child_state(model)
     try:
         report = run_model_child(repo, plan, model, out_dir, state=state)
+        report.setdefault("lifecycle", {}).update({"owner_release_status": state.get("owner_release_status"), "ownership_status": state.get("ownership_status"), "synchronization_completed": state.get("synchronization_completed"), "synchronization_completed_count": state.get("synchronization_completed_count")})
         write_json_no_overwrite(out_dir / "model_report.json", report)
         print(f"DONE MODEL {model}: {out_dir / 'model_report.json'}", flush=True)
         return 0

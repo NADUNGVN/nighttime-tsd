@@ -451,7 +451,7 @@ class PrecisionHeadTrtFeasibilityTests(unittest.TestCase):
                         primary.mutate()
                         return {"count": 0, "xyxy": [], "confidence": [], "class_id": []}
 
-                    def fake_trt(_engine, _runtime, _input, _model, _device):
+                    def fake_trt(_engine, _runtime, _input, _model, _device, **_kwargs):
                         return FakeArray(smoke.EXPECTED_OUTPUT_SHAPES[model])
 
                     state = smoke._child_state(model)
@@ -472,7 +472,8 @@ class PrecisionHeadTrtFeasibilityTests(unittest.TestCase):
                     self.assertEqual(state["forward_counts"]["trt_application_enqueue"]["completed"], 8)
                     self.assertEqual(state["forward_counts"]["onnx_cpu_reference_call"]["attempted"], 8)
                     self.assertEqual(state["forward_counts"]["onnx_cpu_reference_call"]["completed"], 8)
-                    self.assertEqual(state["ownership_status"], "released_after_final_synchronize")
+                    self.assertEqual(state["ownership_status"], "released")
+                    self.assertEqual(state["owner_release_status"], "released")
                 finally:
                     smoke.EXPECTED_ONNX_SHA256[model] = old_sha
 
@@ -504,7 +505,7 @@ class PrecisionHeadTrtFeasibilityTests(unittest.TestCase):
                     primary.mutate()
                     return {"count": 0, "xyxy": [], "confidence": [], "class_id": []}
 
-                def fake_trt(_engine, _runtime, _input, _model, _device):
+                def fake_trt(_engine, _runtime, _input, _model, _device, **_kwargs):
                     return FakeArray(smoke.EXPECTED_OUTPUT_SHAPES[model])
 
                 state = smoke._child_state(model)
@@ -518,6 +519,8 @@ class PrecisionHeadTrtFeasibilityTests(unittest.TestCase):
                 self.assertEqual(state["records_written"], 1)
                 self.assertTrue(any(path.endswith("smoke_records.jsonl") for path in failure["partial_files"]))
                 self.assertEqual(failure["audit_flags"]["tensorrt_build_performed"], True)
+                self.assertFalse(failure["lifecycle"]["synchronization_completed"])
+                self.assertEqual(failure["lifecycle"]["owner_release_status"], "released")
             finally:
                 smoke.EXPECTED_ONNX_SHA256[model] = old_sha
 
@@ -747,6 +750,9 @@ class PrecisionHeadTrtFeasibilityTests(unittest.TestCase):
         self.assertEqual(failure["completion_status"], "unknown_after_timeout")
         self.assertIsNone(failure["forward_counts"]["trt_application_enqueue"]["attempted"])
         self.assertEqual(failure["state_recovery"]["status"], "unknown")
+        self.assertIsNone(failure["audit_flags"]["tensorrt_imported"])
+        self.assertIsNone(failure["audit_flags"]["tensorrt_build_performed"])
+        self.assertIsNone(failure["audit_flags"]["gpu_used"])
 
     def test_timeout_with_valid_partial_state_preserves_observed_counters(self):
         with tempfile.TemporaryDirectory() as tmp:

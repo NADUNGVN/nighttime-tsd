@@ -2942,3 +2942,50 @@ có lệnh server executable trong entry này. Trạng thái là
 `local_lifecycle_repaired_server_execution_not_authorized`; giữ nguyên budget
 2 build, 16 TensorRT enqueue, 16 ORT CPU reference, zero calibration/native/
 retry/benchmark và chờ Astra review.
+
+## L2A-052 — A2L-044 conditional smoke GO prerequisites complete
+
+Đã đọc và thực hiện A2L-044. Các sửa đổi này chỉ hoàn thiện failure evidence
+và lifecycle reporting; không thay đổi numerical protocol, runtime versions,
+GPU policy, input identities hoặc locked budget. Không chạy server/GPU,
+TensorRT thật, ORT graph thật, CPU bridge, Jetson hay matrix.
+
+### Corrections
+
+- Timeout recovery với state thiếu/truncated/malformed/wrong-model nay đặt
+  parser/build/runtime/GPU/ownership flags và counters ở trạng thái unknown
+  (`null`), không ép thành `false` hoặc zero. Valid partial state vẫn giữ các
+  boolean/counters đã quan sát.
+- `synchronization_completed` được ghi độc lập với `owner_release_status`.
+  Cleanup thành công không suy ra synchronize thành công; failure report giữ
+  completion status thực tế. Context reference được xóa ngay sau release,
+  build-to-execute local owner reference được drop trước owner cleanup, và
+  primary error được giữ nếu cleanup lỗi.
+
+### Verification
+
+- `python -m py_compile scripts/run_precision_head_trt_feasibility.py tests/test_precision_head_trt_feasibility.py`: **PASS**.
+- `python -m unittest tests/test_precision_head_trt_feasibility.py -v`:
+  **30/30 PASS**.
+- `git diff --check`: **PASS**.
+- Skill `api-and-interface-design` được áp dụng ở boundary: state recovery có
+  discriminated status (`valid_partial_state`/`unknown`), failure output tách
+  machine-readable lifecycle fields và không thay đổi public parent contract.
+
+### Conditional GO and operator boundary
+
+Implementation revision: `67de9ce97166692b75752e7d5cdecb640e43374a`.
+Documentation/L2A revision: `5039228b3f6767a9b455daaf8ad19408f54ef5c5`.
+Hai commit đã được push lên remote `NADUNGVN/nighttime-tsd.git`. Conditional
+GO chỉ áp dụng cho **một** foreground smoke đúng budget đã khóa; không phải
+GO cho benchmark, scored matrix, INT8 hoặc nghiên cứu tiếp theo.
+
+Trước khi chạy, operator phải dùng các lệnh kiểm tra bên dưới để xác nhận
+working tree không bị reset/clean, checked-out code đúng full implementation
+SHA, GPU/process hiện tại, environment/input hashes và output root mới vắng.
+Lệnh runner cuối cùng phải được điền desktop/background confirmations từ
+snapshot hiện tại; không dùng PID lịch sử. Nếu xuất hiện process không được
+phân loại hoặc output đã tồn tại, dừng và báo lại.
+
+L2A-052 chưa có artifact server. Sau khi operator chạy xong hoặc failure,
+chỉ push artifact scoped; Luna sẽ hậu kiểm và dừng để review tiếp.

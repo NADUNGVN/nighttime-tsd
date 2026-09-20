@@ -70,6 +70,10 @@ runtime and logger in dependency order. JSON evidence records this ownership
 contract but does not substitute for the live references. A primary execution
 error is preserved if cleanup also reports an error.
 
+Lifecycle evidence separates `synchronization_completed` from
+`owner_release_status`. Releasing an owner never implies that the last CUDA
+synchronize completed; failure records preserve the actual completion value.
+
 The intended server environment is the already reviewed environment:
 
 `torch 2.5.1+cu121`, `ultralytics 8.4.102`, `tensorrt 10.16.1.11`,
@@ -118,7 +122,9 @@ directory and atomically replaced into `child_state.json`. Recovery accepts a
 valid partial snapshot, but treats a missing, truncated, malformed or wrong-
 model snapshot as unknown rather than inventing zero counters. The original
 state bytes remain available for audit, and an existing `failure.json` is
-never overwritten.
+never overwritten. Unknown recovery also keeps runtime import, build, GPU,
+parser/build and ownership flags explicitly unknown (`null`), rather than
+publishing false observations.
 
 Raw TensorRT/ORT arrays, checkpoints, ONNX binaries and engine binaries are
 never publishable. JSONL records contain hashes, shapes, dtypes, finite flags,
