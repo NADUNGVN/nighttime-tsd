@@ -1558,14 +1558,12 @@ foreground smoke: one FP16/1 GiB build and three ordered enqueues with the
 900s/180s child deadlines. Until the archive is supplied and reverified, no
 smoke dispatch is authorized by the conditional gate.
 
-## L1A-019 — HF transfer prepared; DungJD authentication is the remaining blocker
+## L1A-019 — HF transfer completed; local private-repo download auth remains
 
-**Status:** HF transfer preparation complete; no archive upload/download and
-no E2 build/inference was performed. The local HF session is authenticated as
-`Dung-trivita`, while the approved destination is `DungJD/nighttime-tsd-artifacts`.
-The destination does not exist and the API rejected creation with HTTP 403
-(`no rights to create a dataset under namespace DungJD`). No alternate
-namespace/repository was created.
+**Status:** The user uploaded the existing archive from SERVER-01 using the
+authorized `DungJD` HF session. Local download and E2 execution remain pending;
+no E2 build/inference was performed. The local HF session is still
+authenticated as `Dung-trivita` and cannot see the private destination.
 
 The upload must be run by the user on SERVER-01 using an HF session authorized
 for `DungJD`. It checks the existing archive hash, creates the dataset repo
@@ -1580,7 +1578,7 @@ returned commit revision without exposing credentials:
     from huggingface_hub import HfApi, HfHubHTTPError
     repo = "DungJD/nighttime-tsd-artifacts"
     artifact = "transfers/e2l1-017/luna1-e2l1-017-source-v2.tar.gz"
-    expected = "bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28"
+    expected = "bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28b"
     local = Path("/tmp/luna1-e2l1-017-source-v2.tar.gz")
     if not local.is_file(): raise SystemExit("ARCHIVE_MISSING")
     observed = hashlib.sha256(local.read_bytes()).hexdigest()
@@ -1610,3 +1608,16 @@ members, no symlinks/traversal, the canonical manifest and all ten private
 hashes. Only then is the verified bundle transferred to fresh E2 paths. The
 existing conditional authorization remains exactly one foreground smoke:
 one FP16/1 GiB build and three ordered inferences, with no retry or benchmark.
+
+### L1A-019 receipt addendum — upload completed (2026-09-20)
+
+The user confirmed the upload completed after authenticating SERVER-01 as
+`DungJD`. Receipt: repo `DungJD/nighttime-tsd-artifacts`, dataset/private;
+HF commit `0f909057a861a2b7fd887963a71c1a3f8f516007`; path
+`transfers/e2l1-017/luna1-e2l1-017-source-v2.tar.gz`; archive size
+`12430222` bytes; SHA-256
+`bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28b`.
+
+The local agent verified the local account is `Dung-trivita`; pinned private
+repo lookup returned 404, so the archive has not yet been downloaded or
+transferred to E2. No smoke was dispatched.

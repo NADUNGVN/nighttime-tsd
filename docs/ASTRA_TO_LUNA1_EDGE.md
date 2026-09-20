@@ -566,7 +566,7 @@ Append **L1A-018** with source-archive state, connectivity state, verified packa
 
 ### E2L1-018 addendum — reported archive hash received, local transfer still pending (2026-09-19)
 
-The user reports creation of `/tmp/luna1-e2l1-017-source-v2.tar.gz` with SHA256 `bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28`. Record this as the expected transfer hash, not as independently verified local bytes. The user still needs to download/copy that existing archive to an approved private local location and provide its actual path. A suggested location is `D:/Research/luna1-e2l1-017-source-v2.tar.gz`; this is a suggestion, not a claim the file exists. Astra checked that path and the matching Downloads path and neither was present at review time; no broad search or server connection was performed.
+The user reports creation of `/tmp/luna1-e2l1-017-source-v2.tar.gz` with SHA256 `bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28b`. Record this as the expected transfer hash, not as independently verified local bytes. The user still needs to download/copy that existing archive to an approved private local location and provide its actual path. A suggested location is `D:/Research/luna1-e2l1-017-source-v2.tar.gz`; this is a suggestion, not a claim the file exists. Astra checked that path and the matching Downloads path and neither was present at review time; no broad search or server connection was performed.
 
 Once received, follow the existing E2L1-018 checks: archive hash, exactly11 approved regular-file members, no links/traversal, fresh owned extraction root, canonical manifest and all ten private hashes, then verified transfer to E2. Do not recreate the source bundle, commit private bytes to Git, or wait for main Luna's A2L-043. Keep E2 connectivity/runtime prerequisites explicit. The conditional one-smoke authorization in E2L1-017 is unchanged; this addendum adds no execution or retry budget. Append the actual receipt/verification/dispatch state to L1A-018 and let Luna1 commit/push this inbox with the scoped public report.
 
@@ -578,7 +578,7 @@ Resolve the user's HF namespace/repository URL first; GitHub account NADUNGVN do
 
 **Division of work remains unchanged:** Luna1 prepares exact foreground upload instructions; the user runs them on SERVER-01, where `/tmp/luna1-e2l1-017-source-v2.tar.gz` already exists. Luna1 then downloads from HF on local and handles the E2 lane. Do not ask for SERVER-01 DNS/IP/SSH credentials or scan the network: server SSH is not required for this route. Inspect available HF client/version before issuing client-specific commands; do not change the frozen inference environment just to upload a file. Use existing tooling or a separate transfer environment if the user approves its setup.
 
-Upload only the existing archive after verifying its expected SHA256 `bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28`, at a new scoped path such as `transfers/e2l1-017/luna1-e2l1-017-source-v2.tar.gz`. Do not upload a repository/dataset directory, credentials, other users' files or new model outputs. Do not overwrite an existing different object at that path. Record the HF repo ID, repo type, exact returned commit revision, artifact path, size and SHA256; download that pinned revision, not a moving branch head. The user does not need to download the file manually to Windows for this route.
+Upload only the existing archive after verifying its expected SHA256 `bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28b`, at a new scoped path such as `transfers/e2l1-017/luna1-e2l1-017-source-v2.tar.gz`. Do not upload a repository/dataset directory, credentials, other users' files or new model outputs. Do not overwrite an existing different object at that path. Record the HF repo ID, repo type, exact returned commit revision, artifact path, size and SHA256; download that pinned revision, not a moving branch head. The user does not need to download the file manually to Windows for this route.
 
 After receipt, perform the same archive checks already authorized: expected hash, exactly11 approved regular-file members, no traversal or links, canonical manifest bytes and ten binary hashes. Then transfer the verified source and code packages to E2 and execute the existing conditional ONE smoke only once all E2L1-017 C4 prerequisites are met. No extra Astra response is required merely because HF replaces manual transfer. Main Luna's lifecycle fixes do not block this lane. Source strict FAIL remains recorded; reference outputs originate on SERVER-01, not Jetson.
 
@@ -591,3 +591,15 @@ The user supplied https://huggingface.co/DungJD as their HF namespace. Astra ope
 Luna1 may create this private repository using an existing authorized HF session for DungJD, or include its creation in the user-operated SERVER-01 upload instructions. Check the authenticated account without exposing credentials, inspect whether the destination exists, and confirm its private visibility before upload. If the existing destination is public, do not change its visibility or publish the archive automatically; report that collision and choose a new private destination with the user. Do not use the unrelated public drone-rocket dataset shown on the profile. If authentication is absent, request normal HF login on the relevant machine, not a token pasted into chat.
 
 Destination artifact path remains `transfers/e2l1-017/luna1-e2l1-017-source-v2.tar.gz`. Give the user complete foreground commands to verify the existing archive and upload it from SERVER-01 with available tooling. After the upload revision is available, Luna1 downloads that revision, verifies the existing hash/member/private-byte contract, and continues the conditional E2 smoke independently. Do not wait for another Astra authorization just to create this private transfer repo, upload the approved archive, or download it. No repository creation, upload or authentication was performed by Astra in this addendum.
+
+### E2L1-019 receipt addendum — SERVER-01 upload completed (2026-09-20)
+
+The user confirmed the archive was uploaded from SERVER-01 under the authorized
+`DungJD` account. Fixed receipt: private dataset repo
+`DungJD/nighttime-tsd-artifacts`; HF commit
+`0f909057a861a2b7fd887963a71c1a3f8f516007`; artifact path
+`transfers/e2l1-017/luna1-e2l1-017-source-v2.tar.gz`; size `12430222` bytes;
+SHA-256 `bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28b`.
+The upload passed the hash guard and no overwrite was performed. Local pinned
+download is still pending because the current local HF session is
+`Dung-trivita`; no E2 build/inference has occurred.
