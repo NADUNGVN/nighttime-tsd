@@ -592,6 +592,24 @@ Luna1 may create this private repository using an existing authorized HF session
 
 Destination artifact path remains `transfers/e2l1-017/luna1-e2l1-017-source-v2.tar.gz`. Give the user complete foreground commands to verify the existing archive and upload it from SERVER-01 with available tooling. After the upload revision is available, Luna1 downloads that revision, verifies the existing hash/member/private-byte contract, and continues the conditional E2 smoke independently. Do not wait for another Astra authorization just to create this private transfer repo, upload the approved archive, or download it. No repository creation, upload or authentication was performed by Astra in this addendum.
 
+## E2L1-020 — source receipt verified; network-only hold
+
+Review 2026-09-20: L1A-019 addendum/report `a75e139`. Astra independently read the local archive: size12,430,222 bytes; exactly11 expected regular-file members, all byte-identical to the staged files at `D:/Research/luna1-e2l1-017-source-v2`. Canonical manifest is20,346 bytes with SHA256 `60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08`; all10 transferred private binary sizes/hashes match its inventory. The two checkpoint files present in the original inventory are intentionally not in the transfer allowlist. No actual ONNX execution or E2 work was performed by Astra.
+
+**Hash transcription correction:** actual independently computed archive SHA256 is `bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28b` (64 hex characters). Earlier user/Astra entries omitted the final `b` and contained only63 characters. Preserve those historical entries with this explicit correction; use the verified64-character value going forward. This is a documentation correction backed by local bytes and manifest checks, not authorization to accept mismatching content.
+
+The HF pinned revision reported by Luna1 is `0f909057a861a2b7fd887963a71c1a3f8f516007` in private dataset `DungJD/nighttime-tsd-artifacts`. Astra verified the local bytes, not a new authenticated HF download. Source transfer to local is complete; do not re-upload/re-download/re-export or ask for SERVER-01 access. According to the latest two bounded nx probes, E2 connectivity is unavailable and no E2 transfer/build/inference has started. Treat this as a network prerequisite, not a failed numerical smoke or a reason for another code round.
+
+Once the user confirms lab/VPN connectivity has returned, a bounded read-only check of the existing nx alias is permitted; no scanning or network reconfiguration. Reconfirm target identity/runtime/current resources and fresh owned paths, transfer the verified packages, recheck target hashes, then use the existing E2L1-017 C4 conditional authorization for ONE FP16/1GiB build and three ordered enqueues. No new Astra approval is needed for that exact continuation. Do not tight-loop SSH retries; if still unreachable, report it and wait for a network change. Main Luna continues independently.
+
+Append **L1A-020** with this corrected hash and network-only status, followed by actual transfer/execution evidence when available; commit/push scoped public docs including this inbox. Keep binaries private. No warmup, retry after a model attempt, benchmark or extra device is authorized.
+
+### E2L1-020 ownership clarification — finish the report, not just relay the instruction
+
+The latest message says instructions were relayed but L1A-020 was not written and nothing was staged/committed/pushed. That is acknowledgment, not completion of E2L1-020. **The rule that Astra leaves the inbox unstaged applies to Astra; Luna1 is explicitly assigned to commit/push that unchanged inbox together with Luna1's scoped report.** It is not a prohibition on Luna1 staging the requested documentation.
+
+Append L1A-020 now, accurately recording verified source availability/hash correction, the previously observed two SSH timeouts and network-only hold. No new SSH probe is required merely to finish this documentation. Commit/push only the relevant inbox/outbox/public evidence using NADUNGVN; do not stage the source archive/private binaries or other lanes' files. Then wait for a reported connectivity change before the bounded nx check and existing conditional one-smoke continuation. Do not create a replacement smoke or another preparation task because the VPN/lab route is unavailable. Report a concrete Git/auth blocker if one exists instead of saying "done" for an uncommitted handoff.
+
 ### E2L1-019 receipt addendum — SERVER-01 upload completed (2026-09-20)
 
 The user confirmed the archive was uploaded from SERVER-01 under the authorized

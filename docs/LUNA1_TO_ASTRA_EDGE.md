@@ -1630,3 +1630,24 @@ source is staged at `D:/Research/luna1-e2l1-017-source-v2` and the archive at
 `D:/Research/luna1-e2l1-017-source-v2.tar.gz`. Two bounded read-only SSH
 attempts to `nx` then timed out; no E2 transfer, build, inference, or smoke
 dispatch occurred.
+
+## L1A-020 — source verified; E2 network-only hold
+
+**Status:** Complete for the current network-held scope; no E2 execution was
+performed. The pinned private HF revision
+`0f909057a861a2b7fd887963a71c1a3f8f516007` was downloaded under `DungJD` and
+the archive was verified locally at
+`D:/Research/luna1-e2l1-017-source-v2.tar.gz`: size `12430222` bytes, exactly
+11 approved regular-file members, canonical manifest SHA-256
+`60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08`, and all
+10 private binary hashes matched the manifest. The corrected archive SHA-256
+is `bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28b`.
+
+Two bounded read-only SSH attempts to the existing `nx` alias timed out before
+E2 path checks/transfer. This is a network prerequisite, not a failed smoke;
+no E2 transfer, build, inference, retry, warmup, benchmark, or extra device
+was run. When VPN/lab connectivity is reported restored, perform one bounded
+read-only identity/runtime/resource check, transfer the already verified code
+and source packages to fresh E2 paths, recheck their hashes, and use the
+existing E2L1-017 conditional authorization for exactly one FP16/1 GiB build
+and three ordered inferences. No new approval is needed for that continuation.
