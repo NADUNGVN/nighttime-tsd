@@ -24,9 +24,10 @@ benchmark, scored confirmation, or precision matrix.
 
   `00006, 00009, 00028, 00036, 00054, 00061, 00098, 00104`.
 
-- Each model has one independent FP16-enabled TensorRT build, eight TensorRT
-  application enqueues and eight CPU ONNX Runtime reference calls. Across the
-  smoke this is exactly 2 builds, 16 TensorRT enqueues and 16 ORT calls. There
+- The smoke has exactly **2 builds total: one independent FP16-enabled build
+  for each model**. Each model receives eight TensorRT application enqueues
+  and eight CPU ONNX Runtime reference calls. Across the smoke this is exactly
+  2 builds, 16 TensorRT enqueues and 16 ORT calls. There
   are zero native forwards, warmups, retries, calibration batches, dev/test
   captures and matrix runs.
 - Input is batch 1, `640x640`, one float32 `images` tensor with shape
@@ -145,7 +146,7 @@ tolerance is applied because no justified application-equivalence margin was
 pre-registered. A completed smoke therefore does not prove numerical
 equivalence, INT8 validity, calibration validity, or deployment superiority.
 
-## Candidate server invocation (pending review)
+## Conditional server invocation (fresh snapshot required)
 
 The following is a candidate only. Replace the two desktop placeholders with
 the exact current rows from the server snapshot; do not reuse historical PIDs
@@ -160,9 +161,13 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PREL
 conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_precision_head_trt_feasibility.py --readiness-root results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2 --graph-audit-root results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4 --onnx-root results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2 --out-dir results/measurement_audit_v1/precision_head_trt_feasibility_v1 --model all --device 0 --confirm-desktop-process DESKTOP_PID_1=/snap/snapd-desktop-integration/CURRENT_REVISION/usr/bin/snapd-desktop-integration --confirm-desktop-process DESKTOP_PID_2=/snap/snapd-desktop-integration/CURRENT_REVISION/usr/bin/snapd-desktop-integration
 ```
 
-The placeholder command is not authorized for execution yet. The operator
-must first report the exact output of the server preflight and then receive
-the reviewed command with the current PID/path values.
+The desktop placeholders must be replaced by exact current observations. If a
+non-desktop background workload is present, it may be included only through
+the exact operator-confirmed `--confirm-background-process PID=COMMAND` path
+after resource compatibility is checked. Unknown or unverifiable workloads
+remain blocked; an authorized workload keeps the run marked shared/review-
+required and does not support an isolation or latency claim. The operator must
+report the exact preflight output before executing the final filled command.
 
 ## Publishable artifact contract
 
