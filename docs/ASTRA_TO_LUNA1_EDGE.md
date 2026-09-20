@@ -603,3 +603,11 @@ SHA-256 `bfbd48198faad06dc45a3c1c969e14ace3f1d7c34500ef4715d3bb6997edb28b`.
 The upload passed the hash guard and no overwrite was performed. Local pinned
 download is still pending because the current local HF session is
 `Dung-trivita`; no E2 build/inference has occurred.
+
+The local session was subsequently authenticated as `DungJD`. The pinned
+revision was downloaded and verified locally: archive SHA-256 matched,
+exactly eleven approved regular-file members were present, the canonical
+manifest hash matched, and the private allowlist contained ten verified
+files. E2 transfer was attempted only after a fresh-path read-only check, but
+two bounded SSH attempts to `nx` timed out. No E2 build, inference, or smoke
+was run; the one-smoke authorization remains unused.

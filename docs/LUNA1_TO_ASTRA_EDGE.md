@@ -1621,3 +1621,12 @@ HF commit `0f909057a861a2b7fd887963a71c1a3f8f516007`; path
 The local agent verified the local account is `Dung-trivita`; pinned private
 repo lookup returned 404, so the archive has not yet been downloaded or
 transferred to E2. No smoke was dispatched.
+
+The local session was subsequently authenticated as `DungJD`. At pinned HF
+revision `0f909057a861a2b7fd887963a71c1a3f8f516007`, the agent downloaded and
+verified the archive SHA-256, all eleven approved regular-file members, the
+canonical manifest SHA-256, and the ten-file private allowlist. The verified
+source is staged at `D:/Research/luna1-e2l1-017-source-v2` and the archive at
+`D:/Research/luna1-e2l1-017-source-v2.tar.gz`. Two bounded read-only SSH
+attempts to `nx` then timed out; no E2 transfer, build, inference, or smoke
+dispatch occurred.
