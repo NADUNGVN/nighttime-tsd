@@ -21,7 +21,9 @@ import signal
 import struct
 import subprocess
 import sys
+import threading
 import time
+from datetime import datetime, timezone
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Protocol, Sequence, Tuple
@@ -385,7 +387,8 @@ class TensorRTOnnxBuilder:
         runtime_version = str(getattr(trt, "__version__", ""))
         if not runtime_version.startswith(EXPECTED_RUNTIME_PREFIX):
             raise ModelSmokeError("RUNTIME_VERSION_MISMATCH", "TensorRT runtime is not the accepted E2 8.5.2.2 family", {"expected_prefix": EXPECTED_RUNTIME_PREFIX, "observed": runtime_version})
-        logger = trt.Logger(trt.Logger.ERROR)
+        logger_level = getattr(trt.Logger, "INFO", getattr(trt.Logger, "ERROR", 0))
+        logger = trt.Logger(logger_level)
         builder = None
         parser = None
         try:
@@ -408,7 +411,7 @@ class TensorRTOnnxBuilder:
                 config.set_memory_pool_limit(trt.MemoryPoolType.WORKSPACE, workspace_bytes)
             else:
                 config.max_workspace_size = workspace_bytes
-            flags_record = {"workspace_bytes": workspace_bytes, "fp16_enabled": False, "tf32_disabled": False}
+            flags_record = {"workspace_bytes": workspace_bytes, "fp16_enabled": False, "tf32_disabled": False, "logger_level": "INFO" if logger_level == getattr(trt.Logger, "INFO", object()) else "ERROR_FALLBACK"}
             if not hasattr(trt, "BuilderFlag") or not hasattr(trt.BuilderFlag, "FP16") or not hasattr(config, "set_flag"):
                 raise ModelSmokeError("FP16_BUILDER_FLAG_UNAVAILABLE", "TensorRT builder cannot enforce the required FP16-enabled diagnostic build")
             config.set_flag(trt.BuilderFlag.FP16)
@@ -427,7 +430,7 @@ class TensorRTOnnxBuilder:
             with engine_path.open("xb") as handle:
                 handle.write(payload)
             digest = hashlib.sha256(payload).hexdigest()
-            self.last_event = {"parser_errors": [], "parser_completed": True, "build_completed": True, "builder_flags": flags_record, "logger_lifetime": "held through parser and builder", "engine_sha256": digest}
+            self.last_event = {"parser_errors": [], "parser_completed": True, "build_completed": True, "builder_flags": flags_record, "logger_level": "INFO" if logger_level == getattr(trt.Logger, "INFO", object()) else "ERROR_FALLBACK", "logger_lifetime": "held through parser and builder", "engine_sha256": digest}
             self._observe("build_completed")
             return EngineArtifact(engine_path.resolve(), digest, len(payload), runtime_version, {"builder_flags": flags_record, "parser_errors": [], "source_onnx_sha256": SOURCE_ONNX_SHA256})
         except AdapterError:
@@ -566,20 +569,61 @@ def _validate_timeout(seconds: float, stage: str) -> None:
 
 def _append_stage_event(path: Path, event: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    event = dict(event)
+    event.setdefault("utc_timestamp", datetime.now(timezone.utc).isoformat())
+    event.setdefault("monotonic_ns", time.monotonic_ns())
     with path.open("a", encoding="utf-8", newline="\n") as handle:
         handle.write(json.dumps(event, sort_keys=True, allow_nan=False) + "\n")
 
 
-def run_bounded_process(command: Sequence[str], timeout_seconds: float, stage: str, event_path: Path) -> subprocess.CompletedProcess:
-    """Run one owned stage; a deadline terminates only its child process group."""
+def _tail_text(path: Path, limit: int = 4000) -> str:
+    try:
+        with path.open("rb") as handle:
+            handle.seek(0, os.SEEK_END)
+            size = handle.tell()
+            handle.seek(max(0, size - limit), os.SEEK_SET)
+            return handle.read(limit).decode("utf-8", "replace")
+    except OSError as exc:
+        return "<unavailable:{}>".format(exc)
+
+
+def _log_file_record(path: Path, include_tail: bool = True) -> Dict[str, Any]:
+    record: Dict[str, Any] = {"path": str(path.resolve())}
+    try:
+        record["bytes"] = path.stat().st_size
+        record["sha256"] = file_sha256(path)
+        if include_tail:
+            record["tail"] = _tail_text(path)
+    except OSError as exc:
+        record["error"] = str(exc)
+    return record
+
+
+def run_bounded_process(command: Sequence[str], timeout_seconds: float, stage: str, event_path: Path, stdout_path: Optional[Path] = None, stderr_path: Optional[Path] = None) -> subprocess.CompletedProcess:
+    """Run one owned stage with durable stdout/stderr and bounded group shutdown."""
     _validate_timeout(timeout_seconds, stage)
-    _append_stage_event(event_path, {"stage": stage, "event": "dispatch", "command": list(command), "timeout_seconds": timeout_seconds})
-    popen_kwargs: Dict[str, Any] = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "text": True}
+    dispatch = {"stage": stage, "event": "dispatch", "command": list(command), "timeout_seconds": timeout_seconds}
+    if stdout_path is not None:
+        dispatch["stdout_path"] = str(stdout_path.resolve())
+    if stderr_path is not None:
+        dispatch["stderr_path"] = str(stderr_path.resolve())
+    _append_stage_event(event_path, dispatch)
+    stdout_handle = None
+    stderr_handle = None
+    if stdout_path is not None:
+        stdout_path.parent.mkdir(parents=True, exist_ok=True)
+        stdout_handle = stdout_path.open("ab")
+    if stderr_path is not None:
+        stderr_path.parent.mkdir(parents=True, exist_ok=True)
+        stderr_handle = stderr_path.open("ab")
+    popen_kwargs: Dict[str, Any] = {"stdout": stdout_handle if stdout_handle is not None else subprocess.PIPE, "stderr": stderr_handle if stderr_handle is not None else subprocess.PIPE, "text": stdout_handle is None and stderr_handle is None}
     if os.name == "nt":
         popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
     else:
         popen_kwargs["start_new_session"] = True
     process = subprocess.Popen(list(command), **popen_kwargs)
+    stdout = ""
+    stderr = ""
     try:
         stdout, stderr = process.communicate(timeout=float(timeout_seconds))
     except subprocess.TimeoutExpired as exc:
@@ -616,12 +660,35 @@ def run_bounded_process(command: Sequence[str], timeout_seconds: float, stage: s
                 except subprocess.TimeoutExpired:
                     pass
         termination_confirmed = process.poll() is not None
-        _append_stage_event(event_path, {"stage": stage, "event": "timeout", "term_signal_dispatched": term_sent, "kill_signal_dispatched": kill_sent, "termination_confirmed": termination_confirmed, "cleanup_unconfirmed": not termination_confirmed, "returncode": process.returncode})
-        raise TargetTimeout("STAGE_TIMEOUT", "owned stage exceeded its deadline", {"stage": stage, "seconds": timeout_seconds, "term_signal_dispatched": term_sent, "kill_signal_dispatched": kill_sent, "termination_confirmed": termination_confirmed, "cleanup_unconfirmed": not termination_confirmed, "event_path": str(event_path), "completion": "unknown", "stdout": stdout[-4000:], "stderr": stderr[-4000:]}) from exc
+        timeout_details = {"stage": stage, "seconds": timeout_seconds, "term_signal_dispatched": term_sent, "kill_signal_dispatched": kill_sent, "termination_confirmed": termination_confirmed, "cleanup_unconfirmed": not termination_confirmed, "returncode": process.returncode, "event_path": str(event_path), "completion": "unknown"}
+        _append_stage_event(event_path, dict(timeout_details, event="timeout"))
+        if stdout_path is not None:
+            timeout_details["stdout"] = _log_file_record(stdout_path)
+        else:
+            timeout_details["stdout"] = stdout[-4000:]
+        if stderr_path is not None:
+            timeout_details["stderr"] = _log_file_record(stderr_path)
+        else:
+            timeout_details["stderr"] = stderr[-4000:]
+        raise TargetTimeout("STAGE_TIMEOUT", "owned stage exceeded its deadline", timeout_details) from exc
+    finally:
+        if stdout_handle is not None:
+            stdout_handle.close()
+        if stderr_handle is not None:
+            stderr_handle.close()
     if process.returncode != 0:
-        _append_stage_event(event_path, {"stage": stage, "event": "failed", "returncode": process.returncode})
-        raise ModelSmokeError("TARGET_STAGE_FAILED", "owned stage exited unsuccessfully", {"stage": stage, "returncode": process.returncode, "event_path": str(event_path), "stdout": stdout[-4000:], "stderr": stderr[-4000:]})
-    _append_stage_event(event_path, {"stage": stage, "event": "complete", "returncode": process.returncode})
+        details = {"stage": stage, "returncode": process.returncode, "event_path": str(event_path)}
+        if stdout_path is not None:
+            details["stdout"] = _log_file_record(stdout_path)
+        else:
+            details["stdout"] = stdout[-4000:]
+        if stderr_path is not None:
+            details["stderr"] = _log_file_record(stderr_path)
+        else:
+            details["stderr"] = stderr[-4000:]
+        _append_stage_event(event_path, dict(details, event="failed"))
+        raise ModelSmokeError("TARGET_STAGE_FAILED", "owned stage exited unsuccessfully", details)
+    _append_stage_event(event_path, {"stage": stage, "event": "complete", "returncode": process.returncode, "stdout": _log_file_record(stdout_path) if stdout_path is not None else {"tail": stdout[-4000:]}, "stderr": _log_file_record(stderr_path) if stderr_path is not None else {"tail": stderr[-4000:]}})
     return subprocess.CompletedProcess(process.args, process.returncode, stdout, stderr)
 
 
@@ -642,9 +709,11 @@ class SubprocessStageExecutor:
     def build(self, bundle: SourceBundle, engine_path: Path, timeout_seconds: float) -> Tuple[EngineArtifact, Dict[str, int], Path]:
         result_path = engine_path.parent / "build_result.json"
         events_path = engine_path.parent / "build_events.jsonl"
+        stdout_path = engine_path.parent / "build_stdout.log"
+        stderr_path = engine_path.parent / "build_stderr.log"
         command = [sys.executable, str(self.script_path), "--child-stage", "build"] + self._provenance_args() + ["--onnx", str(bundle.onnx), "--engine", str(engine_path), "--result", str(result_path), "--events", str(events_path)]
         try:
-            run_bounded_process(command, timeout_seconds, "build", events_path)
+            run_bounded_process(command, timeout_seconds, "build", events_path, stdout_path, stderr_path)
         except TargetTimeout:
             raise
         except ModelSmokeError as exc:
@@ -656,9 +725,11 @@ class SubprocessStageExecutor:
     def infer(self, bundle: SourceBundle, engine: EngineArtifact, target_dir: Path, timeout_seconds: float) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, int], Path]:
         result_path = target_dir.parent / "inference_result.json"
         events_path = target_dir.parent / "inference_events.jsonl"
+        stdout_path = target_dir.parent / "inference_stdout.log"
+        stderr_path = target_dir.parent / "inference_stderr.log"
         command = [sys.executable, str(self.script_path), "--child-stage", "infer"] + self._provenance_args() + ["--bundle-root", str(bundle.root), "--manifest", str(bundle.manifest_path), "--engine", str(engine.path), "--engine-sha256", engine.sha256, "--output-dir", str(target_dir), "--result", str(result_path), "--events", str(events_path)]
         try:
-            run_bounded_process(command, timeout_seconds, "inference", events_path)
+            run_bounded_process(command, timeout_seconds, "inference", events_path, stdout_path, stderr_path)
         except TargetTimeout:
             raise
         except ModelSmokeError as exc:
@@ -683,6 +754,9 @@ def _raise_child_failure(result_path: Path, stage: str, event_path: Path, outer:
     code = error.get("code", outer.code)
     details = dict(error.get("details", {}))
     details.update({"stage": stage, "event_path": str(event_path), "counters": result.get("counters", {})})
+    for key in ("stdout", "stderr"):
+        if key in outer.details:
+            details[key] = outer.details[key]
     if code == "STAGE_TIMEOUT":
         raise TargetTimeout(code, error.get("message", "child stage timed out"), details) from outer
     raise ModelSmokeError(code, error.get("message", outer.message), details) from outer
@@ -712,6 +786,14 @@ def _child_stage_main(argv: List[str]) -> int:
     args = parser.parse_args(argv)
     counters = {"parse_attempted": 0, "parse_completed": 0, "build_attempted": 0, "build_completed": 0, "engine_load_attempted": 0, "engine_load_completed": 0, "enqueues_attempted": 0, "enqueues_completed": 0, "enqueues_synchronized": 0, "output_copies_attempted": 0, "output_copies_completed": 0, "output_copies_synchronized": 0}
     builder = None
+    heartbeat_stop = threading.Event()
+
+    def heartbeat_loop() -> None:
+        while not heartbeat_stop.wait(5.0):
+            _append_stage_event(args.events, {"event": "heartbeat", "stage": args.child_stage, "pid": os.getpid(), "counters": dict(counters)})
+
+    heartbeat_thread = threading.Thread(target=heartbeat_loop, name="e2l1-stage-heartbeat", daemon=True)
+    heartbeat_thread.start()
 
     def record_stage_event(event: str) -> None:
         mapping = {"parser_attempted": "parse_attempted", "parser_completed": "parse_completed", "build_attempted": "build_attempted", "build_completed": "build_completed", "engine_load_attempted": "engine_load_attempted", "engine_load_completed": "engine_load_completed", "enqueue_attempted": "enqueues_attempted", "enqueue_completed": "enqueues_completed", "enqueue_synchronized": "enqueues_synchronized", "d2h_copy_attempted": "output_copies_attempted", "d2h_copy_completed": "output_copies_completed", "d2h_copy_synchronized": "output_copies_synchronized"}
@@ -778,6 +860,9 @@ def _child_stage_main(argv: List[str]) -> int:
         _child_write_error(args.result, exc, counters)
         _append_stage_event(args.events, {"event": "failed", "stage": args.child_stage, "error": _error_dict(exc), "counters": counters})
         return 2
+    finally:
+        heartbeat_stop.set()
+        heartbeat_thread.join(timeout=1.0)
 
 
 def _raw_values(payload: bytes, expected_nbytes: int) -> List[float]:
@@ -837,6 +922,10 @@ class ModelSmokeRunner:
             stage_snapshot = {}
             result_path = Path(paths["result"])
             events_path = Path(paths["events"])
+            for stream_name in ("stdout", "stderr"):
+                stream_path = paths.get(stream_name)
+                if isinstance(stream_path, str) and Path(stream_path).is_file():
+                    stage_snapshot[stream_name] = _log_file_record(Path(stream_path))
             if result_path.is_file():
                 try:
                     result = json.loads(result_path.read_text(encoding="utf-8"))
@@ -881,7 +970,7 @@ class ModelSmokeRunner:
         engine_path = private / "engine" / "e2_yolo11n_fp16.engine"
         self.counters.parse_attempted = 1
         self.counters.build_attempted = 1
-        self.evidence["stage_evidence"] = {"build": {"events": str((private / "engine" / "build_events.jsonl").resolve()), "result": str((private / "engine" / "build_result.json").resolve())}}
+        self.evidence["stage_evidence"] = {"build": {"events": str((private / "engine" / "build_events.jsonl").resolve()), "result": str((private / "engine" / "build_result.json").resolve()), "stdout": str((private / "engine" / "build_stdout.log").resolve()), "stderr": str((private / "engine" / "build_stderr.log").resolve())}}
         engine, build_counts, build_events = executor.build(self.bundle, engine_path, self.build_timeout_seconds)
         for name, value in build_counts.items():
             if hasattr(self.counters, name):
@@ -890,7 +979,7 @@ class ModelSmokeRunner:
         self.evidence["engine"] = {"path": str(engine.path), "sha256": engine.sha256, "nbytes": engine.nbytes, "runtime_version": engine.runtime_version, "build_contract": engine.build_contract}
         target_dir = private / "target_output"
         self.evidence["target_outputs"] = {}
-        self.evidence["stage_evidence"]["inference"] = {"events": str((private / "inference_events.jsonl").resolve()), "result": str((private / "inference_result.json").resolve())}
+        self.evidence["stage_evidence"]["inference"] = {"events": str((private / "inference_events.jsonl").resolve()), "result": str((private / "inference_result.json").resolve()), "stdout": str((private / "inference_stdout.log").resolve()), "stderr": str((private / "inference_stderr.log").resolve())}
         outputs, infer_counts, infer_events = executor.infer(self.bundle, engine, target_dir, self.inference_timeout_seconds)
         for name, value in infer_counts.items():
             if hasattr(self.counters, name):

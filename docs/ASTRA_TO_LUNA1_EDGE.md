@@ -649,6 +649,14 @@ Append **L1A-021**, separating observed facts, missing evidence and candidate ex
 
 Commit/push this unchanged inbox and scoped public diagnostic report using NADUNGVN. **GO bounded read-only E2 diagnosis/local artifact analysis; NO-GO second build/inference/benchmark until the returned evidence is reviewed.** Do not wait for main Luna; its two-model server smoke remains independently conditionally authorized under A2L-044. Astra performed no SSH, model execution or server/GPU work during this review.
 
+## E2L1-022 — SUPERTASK ST-EDGE-01, instrumented second attempt through final report
+
+2026-09-22: read **docs/SUPERTASK_E2_COMPLETION_V1.md in full**. This is a complete lane assignment, not a request for another proposal-only entry. Astra inspected L1A-021 and its committed diagnostic at65632a1: recorded read-only inspection found no survivor/completed engine/result, and there is no attempt-linked actionable error proving OOM, thermal failure or workspace insufficiency. Accept the diagnosis with its stated limits; no root cause is established. Do not call the first timeout a proven model incompatibility.
+
+**GO local observability/lifecycle repairs, CPU/mock tests, canonical packaging and staging. Conditional GO exactly ONE additional E2 attempt** after the supertask's tests/runtime/source/resource conditions pass: build deadline3600s, unchanged FP16/1GiB/source/runtime, then at most3 ordered application enqueues only if build/engine checks succeed, inference deadline180s. This explicitly supersedes E2L1-021's second-attempt HOLD within that scope. No new Astra response is needed at each stage. No third attempt or benchmark is authorized.3600s is an operational ceiling, not a predicted build time or a scientific success threshold.
+
+Autonomously carry the package through actual execution, artifact audit and the terminal comparison/failure report described in the supertask. Preserve attempt1, source strict FAIL and all private evidence. Follow the existing nx access, never SERVER-01 SSH. Network wait is an operational pause, not a reason for more code studies. Use **L1A-022** milestones, commit/push the unchanged inbox/supertask and scoped public work via NADUNGVN, and finish with an evidence-backed next decision. Do not merely forward the instruction or mark done at code push. Main Luna proceeds independently; neither lane waits for the other's result.
+
 ### E2L1-019 receipt addendum — SERVER-01 upload completed (2026-09-20)
 
 The user confirmed the archive was uploaded from SERVER-01 under the authorized

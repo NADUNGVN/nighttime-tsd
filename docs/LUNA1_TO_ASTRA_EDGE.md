@@ -1691,6 +1691,21 @@ build ceiling `3600s`. It must be separately reviewed, counted alongside the
 consumed attempt, and must never resume or overwrite the old root. E2L1-021
 does not run it.
 
+## L1A-022 — implementation_verified milestone
+
+The E2L1-022 observability/lifecycle repair is locally verified. The parent
+stage boundary now binds durable per-stage stdout/stderr paths, SHA-256/tail
+metadata, UTC and monotonic event timestamps, and additive timeout details;
+the child emits low-rate heartbeat events while a stage is live and requests
+TensorRT INFO logging with an explicit legacy ERROR fallback. Existing
+unknown-completion and partial-counter semantics remain unchanged.
+
+Focused durable-log/timeout/child-boundary tests pass, and the full edge
+regression is **108/108 PASS**. No local GPU, TensorRT execution, E2 build or
+inference occurred during this milestone. Next milestones are canonical
+package creation, E2 transfer/hash recheck and the single conditional attempt
+authorized by E2L1-022.
+
 ### L1A-020 execution addendum — one E2 smoke consumed by build timeout (2026-09-21)
 
 The bounded read-only E2 gate passed: `arar-desktop`, `aarch64`, NVIDIA Jetson

@@ -493,6 +493,35 @@ class ModelSmokeTests(unittest.TestCase):
             events = event_path.read_text(encoding="utf-8")
             self.assertIn('"event": "timeout"', events)
 
+    def test_owned_stage_timeout_preserves_durable_stdout_stderr_and_hashes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            event_path = root / "events.jsonl"
+            stdout_path = root / "stdout.log"
+            stderr_path = root / "stderr.log"
+            command = [sys.executable, "-c", "import sys,time; print('durable-out', flush=True); print('durable-err', file=sys.stderr, flush=True); time.sleep(5)"]
+            with self.assertRaisesRegex(AdapterError, "STAGE_TIMEOUT") as context:
+                smoke.run_bounded_process(command, 0.15, "build", event_path, stdout_path, stderr_path)
+            details = context.exception.details
+            self.assertEqual(details["stdout"]["path"], str(stdout_path.resolve()))
+            self.assertEqual(details["stderr"]["path"], str(stderr_path.resolve()))
+            self.assertEqual(details["stdout"]["sha256"], hashlib.sha256(stdout_path.read_bytes()).hexdigest())
+            self.assertEqual(details["stderr"]["sha256"], hashlib.sha256(stderr_path.read_bytes()).hexdigest())
+            self.assertIn("durable-out", stdout_path.read_text(encoding="utf-8"))
+            self.assertIn("durable-err", stderr_path.read_text(encoding="utf-8"))
+            rows = [json.loads(line) for line in event_path.read_text(encoding="utf-8").splitlines()]
+            self.assertTrue(all("utc_timestamp" in row and "monotonic_ns" in row for row in rows))
+            self.assertEqual(rows[-1]["event"], "timeout")
+
+    def test_builder_requests_informative_logger_without_breaking_legacy_logger(self):
+        trt = FakeTensorRT()
+        with tempfile.TemporaryDirectory() as temp:
+            onnx = Path(temp) / "source.onnx"
+            engine = Path(temp) / "engine.plan"
+            onnx.write_bytes(b"onnx")
+            artifact = smoke.TensorRTOnnxBuilder(module_loader=lambda _name: trt).build(onnx, engine)
+            self.assertEqual(artifact.build_contract["builder_flags"]["logger_level"], "ERROR_FALLBACK")
+
     def test_invalid_timeout_is_rejected_before_dispatch(self):
         with tempfile.TemporaryDirectory() as temp:
             for value in (0, -1, float("nan"), float("inf")):
