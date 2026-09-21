@@ -3030,6 +3030,52 @@ allowlist của protocol; không push engine/ONNX/checkpoint/raw tensor/cache.
 Luna sẽ pull, kiểm đủ 2 model/2 build, provenance, telemetry và lifecycle,
 rồi dừng ở review.
 
-L2A-052 chưa có artifact server. Trạng thái là
-`conditional_smoke_go_pending_fresh_server_snapshot`; đây là điều kiện vận
-hành, không phải yêu cầu Astra duyệt thêm thiết kế.
+### Artifact audit — operator result
+
+Operator đã chạy đúng conditional smoke trên `SERVER-01` và push artifact
+commit `03af60ff4a639818240b760849f3655331e9f972`. Luna đã pull commit này về
+local bằng fast-forward; checkpoint dirty ngoài scope vẫn được giữ nguyên và
+không stage. Không chạy lại GPU/TensorRT/ORT.
+
+- Inventory terminal là `complete`, gồm đúng **13 file scoped**: plan,
+  manifest, report, hai log, hai `child_state.json`, hai `model_report.json`,
+  bốn JSONL. Không có engine, ONNX, checkpoint, raw tensor hoặc cache được
+  push.
+- Study và cả hai model đều `completed` với
+  `validity_checks_passed; scientific_assessment_descriptive`. Contract thực tế
+  khớp: **2 builds tổng cộng, đúng 1/model; 16 TensorRT enqueues; 16 ORT CPU
+  references; native=0; warmup=0; retry=0; calibration=0; dev/test capture=0**.
+- Mỗi model có 8 records và 8 preprocessing traces; mọi record có output
+  float32 finite. YOLOv8n giữ shape `[1,7,8400]`, YOLO26n giữ `[1,300,6]`;
+  input đều float32 `[1,3,640,640]`. Raw TensorRT/ORT hashes được ghi trước
+  consumer comparison; comparison giữ `descriptive_only` và tolerance
+  `None`, không tạo equivalence verdict.
+- Parser/build/deserialize/dispatch đều completed. Cả hai model ghi
+  `synchronization_completed=true`, count `8`, `owner_release_status=released`
+  và `ownership_status=released`; không có failure/timeout/retry.
+- Frozen checkpoint và accepted ONNX đều `before == after` và khớp expected:
+  YOLOv8n checkpoint
+  `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b`, ONNX
+  `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603`;
+  YOLO26n checkpoint
+  `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e`, ONNX
+  `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc`.
+- GPU identity khớp UUID `GPU-9850d121-55dc-e752-ffaa-df19e7585eb4`, Quadro
+  RTX 8000, driver `595.71.05`. Runtime observed khớp Torch `2.5.1+cu121`,
+  CUDA `12.1`, TensorRT `10.16.1.11`, Ultralytics `8.4.102`, NumPy `2.4.4`,
+  pycocotools `2.0.10`, ONNX Runtime `1.24.4`.
+- Desktop Snap PID/path được xác nhận exact qua snapshot `nvidia-smi`; evidence
+  ghi rõ `/proc` không được đọc. Trước/trong/sau run, blocked/unmatched và
+  external workload violations đều rỗng; snapshot sau có study child process
+  của chính run. Đây vẫn là shared lab telemetry, không phải GPU isolation và
+  không hỗ trợ latency claim.
+- Builder evidence ghi FP16 `true`, INT8/TF32 `false`, precision overrides
+  `false`, workspace 4 GiB, optimization level 3, average timing iterations
+  1 và fresh empty in-memory timing cache. Inspector evidence được giữ, nhưng
+  không suy diễn rằng mọi layer chạy FP16.
+
+Kết luận handoff: feasibility smoke **hoàn tất, review required**. Kết quả
+không thay thế và không làm sạch các strict `FAIL` trước đó; không chứng minh
+native/ONNX equivalence, INT8/calibration validity, benchmark, latency,
+deployment superiority hoặc GPU isolation. Không được tự rerun hay mở matrix;
+chờ Astra review tiếp theo.
