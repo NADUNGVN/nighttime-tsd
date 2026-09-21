@@ -1651,3 +1651,33 @@ read-only identity/runtime/resource check, transfer the already verified code
 and source packages to fresh E2 paths, recheck their hashes, and use the
 existing E2L1-017 conditional authorization for exactly one FP16/1 GiB build
 and three ordered inferences. No new approval is needed for that continuation.
+
+### L1A-020 execution addendum — one E2 smoke consumed by build timeout (2026-09-21)
+
+The bounded read-only E2 gate passed: `arar-desktop`, `aarch64`, NVIDIA Jetson
+Xavier NX Developer Kit, Python 3.8.10, expected fresh paths, approximately
+97 GB available on `/tmp`, and no relevant workload process. The verified code
+and source packages were transferred to `/tmp/luna1-e2l1-017-code` and
+`/tmp/luna1-e2l1-017-source`; the E2 recheck matched the source manifest,
+all ten private binaries, code commit `b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4`,
+and code-export manifest SHA-256
+`aa136f72b9d395569e70944e1c67d1dbd1bdb23621912f9dfbed856297764507`.
+
+The single authorized foreground smoke was dispatched with build deadline
+900s, inference deadline 180s, FP16 and 1 GiB workspace, zero warmup/retry/
+benchmark, and input order `00006`, `00009`, `00028`. It ended with
+`status=failed`, `error=STAGE_TIMEOUT`, `stage=build`, and
+`execution_state=unknown`; termination was confirmed. Counters: parse
+`1/1`, build `1/0`, engine load `0/0`, enqueues `0/0`, output copies `0/0`,
+comparisons `0/0`; `unknown_completions=["build_completion"]`. No inference
+was attempted and no retry is authorized. The source strict diagnostic was
+preserved separately (`00006`/`00009` pass, `00028` has one mismatch); this is
+not an E2 target numerical result because target inference never started.
+
+Public evidence is retained at
+`results/edge_readiness_v1/e2l1-017-model-smoke-public/`; private engine/build
+partials remain on E2. Public artifact hashes are: `failure.json`
+`9962a13e6c1b336fabca8267b8e9a1ed5ead0c1c3350e2a6a5fa9664244ab3ed`,
+`index.json` `0a0b4e3d1342e11a87eb8dfc40fbfa18532a48a319665cb1ada24bd333dfd6a9`,
+`plan.json` `050e3e9b4408b12c0e503bdd1833ee9ea6bd165bf212d1ffb757667d25f19a5d`,
+and `run.log` `d8215558f3bfeadd117e42f22cdb7802263d3a62131825d7905369c96ac3a346`.

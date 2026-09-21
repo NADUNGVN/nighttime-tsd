@@ -1,0 +1,366 @@
+{
+  "schema_version": "e2l1-model-smoke-v1",
+  "status": "failed",
+  "execution_state": "unknown",
+  "real_device_execution": true,
+  "source_strict_status": "fail",
+  "attempted_completed": {
+    "parse_attempted": 1,
+    "parse_completed": 1,
+    "build_attempted": 1,
+    "build_completed": 0,
+    "engine_load_attempted": 0,
+    "engine_load_completed": 0,
+    "enqueues_attempted": 0,
+    "enqueues_completed": 0,
+    "enqueues_synchronized": 0,
+    "output_copies_attempted": 0,
+    "output_copies_completed": 0,
+    "output_copies_synchronized": 0,
+    "comparisons_attempted": 0,
+    "comparisons_completed": 0,
+    "unknown_completions": [
+      "build_completion"
+    ]
+  },
+  "events": [
+    "plan_written",
+    "failed:TargetTimeout"
+  ],
+  "code_provenance": {
+    "provenance_mode": "reviewed_archive_manifest",
+    "code_root": "/tmp/luna1-e2l1-017-code",
+    "archive_manifest": "/tmp/luna1-e2l1-017-code/code-export-manifest.json",
+    "archive_manifest_sha256": "aa136f72b9d395569e70944e1c67d1dbd1bdb23621912f9dfbed856297764507",
+    "requested_commit": "b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4",
+    "reviewed_commit": "b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4",
+    "files": {
+      "scripts/edge_readiness/e2_model_smoke.py": "008ddbb646a2ef11caa807d05dcf01e27d775f13c1ddde31352f7a38e56c2863",
+      "scripts/edge_readiness/e2_output_compare.py": "a946b4462fdd7b2171c8cbfac9bd9851d49e7ab1e7985849b27c75430b3ed0fd",
+      "scripts/edge_readiness/jetson_adapter.py": "c362828c2d4b416235dc2d211a3da49633eb957f6384da001c6974f1f2ea82fa",
+      "scripts/edge_readiness/jetson_runtime_provider.py": "d79185a0bb0bfb31b2938c6fc9f18cf19720194b197b5c85d313743fe46ccb61",
+      "scripts/edge_readiness/cuda_runtime_owner.py": "0512964f58c4bffae85be9d83bb6c7748041e581434ed88bff7c87b2277f283b",
+      "scripts/edge_readiness/edge_errors.py": "c13691982d80dc714b935d367ef35bb371b07dfd591a8856be3d23ac1aaa7602"
+    }
+  },
+  "stage_evidence": {
+    "build": {
+      "events": "/tmp/luna1-e2l1-017-model-smoke/private/engine/build_events.jsonl",
+      "result": "/tmp/luna1-e2l1-017-model-smoke/private/engine/build_result.json"
+    }
+  },
+  "provenance": {
+    "source_bundle": {
+      "manifest": "/tmp/luna1-e2l1-017-source/public/manifest.json",
+      "manifest_sha256": "60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08",
+      "onnx_sha256": "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7",
+      "allowlist": [
+        {
+          "role": "source_onnx",
+          "relative_path": "private/onnx_export/best.onnx",
+          "nbytes": 10605721,
+          "sha256": "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7"
+        },
+        {
+          "role": "input",
+          "image_id": "00006",
+          "relative_path": "private/inputs/00006.bin",
+          "nbytes": 4915200,
+          "sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474"
+        },
+        {
+          "role": "source_native",
+          "image_id": "00006",
+          "relative_path": "private/native_reference/00006.bin",
+          "nbytes": 235200,
+          "sha256": "7a200d1f08c39205d8b9677166f58513e03cdd29bef71e27e21e99837bd50125"
+        },
+        {
+          "role": "source_onnx_output",
+          "image_id": "00006",
+          "relative_path": "private/onnx_reference/00006.bin",
+          "nbytes": 235200,
+          "sha256": "caf4c185a245bae48ca99608b9a4dc507d5e35ba05d5fdd554528f982820fea0"
+        },
+        {
+          "role": "input",
+          "image_id": "00009",
+          "relative_path": "private/inputs/00009.bin",
+          "nbytes": 4915200,
+          "sha256": "357c0cc87ea2b4bfa56c1eca53bd54f5970bc1ea67b660d293a8bc4a9f62a9f0"
+        },
+        {
+          "role": "source_native",
+          "image_id": "00009",
+          "relative_path": "private/native_reference/00009.bin",
+          "nbytes": 235200,
+          "sha256": "376ea9cf833fa7fc075ecaa64e09837a8cf718198a020b1c5da2c3f4e5c68176"
+        },
+        {
+          "role": "source_onnx_output",
+          "image_id": "00009",
+          "relative_path": "private/onnx_reference/00009.bin",
+          "nbytes": 235200,
+          "sha256": "32501b8a9b90e00ee78884aeac45fbecf7dbb4be2c01f6002022eb1954886647"
+        },
+        {
+          "role": "input",
+          "image_id": "00028",
+          "relative_path": "private/inputs/00028.bin",
+          "nbytes": 4915200,
+          "sha256": "7b89184eac3c948ba0305d904e2b1e7b48e96d80bb13d4724abb2062b6286f29"
+        },
+        {
+          "role": "source_native",
+          "image_id": "00028",
+          "relative_path": "private/native_reference/00028.bin",
+          "nbytes": 235200,
+          "sha256": "66b1b796880db75e115a8aad5e1fc57d5726b8acfd1cb6fabdd494e358e5cc82"
+        },
+        {
+          "role": "source_onnx_output",
+          "image_id": "00028",
+          "relative_path": "private/onnx_reference/00028.bin",
+          "nbytes": 235200,
+          "sha256": "2ac6d843cad615f45817ce50697d0e2b2cd1c13adfcb83c394cc0672cb1f5193"
+        }
+      ]
+    },
+    "out_dir": "/tmp/luna1-e2l1-017-model-smoke",
+    "code_provenance": {
+      "provenance_mode": "reviewed_archive_manifest",
+      "code_root": "/tmp/luna1-e2l1-017-code",
+      "archive_manifest": "/tmp/luna1-e2l1-017-code/code-export-manifest.json",
+      "archive_manifest_sha256": "aa136f72b9d395569e70944e1c67d1dbd1bdb23621912f9dfbed856297764507",
+      "requested_commit": "b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4",
+      "reviewed_commit": "b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4",
+      "files": {
+        "scripts/edge_readiness/e2_model_smoke.py": "008ddbb646a2ef11caa807d05dcf01e27d775f13c1ddde31352f7a38e56c2863",
+        "scripts/edge_readiness/e2_output_compare.py": "a946b4462fdd7b2171c8cbfac9bd9851d49e7ab1e7985849b27c75430b3ed0fd",
+        "scripts/edge_readiness/jetson_adapter.py": "c362828c2d4b416235dc2d211a3da49633eb957f6384da001c6974f1f2ea82fa",
+        "scripts/edge_readiness/jetson_runtime_provider.py": "d79185a0bb0bfb31b2938c6fc9f18cf19720194b197b5c85d313743fe46ccb61",
+        "scripts/edge_readiness/cuda_runtime_owner.py": "0512964f58c4bffae85be9d83bb6c7748041e581434ed88bff7c87b2277f283b",
+        "scripts/edge_readiness/edge_errors.py": "c13691982d80dc714b935d367ef35bb371b07dfd591a8856be3d23ac1aaa7602"
+      }
+    },
+    "source_strict_comparisons": {
+      "00006": {
+        "status": "pass",
+        "passed": true,
+        "compared_elements": 58800,
+        "mismatch_count": 0,
+        "nonfinite_reference": 0,
+        "nonfinite_target": 0,
+        "max_absolute_error": 0.0016632080078125,
+        "max_relative_error": 5.84876910707276,
+        "domain_summary": {
+          "boxes": {
+            "elements": 33600,
+            "mismatches": 0,
+            "nonfinite": 0,
+            "max_absolute_error": 0.0016632080078125,
+            "max_relative_error": 7.657847379101735e-05
+          },
+          "scores": {
+            "elements": 25200,
+            "mismatches": 0,
+            "nonfinite": 0,
+            "max_absolute_error": 2.980232238769531e-07,
+            "max_relative_error": 5.84876910707276
+          }
+        },
+        "mismatches": [],
+        "policy": {
+          "source_compute_mode": "fp32_reference",
+          "target_compute_mode": "onnx_fp32",
+          "source_dtype": "float32",
+          "target_binding_dtype": "float32",
+          "tolerance_equation": "abs(reference-target) <= absolute + relative*abs(reference)",
+          "box_tolerance": {
+            "absolute": 1e-05,
+            "relative": 0.0001
+          },
+          "score_tolerance": {
+            "absolute": 1e-05,
+            "relative": 0.0001
+          },
+          "class_order": [
+            "prohibitory",
+            "mandatory",
+            "warning"
+          ],
+          "coordinate_convention": "xywh in pixels of the 640x640 letterboxed input; channel order x,y,w,h",
+          "comparison_stage": "native output0 before decode/NMS"
+        }
+      },
+      "00009": {
+        "status": "pass",
+        "passed": true,
+        "compared_elements": 58800,
+        "mismatch_count": 0,
+        "nonfinite_reference": 0,
+        "nonfinite_target": 0,
+        "max_absolute_error": 0.0003509521484375,
+        "max_relative_error": 6.758800016694825,
+        "domain_summary": {
+          "boxes": {
+            "elements": 33600,
+            "mismatches": 0,
+            "nonfinite": 0,
+            "max_absolute_error": 0.0003509521484375,
+            "max_relative_error": 1.633346400104534e-05
+          },
+          "scores": {
+            "elements": 25200,
+            "mismatches": 0,
+            "nonfinite": 0,
+            "max_absolute_error": 1.1324882507324219e-06,
+            "max_relative_error": 6.758800016694825
+          }
+        },
+        "mismatches": [],
+        "policy": {
+          "source_compute_mode": "fp32_reference",
+          "target_compute_mode": "onnx_fp32",
+          "source_dtype": "float32",
+          "target_binding_dtype": "float32",
+          "tolerance_equation": "abs(reference-target) <= absolute + relative*abs(reference)",
+          "box_tolerance": {
+            "absolute": 1e-05,
+            "relative": 0.0001
+          },
+          "score_tolerance": {
+            "absolute": 1e-05,
+            "relative": 0.0001
+          },
+          "class_order": [
+            "prohibitory",
+            "mandatory",
+            "warning"
+          ],
+          "coordinate_convention": "xywh in pixels of the 640x640 letterboxed input; channel order x,y,w,h",
+          "comparison_stage": "native output0 before decode/NMS"
+        }
+      },
+      "00028": {
+        "status": "fail",
+        "passed": false,
+        "compared_elements": 58800,
+        "mismatch_count": 1,
+        "nonfinite_reference": 0,
+        "nonfinite_target": 0,
+        "max_absolute_error": 0.000335693359375,
+        "max_relative_error": 6.365596604765779,
+        "domain_summary": {
+          "boxes": {
+            "elements": 33600,
+            "mismatches": 1,
+            "nonfinite": 0,
+            "max_absolute_error": 0.000335693359375,
+            "max_relative_error": 0.005215123859191656
+          },
+          "scores": {
+            "elements": 25200,
+            "mismatches": 0,
+            "nonfinite": 0,
+            "max_absolute_error": 2.384185791015625e-07,
+            "max_relative_error": 6.365596604765779
+          }
+        },
+        "mismatches": [
+          {
+            "flat_index": 16402,
+            "channel": 1,
+            "channel_kind": "boxes",
+            "reference": 0.002925872802734375,
+            "target": 0.002941131591796875,
+            "absolute_error": 1.52587890625e-05,
+            "relative_error": 0.005215123859191656,
+            "allowed_error": 1.0292587280273439e-05,
+            "reason": null
+          }
+        ],
+        "policy": {
+          "source_compute_mode": "fp32_reference",
+          "target_compute_mode": "onnx_fp32",
+          "source_dtype": "float32",
+          "target_binding_dtype": "float32",
+          "tolerance_equation": "abs(reference-target) <= absolute + relative*abs(reference)",
+          "box_tolerance": {
+            "absolute": 1e-05,
+            "relative": 0.0001
+          },
+          "score_tolerance": {
+            "absolute": 1e-05,
+            "relative": 0.0001
+          },
+          "class_order": [
+            "prohibitory",
+            "mandatory",
+            "warning"
+          ],
+          "coordinate_convention": "xywh in pixels of the 640x640 letterboxed input; channel order x,y,w,h",
+          "comparison_stage": "native output0 before decode/NMS"
+        }
+      }
+    },
+    "execution_state": "unknown",
+    "target_preflight": {
+      "target_id": "E2",
+      "hardware_profile": "Jetson Xavier NX",
+      "runtime_version": "8.5.2.2",
+      "execution_api": "legacy_binding_execute_async_v2",
+      "hostname": "arar-desktop",
+      "machine": "aarch64",
+      "hardware_model": "NVIDIA Jetson Xavier NX Developer Kit",
+      "identity": {
+        "expected": {
+          "target_id": "E2",
+          "ssh_alias": "nx",
+          "hostname": "arar-desktop",
+          "architecture": "aarch64",
+          "hardware_model": "Jetson Xavier NX"
+        },
+        "observed": {
+          "hostname": "arar-desktop",
+          "architecture": "aarch64",
+          "hardware_model": "NVIDIA Jetson Xavier NX Developer Kit",
+          "device_tree_path": "/proc/device-tree/model"
+        }
+      },
+      "identity_policy": "expected host, architecture and device-tree model are checked before TensorRT/CUDA load",
+      "cuda_visible_devices": "0"
+    },
+    "stage_evidence": {
+      "build": {
+        "events": "/tmp/luna1-e2l1-017-model-smoke/private/engine/build_events.jsonl",
+        "result": "/tmp/luna1-e2l1-017-model-smoke/private/engine/build_result.json"
+      }
+    },
+    "stage_evidence_snapshot": {
+      "build": {
+        "events": {
+          "sha256": "1b2bad411c45b001086ccfcffd462d811fd85575f3ac9121994622a38accff81",
+          "bytes": 1997,
+          "content": "{\"command\": [\"/usr/bin/python3.8\", \"/tmp/luna1-e2l1-017-code/scripts/edge_readiness/e2_model_smoke.py\", \"--child-stage\", \"build\", \"--commit\", \"b7fedfaf95bfbd9b1ee1248ec330ee5f7ac7d3f4\", \"--archive-manifest\", \"/tmp/luna1-e2l1-017-code/code-export-manifest.json\", \"--onnx\", \"/tmp/luna1-e2l1-017-source/private/onnx_export/best.onnx\", \"--engine\", \"/tmp/luna1-e2l1-017-model-smoke/private/engine/e2_yolo11n_fp16.engine\", \"--result\", \"/tmp/luna1-e2l1-017-model-smoke/private/engine/build_result.json\", \"--events\", \"/tmp/luna1-e2l1-017-model-smoke/private/engine/build_events.jsonl\"], \"event\": \"dispatch\", \"stage\": \"build\", \"timeout_seconds\": 900.0}\n{\"event\": \"started\", \"stage\": \"build\"}\n{\"counters\": {\"build_attempted\": 0, \"build_completed\": 0, \"engine_load_attempted\": 0, \"engine_load_completed\": 0, \"enqueues_attempted\": 0, \"enqueues_completed\": 0, \"enqueues_synchronized\": 0, \"output_copies_attempted\": 0, \"output_copies_completed\": 0, \"output_copies_synchronized\": 0, \"parse_attempted\": 1, \"parse_completed\": 0}, \"event\": \"parser_attempted\", \"stage\": \"build\"}\n{\"counters\": {\"build_attempted\": 0, \"build_completed\": 0, \"engine_load_attempted\": 0, \"engine_load_completed\": 0, \"enqueues_attempted\": 0, \"enqueues_completed\": 0, \"enqueues_synchronized\": 0, \"output_copies_attempted\": 0, \"output_copies_completed\": 0, \"output_copies_synchronized\": 0, \"parse_attempted\": 1, \"parse_completed\": 1}, \"event\": \"parser_completed\", \"stage\": \"build\"}\n{\"counters\": {\"build_attempted\": 1, \"build_completed\": 0, \"engine_load_attempted\": 0, \"engine_load_completed\": 0, \"enqueues_attempted\": 0, \"enqueues_completed\": 0, \"enqueues_synchronized\": 0, \"output_copies_attempted\": 0, \"output_copies_completed\": 0, \"output_copies_synchronized\": 0, \"parse_attempted\": 1, \"parse_completed\": 1}, \"event\": \"build_attempted\", \"stage\": \"build\"}\n{\"cleanup_unconfirmed\": false, \"event\": \"timeout\", \"kill_signal_dispatched\": false, \"returncode\": -15, \"stage\": \"build\", \"term_signal_dispatched\": true, \"termination_confirmed\": true}\n"
+        }
+      }
+    }
+  },
+  "error": {
+    "code": "STAGE_TIMEOUT",
+    "message": "owned stage exceeded its deadline",
+    "details": {
+      "stage": "build",
+      "seconds": 900.0,
+      "term_signal_dispatched": true,
+      "kill_signal_dispatched": false,
+      "termination_confirmed": true,
+      "cleanup_unconfirmed": false,
+      "event_path": "/tmp/luna1-e2l1-017-model-smoke/private/engine/build_events.jsonl",
+      "completion": "unknown",
+      "stdout": "",
+      "stderr": ""
+    }
+  }
+}

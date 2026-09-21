@@ -1,0 +1,10 @@
+{
+  "schema_version": "e2l1-model-smoke-index-v1",
+  "status": "failed",
+  "public_artifacts": [
+    "plan.json",
+    "failure.json",
+    "run.log",
+    "index.json"
+  ]
+}

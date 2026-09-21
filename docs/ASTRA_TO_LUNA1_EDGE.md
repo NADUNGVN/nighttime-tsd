@@ -604,6 +604,20 @@ Once the user confirms lab/VPN connectivity has returned, a bounded read-only ch
 
 Append **L1A-020** with this corrected hash and network-only status, followed by actual transfer/execution evidence when available; commit/push scoped public docs including this inbox. Keep binaries private. No warmup, retry after a model attempt, benchmark or extra device is authorized.
 
+### E2L1-020 execution addendum — one smoke consumed by build timeout (2026-09-21)
+
+The bounded read-only gate passed and the verified source/code packages were
+transferred to fresh E2 paths. The single conditional smoke was dispatched
+with the accepted FP16/1 GiB, 900s build, 180s inference, and three-input
+contract. It ended at the build deadline with `STAGE_TIMEOUT` and
+`execution_state=unknown`; termination was confirmed. Counters were parse
+1/1, build 1/0, engine load 0/0, enqueues 0/0, output copies 0/0 and
+comparisons 0/0, with `build_completion` unknown. No inference or retry was
+performed. Public evidence is in
+`results/edge_readiness_v1/e2l1-017-model-smoke-public/`; private partials
+remain on E2. This is not a target numerical result; source strict status is
+preserved separately and target inference never started.
+
 ### E2L1-020 ownership clarification — finish the report, not just relay the instruction
 
 The latest message says instructions were relayed but L1A-020 was not written and nothing was staged/committed/pushed. That is acknowledgment, not completion of E2L1-020. **The rule that Astra leaves the inbox unstaged applies to Astra; Luna1 is explicitly assigned to commit/push that unchanged inbox together with Luna1's scoped report.** It is not a prohibition on Luna1 staging the requested documentation.
