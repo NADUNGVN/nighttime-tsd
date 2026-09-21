@@ -73,9 +73,11 @@ the only process allowed to import them. State is written atomically and
 contains phase, identity, counters, telemetry, lifecycle and partial-file
 inventory. Existing output roots are never resumed or overwritten.
 
-The pre-execution state is `implementation_complete_integrated_review_required`.
-Only after the integrated Astra review may the operator pass the GO token and
-run the foreground server sequence. A complete artifact set ends in
+The current pre-execution state is
+`implementation_incomplete_remediation_in_progress`; it becomes
+`implementation_complete_integrated_review_required` only after Astra accepts
+this integrated R1 packet. Only after that review may the operator pass the GO
+token and run the foreground server sequence. A complete artifact set ends in
 `confirmation_completed_review_required`; missing, invalid, timed-out or
 contaminated cells end in `confirmation_incomplete_blocked`. Neither status
 selects a deployment arm or opens B/C/15-model work.

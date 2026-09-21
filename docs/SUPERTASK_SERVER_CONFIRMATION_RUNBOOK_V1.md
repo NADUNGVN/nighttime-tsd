@@ -10,7 +10,7 @@ handoff is not yet an authorization to execute them.
 Replace `FULL_COMMIT` with the full SHA printed in L2A-053 after push.
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "FULL_COMMIT" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git diff --exit-code FULL_COMMIT -- configs/precision_head_confirmation_execution_v1.json scripts/precision_head_confirmation_contract.py scripts/run_precision_head_confirmation.py scripts/analyze_precision_head_confirmation.py && test ! -e results/measurement_audit_v1/server_precision_head_confirmation_v1 && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "FULL_COMMIT" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git diff --exit-code FULL_COMMIT -- configs/precision_head_confirmation_execution_v1.json scripts/precision_head_confirmation_contract.py scripts/run_precision_head_confirmation.py scripts/run_precision_head_confirmation_server.py scripts/analyze_precision_head_confirmation.py scripts/prepare_precision_head_confirmation.py scripts/prepare_precision_head_confirmation_graph.py scripts/capture_cctsdb_validator.py scripts/verify_cctsdb_capture.py scripts/analyze_dev_quantization.py scripts/verify_cctsdb_capture.py && test ! -e results/measurement_audit_v1/server_precision_head_confirmation_v1 && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch
 ```
 
 The operator must also record GPU UUID/name/driver, temperature/power/clocks,
@@ -19,23 +19,31 @@ ONNX/config hashes, and output absence. Desktop exceptions use the current
 exact PID/path confirmation. Unknown or non-desktop compute remains a block;
 do not kill, pause, reprioritize, or change another user's process.
 
-## CPU-only preparation
+## Read-only plan preparation
 
-After GO, use a fresh preparation root and preserve its failure inventory. The
-existing accepted graph/ONNX evidence is read-only; do not replace frozen
-files. The exact preparation command is the versioned graph-preparation
-command already recorded in the accepted readiness protocol, with
-`CUDA_VISIBLE_DEVICES=-1`, `PIP_NO_INDEX=1`, and `YOLO_AUTOINSTALL=0`.
-Preparation must end with verified per-model ONNX schema and mapping hashes
-before any scored child is dispatched.
+Do not rerun graph preparation or export. The accepted ONNX and graph-audit
+artifacts are read-only inputs. After GO, create the fresh study plan with the
+CPU-only parent; it verifies the actual checkpoint/ONNX bytes, nested graph
+mapping schema, mapping hashes and the exact canonical schedule:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/run_precision_head_confirmation.py --phase plan --out-dir results/measurement_audit_v1/server_precision_head_confirmation_v1
+```
+
+This command must finish before the scored command and must not create ONNX,
+engine, calibration or timing binaries.
 
 ## Scored execution after GO
 
-The full command is intentionally released only in the post-GO dispatch note,
-because desktop PID/path and the current GPU identity are time-dependent. It
-must invoke `scripts/run_precision_head_confirmation.py --phase scored` in
-the foreground, with the fresh output root, current desktop confirmations,
-and the operator's current GPU/workload snapshot. It must not add a canary,
+The foreground command uses the current desktop PID/path from the immediately
+preceding snapshot. Replace both placeholders; never use historical PIDs:
+
+```bash
+conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_precision_head_confirmation.py --phase scored --go-token ASTRA_INTEGRATED_GO_REQUIRED --out-dir results/measurement_audit_v1/server_precision_head_confirmation_v1 --device 0 --confirm-desktop-process CURRENT_PID=CURRENT_ALLOWLISTED_PATH
+```
+
+The command dispatches one isolated child per scheduled job, with a bounded
+foreground timeout and no retry/replacement. It must not add a canary,
 warmup, calibration retry, timing-cache reuse, or hidden reference forward.
 
 If two compatible hosts are explicitly offered, split complete model blocks:
@@ -45,10 +53,12 @@ running block. Otherwise run both blocks sequentially on one compatible GPU.
 ## Scoped publication
 
 After completion or failure, publish only the allowlist generated by the
-runner: manifests, plan/schedule, child states, reports, JSONL predictions and
-logs, telemetry, hashes, and failure/partial inventories. Never publish
-checkpoint, ONNX, engine, calibration/timing cache, private tensor, or private
-temporary files. Push the scoped artifact commit and send Luna the full SHA.
+runner: `confirmation_plan.json`, `schedule.json`, `execution_manifest.json`,
+`jobs/*/child_state.json`, `jobs/*/cell_metrics.json`,
+`jobs/*/predictions.json`, reports, logs, telemetry, hashes, and
+failure/partial inventories. Never publish checkpoint, ONNX, engine,
+calibration/timing cache, private tensor, or private temporary files. Push the
+scoped artifact commit and send Luna the full SHA.
 
 ## Local post-run audit
 
@@ -56,7 +66,14 @@ Luna pulls the artifact commit and checks the exact 84/78 schedule, every
 identity link, cache-only counters, fresh timing-cache evidence, mapping and
 output semantics, capture membership, XML/hash bindings, telemetry/workload
 violations, finite outputs, deadlines, lifecycle release and partial files.
-Then Luna runs the CPU analysis command on the pulled artifact only. Any
+Then Luna runs the CPU analysis command on the pulled artifact only:
+
+```bash
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/analyze_precision_head_confirmation.py --root results/measurement_audit_v1/server_precision_head_confirmation_v1 --xml /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip --out-dir results/measurement_audit_v1/server_precision_head_confirmation_analysis_v1
+```
+
+The analyzer reconstructs pooled COCO/XML AP from detection records and uses
+the shared PCG64 image bootstrap. Any
 missing or invalid cell is reported as incomplete; no replacement run is
 started. The final packet contains machine JSON, all-cell/contrast/variation
 tables and manuscript Methods/Results/Limitations text for Astra review.

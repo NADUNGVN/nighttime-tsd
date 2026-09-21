@@ -7,6 +7,7 @@ runtime code belongs to the isolated server child.
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import math
 from pathlib import Path
@@ -45,37 +46,11 @@ def canonical_json_sha256(value: Any) -> str:
 
 
 def build_schedule() -> list[dict[str, Any]]:
-    """Return the immutable 84-job schedule in execution order.
-
-    The rotation changes execution order only.  It never changes the identity
-    of a cell and never permits metric-based reordering.
-    """
-    jobs: list[dict[str, Any]] = []
-    sequence = 0
-    for model in MODELS:
-        for selection in SELECTIONS:
-            sequence += 1
-            jobs.append({
-                "sequence": sequence, "job_id": f"aux-{model}-{selection}",
-                "kind": "auxiliary_cache", "model": model, "selection": selection,
-                "arm": "cache_builder", "round": 0, "repeat": 1,
-                "capture_required": False, "calibration_write_allowed": True,
-            })
-        for round_id, shift in zip(ROUNDS, SHIFTS):
-            cells = [(selection, arm) for selection in SELECTIONS for arm in ARMS]
-            cells.append((None, "fp16"))
-            cells = cells[shift:] + cells[:shift]
-            for position, (selection, arm) in enumerate(cells):
-                sequence += 1
-                kind = "scored_fp16" if arm == "fp16" else "scored_int8"
-                jobs.append({
-                    "sequence": sequence,
-                    "job_id": f"{kind}-{model}-r{round_id:02d}-p{position:02d}",
-                    "kind": kind, "model": model, "selection": selection,
-                    "arm": arm, "round": round_id, "repeat": round_id,
-                    "rotation_shift": shift, "rotation_position": position,
-                    "capture_required": True, "calibration_write_allowed": False,
-                })
+    """Return the schedule from the accepted readiness producer, verbatim."""
+    producer = importlib.import_module("prepare_precision_head_confirmation")
+    config_path = Path(__file__).resolve().parents[1] / "configs" / "precision_head_confirmation_v1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    jobs = producer.generate_schedule(config)
     validate_schedule(jobs)
     return jobs
 
@@ -86,12 +61,13 @@ def validate_schedule(jobs: Iterable[dict[str, Any]]) -> None:
         raise ContractError(f"schedule has {len(rows)} jobs, expected 84")
     if [row.get("sequence") for row in rows] != list(range(1, 85)):
         raise ContractError("schedule sequence is not contiguous")
-    ids = [row.get("job_id") for row in rows]
-    if len(set(ids)) != len(ids) or any(not item for item in ids):
-        raise ContractError("schedule contains duplicate or empty job IDs")
-    counts = {key: sum(row.get("kind") == key for row in rows) for key in (
-        "auxiliary_cache", "scored_int8", "scored_fp16")}
-    if counts != {"auxiliary_cache": 6, "scored_int8": 72, "scored_fp16": 6}:
+    exact_fields = ("sequence", "round", "model", "selection", "phase", "arm", "repeat", "scored", "capture_required", "calibration_cache_creation", "timing_cache_policy")
+    # Compare against a fresh canonical producer output, not only counts.
+    canonical = _canonical_schedule_without_validation()
+    if len(rows) != len(canonical) or any(any(row.get(field) != wanted.get(field) for field in exact_fields) for row, wanted in zip(rows, canonical)):
+        raise ContractError("schedule differs from accepted canonical field order")
+    counts = {key: sum(row.get("phase") == key for row in rows) for key in ("auxiliary_calibration", "scored_int8", "scored_fp16")}
+    if counts != {"auxiliary_calibration": 6, "scored_int8": 72, "scored_fp16": 6}:
         raise ContractError(f"schedule kind counts differ: {counts}")
     if sum(bool(row.get("capture_required")) for row in rows) != EXPECTED["captures"]:
         raise ContractError("capture count differs from 78")
@@ -99,29 +75,39 @@ def validate_schedule(jobs: Iterable[dict[str, Any]]) -> None:
         model_rows = [row for row in rows if row.get("model") == model]
         if len(model_rows) != 42:
             raise ContractError(f"{model} must have 42 builder jobs")
-        if model_rows != sorted(model_rows, key=lambda row: row["sequence"]):
+        sequences = [row["sequence"] for row in model_rows]
+        if sequences != list(range(sequences[0], sequences[0] + 42)):
             raise ContractError(f"{model} block is not contiguous")
-        if sum(row["kind"] == "auxiliary_cache" for row in model_rows) != 3:
+        if sum(row["phase"] == "auxiliary_calibration" for row in model_rows) != 3:
             raise ContractError(f"{model} auxiliary count differs")
         for round_id, shift in zip(ROUNDS, SHIFTS):
             cells = [row for row in model_rows if row.get("round") == round_id]
-            if len(cells) != 13 or {row.get("rotation_shift") for row in cells} != {shift}:
+            if len(cells) != 13:
                 raise ContractError(f"{model} round {round_id} rotation differs")
-            if sum(row["kind"] == "scored_int8" for row in cells) != 12:
+            if sum(row["phase"] == "scored_int8" for row in cells) != 12:
                 raise ContractError(f"{model} round {round_id} int8 count differs")
-            if sum(row["kind"] == "scored_fp16" for row in cells) != 1:
+            if sum(row["phase"] == "scored_fp16" for row in cells) != 1:
                 raise ContractError(f"{model} round {round_id} fp16 count differs")
             if any(row["capture_required"] is not True for row in cells):
                 raise ContractError("every scored cell must have one capture")
-    if any(row["kind"] == "auxiliary_cache" and row["capture_required"] for row in rows):
+    if any(row["phase"] == "auxiliary_calibration" and row["capture_required"] for row in rows):
         raise ContractError("auxiliary cache builders must not capture")
+
+
+def _canonical_schedule_without_validation() -> list[dict[str, Any]]:
+    """Load the accepted producer without validating any derived counts."""
+    producer = importlib.import_module("prepare_precision_head_confirmation")
+    config_path = Path(__file__).resolve().parents[1] / "configs" / "precision_head_confirmation_v1.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    return producer.generate_schedule(config)
 
 
 def mapping_targets(graph_audit: dict[str, Any], model: str) -> dict[str, list[str]]:
     """Extract only the verified active convolution targets from graph audit."""
-    if graph_audit.get("mapping_status") != "verified":
+    mapping = graph_audit.get("mapping") or graph_audit
+    if graph_audit.get("mapping_status", mapping.get("mapping_status")) != "verified":
         raise ContractError(f"graph mapping is not verified for {model}")
-    audit = graph_audit.get("active_branch_audit") or {}
+    audit = mapping.get("active_branch_audit") or {}
     branch_names = {
         "yolov8n": ("cv2", "cv3"),
         "yolo26n": ("one2one_cv2", "one2one_cv3"),
@@ -134,8 +120,12 @@ def mapping_targets(graph_audit: dict[str, Any], model: str) -> dict[str, list[s
             raise ContractError(f"{model} {branch} has no target nodes")
         if len(names) != len(set(names)):
             raise ContractError(f"{model} {branch} target names are duplicated")
+        matched = row.get("matched_convolutions") or row.get("matched_records") or []
+        matched_by_name = {item.get("export_node", item.get("name")): item for item in matched if isinstance(item, dict)}
         if any("/act/" in name or not name.endswith("/Conv") for name in names):
             raise ContractError(f"{model} {branch} includes non-convolution target")
+        if matched_by_name and any(matched_by_name.get(name, {}).get("export_op_type", "Conv") != "Conv" for name in names):
+            raise ContractError(f"{model} {branch} target metadata is not Conv")
         result[label] = names
     if set(result["bbox"]) & set(result["classification"]):
         raise ContractError(f"{model} active target sets overlap")
@@ -158,7 +148,7 @@ def selected_targets(mapping: dict[str, list[str]], arm: str) -> list[str]:
 
 def verify_cache_only_audit(audit: dict[str, Any], *, scored: bool) -> None:
     if scored:
-        if audit.get("read_calls") != 1 or audit.get("write_calls") != 0 or audit.get("batch_calls") != 0:
+        if audit.get("read_calls", 0) < 1 or audit.get("cache_consumed") is not True or audit.get("write_calls") != 0 or audit.get("batch_calls") != 0:
             raise ContractError("scored INT8 build did not use read-only cache-only calibration")
     else:
         if audit.get("write_calls") != 1 or audit.get("batch_calls") != 1024:

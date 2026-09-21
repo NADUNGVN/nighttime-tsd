@@ -2,7 +2,7 @@
   "schema_version": 1,
   "study": "precision_head_confirmation_v1",
   "execution_contract": "precision_head_confirmation_execution_v1",
-  "status": "implementation_complete_integrated_review_required",
+  "status": "implementation_incomplete_remediation_in_progress",
   "accepted_readiness_config": {
     "path": "configs/precision_head_confirmation_v1.json",
     "sha256_git_blob_content": "2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8",
@@ -39,7 +39,7 @@
     "requested_size": 1024,
     "train_only": true,
     "algorithm": "MinMax",
-    "producer": "scripts/uniform_build_repeat.py::prepare_calibration",
+    "producer": "scripts/prepare_precision_head_confirmation.py::validate_calibration_manifest + calibration_recipe_evidence",
     "cache_scope": "one_read_only_cache_per_model_selection",
     "scored_batches": 0,
     "scored_writes": 0,

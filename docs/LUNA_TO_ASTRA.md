@@ -3138,7 +3138,10 @@ Files mới trong packet:
 
 ### Gate and next action
 
-Trạng thái bàn giao là **`implementation_complete_integrated_review_required`**.
+Trạng thái bàn giao trong bản L2A-053 ban đầu là
+**`implementation_complete_integrated_review_required`**; trạng thái này được
+đính chính trong addendum R1 bên dưới vì integrated review đã phát hiện runner
+và analyzer chưa hoàn thiện.
 84 builder invocations/78 captures **chưa được phép chạy** chỉ dựa trên
 feasibility smoke cũ. Astra cần review một packet tích hợp: contract hashes,
 schedule/accounting, parent/child boundary, mapping/output semantics, cache
@@ -3147,3 +3150,61 @@ operator mới pull full SHA, snapshot server, chạy foreground theo runbook;
 Luna sẽ audit đủ cell/artifact, phân tích CPU và cập nhật bảng Methods/Results/
 Limitations trong cùng milestone, không tự chọn build tốt nhất và không mở
 B/C/15-model matrix.
+
+## L2A-053 correction — R1 remediation packet
+
+2026-09-22. Đính chính L2A-053 trước đó: claim
+`implementation_complete_integrated_review_required` là sớm. Trạng thái hiện
+tại là **`implementation_incomplete_remediation_in_progress`**; không có server,
+GPU, TensorRT, export, builder hoặc capture nào được chạy trong remediation này.
+
+R1 đã được triển khai thành một packet liên kết contract giữa các module:
+
+- `scripts/run_precision_head_confirmation_server.py` là parent/child executor
+  thật: 84 child jobs tuần tự, fresh-root/no-resume/no-retry, atomic child state,
+  bounded timeout, partial inventory/log preservation, runtime lifecycle và
+  capture artifact publication. `--runtime-double` kiểm tra toàn bộ 84/78
+  inventory CPU-only nhưng không phải numerical evidence.
+- `scripts/precision_head_confirmation_contract.py` gọi schedule producer thật
+  `scripts/prepare_precision_head_confirmation.py::generate_schedule`, giữ
+  FP16 đầu mỗi vòng và rotation `[0,4,8]`; validator exact-compares mọi field,
+  identity, model block và accounting. Mapping đọc nested
+  `mapping.active_branch_audit` của graph-audit thật, không dùng schema fixture
+  thay thế.
+- Server child bind calibration vào
+  `prepare_precision_head_confirmation.py::validate_calibration_manifest` /
+  `calibration_recipe_evidence` và materialized `calibration.yaml`; auxiliary
+  dùng đúng 1,024 batches + 1 cache write, scored INT8 yêu cầu cache consumed,
+  read count >=1, zero batches/writes. Fresh timing cache, OBEY constraints,
+  input/output shape, engine deserialize và inspector evidence được giữ riêng.
+- `scripts/analyze_precision_head_confirmation.py` audit execution manifest,
+  exact cell identity, plan/prediction hashes và 1,636 records trước khi dùng
+  `verify_cctsdb_capture.py::coco_size` +
+  `analyze_dev_quantization.py::resample_ap`. AP là pooled detection-level
+  COCO/XML AP với duplicated image resampling, không phải mean per-image AP;
+  có full/XS/S, shared PCG64 bootstrap, primary/control/FP16 contrasts,
+  within-build SD và between-selection-mean SD.
+
+### R1 evidence and limitations
+
+- `python -m unittest tests/test_precision_head_confirmation_super.py -v`:
+  **11 PASS, 2 SKIP** in the current local Windows environment. The skips are
+  only NumPy/pycocotools-dependent statistical fixtures unavailable locally;
+  the external runtime-double test executed the complete 84-job parent/child
+  inventory and produced 78 synthetic cell records.
+- `python -m py_compile` for the changed runner, server executor, analyzer,
+  contract and test files: **PASS**; `git diff --check`: **PASS**.
+- The previously targeted TensorRT-feasibility regression remains **30/30
+  PASS**. Older graph/readiness tests that need local NumPy/ONNX/Ultralytics
+  and raw server fixtures remain unavailable/failing in this checkout; they
+  are not represented as verified here.
+- No local GPU/TensorRT/build/benchmark/export was run. Numerical output,
+  workload conditions and the 84/78 budget remain unobserved until a later
+  Astra integrated GO. The analyzer's final numerical path is therefore
+  implemented and tested synthetically, not claimed as completed study output.
+
+Files added or changed for this correction include the execution config,
+contract, parent/child runner, analyzer, supertests, runbook, manuscript
+template and `docs/ST_SERVER_01_INTEGRATED_REVIEW_R1.md`. The dirty checkpoint
+`results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt` remains untouched and is
+not part of the packet.

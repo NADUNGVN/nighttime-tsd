@@ -773,6 +773,32 @@ def _canonical_dataset_inventory(repo: Path, config: dict[str, Any]) -> dict[str
     }
 
 
+def calibration_recipe_evidence(
+    repo: Path,
+    config: dict[str, Any],
+    dataset_contract: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Bind execution to the accepted manifest/materialized-YAML producer.
+
+    This is deliberately CPU/read-only.  The server child consumes the
+    materialized YAML produced here; it never invents a calibration directory
+    or silently substitutes another selection.
+    """
+    records = [
+        validate_calibration_manifest(repo, config["canonical_input_commit"], selection, dataset_contract)
+        for selection in config["calibration_selections"]
+    ]
+    if any(record.get("status") != "verified" for record in records):
+        raise ValueError("One or more accepted calibration selections failed producer validation")
+    return {
+        "producer": "scripts/prepare_precision_head_confirmation.py::validate_calibration_manifest + calibration_recipe_evidence",
+        "algorithm": config["calibration_recipe"]["algorithm"],
+        "requested_size": config["calibration_recipe"]["requested_size"],
+        "train_only": config["calibration_recipe"]["train_only"],
+        "selections": records,
+    }
+
+
 def _audit_split_directory(
     directory: Path,
     extensions: set[str],

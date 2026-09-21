@@ -93,6 +93,9 @@ def validate_files(repo: Path, contract: dict[str, Any]) -> dict[str, Any]:
 
 def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH) -> dict[str, Any]:
     contract = read_json(repo / contract_path)
+    producer = __import__("prepare_precision_head_confirmation")
+    readiness_config_path = repo / contract["accepted_readiness_config"]["path"]
+    readiness_config = read_json(readiness_config_path)
     jobs = build_schedule()
     validate_schedule(jobs)
     evidence = validate_files(repo, contract)
@@ -102,13 +105,15 @@ def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH
     readiness = read_json(readiness_path)
     if readiness.get("status") not in {"ready_for_server_prepare_review", "ready_for_server_run"}:
         raise ContractError(f"readiness status is not accepted: {readiness.get('status')}")
+    calibration = producer.calibration_recipe_evidence(repo, readiness_config)
     return {
         "schema_version": SCHEMA_VERSION,
         "study": "precision_head_confirmation_v1",
-        "status": "implementation_complete_integrated_review_required",
+        "status": "implementation_incomplete_remediation_in_progress",
         "repo_head": git_head(repo),
         "contract": {"path": relative(repo, repo / contract_path), "sha256": sha256_file(repo / contract_path)},
         "readiness": {"path": relative(repo, readiness_path), "status": readiness.get("status")},
+        "calibration_producer": calibration,
         "graph_audit_root": relative(repo, repo / GRAPH_ROOT),
         "prepare_root": relative(repo, repo / PREP_ROOT),
         "models": evidence,
@@ -135,8 +140,13 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
     parser.add_argument("--out-dir", type=Path, default=Path("results/measurement_audit_v1/server_precision_head_confirmation_v1"))
-    parser.add_argument("--phase", choices=("plan", "prepare", "scored", "analysis"), default="plan")
+    parser.add_argument("--phase", choices=("plan", "scored", "analysis"), default="plan")
     parser.add_argument("--go-token", help=argparse.SUPPRESS)
+    parser.add_argument("--device", default="0")
+    parser.add_argument("--child-timeout", type=int, default=21600)
+    parser.add_argument("--confirm-desktop-process", action="append", default=[])
+    parser.add_argument("--confirm-background-process", action="append", default=[])
+    parser.add_argument("--runtime-double", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args(argv)
     repo = args.repo.resolve()
     out_dir = args.out_dir if args.out_dir.is_absolute() else repo / args.out_dir
@@ -145,7 +155,19 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.go_token != "ASTRA_INTEGRATED_GO_REQUIRED":
         raise SystemExit("Refusing server phase: integrated Astra GO is required after local implementation review")
-    raise SystemExit("Server phases are dispatched by the post-GO runbook; no GPU work is permitted in the local parent")
+    if args.phase == "scored":
+        from run_precision_head_confirmation_server import run_parent as run_server_parent
+        plan_path = out_dir / "confirmation_plan.json"
+        if not plan_path.is_file():
+            raise SystemExit(f"Missing preflight plan: {plan_path}")
+        server_args = argparse.Namespace(
+            repo=repo, plan=plan_path, out_dir=out_dir, device=args.device,
+            child_timeout=args.child_timeout, runtime_double=args.runtime_double,
+            confirm_desktop_process=args.confirm_desktop_process,
+            confirm_background_process=args.confirm_background_process,
+        )
+        return run_server_parent(server_args)
+    raise SystemExit("CPU analysis is a separate post-artifact command; use scripts/analyze_precision_head_confirmation.py")
 
 
 if __name__ == "__main__":
