@@ -1,0 +1,2790 @@
+{
+  "audit_flags": {
+    "calibration_loader_called": false,
+    "export_performed": false,
+    "gpu_used": false,
+    "matrix_opened": false,
+    "official_test_accessed": false,
+    "onnx_modified": false,
+    "scored_run_authorized": false,
+    "tensorrt_build_performed": false,
+    "tensorrt_imported": false,
+    "training_performed": false
+  },
+  "build_settings": {
+    "avg_timing_iterations": 1,
+    "batch": 1,
+    "builder_optimization_level": 3,
+    "fp16": true,
+    "imgsz": 640,
+    "int8": false,
+    "precision_overrides": false,
+    "profiling_verbosity": "DETAILED",
+    "tf32": false,
+    "timing_cache": "fresh_empty_in_memory_per_model; never serialized or reused",
+    "workspace_bytes": 4294967296
+  },
+  "call_contract": {
+    "calibration_batches": 0,
+    "dev_captures": 0,
+    "independent_builds": 2,
+    "models": 2,
+    "native_forwards": 0,
+    "onnx_cpu_reference_calls": 16,
+    "retries": 0,
+    "test_captures": 0,
+    "trt_application_enqueues": 16,
+    "warmup_calls": 0
+  },
+  "config": {
+    "binding": {
+      "accepted_execution_commit": "9c0597d1ec6f6d73c98fffa7cc3779a00eddec34",
+      "accepted_script_sha256": "204a0199ff768a72406ec1b21d12d16a69970d8629049e4c284bedab06df52ec",
+      "config": {
+        "accounting": {
+          "auxiliary_calibration_builds": 6,
+          "captures": 78,
+          "dev_images": 1636,
+          "dev_instances": 2706,
+          "image_passes": 127608,
+          "onnx_exports": 2,
+          "scored_builds": 78,
+          "scored_fp16_builds": 6,
+          "scored_int8_builds": 72,
+          "total_builder_invocations": 84
+        },
+        "arms": [
+          "baseline_int8",
+          "bbox_fp32",
+          "classification_fp32",
+          "both_fp32"
+        ],
+        "build_repeats": [
+          1,
+          2,
+          3
+        ],
+        "calibration_recipe": {
+          "algorithm": "MinMax",
+          "batch_size": 1,
+          "fp16_mode": "no_calibration",
+          "input_shape": [
+            1,
+            3,
+            640,
+            640
+          ],
+          "order": "manifest file order, deterministic",
+          "preprocessing": "unresolved_pending_server_prepare",
+          "preprocessing_helper": "scripts/uniform_build_repeat.py",
+          "preprocessing_status": "unresolved_pending_server_prepare",
+          "scored_int8_mode": "cache_only_zero_batches_zero_writes"
+        },
+        "calibration_selections": [
+          {
+            "canonical_sha256": "ef1c4416986118814ed52367e9e04a935dfe2f2bf200f3752a4b5beb11b5ca18",
+            "id": "U42",
+            "manifest": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/calibration_manifest.json",
+            "materialized_yaml_required": true,
+            "requested_size": 1024,
+            "seed": 42,
+            "selected_size": 1024,
+            "strategy": "uniform",
+            "train_only": true
+          },
+          {
+            "canonical_sha256": "0ad1dfe04c0a983babed1ac4409ed199d260a2310653dc5b11527c9ee12b5889",
+            "id": "U43",
+            "manifest": "data/processed/cctsdb2021_clean/calibration/uniform_s43_n1024/calibration_manifest.json",
+            "materialized_yaml_required": true,
+            "requested_size": 1024,
+            "seed": 43,
+            "selected_size": 1024,
+            "strategy": "uniform",
+            "train_only": true
+          },
+          {
+            "canonical_sha256": "100914438e4d1b037e2b1bd046442d881b089ca6ba6a7f2ecab4a6270fb05a3c",
+            "id": "U44",
+            "manifest": "data/processed/cctsdb2021_clean/calibration/uniform_s44_n1024/calibration_manifest.json",
+            "materialized_yaml_required": true,
+            "requested_size": 1024,
+            "seed": 44,
+            "selected_size": 1024,
+            "strategy": "uniform",
+            "train_only": true
+          }
+        ],
+        "canonical_dev_reference": {
+          "capture_report": "results/measurement_audit_v1/server_fp16_capture_v1/capture_report.json",
+          "dataset_split": "CCTSDB2021/dev",
+          "images": 1636,
+          "instances": 2706,
+          "predictions": "results/measurement_audit_v1/server_fp16_capture_v1/validator_predictions.json",
+          "predictions_sha256": "5c23d0fa7d4bbf09858b2f1a4dbf45c35650c474aaedebe40d845e3c9acc410a"
+        },
+        "canonical_dev_reference_commit": "5eb7ec36da7eed1701f6383b9db37ca3cfe31186",
+        "canonical_input_commit": "53f12554761c80f367876756b4371a7729891d44",
+        "dataset_inventory_reference": {
+          "commit": "3154b7ad2308ff8802ea1c15532951c86ed66a96",
+          "dev_images": 1636,
+          "ids_available": false,
+          "manifest": "results/paper_artifacts/v1/metadata/dataset_manifest.json",
+          "positive_test_exclusion_images": 1500,
+          "scope": "approved split counts and provenance; current checkout binds per-directory IDs",
+          "sha256": "5d1b6f1c6df475efe14c8bc6e41c6312b5121dcb828041ec81bbcb2733ac0a2e",
+          "train_images": 14720
+        },
+        "decision_rules": {
+          "consistency_no_reversal_pp": 2.0,
+          "consistency_positive_selections": 2,
+          "fp16_noninferiority_margin": null,
+          "fp16_reporting": "continuous_gap_and_ci_only",
+          "screening_margin_full_map50_95_pp": 2.0,
+          "size_gate_pp": null,
+          "size_reporting": "continuous_xs_s_point_ci_and_adverse_effects"
+        },
+        "dev_contract": {
+          "bootstrap_resamples": 1000,
+          "bootstrap_seed": 20260916,
+          "evaluator": "coco_xml_paired_image_bootstrap_v1",
+          "images": 1636,
+          "instances": 2706,
+          "split": "CCTSDB2021/dev",
+          "yaml_reference": "results/measurement_audit_v1/server_fp16_capture_v1/dev_absolute.yaml"
+        },
+        "execution_boundary": {
+          "child_must_bind_model_selection_arm_repeat": true,
+          "parent_must_not_import_tensorrt_or_touch_cuda": true,
+          "readiness_process": "single_cpu_only_parent",
+          "scored_execution": "one_isolated_child_per_builder_or_capture_job",
+          "server_prepare": "reviewed_prepare_process_creates_onnx_and_mapping"
+        },
+        "export_contract": {
+          "batch": 1,
+          "dynamic": false,
+          "end2end": "preserve_frozen_model_head_flag",
+          "format": "onnx",
+          "half": false,
+          "imgsz": 640,
+          "opset": 17,
+          "output_semantics": "model-specific_expected_contract_and_native_parser_validation",
+          "simplify": true
+        },
+        "fp16_repeats": [
+          1,
+          2,
+          3
+        ],
+        "limitations": [
+          "CPU readiness evidence is not TensorRT end-to-end evidence.",
+          "ONNX graph mapping is deferred to the reviewed server prepare/export phase.",
+          "Shared-lab GPU interference remains an execution-time limitation.",
+          "Two source models are not a random architecture sample."
+        ],
+        "models": [
+          {
+            "bytes": 6260963,
+            "checkpoint": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+            "expected_contract": {
+              "active_branches": [
+                "cv2",
+                "cv3"
+              ],
+              "boxes_shape": [
+                1,
+                64,
+                8400
+              ],
+              "debug_paths": [
+                "boxes",
+                "scores",
+                "feats"
+              ],
+              "end2end": false,
+              "feature_shapes": [
+                [
+                  1,
+                  64,
+                  80,
+                  80
+                ],
+                [
+                  1,
+                  128,
+                  40,
+                  40
+                ],
+                [
+                  1,
+                  256,
+                  20,
+                  20
+                ]
+              ],
+              "head_index": 22,
+              "head_type": "Detect",
+              "inactive_branches": [],
+              "nms": "not_in_model_head_output",
+              "output_kind": "decoded_raw_plus_head_dict",
+              "postprocess": "none_in_model_head_output",
+              "primary_output_dtype": "torch.float32",
+              "primary_output_representation": "tuple_tensor_plus_dict",
+              "primary_output_shape": [
+                1,
+                7,
+                8400
+              ],
+              "scores_shape": [
+                1,
+                3,
+                8400
+              ]
+            },
+            "label": "yolov8n",
+            "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+          },
+          {
+            "bytes": 5399038,
+            "checkpoint": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+            "expected_contract": {
+              "active_branches": [
+                "one2one_cv2",
+                "one2one_cv3"
+              ],
+              "boxes_shape": [
+                1,
+                4,
+                8400
+              ],
+              "debug_paths": [
+                "one2many",
+                "one2one"
+              ],
+              "end2end": true,
+              "feature_shapes": [
+                [
+                  1,
+                  64,
+                  80,
+                  80
+                ],
+                [
+                  1,
+                  128,
+                  40,
+                  40
+                ],
+                [
+                  1,
+                  256,
+                  20,
+                  20
+                ]
+              ],
+              "head_index": 23,
+              "head_type": "Detect",
+              "inactive_branches": [
+                "cv2",
+                "cv3"
+              ],
+              "nms": "postprocess_only_as_defined_by_locked_ultralytics_runtime",
+              "output_kind": "end2end_topk_detections_plus_head_dict",
+              "postprocess": "topk_300_detections_in_model_head_output",
+              "primary_output_dtype": "torch.float32",
+              "primary_output_representation": "tuple_tensor_plus_dict",
+              "primary_output_shape": [
+                1,
+                300,
+                6
+              ],
+              "scores_shape": [
+                1,
+                3,
+                8400
+              ]
+            },
+            "label": "yolo26n",
+            "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e"
+          }
+        ],
+        "output_contract": {
+          "files": [
+            "readiness_manifest.json",
+            "model_contracts.json",
+            "calibration_readiness.json",
+            "schedule.json",
+            "report.md"
+          ],
+          "no_overwrite": true,
+          "root": "results/measurement_audit_v1/precision_head_confirmation_readiness_v1"
+        },
+        "runtime": {
+          "batch": 1,
+          "conf": 0.001,
+          "cuda": "12.1",
+          "imgsz": 640,
+          "iou": 0.7,
+          "max_det": 300,
+          "numpy": "2.4.4",
+          "pycocotools": "2.0.10",
+          "rect": false,
+          "task": "detect",
+          "tensorrt": "10.16.1.11",
+          "torch": "2.5.1+cu121",
+          "ultralytics": "8.4.102",
+          "workers": 0
+        },
+        "schedule": {
+          "arm_order": [
+            "baseline_int8",
+            "bbox_fp32",
+            "classification_fp32",
+            "both_fp32"
+          ],
+          "build_repeat_order": [
+            1,
+            2,
+            3
+          ],
+          "fp16_repeat_order": [
+            1,
+            2,
+            3
+          ],
+          "model_order": [
+            "yolov8n",
+            "yolo26n"
+          ],
+          "selection_order": [
+            "U42",
+            "U43",
+            "U44"
+          ],
+          "version": "model_block_aux_then_interleaved_rounds_v2"
+        },
+        "schema_version": 1,
+        "status": "design_locked_readiness_implementation",
+        "study": "precision_head_confirmation_v1"
+      },
+      "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/configs/precision_head_confirmation_v1.json",
+      "semantic_sha256": "c0f7f53a56c79a041f9d2ff5f01f458b8e65191c3812006f6ad01f0b894243ec",
+      "sha256": "2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8"
+    },
+    "file": {
+      "bytes": 7808,
+      "exists": true,
+      "path": "configs/precision_head_confirmation_v1.json",
+      "regular_file": true,
+      "sha256": "2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8"
+    },
+    "path": "configs/precision_head_confirmation_v1.json"
+  },
+  "fixture": {
+    "forward_image_count": 8,
+    "forward_images": [
+      {
+        "expected_bytes": 63138,
+        "expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+        "image": "train/images/00006.jpg",
+        "image_id": "00006",
+        "manifest_order": 0,
+        "materialized_expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+        "rule": "first 8 distinct train image IDs in canonical U42 manifest order",
+        "selection": "U42"
+      },
+      {
+        "expected_bytes": 120736,
+        "expected_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+        "image": "train/images/00009.jpg",
+        "image_id": "00009",
+        "manifest_order": 1,
+        "materialized_expected_sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354",
+        "rule": "first 8 distinct train image IDs in canonical U42 manifest order",
+        "selection": "U42"
+      },
+      {
+        "expected_bytes": 314856,
+        "expected_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde",
+        "image": "train/images/00028.jpg",
+        "image_id": "00028",
+        "manifest_order": 2,
+        "materialized_expected_sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde",
+        "rule": "first 8 distinct train image IDs in canonical U42 manifest order",
+        "selection": "U42"
+      },
+      {
+        "expected_bytes": 112746,
+        "expected_sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce",
+        "image": "train/images/00036.jpg",
+        "image_id": "00036",
+        "manifest_order": 3,
+        "materialized_expected_sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce",
+        "rule": "first 8 distinct train image IDs in canonical U42 manifest order",
+        "selection": "U42"
+      },
+      {
+        "expected_bytes": 119946,
+        "expected_sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50",
+        "image": "train/images/00054.jpg",
+        "image_id": "00054",
+        "manifest_order": 4,
+        "materialized_expected_sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50",
+        "rule": "first 8 distinct train image IDs in canonical U42 manifest order",
+        "selection": "U42"
+      },
+      {
+        "expected_bytes": 101216,
+        "expected_sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1",
+        "image": "train/images/00061.jpg",
+        "image_id": "00061",
+        "manifest_order": 5,
+        "materialized_expected_sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1",
+        "rule": "first 8 distinct train image IDs in canonical U42 manifest order",
+        "selection": "U42"
+      },
+      {
+        "expected_bytes": 137774,
+        "expected_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb",
+        "image": "train/images/00098.jpg",
+        "image_id": "00098",
+        "manifest_order": 6,
+        "materialized_expected_sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb",
+        "rule": "first 8 distinct train image IDs in canonical U42 manifest order",
+        "selection": "U42"
+      },
+      {
+        "expected_bytes": 118496,
+        "expected_sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f",
+        "image": "train/images/00104.jpg",
+        "image_id": "00104",
+        "manifest_order": 7,
+        "materialized_expected_sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f",
+        "rule": "first 8 distinct train image IDs in canonical U42 manifest order",
+        "selection": "U42"
+      }
+    ],
+    "forward_selection": "U42",
+    "no_labels_read": true,
+    "no_test_images_or_labels_read": true,
+    "preprocess_trace_images": [
+      {
+        "expected_bytes": 63138,
+        "expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+        "image": "train/images/00006.jpg",
+        "image_id": "00006",
+        "manifest_order": 0,
+        "materialized_expected_sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434",
+        "rule": "first image in canonical train-only selection order",
+        "selection": "U42"
+      },
+      {
+        "expected_bytes": 82133,
+        "expected_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c",
+        "image": "train/images/00029.jpg",
+        "image_id": "00029",
+        "manifest_order": 0,
+        "materialized_expected_sha256": "d0428fb30083824178641c419e69eeb075def030e4d1650c93f10943d0462d7c",
+        "rule": "first image in canonical train-only selection order",
+        "selection": "U43"
+      },
+      {
+        "expected_bytes": 114276,
+        "expected_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72",
+        "image": "train/images/00000.jpg",
+        "image_id": "00000",
+        "manifest_order": 0,
+        "materialized_expected_sha256": "a38a767d86390fb90263fbe680532b577b483d28738bede4afff8ac1b7f37a72",
+        "rule": "first image in canonical train-only selection order",
+        "selection": "U44"
+      }
+    ],
+    "preprocess_trace_rule": "first image in each canonical U42/U43/U44 train-only manifest order",
+    "selection_rule": "first 8 distinct train image IDs in canonical U42 manifest order"
+  },
+  "fixture_bindings_preflight": {
+    "train/images/00006.jpg": {
+      "materialized": {
+        "bytes": 63138,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00006.jpg",
+        "regular_file": true,
+        "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+      },
+      "source": {
+        "bytes": 63138,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/train/images/00006.jpg",
+        "regular_file": true,
+        "sha256": "a4bdd9e4968a005f2c8223d0b10adcf8104f0c95c1086b1631721d940aa55434"
+      }
+    },
+    "train/images/00009.jpg": {
+      "materialized": {
+        "bytes": 120736,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00009.jpg",
+        "regular_file": true,
+        "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+      },
+      "source": {
+        "bytes": 120736,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/train/images/00009.jpg",
+        "regular_file": true,
+        "sha256": "48b81a7b018827fcb92b589eee6ed389134bc9e711ba5751347849f49d370354"
+      }
+    },
+    "train/images/00028.jpg": {
+      "materialized": {
+        "bytes": 314856,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00028.jpg",
+        "regular_file": true,
+        "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+      },
+      "source": {
+        "bytes": 314856,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/train/images/00028.jpg",
+        "regular_file": true,
+        "sha256": "e42cc181f5e8f6bb9f4349625b68cb65b94ac42e01a16726be6bc35446c31cde"
+      }
+    },
+    "train/images/00036.jpg": {
+      "materialized": {
+        "bytes": 112746,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00036.jpg",
+        "regular_file": true,
+        "sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+      },
+      "source": {
+        "bytes": 112746,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/train/images/00036.jpg",
+        "regular_file": true,
+        "sha256": "58a5f69fa581e35bfb41c481fc5b67620345fb30e247fb2cae0f94e4d591a4ce"
+      }
+    },
+    "train/images/00054.jpg": {
+      "materialized": {
+        "bytes": 119946,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00054.jpg",
+        "regular_file": true,
+        "sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+      },
+      "source": {
+        "bytes": 119946,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/train/images/00054.jpg",
+        "regular_file": true,
+        "sha256": "4e9f0fc9e935ddea11fc496f7b1e5b6342186c62ccb5f4a14d10641cf7227a50"
+      }
+    },
+    "train/images/00061.jpg": {
+      "materialized": {
+        "bytes": 101216,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00061.jpg",
+        "regular_file": true,
+        "sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+      },
+      "source": {
+        "bytes": 101216,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/train/images/00061.jpg",
+        "regular_file": true,
+        "sha256": "725b53beed1d208816e5a546a82f2c90533f6dded1f9ef99ae4e0b62505349d1"
+      }
+    },
+    "train/images/00098.jpg": {
+      "materialized": {
+        "bytes": 137774,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00098.jpg",
+        "regular_file": true,
+        "sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+      },
+      "source": {
+        "bytes": 137774,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/train/images/00098.jpg",
+        "regular_file": true,
+        "sha256": "d43e3f59cfc975a221078d81eda798ae9bd82549a33cc50635e6d59ac2ca1edb"
+      }
+    },
+    "train/images/00104.jpg": {
+      "materialized": {
+        "bytes": 118496,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/calibration/uniform_s42_n1024/images/00104.jpg",
+        "regular_file": true,
+        "sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+      },
+      "source": {
+        "bytes": 118496,
+        "exists": true,
+        "path": "data/processed/cctsdb2021_clean/train/images/00104.jpg",
+        "regular_file": true,
+        "sha256": "47270f4d04479ae82c08987d3083b2d626e13bfd73c78321e802a834d5bf476f"
+      }
+    }
+  },
+  "fixture_contract": {
+    "count": 8,
+    "images": [
+      "train/images/00006.jpg",
+      "train/images/00009.jpg",
+      "train/images/00028.jpg",
+      "train/images/00036.jpg",
+      "train/images/00054.jpg",
+      "train/images/00061.jpg",
+      "train/images/00098.jpg",
+      "train/images/00104.jpg"
+    ],
+    "selection": "U42",
+    "source_and_materialized_hashes_required": true
+  },
+  "gpu_preflight": {
+    "confirmed_background": [],
+    "confirmed_desktop": [
+      {
+        "pid": 644963,
+        "reported_path": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration"
+      },
+      {
+        "pid": 644977,
+        "reported_path": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration"
+      }
+    ],
+    "identity": {
+      "clocks_mem": "405 MHz",
+      "clocks_sm": "300 MHz",
+      "device_index": 0,
+      "driver_version": "595.71.05",
+      "memory_used": "29 MiB",
+      "name": "Quadro RTX 8000",
+      "power_draw": "10.63 W",
+      "pstate": "P8",
+      "temperature_gpu": "33",
+      "uuid": "GPU-9850d121-55dc-e752-ffaa-df19e7585eb4"
+    },
+    "snapshot": {
+      "device": "GPU-9850d121-55dc-e752-ffaa-df19e7585eb4, Quadro RTX 8000, 595.71.05, P8, 33, 10.63 W, 300 MHz, 405 MHz, 29 MiB",
+      "gpu_identity": {
+        "clocks_mem": "405 MHz",
+        "clocks_sm": "300 MHz",
+        "device_index": 0,
+        "driver_version": "595.71.05",
+        "memory_used": "29 MiB",
+        "name": "Quadro RTX 8000",
+        "power_draw": "10.63 W",
+        "pstate": "P8",
+        "temperature_gpu": "33",
+        "uuid": "GPU-9850d121-55dc-e752-ffaa-df19e7585eb4"
+      },
+      "process_details": [
+        {
+          "allowed": true,
+          "allowlist_exception": "snapd-desktop-integration",
+          "classification": "allowed_desktop_operator_confirmed",
+          "desktop_allowlist_id": "snapd-desktop-integration",
+          "operator_confirmed": true,
+          "pid": 644963,
+          "process_name": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration",
+          "raw": "644963, /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration, 5 MiB",
+          "reason": "exact current nvidia-smi PID/path was explicitly confirmed; /proc was not read",
+          "resolved_executable": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration",
+          "used_gpu_memory": "5 MiB"
+        },
+        {
+          "allowed": true,
+          "allowlist_exception": "snapd-desktop-integration",
+          "classification": "allowed_desktop_operator_confirmed",
+          "desktop_allowlist_id": "snapd-desktop-integration",
+          "operator_confirmed": true,
+          "pid": 644977,
+          "process_name": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration",
+          "raw": "644977, /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration, 5 MiB",
+          "reason": "exact current nvidia-smi PID/path was explicitly confirmed; /proc was not read",
+          "resolved_executable": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration",
+          "used_gpu_memory": "5 MiB"
+        }
+      ],
+      "process_guard": {
+        "allowlist": {
+          "gnome-session": "/usr/bin/gnome-session-binary or /usr/libexec/gnome-session-binary",
+          "gnome-shell": "/usr/bin/gnome-shell or /usr/libexec/gnome-shell",
+          "snapd-desktop-integration": "/snap/snapd-desktop-integration/<numeric-revision>/usr/bin/snapd-desktop-integration",
+          "xorg": "/usr/lib/xorg/Xorg or /usr/bin/Xorg"
+        },
+        "background_workload": [],
+        "blocked_processes": [],
+        "external_workload_detected": false,
+        "telemetry_status": "complete",
+        "unmatched_confirmations": [],
+        "verification_method": "exact PID/path comparison against current nvidia-smi plus explicit operator confirmation; /proc was not read",
+        "version": "operator-confirmed-nvidia-smi-path-v1"
+      },
+      "processes": "644963, /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration, 5 MiB\n644977, /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration, 5 MiB"
+    }
+  },
+  "graph_audit": {
+    "commit": "6780b813c5f1cb2d915b72832eedd79525eaecbd",
+    "files": {
+      "audit_plan.json": {
+        "accepted_git_blob_sha256": "cfe5333e5caf816511060eb81b3575d8390e8adbac3acb19278120a87fa5c65a",
+        "bytes": 18634,
+        "content_match_mode": "exact",
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/audit_plan.json",
+        "sha256": "cfe5333e5caf816511060eb81b3575d8390e8adbac3acb19278120a87fa5c65a"
+      },
+      "graph_audit_manifest.json": {
+        "accepted_git_blob_sha256": "c5f538aa5cb390d68e272cec9fad22a455ac8397fdb351f5c93c1e79e4382d65",
+        "bytes": 405017,
+        "content_match_mode": "exact",
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/graph_audit_manifest.json",
+        "sha256": "c5f538aa5cb390d68e272cec9fad22a455ac8397fdb351f5c93c1e79e4382d65"
+      },
+      "models/yolo26n/graph_audit.json": {
+        "accepted_git_blob_sha256": "2c8d97c10d12323862831a2e58c6aa7a3c79e2fe9bc424560db206fc707b14cb",
+        "bytes": 223183,
+        "content_match_mode": "exact",
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/models/yolo26n/graph_audit.json",
+        "sha256": "2c8d97c10d12323862831a2e58c6aa7a3c79e2fe9bc424560db206fc707b14cb"
+      },
+      "models/yolov8n/graph_audit.json": {
+        "accepted_git_blob_sha256": "5cf9d9b7c39c8d7607352492ee2e89276915104bee93ce661876864a5fb97ccb",
+        "bytes": 121711,
+        "content_match_mode": "exact",
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/models/yolov8n/graph_audit.json",
+        "sha256": "5cf9d9b7c39c8d7607352492ee2e89276915104bee93ce661876864a5fb97ccb"
+      },
+      "report.md": {
+        "accepted_git_blob_sha256": "71489f4c12607321c61cd18e4363a7d037cd318aaaa3823a7271e3ede5c33a2e",
+        "bytes": 1020,
+        "content_match_mode": "exact",
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4/report.md",
+        "sha256": "71489f4c12607321c61cd18e4363a7d037cd318aaaa3823a7271e3ede5c33a2e"
+      }
+    },
+    "root": "results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4"
+  },
+  "historical_numeric_verdict": "preserved_fail_not_replaced",
+  "models": {
+    "yolo26n": {
+      "accepted_contract": {
+        "active_branches": [
+          "one2one_cv2",
+          "one2one_cv3"
+        ],
+        "active_convolution_mapping": {
+          "one2one_cv2": [
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv2.0.0.conv",
+              "out_channels": 16,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 16,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv2.0.1.conv",
+              "out_channels": 16,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 16,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv2.0.2",
+              "out_channels": 4,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 128,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv2.1.0.conv",
+              "out_channels": 16,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 16,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv2.1.1.conv",
+              "out_channels": 16,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 16,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv2.1.2",
+              "out_channels": 4,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 256,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv2.2.0.conv",
+              "out_channels": 16,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 16,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv2.2.1.conv",
+              "out_channels": 16,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 16,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv2.2.2",
+              "out_channels": 4,
+              "stride": [
+                1,
+                1
+              ]
+            }
+          ],
+          "one2one_cv3": [
+            {
+              "groups": 64,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.0.0.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.0.0.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 64,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.0.1.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.0.1.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.0.2",
+              "out_channels": 3,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 128,
+              "in_channels": 128,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.1.0.0.conv",
+              "out_channels": 128,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 128,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.1.0.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 64,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.1.1.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.1.1.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.1.2",
+              "out_channels": 3,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 256,
+              "in_channels": 256,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.2.0.0.conv",
+              "out_channels": 256,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 256,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.2.0.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 64,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.2.1.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.2.1.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.23.one2one_cv3.2.2",
+              "out_channels": 3,
+              "stride": [
+                1,
+                1
+              ]
+            }
+          ]
+        },
+        "checkpoint": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+        "checkpoint_bytes": 5399038,
+        "checkpoint_exists": true,
+        "checkpoint_sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e",
+        "constraints": {
+          "bbox_fp32_requested": "deferred_to_server_onnx_prepare",
+          "classification_fp32_requested": "deferred_to_server_onnx_prepare",
+          "effective_precision": "unknown"
+        },
+        "device": "cpu",
+        "errors": [],
+        "expected_bytes": 5399038,
+        "expected_sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e",
+        "export_performed": false,
+        "forward_summary": {
+          "items": [
+            {
+              "dtype": "torch.float32",
+              "kind": "tensor",
+              "shape": [
+                1,
+                300,
+                6
+              ]
+            },
+            {
+              "keys": [
+                "one2many",
+                "one2one"
+              ],
+              "kind": "dict",
+              "values": {
+                "one2many": {
+                  "keys": [
+                    "boxes",
+                    "scores",
+                    "feats"
+                  ],
+                  "kind": "dict",
+                  "values": {
+                    "boxes": {
+                      "dtype": "torch.float32",
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        4,
+                        8400
+                      ]
+                    },
+                    "feats": {
+                      "items": [
+                        {
+                          "dtype": "torch.float32",
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            64,
+                            80,
+                            80
+                          ]
+                        },
+                        {
+                          "dtype": "torch.float32",
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            128,
+                            40,
+                            40
+                          ]
+                        },
+                        {
+                          "dtype": "torch.float32",
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            256,
+                            20,
+                            20
+                          ]
+                        }
+                      ],
+                      "kind": "list",
+                      "length": 3
+                    },
+                    "scores": {
+                      "dtype": "torch.float32",
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        3,
+                        8400
+                      ]
+                    }
+                  }
+                },
+                "one2one": {
+                  "keys": [
+                    "boxes",
+                    "scores",
+                    "feats"
+                  ],
+                  "kind": "dict",
+                  "values": {
+                    "boxes": {
+                      "dtype": "torch.float32",
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        4,
+                        8400
+                      ]
+                    },
+                    "feats": {
+                      "items": [
+                        {
+                          "dtype": "torch.float32",
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            64,
+                            80,
+                            80
+                          ]
+                        },
+                        {
+                          "dtype": "torch.float32",
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            128,
+                            40,
+                            40
+                          ]
+                        },
+                        {
+                          "dtype": "torch.float32",
+                          "kind": "tensor",
+                          "shape": [
+                            1,
+                            256,
+                            20,
+                            20
+                          ]
+                        }
+                      ],
+                      "kind": "list",
+                      "length": 3
+                    },
+                    "scores": {
+                      "dtype": "torch.float32",
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        3,
+                        8400
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "kind": "tuple",
+          "length": 2
+        },
+        "gpu_used": false,
+        "head": {
+          "available_branches": [
+            "cv2",
+            "cv3",
+            "one2one_cv2",
+            "one2one_cv3"
+          ],
+          "end2end": true,
+          "index": 23,
+          "type": "Detect"
+        },
+        "head_output_evidence": {
+          "active_branches": [
+            "one2one_cv2",
+            "one2one_cv3"
+          ],
+          "active_convolution_mapping": {
+            "one2one_cv2": [
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv2.0.0.conv",
+                "out_channels": 16,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 16,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv2.0.1.conv",
+                "out_channels": 16,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 16,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv2.0.2",
+                "out_channels": 4,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 128,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv2.1.0.conv",
+                "out_channels": 16,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 16,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv2.1.1.conv",
+                "out_channels": 16,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 16,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv2.1.2",
+                "out_channels": 4,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 256,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv2.2.0.conv",
+                "out_channels": 16,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 16,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv2.2.1.conv",
+                "out_channels": 16,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 16,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv2.2.2",
+                "out_channels": 4,
+                "stride": [
+                  1,
+                  1
+                ]
+              }
+            ],
+            "one2one_cv3": [
+              {
+                "groups": 64,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.0.0.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.0.0.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 64,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.0.1.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.0.1.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.0.2",
+                "out_channels": 3,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 128,
+                "in_channels": 128,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.1.0.0.conv",
+                "out_channels": 128,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 128,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.1.0.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 64,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.1.1.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.1.1.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.1.2",
+                "out_channels": 3,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 256,
+                "in_channels": 256,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.2.0.0.conv",
+                "out_channels": 256,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 256,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.2.0.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 64,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.2.1.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.2.1.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.23.one2one_cv3.2.2",
+                "out_channels": 3,
+                "stride": [
+                  1,
+                  1
+                ]
+              }
+            ]
+          },
+          "boxes_shape": [
+            1,
+            4,
+            8400
+          ],
+          "debug_paths": [
+            "one2many",
+            "one2one"
+          ],
+          "end2end": true,
+          "feature_shapes": [
+            [
+              1,
+              64,
+              80,
+              80
+            ],
+            [
+              1,
+              128,
+              40,
+              40
+            ],
+            [
+              1,
+              256,
+              20,
+              20
+            ]
+          ],
+          "head_index": 23,
+          "head_type": "Detect",
+          "inactive_branches": [
+            "cv2",
+            "cv3"
+          ],
+          "mapping_status": "pytorch_structure_verified_onnx_deferred",
+          "nms": "postprocess_only_as_defined_by_locked_ultralytics_runtime",
+          "output_kind": "end2end_topk_detections_plus_head_dict",
+          "postprocess": "topk_300_detections_in_model_head_output",
+          "primary_output_dtype": "torch.float32",
+          "primary_output_representation": "tuple_tensor_plus_dict",
+          "primary_output_shape": [
+            1,
+            300,
+            6
+          ],
+          "scores_shape": [
+            1,
+            3,
+            8400
+          ]
+        },
+        "inactive_branches": [
+          "cv2",
+          "cv3"
+        ],
+        "label": "yolo26n",
+        "mapping_hash": "f601ce7fa822931d172f464ea9870dd45f05f8ed1e8f6f747e57c867033727c1",
+        "mapping_status": "pytorch_structure_verified_onnx_deferred",
+        "probe": {
+          "cuda_calls": false,
+          "input_dtype": "torch.float32",
+          "input_shape": [
+            1,
+            3,
+            640,
+            640
+          ],
+          "method": "Ultralytics frozen PyTorch model CPU eval/no_grad dummy input",
+          "parameters_on_cpu": true
+        },
+        "probe_requested": true,
+        "runtime_compatibility": {
+          "blocking_errors": [],
+          "expected_server_packages": {
+            "numpy": "2.4.4",
+            "pycocotools": "2.0.10",
+            "torch": "2.5.1+cu121",
+            "ultralytics": "8.4.102"
+          },
+          "missing_packages": [],
+          "native_head_probe_supported": true,
+          "observed_cpu_packages": {
+            "numpy": "2.4.4",
+            "pycocotools": "2.0.10",
+            "torch": "2.5.1+cu121",
+            "ultralytics": "8.4.102"
+          },
+          "package_mismatches": [],
+          "server_gpu_cuda_tensorrt_observed": false,
+          "server_runtime_note": "Torch/NumPy/package differences are recorded separately; no CUDA or TensorRT verification is inferred here.",
+          "server_runtime_status": "not_verified_by_cpu_readiness",
+          "status": "cpu_probe_supported",
+          "supported_ultralytics": "8.4.102"
+        },
+        "status": "verified",
+        "tensorrt_imported": false
+      },
+      "application_contract": {
+        "comparison": {
+          "primary": "raw output array; descriptive only",
+          "v26": "fixed [1,300,6] row order; installed end2end=True filtering route; no second NMS or sorting",
+          "v8": "decoded xywh plus probabilities; installed application NMS/scale_boxes route"
+        },
+        "input": {
+          "dtype": "float32",
+          "name": "images",
+          "shape": [
+            1,
+            3,
+            640,
+            640
+          ]
+        },
+        "model": "yolo26n",
+        "output": {
+          "dtype": "float32",
+          "name": "output0",
+          "shape": [
+            1,
+            300,
+            6
+          ]
+        },
+        "route": {
+          "agnostic": false,
+          "conf": 0.001,
+          "coordinate_scale": "ultralytics.utils.ops.scale_boxes from 640x640 input pixels to original image xyxy",
+          "end2end": true,
+          "input_representation": "[1,300,6] decoded end-to-end xyxy, confidence, class id",
+          "iou": 0.7,
+          "max_det": 300,
+          "model": "yolo26n",
+          "multi_label": false,
+          "nc": 3,
+          "nms": false,
+          "postprocess": "ultralytics.utils.nms.non_max_suppression end2end=True filtering path"
+        }
+      },
+      "checkpoint": {
+        "expected": {
+          "bytes": 5399038,
+          "path": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+          "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e"
+        },
+        "observed": {
+          "bytes": 5399038,
+          "exists": true,
+          "path": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+          "regular_file": true,
+          "sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e"
+        }
+      },
+      "graph_contract": {
+        "mapping_status": "verified",
+        "output_shape": [
+          1,
+          300,
+          6
+        ]
+      },
+      "model": "yolo26n",
+      "onnx": {
+        "before": {
+          "bytes": 9806783,
+          "exists": true,
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx",
+          "regular_file": true,
+          "sha256": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc"
+        },
+        "expected_sha256": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc",
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx"
+      }
+    },
+    "yolov8n": {
+      "accepted_contract": {
+        "active_branches": [
+          "cv2",
+          "cv3"
+        ],
+        "active_convolution_mapping": {
+          "cv2": [
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv2.0.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv2.0.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv2.0.2",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 128,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv2.1.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv2.1.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv2.1.2",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 256,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv2.2.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv2.2.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv2.2.2",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            }
+          ],
+          "cv3": [
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv3.0.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv3.0.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv3.0.2",
+              "out_channels": 3,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 128,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv3.1.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv3.1.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv3.1.2",
+              "out_channels": 3,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 256,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv3.2.0.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                3,
+                3
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv3.2.1.conv",
+              "out_channels": 64,
+              "stride": [
+                1,
+                1
+              ]
+            },
+            {
+              "groups": 1,
+              "in_channels": 64,
+              "kernel_size": [
+                1,
+                1
+              ],
+              "module_type": "Conv2d",
+              "name": "model.22.cv3.2.2",
+              "out_channels": 3,
+              "stride": [
+                1,
+                1
+              ]
+            }
+          ]
+        },
+        "checkpoint": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+        "checkpoint_bytes": 6260963,
+        "checkpoint_exists": true,
+        "checkpoint_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+        "constraints": {
+          "bbox_fp32_requested": "deferred_to_server_onnx_prepare",
+          "classification_fp32_requested": "deferred_to_server_onnx_prepare",
+          "effective_precision": "unknown"
+        },
+        "device": "cpu",
+        "errors": [],
+        "expected_bytes": 6260963,
+        "expected_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+        "export_performed": false,
+        "forward_summary": {
+          "items": [
+            {
+              "dtype": "torch.float32",
+              "kind": "tensor",
+              "shape": [
+                1,
+                7,
+                8400
+              ]
+            },
+            {
+              "keys": [
+                "boxes",
+                "scores",
+                "feats"
+              ],
+              "kind": "dict",
+              "values": {
+                "boxes": {
+                  "dtype": "torch.float32",
+                  "kind": "tensor",
+                  "shape": [
+                    1,
+                    64,
+                    8400
+                  ]
+                },
+                "feats": {
+                  "items": [
+                    {
+                      "dtype": "torch.float32",
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        64,
+                        80,
+                        80
+                      ]
+                    },
+                    {
+                      "dtype": "torch.float32",
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        128,
+                        40,
+                        40
+                      ]
+                    },
+                    {
+                      "dtype": "torch.float32",
+                      "kind": "tensor",
+                      "shape": [
+                        1,
+                        256,
+                        20,
+                        20
+                      ]
+                    }
+                  ],
+                  "kind": "list",
+                  "length": 3
+                },
+                "scores": {
+                  "dtype": "torch.float32",
+                  "kind": "tensor",
+                  "shape": [
+                    1,
+                    3,
+                    8400
+                  ]
+                }
+              }
+            }
+          ],
+          "kind": "tuple",
+          "length": 2
+        },
+        "gpu_used": false,
+        "head": {
+          "available_branches": [
+            "cv2",
+            "cv3"
+          ],
+          "end2end": false,
+          "index": 22,
+          "type": "Detect"
+        },
+        "head_output_evidence": {
+          "active_branches": [
+            "cv2",
+            "cv3"
+          ],
+          "active_convolution_mapping": {
+            "cv2": [
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv2.0.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv2.0.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv2.0.2",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 128,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv2.1.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv2.1.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv2.1.2",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 256,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv2.2.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv2.2.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv2.2.2",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              }
+            ],
+            "cv3": [
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv3.0.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv3.0.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv3.0.2",
+                "out_channels": 3,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 128,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv3.1.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv3.1.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv3.1.2",
+                "out_channels": 3,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 256,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv3.2.0.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  3,
+                  3
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv3.2.1.conv",
+                "out_channels": 64,
+                "stride": [
+                  1,
+                  1
+                ]
+              },
+              {
+                "groups": 1,
+                "in_channels": 64,
+                "kernel_size": [
+                  1,
+                  1
+                ],
+                "module_type": "Conv2d",
+                "name": "model.22.cv3.2.2",
+                "out_channels": 3,
+                "stride": [
+                  1,
+                  1
+                ]
+              }
+            ]
+          },
+          "boxes_shape": [
+            1,
+            64,
+            8400
+          ],
+          "debug_paths": [
+            "boxes",
+            "scores",
+            "feats"
+          ],
+          "end2end": false,
+          "feature_shapes": [
+            [
+              1,
+              64,
+              80,
+              80
+            ],
+            [
+              1,
+              128,
+              40,
+              40
+            ],
+            [
+              1,
+              256,
+              20,
+              20
+            ]
+          ],
+          "head_index": 22,
+          "head_type": "Detect",
+          "inactive_branches": [],
+          "mapping_status": "pytorch_structure_verified_onnx_deferred",
+          "nms": "not_in_model_head_output",
+          "output_kind": "decoded_raw_plus_head_dict",
+          "postprocess": "none_in_model_head_output",
+          "primary_output_dtype": "torch.float32",
+          "primary_output_representation": "tuple_tensor_plus_dict",
+          "primary_output_shape": [
+            1,
+            7,
+            8400
+          ],
+          "scores_shape": [
+            1,
+            3,
+            8400
+          ]
+        },
+        "inactive_branches": [],
+        "label": "yolov8n",
+        "mapping_hash": "e6e92e5808a444d1c7207b823d617be39ee1cb08ea9bc29629104d51ca5374a7",
+        "mapping_status": "pytorch_structure_verified_onnx_deferred",
+        "probe": {
+          "cuda_calls": false,
+          "input_dtype": "torch.float32",
+          "input_shape": [
+            1,
+            3,
+            640,
+            640
+          ],
+          "method": "Ultralytics frozen PyTorch model CPU eval/no_grad dummy input",
+          "parameters_on_cpu": true
+        },
+        "probe_requested": true,
+        "runtime_compatibility": {
+          "blocking_errors": [],
+          "expected_server_packages": {
+            "numpy": "2.4.4",
+            "pycocotools": "2.0.10",
+            "torch": "2.5.1+cu121",
+            "ultralytics": "8.4.102"
+          },
+          "missing_packages": [],
+          "native_head_probe_supported": true,
+          "observed_cpu_packages": {
+            "numpy": "2.4.4",
+            "pycocotools": "2.0.10",
+            "torch": "2.5.1+cu121",
+            "ultralytics": "8.4.102"
+          },
+          "package_mismatches": [],
+          "server_gpu_cuda_tensorrt_observed": false,
+          "server_runtime_note": "Torch/NumPy/package differences are recorded separately; no CUDA or TensorRT verification is inferred here.",
+          "server_runtime_status": "not_verified_by_cpu_readiness",
+          "status": "cpu_probe_supported",
+          "supported_ultralytics": "8.4.102"
+        },
+        "status": "verified",
+        "tensorrt_imported": false
+      },
+      "application_contract": {
+        "comparison": {
+          "primary": "raw output array; descriptive only",
+          "v26": "fixed [1,300,6] row order; installed end2end=True filtering route; no second NMS or sorting",
+          "v8": "decoded xywh plus probabilities; installed application NMS/scale_boxes route"
+        },
+        "input": {
+          "dtype": "float32",
+          "name": "images",
+          "shape": [
+            1,
+            3,
+            640,
+            640
+          ]
+        },
+        "model": "yolov8n",
+        "output": {
+          "dtype": "float32",
+          "name": "output0",
+          "shape": [
+            1,
+            7,
+            8400
+          ]
+        },
+        "route": {
+          "agnostic": false,
+          "conf": 0.001,
+          "coordinate_scale": "ultralytics.utils.ops.scale_boxes from 640x640 input pixels to original image xyxy",
+          "end2end": false,
+          "input_representation": "[1,7,8400] decoded xywh plus post-sigmoid class probabilities",
+          "iou": 0.7,
+          "max_det": 300,
+          "model": "yolov8n",
+          "multi_label": false,
+          "nc": 3,
+          "nms": true,
+          "postprocess": "ultralytics.utils.nms.non_max_suppression"
+        }
+      },
+      "checkpoint": {
+        "expected": {
+          "bytes": 6260963,
+          "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+          "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+        },
+        "observed": {
+          "bytes": 6260963,
+          "exists": true,
+          "path": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+          "regular_file": true,
+          "sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b"
+        }
+      },
+      "graph_contract": {
+        "mapping_status": "verified",
+        "output_shape": [
+          1,
+          7,
+          8400
+        ]
+      },
+      "model": "yolov8n",
+      "onnx": {
+        "before": {
+          "bytes": 12266841,
+          "exists": true,
+          "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+          "regular_file": true,
+          "sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+        },
+        "expected_sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603",
+        "path": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx"
+      }
+    }
+  },
+  "no_overwrite": true,
+  "no_resume": true,
+  "numerical_policy": {
+    "assessment": "descriptive_only",
+    "hard_checks": [
+      "shape",
+      "dtype",
+      "finite",
+      "input identity"
+    ],
+    "raw_output_tolerance": null,
+    "reason": "no justified application-equivalence margin was pre-registered; no post-hoc threshold",
+    "v26": "fixed row index; no rematching/sorting/NMS to manufacture agreement"
+  },
+  "output_root": "results/measurement_audit_v1/precision_head_trt_feasibility_v1",
+  "process_guard_contract": {
+    "desktop_allowlist": {
+      "gnome-session": "/usr/bin/gnome-session-binary or /usr/libexec/gnome-session-binary",
+      "gnome-shell": "/usr/bin/gnome-shell or /usr/libexec/gnome-shell",
+      "snapd-desktop-integration": "/snap/snapd-desktop-integration/<numeric-revision>/usr/bin/snapd-desktop-integration",
+      "xorg": "/usr/lib/xorg/Xorg or /usr/bin/Xorg"
+    },
+    "no_kill_pause_permission_clock_or_power_changes": true,
+    "unknown_process_policy": "block before dispatch; if newly observed during/after, preserve output and mark review",
+    "version": "operator-confirmed-nvidia-smi-path-v1"
+  },
+  "readiness": {
+    "accepted_execution_commit": "9c0597d1ec6f6d73c98fffa7cc3779a00eddec34",
+    "accepted_git_commit": "7c0ea9e7fe86dfa6358ec1ee90473f9243a53f76",
+    "files": {
+      "calibration_readiness.json": {
+        "accepted_git_blob_sha256": "34c258e518c826bae92ad880e76cb78977c6afd054943ae9ebb1fcfc49fec41c",
+        "bytes": 2356559,
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/calibration_readiness.json",
+        "sha256": "34c258e518c826bae92ad880e76cb78977c6afd054943ae9ebb1fcfc49fec41c"
+      },
+      "model_contracts.json": {
+        "accepted_git_blob_sha256": "dac10919a336f115676bbe997e30ecd66419b4b99f5795f4499498f1b7fd4d51",
+        "bytes": 44607,
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/model_contracts.json",
+        "sha256": "dac10919a336f115676bbe997e30ecd66419b4b99f5795f4499498f1b7fd4d51"
+      },
+      "readiness_manifest.json": {
+        "accepted_git_blob_sha256": "112afbd2384da4e381e3ba9f7293c2d7fdc22991448acabb66c1fa21b6276147",
+        "bytes": 3818285,
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json",
+        "sha256": "112afbd2384da4e381e3ba9f7293c2d7fdc22991448acabb66c1fa21b6276147"
+      },
+      "report.md": {
+        "accepted_git_blob_sha256": "7cf1f681d1cac6c3fe4b913b825ed088bcafe266e5874a1179d239d1aaeeaaf7",
+        "bytes": 2158,
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/report.md",
+        "sha256": "7cf1f681d1cac6c3fe4b913b825ed088bcafe266e5874a1179d239d1aaeeaaf7"
+      },
+      "schedule.json": {
+        "accepted_git_blob_sha256": "531ae23f2269f862fd9141e0f85b567fc8d997933391f62cedc2e3195f84dd5b",
+        "bytes": 28310,
+        "path": "/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/schedule.json",
+        "sha256": "531ae23f2269f862fd9141e0f85b567fc8d997933391f62cedc2e3195f84dd5b"
+      }
+    },
+    "root": "results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2"
+  },
+  "repo_head": "71fe72e5e79267f66038c1fe82b5a44ee3251509",
+  "runtime_requirements": {
+    "cuda": "12.1",
+    "device_argument": "0",
+    "gpu_identity": "same UUID/name at preflight, child start and post-run snapshots",
+    "gpu_isolation": "not claimed; shared lab desktop is recorded and unknown workloads block/review",
+    "logical_cuda_index": 0,
+    "numpy": "2.4.4",
+    "physical_device_index": 0,
+    "pycocotools": "2.0.10",
+    "tensorrt": "10.16.1.11",
+    "torch": "2.5.1+cu121",
+    "ultralytics": "8.4.102"
+  },
+  "schema_version": 1,
+  "status": "local_preparation_only; actual_smoke_pending_review",
+  "study": "precision_head_trt_feasibility_v1"
+}
