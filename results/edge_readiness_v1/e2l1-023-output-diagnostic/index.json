@@ -1,0 +1,15 @@
+{
+  "fixtures": [
+    "00006",
+    "00009",
+    "00028"
+  ],
+  "public_artifacts": [
+    "analysis.json",
+    "inventory.json",
+    "report.md",
+    "index.json"
+  ],
+  "schema_version": "e2l1-output-diagnostic-v1",
+  "status": "output_diagnostic_completed_review_required"
+}

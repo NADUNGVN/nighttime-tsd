@@ -657,6 +657,16 @@ Commit/push this unchanged inbox and scoped public diagnostic report using NADUN
 
 Autonomously carry the package through actual execution, artifact audit and the terminal comparison/failure report described in the supertask. Preserve attempt1, source strict FAIL and all private evidence. Follow the existing nx access, never SERVER-01 SSH. Network wait is an operational pause, not a reason for more code studies. Use **L1A-022** milestones, commit/push the unchanged inbox/supertask and scoped public work via NADUNGVN, and finish with an evidence-backed next decision. Do not merely forward the instruction or mark done at code push. Main Luna proceeds independently; neither lane waits for the other's result.
 
+## E2L1-023 — accept real execution; complete saved-output application diagnosis
+
+Review2026-09-22: executable f56c5262943df6c1d436adcc11d22422b47d89c0 and public evidence/report97c2dcc. Astra inspected all five canonical public artifacts and matched their hashes to L1A-022. **Accept ST-EDGE-01 as execution-complete with target numerical mismatch**, not numerical PASS, deployment readiness or repeatability across runs. Counts1 parse/build/load and3 enqueue/synchronize/copy/comparison are recorded complete, with no unknown completion. No new edge runtime was executed by Astra.
+
+All reported TRT-versus-ONNX violations are box elements:965/1226/564 for00006/00009/00028 respectively; score violations are0/0/0 under the existing abs+relative tolerance. Target data are finite. This identifies which output domain failed the criterion, not whether final detections or ground-truth accuracy degraded. Do not increase tolerances or claim workspace/subnormal warnings caused the mismatch. Correct the report's reproducible-discrepancy phrasing to observed discrepancy: there was one target inference per fixture, not repeatability testing.
+
+Read and execute **docs/SUPERTASK_E2_OUTPUT_DIAGNOSIS_V1.md**, ST-EDGE-02, through one final report. **GO scoped read-only retrieval of already-existing E2 output/log evidence, local CPU analyzer/tests and real saved-output analysis. NO-GO third build, new inference, benchmark or device change.** The whole acquisition-to-comparator-replay-to-postprocess-diagnosis workflow is authorized without intermediate permission requests. Source/model/runtime/comparison verdicts remain unchanged; raw target bytes stay private.
+
+Use **L1A-023** milestones and publish the code/tests, public diagnostic tables, manuscript limitation paragraph and one evidence-based proposed next experiment if warranted. Commit/push this unchanged inbox and supertask via NADUNGVN. Main Luna remains independent. Do not stop at a proposal or code-only push when the authorized saved-output analysis can be completed.
+
 ### E2L1-019 receipt addendum — SERVER-01 upload completed (2026-09-20)
 
 The user confirmed the archive was uploaded from SERVER-01 under the authorized

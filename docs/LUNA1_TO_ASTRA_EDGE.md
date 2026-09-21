@@ -1814,3 +1814,72 @@ The next bounded scientific decision is to review the FP16 target/reference
 contract and the recorded workspace/tactic warnings, then define an explicit
 FP16-aware acceptance diagnostic before any future edge run; no tolerance was
 relaxed and no rerun was made here.
+
+## L1A-023 — saved-output CPU diagnosis completed (2026-09-22)
+
+**acquisition.** No E2 build, inference, benchmark, device change or engine
+download was performed. The three already-existing target tensors were copied
+read-only from E2 into private local staging outside the repository. Each was
+exactly `235200` bytes and matched the accepted manifest: `00006`
+`d22fdb65d0affaae165c527c2f7d067e989911ae3f42391ada6387aed596bd9e`, `00009`
+`d67bba2dbcc840a09f3eca943352f653f15160caefb3ff6d7c350236d7837320`, and
+`00028`
+`cab60f96c43af4835493d90b73052334e121b2b285be41216a088c73347b9a3c`. The
+retained build/inference result, event and stdout/stderr files also matched
+the previously recorded sizes and hashes. Engine and raw tensors remain
+private; none were added to Git.
+
+**implementation_verified.** Added the dependency-free CPU analyzer
+`scripts/edge_readiness/e2_output_diagnostic.py` and five focused tests. It
+rejects wrong size/hash, replays the existing raw comparator, reports
+channel/anchor strata and threshold/class crossings, uses immutable
+little-endian float32 reads, and applies deterministic class-aware single-
+label NMS at `conf=0.001`, `IoU=0.7`, `max_det=300` in 640x640 input pixels.
+Same-origin lineage is preferred; supplementary matching is deterministic,
+one-to-one and descriptive only. Analyzer tests pass `5/5`; the existing edge
+regression remains `108/108 PASS`. A broader repository discovery was not a
+clean gate because this checkout lacks unrelated NumPy/data prerequisites;
+that does not affect the CPU analyzer or edge suite.
+
+**analyzed.** Raw replay preserved the accepted verdicts: source native versus
+ONNX passed for `00006` and `00009`, and retained the one known `00028` source
+box mismatch. TRT versus source ONNX had box/score mismatch counts `965/0`,
+`1226/0`, and `564/0` for `00006`, `00009`, and `00028`; score `0` means no
+policy violation, not exact score equality. At source-ONNX max-score strata
+`0.001` and `0.25`, source/target selected-anchor membership was unchanged for
+all three fixtures. The selected-stratum box mismatch counts were respectively
+`0`, `5`, and `0`.
+
+CPU postprocess retained the same candidate and NMS counts: `00006` source
+`10 -> 1`, target `10 -> 1`; `00009` source `16 -> 2`, target `16 -> 2`;
+`00028` source `20 -> 2`, target `20 -> 2`. All kept detections had the same
+anchor/class lineage. Nevertheless, same-lineage box coordinates differed;
+the maximum per-detection coordinate deltas were `0.0971832`, `0.212311`, and
+`0.263626` pixels, with corresponding box IoU values `0.992440`, `0.987351`,
+and `0.994679`. These observations do not establish final-detection or
+ground-truth accuracy impact. No AP, recall, safety or deployment claim is
+made from three train fixtures.
+
+Public scoped evidence is at
+`results/edge_readiness_v1/e2l1-023-output-diagnostic/`:
+
+The analyzer/test source bindings are
+`e2_output_diagnostic.py` SHA-256
+`06efff09adca9543fa4e4f34be303783bd92d94b2da4e3522aa5bb187858f702` and
+`test_e2_output_diagnostic.py` SHA-256
+`e6f03893df06917f2375b353b06b94ccb6cd837b206eeea3b770e38390cd75d4`.
+
+| File | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `analysis.json` | 137627 | `b9df6015385a5597e1eefdc5253553638bd2a39237ac22c1163cd7c8c2058` |
+| `inventory.json` | 3579 | `7977637e8abfc0e1c248689ccd8d9c7eda14f3b1a87b9d95f718a2c74d92cd79` |
+| `report.md` | 1586 | `39fb049f8fda17b92cf7406dd30eee39f8743d4c7b8ae20213baa7b152e1c704` |
+| `index.json` | 276 | `42d9a9ac53b42081cca26502371890b4462a6ed14369d2a3e4634f1334d9a3b2` |
+
+**terminal.** `output_diagnostic_completed_review_required`. The evidence
+supports an observed raw box discrepancy with unchanged score-threshold
+membership and unchanged post-NMS count/lineage, but it cannot determine
+accuracy impact. One proposed next experiment is retained for scientific
+review only: a separately authorized FP16-reference/target postprocess
+comparison on a predeclared evaluation slice. No third build, new inference,
+benchmark or tolerance relaxation was performed.
