@@ -1,0 +1,12 @@
+{
+  "schema_version": "e2l1-model-smoke-index-v1",
+  "status": "execution_complete_target_mismatch",
+  "public_artifacts": [
+    "plan.json",
+    "manifest.json",
+    "report.md",
+    "run.log",
+    "index.json"
+  ],
+  "private_root": "/tmp/luna1-e2l1-022-model-smoke/private"
+}

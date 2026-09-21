@@ -1,0 +1,173 @@
+{
+  "schema_version": "e2l1-model-smoke-v1",
+  "status": "planned",
+  "code_provenance": {
+    "provenance_mode": "reviewed_archive_manifest",
+    "code_root": "/tmp/luna1-e2l1-022-code",
+    "archive_manifest": "/tmp/luna1-e2l1-022-code/code-export-manifest.json",
+    "archive_manifest_sha256": "89b91cf51aedfe83378feca2d5726a506a466d980e5c2733baaaf97486e80778",
+    "requested_commit": "f56c5262943df6c1d436adcc11d22422b47d89c0",
+    "reviewed_commit": "f56c5262943df6c1d436adcc11d22422b47d89c0",
+    "files": {
+      "scripts/edge_readiness/e2_model_smoke.py": "e2e7a63fb1da13ef2274ea7d65fa603b74139d3708a9e06139184779be9ba2e4",
+      "scripts/edge_readiness/e2_output_compare.py": "a946b4462fdd7b2171c8cbfac9bd9851d49e7ab1e7985849b27c75430b3ed0fd",
+      "scripts/edge_readiness/jetson_adapter.py": "c362828c2d4b416235dc2d211a3da49633eb957f6384da001c6974f1f2ea82fa",
+      "scripts/edge_readiness/jetson_runtime_provider.py": "d79185a0bb0bfb31b2938c6fc9f18cf19720194b197b5c85d313743fe46ccb61",
+      "scripts/edge_readiness/cuda_runtime_owner.py": "0512964f58c4bffae85be9d83bb6c7748041e581434ed88bff7c87b2277f283b",
+      "scripts/edge_readiness/edge_errors.py": "c13691982d80dc714b935d367ef35bb371b07dfd591a8856be3d23ac1aaa7602"
+    }
+  },
+  "target": {
+    "id": "E2",
+    "ssh_alias": "nx",
+    "hostname": "arar-desktop",
+    "architecture": "aarch64",
+    "hardware": "Jetson Xavier NX",
+    "runtime_prefix": "8.5.2.2"
+  },
+  "source_bundle": {
+    "manifest": "/tmp/luna1-e2l1-017-source/public/manifest.json",
+    "manifest_sha256": "60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08",
+    "onnx_sha256": "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7",
+    "allowlist": [
+      {
+        "role": "source_onnx",
+        "relative_path": "private/onnx_export/best.onnx",
+        "nbytes": 10605721,
+        "sha256": "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7"
+      },
+      {
+        "role": "input",
+        "image_id": "00006",
+        "relative_path": "private/inputs/00006.bin",
+        "nbytes": 4915200,
+        "sha256": "08f705314f573ab4c1b944c060e2ee06a22982d4beae72542ee516f79ff85474"
+      },
+      {
+        "role": "source_native",
+        "image_id": "00006",
+        "relative_path": "private/native_reference/00006.bin",
+        "nbytes": 235200,
+        "sha256": "7a200d1f08c39205d8b9677166f58513e03cdd29bef71e27e21e99837bd50125"
+      },
+      {
+        "role": "source_onnx_output",
+        "image_id": "00006",
+        "relative_path": "private/onnx_reference/00006.bin",
+        "nbytes": 235200,
+        "sha256": "caf4c185a245bae48ca99608b9a4dc507d5e35ba05d5fdd554528f982820fea0"
+      },
+      {
+        "role": "input",
+        "image_id": "00009",
+        "relative_path": "private/inputs/00009.bin",
+        "nbytes": 4915200,
+        "sha256": "357c0cc87ea2b4bfa56c1eca53bd54f5970bc1ea67b660d293a8bc4a9f62a9f0"
+      },
+      {
+        "role": "source_native",
+        "image_id": "00009",
+        "relative_path": "private/native_reference/00009.bin",
+        "nbytes": 235200,
+        "sha256": "376ea9cf833fa7fc075ecaa64e09837a8cf718198a020b1c5da2c3f4e5c68176"
+      },
+      {
+        "role": "source_onnx_output",
+        "image_id": "00009",
+        "relative_path": "private/onnx_reference/00009.bin",
+        "nbytes": 235200,
+        "sha256": "32501b8a9b90e00ee78884aeac45fbecf7dbb4be2c01f6002022eb1954886647"
+      },
+      {
+        "role": "input",
+        "image_id": "00028",
+        "relative_path": "private/inputs/00028.bin",
+        "nbytes": 4915200,
+        "sha256": "7b89184eac3c948ba0305d904e2b1e7b48e96d80bb13d4724abb2062b6286f29"
+      },
+      {
+        "role": "source_native",
+        "image_id": "00028",
+        "relative_path": "private/native_reference/00028.bin",
+        "nbytes": 235200,
+        "sha256": "66b1b796880db75e115a8aad5e1fc57d5726b8acfd1cb6fabdd494e358e5cc82"
+      },
+      {
+        "role": "source_onnx_output",
+        "image_id": "00028",
+        "relative_path": "private/onnx_reference/00028.bin",
+        "nbytes": 235200,
+        "sha256": "2ac6d843cad615f45817ce50697d0e2b2cd1c13adfcb83c394cc0672cb1f5193"
+      }
+    ]
+  },
+  "builder": {
+    "workspace_bytes": 1073741824,
+    "fp16_enabled": true,
+    "output_dtype": "float32",
+    "timing_cache": "none",
+    "retries": 0
+  },
+  "execution": {
+    "device": "E2",
+    "enqueues": 3,
+    "warmup": 0,
+    "repeats": 0,
+    "latency_benchmark": false,
+    "energy_benchmark": false,
+    "input_policy": "exact frozen float32 input bytes; no E2 decode/preprocess",
+    "lifecycle": "owned child process per build and inference stage"
+  },
+  "comparisons": {
+    "source_strict": {
+      "source_compute_mode": "fp32_reference",
+      "target_compute_mode": "onnx_fp32",
+      "source_dtype": "float32",
+      "target_binding_dtype": "float32",
+      "tolerance_equation": "abs(reference-target) <= absolute + relative*abs(reference)",
+      "box_tolerance": {
+        "absolute": 1e-05,
+        "relative": 0.0001
+      },
+      "score_tolerance": {
+        "absolute": 1e-05,
+        "relative": 0.0001
+      },
+      "class_order": [
+        "prohibitory",
+        "mandatory",
+        "warning"
+      ],
+      "coordinate_convention": "xywh in pixels of the 640x640 letterboxed input; channel order x,y,w,h",
+      "comparison_stage": "native output0 before decode/NMS"
+    },
+    "target_diagnostic": {
+      "source_compute_mode": "fp32_reference",
+      "target_compute_mode": "fp16",
+      "source_dtype": "float32",
+      "target_binding_dtype": "float32",
+      "tolerance_equation": "abs(reference-target) <= absolute + relative*abs(reference)",
+      "box_tolerance": {
+        "absolute": 0.005,
+        "relative": 0.01
+      },
+      "score_tolerance": {
+        "absolute": 0.002,
+        "relative": 0.01
+      },
+      "class_order": [
+        "prohibitory",
+        "mandatory",
+        "warning"
+      ],
+      "coordinate_convention": "xywh in pixels of the 640x640 letterboxed input; channel order x,y,w,h",
+      "comparison_stage": "native output0 before decode/NMS"
+    },
+    "domains": [
+      "boxes",
+      "scores"
+    ],
+    "source_failure_preserved": true
+  },
+  "private_policy": "engine and full tensor outputs remain private; publish only JSON/text evidence"
+}

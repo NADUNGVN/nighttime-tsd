@@ -1735,3 +1735,82 @@ partials remain on E2. Public artifact hashes are: `failure.json`
 `index.json` `0a0b4e3d1342e11a87eb8dfc40fbfa18532a48a319665cb1ada24bd333dfd6a9`,
 `plan.json` `050e3e9b4408b12c0e503bdd1833ee9ea6bd165bf212d1ffb757667d25f19a5d`,
 and `run.log` `d8215558f3bfeadd117e42f22cdb7802263d3a62131825d7905369c96ac3a346`.
+
+### L1A-022 execution milestones — one instrumented E2 attempt completed (2026-09-22)
+
+**staged.** The local observability repair and CPU/mock regression were
+verified before staging: focused durable-log tests passed and the full edge
+regression was `108/108 PASS`. The executable package was built from canonical
+Git blobs of commit `f56c5262943df6c1d436adcc11d22422b47d89c0`; its seven-file
+code manifest was verified on E2 with SHA-256
+`89b91cf51aedfe83378feca2d5726a506a466d980e5c2733baaaf97486e80778`.
+The accepted source was rechecked against manifest
+`60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08` and ONNX
+`bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7`.
+
+**running.** The fresh E2 roots were `/tmp/luna1-e2l1-022-code` and
+`/tmp/luna1-e2l1-022-model-smoke`; attempt1 at
+`/tmp/luna1-e2l1-017-model-smoke` was not modified. The read-only identity
+gate remained `nx`/`arar-desktop`, `aarch64`, NVIDIA Jetson Xavier NX
+Developer Kit, TensorRT `8.5.2.2`, Python `3.8.10`. Exactly one foreground
+attempt was dispatched with one FP16 builder, `1073741824` workspace bytes,
+build ceiling `3600s`, inference ceiling `180s`, zero warmup/retry/benchmark,
+and ordered fixtures `00006`, `00009`, `00028`. No third attempt or benchmark
+was run.
+
+**artifact_audited.** Attempt2 parsed and built successfully, loaded the
+engine, and completed all three ordered enqueues and synchronized output
+copies. Counters were parse `1/1`, build `1/1`, engine load `1/1`, enqueues
+`3/3` with synchronization `3/3`, output copies `3/3` with synchronization
+`3/3`, and comparisons `3/3`; no unknown completions remained. The private
+engine is 7,158,097 bytes, SHA-256
+`581a9ea2eafdae690f25f57ab88ba1bcffdafa99e5322ea50ee43678520e7f56`.
+The build event window was approximately 16m35s and the inference event
+window approximately 13.3s; these are stage wall times, not benchmark or
+inference-latency claims. Durable evidence hashes are:
+
+| Evidence | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `private/engine/build_events.jsonl` | 100950 | `93074ef910d64cbcdba864807f14ae8a356ce65517c9744cc9ccc1927ffbf2f2` |
+| `private/engine/build_stdout.log` | 24143 | `494d324db36d900857824e4831396f55844bcab5bbd5244e8865a1f757eb285d` |
+| `private/inference_events.jsonl` | 15232 | `28dfdb6814f57498584a1d409b5de81d2c79af4e7fbbe2faa39b14000c8a5dc1` |
+| `private/inference_result.json` | 1296 | `c5e019fbba9b3907e141666dae77875fc2cbf530dfc920027c10f4e4a570c00d` |
+
+The build log contains TensorRT warnings about tactics requiring more than
+the available workspace and FP16 subnormal weights; these are observed log
+facts, not a causal diagnosis. A post-run read-only snapshot found no matching
+smoke process, `MODE_20W_6CORE` (index 8), about 4.7 GiB available memory,
+3.3 GiB unused swap, and 93 GiB free on `/tmp`. The snapshot is not evidence
+of resource conditions throughout the build. No binary engine or raw target
+tensor was published to Git.
+
+The public handoff is
+`results/edge_readiness_v1/e2l1-022-model-smoke-public/` with five JSON/text
+files. Their local hashes are: `manifest.json`
+`29954570c5b1f44af928e283ce2ab89885c224b165ab85b4f69de6d5ae6a4e74`,
+`plan.json` `85cae7fea27e7dce65bb9ef39292db0dc62cab14920c24221b3dfeb15843b19e`,
+`index.json` `d1c99f0f3bba11461bc2e3f1390116a1a4d10f688d8159599ef96a583e0d9cd7`,
+`report.md` `b010475ec19ae2846a332ac22fffc0e5143c08d81b6522cc6b43c7e405249990`,
+and `run.log`
+`832cfaaf3e189a599cdefee109a4f7a92c9210a0db1c768ca82fcb6378a94f78`.
+
+**Comparison and interpretation.** The source/export discrepancy is kept
+separate from target comparison: source native versus source ONNX passed for
+`00006` and `00009`, while `00028` retained the known single box mismatch.
+TensorRT versus source ONNX/native both failed for every target fixture:
+
+| Fixture | TRT vs ONNX mismatches / max abs | TRT vs native mismatches / max abs | Target output SHA-256 |
+| --- | ---: | ---: | --- |
+| `00006` | 965 / 4.2297821045 | 966 / 4.2314453125 | `d22fdb65d0affaae165c527c2f7d067e989911ae3f42391ada6387aed596bd9e` |
+| `00009` | 1226 / 1.3426208496 | 1226 / 1.3427810669 | `d67bba2dbcc840a09f3eca943352f653f15160caefb3ff6d7c350236d7837320` |
+| `00028` | 564 / 0.9544372559 | 564 / 0.9544982910 | `cab60f96c43af4835493d90b73052334e121b2b285be41216a088c73347b9a3c` |
+
+The terminal result is therefore
+`edge_smoke_completed_review_required`, specifically
+`execution_complete_target_mismatch`. This establishes a real FP16 TensorRT
+build/load/copy path and a reproducible target discrepancy; it does not
+establish accuracy, latency, energy, deployment readiness, or a root cause.
+The next bounded scientific decision is to review the FP16 target/reference
+contract and the recorded workspace/tactic warnings, then define an explicit
+FP16-aware acceptance diagnostic before any future edge run; no tolerance was
+relaxed and no rerun was made here.
