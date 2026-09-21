@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "study": "precision_head_confirmation_v1",
+  "execution_contract": "precision_head_confirmation_execution_v1",
+  "status": "implementation_complete_integrated_review_required",
+  "accepted_readiness_config": {
+    "path": "configs/precision_head_confirmation_v1.json",
+    "sha256_git_blob_content": "2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8",
+    "canonical_input_commit": "53f12554761c80f367876756b4371a7729891d44",
+    "canonical_dev_reference_commit": "5eb7ec36da7eed1701f6383b9db37ca3cfe31186"
+  },
+  "models": {
+    "yolov8n": {
+      "checkpoint": "results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt",
+      "checkpoint_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+      "onnx": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx",
+      "onnx_sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603",
+      "mapping_sha256": "378d82b8753ba2cb326c488c176ab1f64c885ff0a681f2ab96f61b368a0b74bb",
+      "head_index": 22,
+      "active_branches": {"bbox": "cv2", "classification": "cv3"},
+      "output_shape": [1, 7, 8400],
+      "postprocess": "locked_v8_decoded_output_then_nms"
+    },
+    "yolo26n": {
+      "checkpoint": "results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt",
+      "checkpoint_sha256": "2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e",
+      "onnx": "results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx",
+      "onnx_sha256": "1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc",
+      "mapping_sha256": "8c80477e4e90053c849947cebfda771c3b1b59d348057c830e8faf8ef2661c2d",
+      "head_index": 23,
+      "active_branches": {"bbox": "one2one_cv2", "classification": "one2one_cv3"},
+      "inactive_branches": ["cv2", "cv3"],
+      "output_shape": [1, 300, 6],
+      "postprocess": "locked_v26_end2end_topk_no_second_nms"
+    }
+  },
+  "calibration": {
+    "selections": ["U42", "U43", "U44"],
+    "requested_size": 1024,
+    "train_only": true,
+    "algorithm": "MinMax",
+    "producer": "scripts/uniform_build_repeat.py::prepare_calibration",
+    "cache_scope": "one_read_only_cache_per_model_selection",
+    "scored_batches": 0,
+    "scored_writes": 0,
+    "cache_cross_model_reuse": false
+  },
+  "runtime": {
+    "imgsz": 640,
+    "batch": 1,
+    "conf": 0.001,
+    "iou": 0.7,
+    "max_det": 300,
+    "workers": 0,
+    "workspace_gib": 4,
+    "optimization_level": 3,
+    "avg_timing_iterations": 1,
+    "tf32": false,
+    "precision_constraint": "OBEY",
+    "fresh_timing_cache_per_build": true,
+    "torch": "2.5.1+cu121",
+    "ultralytics": "8.4.102",
+    "tensorrt": "10.16.1.11",
+    "cuda": "12.1"
+  },
+  "schedule": {
+    "auxiliary_cache_builds": 6,
+    "scored_int8_builds": 72,
+    "scored_fp16_builds": 6,
+    "total_builder_invocations": 84,
+    "captures": 78,
+    "round_shifts": [0, 4, 8],
+    "rounds_per_model": 3,
+    "model_order": ["yolov8n", "yolo26n"],
+    "no_best_build_selection": true,
+    "no_retry_or_replacement": true
+  },
+  "analysis": {
+    "dev_images": 1636,
+    "dev_instances": 2706,
+    "endpoints": ["full", "XS", "S"],
+    "primary_contrast": "both_fp32_minus_baseline_int8_full_ap50_95",
+    "bootstrap": {"generator": "PCG64", "seed": 20260916, "draws": 1000, "shared_image_resampling": true},
+    "within_selection_sd": "sample_sd_ddof1_across_three_builds",
+    "between_selection_sd": "sample_sd_ddof1_across_three_selection_means",
+    "no_fp16_noninferiority_margin": true
+  },
+  "paths": {
+    "output_root": "results/measurement_audit_v1/server_precision_head_confirmation_v1",
+    "private_root": "results/measurement_audit_v1/server_precision_head_confirmation_v1/private",
+    "analysis_root": "results/measurement_audit_v1/server_precision_head_confirmation_analysis_v1",
+    "no_overwrite": true
+  }
+}

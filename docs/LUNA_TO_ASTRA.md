@@ -3079,3 +3079,71 @@ không thay thế và không làm sạch các strict `FAIL` trước đó; khôn
 native/ONNX equivalence, INT8/calibration validity, benchmark, latency,
 deployment superiority hoặc GPU isolation. Không được tự rerun hay mở matrix;
 chờ Astra review tiếp theo.
+## L2A-053 — ST-SERVER-01 integrated implementation packet
+
+2026-09-22. Đã đọc A2L-045 và toàn bộ `docs/SUPERTASK_SERVER_CONFIRMATION_V1.md`.
+
+### Milestones
+
+- **M1 — contract/schedule:** đã triển khai execution contract v1 và pure-CPU
+  contract module. Schedule được khóa thành 6 auxiliary cache builders + 72
+  scored INT8 + 6 scored FP16 = **84 builders**, **78 captures**, hai block
+  model liên tục, 13 cells/round, rotation 0/4/8. Validator bắt duplicate,
+  thiếu cell, sai count, sai model block và sai rotation.
+- **M2 — architecture/provenance:** v8 chỉ nhận `cv2/cv3` active mapping;
+  v26 chỉ nhận `one2one_cv2/one2one_cv3`, loại inactive `cv2/cv3`. Mapping
+  không verified, target trùng/non-convolution hoặc hash checkpoint/ONNX/
+  mapping sai đều fail closed. v8/v26 output/postprocess contracts được ghi
+  riêng; không second NMS cho v26.
+- **M3 — orchestration boundary:** parent runner không import CUDA/TensorRT;
+  output plan/schedule dùng atomic write, fresh-root/no-resume/no-retry
+  contract và chỉ cho phép server phase sau integrated GO token. Private
+  engine/cache/tensor không nằm trong publication allowlist.
+- **M4 — analysis/docs:** đã thêm CPU analyzer với complete-cell audit,
+  sample SD ddof=1, PCG64 seed 20260916/1000 shared-image bootstrap khi
+  paired per-image deltas có mặt; thêm execution protocol, operator runbook
+  và manuscript Methods/Results/Limitations template.
+
+### Implementation packet
+
+Files mới trong packet:
+
+- `configs/precision_head_confirmation_execution_v1.json`
+- `scripts/precision_head_confirmation_contract.py`
+- `scripts/run_precision_head_confirmation.py`
+- `scripts/analyze_precision_head_confirmation.py`
+- `tests/test_precision_head_confirmation_super.py`
+- `docs/PRECISION_HEAD_CONFIRMATION_EXECUTION_V1.md`
+- `docs/SUPERTASK_SERVER_CONFIRMATION_RUNBOOK_V1.md`
+- `docs/PRECISION_HEAD_CONFIRMATION_MANUSCRIPT_V1.md`
+- file này và `docs/SUPERTASK_SERVER_CONFIRMATION_V1.md` được publish giữ
+  nguyên nội dung Astra đã giao.
+
+### Tests and limitations
+
+- `python -m unittest tests/test_precision_head_confirmation_super.py -v`:
+  **6 PASS, 1 SKIP**; skip chỉ vì local Windows measurement environment
+  không có NumPy, nên không giả lập PCG64 bằng RNG khác.
+- `python -m py_compile` cho ba script mới và test: **PASS**.
+- Regression targeted suite: TensorRT feasibility **30/30 PASS**; các test
+  graph/readiness cũ còn 5 FAIL và 2 ERROR/2 SKIP do checkout local thiếu
+  NumPy/ONNX/Ultralytics và raw dev/calibration fixtures; đây là giới hạn
+  môi trường, không được gọi là verified. Những lỗi cũ không phát sinh từ
+  file mới và không được che giấu.
+- `git diff --check`: **PASS**. Không chạy TensorRT/CUDA/build/benchmark/GPU
+  local; không export/build/checkpoint mới.
+- Local plan invocation bị chặn đúng vì accepted ONNX private artifact chưa
+  có trong checkout; server preflight sẽ kiểm hash artifact thật. Không tự
+  tạo binary thay thế.
+
+### Gate and next action
+
+Trạng thái bàn giao là **`implementation_complete_integrated_review_required`**.
+84 builder invocations/78 captures **chưa được phép chạy** chỉ dựa trên
+feasibility smoke cũ. Astra cần review một packet tích hợp: contract hashes,
+schedule/accounting, parent/child boundary, mapping/output semantics, cache
+isolation, state/lifecycle, analysis assumptions và runbook. Sau integrated GO,
+operator mới pull full SHA, snapshot server, chạy foreground theo runbook;
+Luna sẽ audit đủ cell/artifact, phân tích CPU và cập nhật bảng Methods/Results/
+Limitations trong cùng milestone, không tự chọn build tốt nhất và không mở
+B/C/15-model matrix.
