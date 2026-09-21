@@ -1652,6 +1652,45 @@ and source packages to fresh E2 paths, recheck their hashes, and use the
 existing E2L1-017 conditional authorization for exactly one FP16/1 GiB build
 and three ordered inferences. No new approval is needed for that continuation.
 
+## L1A-021 — read-only audit of consumed E2 build timeout
+
+**Status:** Diagnosis complete; no second build or inference was run. A single
+read-only audit inspected the unchanged owned run
+`/tmp/luna1-e2l1-017-model-smoke` on E2 at UTC
+`2026-09-21T16:12:52.169931+00:00`.
+
+Observed: no matching old-run process remained; the engine path and
+`build_result.json` were absent; and no engine was deserialized. The retained
+`build_events.jsonl` is 1,997 bytes with SHA-256
+`1b2bad411c45b001086ccfcffd462d811fd85575f3ac9121994622a38accff81`. It
+records parse 1/1, build 1/0, engine load/enqueue/copy/compare 0/0, TERM sent,
+KILL not sent, child return code `-15`, and confirmed termination. Attempt-time
+timestamps were unavailable; file mtimes are artifact-write times only.
+
+The current snapshot showed 4,928,136 kB available RAM, 3,509,072 kB free
+swap, approximately 99.4 GB free on `/tmp`, and load average `0.29 0.11
+0.03`. `nvpmodel -q` reported `MODE_20W_6CORE` (index 8) without changing
+state; its read-only query also reported permission errors for some EMC/VDDIN
+limit paths. A bounded 10-second `tegrastats` sample showed no current GPU
+activity and temperatures around 30 C. These are current observations, not
+reconstructed build-time conditions. `journalctl -k` exposed recent/current
+throttle-device lines and `NVRM: No NVIDIA GPU found`, but no timestamp linkage
+to the build; `dmesg` was unavailable due to permission denial.
+
+Evidence does not establish whether the 900s deadline was insufficient, the
+runtime/driver stalled, or a resource condition occurred during the build. No
+OOM, thermal failure, or workspace insufficiency is claimed. The full public
+diagnostic is at
+`results/edge_readiness_v1/e2l1-021-timeout-diagnostic/`; binary/tensor bytes
+were not published and the old private run was left unchanged.
+
+**Recommendation:** because no completed engine or actionable error exists,
+propose (not authorize) one future fresh-root diagnostic with unchanged
+source/runtime/FP16/1 GiB/input contract, durable builder logs, and candidate
+build ceiling `3600s`. It must be separately reviewed, counted alongside the
+consumed attempt, and must never resume or overwrite the old root. E2L1-021
+does not run it.
+
 ### L1A-020 execution addendum — one E2 smoke consumed by build timeout (2026-09-21)
 
 The bounded read-only E2 gate passed: `arar-desktop`, `aarch64`, NVIDIA Jetson

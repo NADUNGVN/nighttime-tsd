@@ -1,0 +1,114 @@
+{
+  "schema_version": "e2l1-timeout-diagnostic-v1",
+  "collected_utc": "2026-09-21T16:12:52.169931+00:00",
+  "target": "E2",
+  "run_root": "/tmp/luna1-e2l1-017-model-smoke",
+  "scope": "read_only_existing_attempt",
+  "attempt_timestamps": {
+    "available": false,
+    "reason": "retained events contain no timestamps; file mtimes are artifact-write times only"
+  },
+  "processes": {
+    "matching_owned_processes": [],
+    "note": "No process matching the exact run path, e2_model_smoke.py or child-stage remained at collection time. This is a current snapshot, not proof about the timeout moment."
+  },
+  "engine": {
+    "path": "/tmp/luna1-e2l1-017-model-smoke/private/engine/e2_yolo11n_fp16.engine",
+    "state": "absent",
+    "deserialized": false,
+    "note": "No partial or completed engine was available to hash or inspect."
+  },
+  "retained_files": [
+    {
+      "path": "private/engine/build_events.jsonl",
+      "bytes": 1997,
+      "mtime_utc": "2026-09-21T11:06:51.922942+00:00",
+      "sha256": "1b2bad411c45b001086ccfcffd462d811fd85575f3ac9121994622a38accff81"
+    },
+    {
+      "path": "public/failure.json",
+      "bytes": 15770,
+      "mtime_utc": "2026-09-21T11:06:52.078945+00:00",
+      "sha256": "9962a13e6c1b336fabca8267b8e9a1ed5ead0c1c3350e2a6a5fa9664244ab3ed"
+    },
+    {
+      "path": "public/index.json",
+      "bytes": 172,
+      "mtime_utc": "2026-09-21T11:06:52.078945+00:00",
+      "sha256": "0a0b4e3d1342e11a87eb8dfc40fbfa18532a48a319665cb1ada24bd333dfd6a9"
+    },
+    {
+      "path": "public/plan.json",
+      "bytes": 6307,
+      "mtime_utc": "2026-09-21T10:51:48.873524+00:00",
+      "sha256": "050e3e9b4408b12c0e503bdd1833ee9ea6bd165bf212d1ffb757667d25f19a5d"
+    },
+    {
+      "path": "public/run.log",
+      "bytes": 34,
+      "mtime_utc": "2026-09-21T11:06:52.078945+00:00",
+      "sha256": "d8215558f3bfeadd117e42f22cdb7802263d3a62131825d7905369c96ac3a346"
+    }
+  ],
+  "event_observations": {
+    "parse_attempted": 1,
+    "parse_completed": 1,
+    "build_attempted": 1,
+    "build_completed": 0,
+    "engine_load_attempted": 0,
+    "enqueues_attempted": 0,
+    "output_copies_attempted": 0,
+    "comparisons_attempted": 0,
+    "timeout_stage": "build",
+    "timeout_seconds": 900.0,
+    "term_signal_dispatched": true,
+    "kill_signal_dispatched": false,
+    "returncode": -15,
+    "termination_confirmed": true,
+    "execution_state": "unknown",
+    "build_completion": "unknown"
+  },
+  "resources_current_snapshot": {
+    "hostname": "arar-desktop",
+    "architecture": "aarch64",
+    "loadavg": "0.29 0.11 0.03 1/539 15844",
+    "mem_total_kb": 7018712,
+    "mem_available_kb": 4928136,
+    "swap_total_kb": 3509328,
+    "swap_free_kb": 3509072,
+    "tmp_total_bytes": 124984098816,
+    "tmp_used_bytes": 20288589824,
+    "tmp_free_bytes": 99425181696
+  },
+  "power_mode": {
+    "query": "nvpmodel -q",
+    "returncode": 0,
+    "stdout_summary": "NV Power Mode: MODE_20W_6CORE; mode index 8",
+    "stderr_summary": "read-only query reported permission errors for EMC cap and VDDIN limit paths"
+  },
+  "tegrastats_current_snapshot": {
+    "bounded_seconds": 10,
+    "available": true,
+    "observed_summary": "RAM 1867/6854MB, SWAP 0/3427MB, CPU mostly 0%, GR3D_FREQ 0%; temperatures approximately AUX 29.5-30C, CPU 30-30.5C, thermal 30-30.3C, GPU 30-30.5C, PMIC 50C",
+    "interpretation": "current resource evidence only; not a reconstruction of build-time conditions"
+  },
+  "kernel_log_evidence": {
+    "journalctl": {
+      "keyword_matches": [
+        "cpu-throttle-alert cooling device registered",
+        "gpu-throttle-alert cooling device registered",
+        "aux-throttle-alert cooling device registered",
+        "NVRM: No NVIDIA GPU found"
+      ],
+      "interpretation": "current/recent log snapshot with no timestamp alignment to the build attempt; not proof of an attempt-time error"
+    },
+    "dmesg": {
+      "available": false,
+      "reason": "permission denied reading kernel buffer"
+    }
+  },
+  "privacy": {
+    "binary_or_tensor_bytes_published": false,
+    "private_run_root_left_unchanged": true
+  }
+}
