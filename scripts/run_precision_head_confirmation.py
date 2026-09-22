@@ -80,14 +80,18 @@ def validate_files(repo: Path, contract: dict[str, Any]) -> dict[str, Any]:
             actual = sha256_file(path)
             if actual != spec[f"{key}_sha256"]:
                 raise ContractError(f"{model} {key} hash differs: {actual}")
-            evidence[f"{model}.{key}"] = {"path": spec[key], "sha256": actual, "bytes": path.stat().st_size}
+            evidence.setdefault(model, {})[key] = {"path": spec[key], "sha256": actual, "bytes": path.stat().st_size}
         graph_path = repo / GRAPH_ROOT / "models" / model / "graph_audit.json"
         graph = read_json(graph_path)
         targets = mapping_targets(graph, model)
         expected_hash = spec["mapping_sha256"]
         if targets["mapping_hash"] != expected_hash:
             raise ContractError(f"{model} mapping hash differs")
-        evidence[f"{model}.mapping"] = {"path": relative(repo, graph_path), "sha256": expected_hash, "targets": targets}
+        evidence[model]["mapping"] = {"path": relative(repo, graph_path), "sha256": expected_hash, "targets": targets}
+        evidence[model]["output_shape"] = spec["output_shape"]
+        evidence[model]["postprocess"] = spec["postprocess"]
+        evidence[model]["head_index"] = spec["head_index"]
+        evidence[model]["active_branches"] = spec["active_branches"]
     return evidence
 
 
@@ -117,6 +121,8 @@ def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH
         "graph_audit_root": relative(repo, repo / GRAPH_ROOT),
         "prepare_root": relative(repo, repo / PREP_ROOT),
         "models": evidence,
+        "runtime": contract["runtime"],
+        "dataset": {"dev_images": contract["analysis"]["dev_images"], "dev_instances": contract["analysis"]["dev_instances"], "xml_path": "data/raw/CCTSDB2021/xml.zip"},
         "schedule": {"sha256": canonical_json_sha256(jobs), "jobs": jobs},
         "accounting": {"auxiliary_cache_builds": 6, "scored_int8_builds": 72, "scored_fp16_builds": 6, "total_builder_invocations": 84, "captures": 78, "dev_image_model_passes": 127608},
         "execution_boundary": {"parent_imports_cuda": False, "parent_imports_tensorrt": False, "server_children_only": True, "go_required": True, "no_resume": True, "no_retry_or_replacement": True},

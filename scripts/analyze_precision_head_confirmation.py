@@ -36,17 +36,29 @@ def _job_key(job: dict[str, Any]) -> str:
     return f"{job['sequence']:03d}_{job['model']}_{job['phase']}_{job['selection'] or 'NA'}_{job['arm']}_r{job['repeat'] or 0}"
 
 
-def _cell_files(root: Path) -> tuple[list[dict[str, Any]], dict[tuple[int, str, int, str, str], dict[str, Any]]]:
+def _cell_files(root: Path, plan: dict[str, Any] | None = None) -> tuple[list[dict[str, Any]], dict[tuple[int, str, int, str, str], dict[str, Any]]]:
     manifest_path = root / "execution_manifest.json"
     if not manifest_path.is_file():
         raise ContractError("execution manifest is missing")
     manifest = read(manifest_path)
+    plan = plan or read(root / "confirmation_plan.json")
     if manifest.get("status") != "completed_review_required":
         raise ContractError(f"execution is not complete: {manifest.get('status')}")
-    if len(manifest.get("jobs", [])) != 84 or any(item.get("state", {}).get("status") != "completed" for item in manifest["jobs"]):
+    expected_all = build_schedule()
+    manifest_jobs = manifest.get("jobs", [])
+    if len(manifest_jobs) != 84 or any(item.get("exit_code") != 0 or item.get("state", {}).get("status") != "completed" for item in manifest_jobs):
         raise ContractError("execution manifest does not contain 84 completed child states")
+    observed_all = [item.get("job") for item in manifest_jobs]
+    if observed_all != expected_all or any(item.get("state", {}).get("job") != item.get("job") for item in manifest_jobs):
+        raise ContractError("execution manifest job order or child identity differs from canonical schedule")
     plan_sha256 = hashlib.sha256((root / "confirmation_plan.json").read_bytes()).hexdigest()
     expected = [row for row in build_schedule() if row["capture_required"]]
+    schedule = read(root / "schedule.json")
+    validate_schedule(schedule.get("jobs", []))
+    if schedule.get("sha256") != hashlib.sha256(json.dumps(schedule["jobs"], ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()).hexdigest():
+        raise ContractError("schedule content hash is invalid")
+    if schedule.get("jobs") != plan.get("schedule", {}).get("jobs") or schedule.get("sha256") != plan.get("schedule", {}).get("sha256"):
+        raise ContractError("plan/schedule content binding differs")
     expected_keys = {(row["sequence"], row["model"], row["round"], row["selection"], row["arm"]): row for row in expected}
     cells: dict[tuple[int, str, int, str, str], dict[str, Any]] = {}
     for path in sorted(root.glob("jobs/*/cell_metrics.json")):
@@ -60,7 +72,9 @@ def _cell_files(root: Path) -> tuple[list[dict[str, Any]], dict[tuple[int, str, 
         if row.get("plan_sha256") != plan_sha256:
             raise ContractError(f"cell plan provenance mismatch: {path}")
         model_spec = plan.get("models", {}).get(job.get("model"), {})
-        if row.get("checkpoint_sha256") != model_spec.get("checkpoint", {}).get("sha256") or row.get("onnx_sha256") != model_spec.get("onnx", {}).get("sha256"):
+        expected_checkpoint = model_spec.get("checkpoint", {}).get("sha256")
+        expected_onnx = model_spec.get("onnx", {}).get("sha256")
+        if not expected_checkpoint or not expected_onnx or row.get("checkpoint_sha256") != expected_checkpoint or row.get("onnx_sha256") != expected_onnx:
             raise ContractError(f"cell model provenance mismatch: {path}")
         if row.get("record_count") != 1636:
             raise ContractError(f"cell record count mismatch: {path}")
@@ -68,6 +82,15 @@ def _cell_files(root: Path) -> tuple[list[dict[str, Any]], dict[tuple[int, str, 
         if row.get("prediction_sha256") != actual_prediction_sha256:
             raise ContractError(f"prediction hash mismatch: {prediction_path}")
         row["_path"], row["_prediction_path"] = path, prediction_path
+        payload = read(prediction_path)
+        if payload.get("schema_version") != 2 or payload.get("capture_mode") != "same_val_process_batch":
+            raise ContractError(f"capture schema mismatch: {prediction_path}")
+        if payload.get("model_sha256") != row.get("engine_sha256"):
+            raise ContractError(f"capture engine identity mismatch: {prediction_path}")
+        if len(payload.get("iou_thresholds", [])) != 10:
+            raise ContractError(f"capture IoU thresholds missing: {prediction_path}")
+        if row.get("native_matching", {}).get("status") != "pass" or row.get("xml_validation", {}).get("instances") != 2706:
+            raise ContractError(f"cell native/XML validation is incomplete: {path}")
         cells[key] = row
     if set(cells) != set(expected_keys): raise ContractError(f"scored coverage differs: expected={len(expected_keys)} observed={len(cells)}")
     return expected, cells
@@ -90,6 +113,24 @@ def _json_safe(value: Any) -> Any:
     if isinstance(value, list):
         return [_json_safe(item) for item in value]
     return value
+
+
+def _point_rows(points: dict[tuple[str, str, str], dict[str, float]], points_repeat: dict[tuple[str, str, str, int], dict[str, float]]) -> list[dict[str, Any]]:
+    rows = []
+    for (model, selection, arm), point in sorted(points.items()):
+        for repeat in (1, 2, 3):
+            rows.append({"model": model, "selection": selection, "arm": arm, "repeat": repeat, "metrics": points_repeat[(model, selection, arm, repeat)]})
+        rows.append({"model": model, "selection": selection, "arm": arm, "repeat": "mean", "metrics": point})
+    return rows
+
+
+def _fp16_rows(fp16_point: dict[str, dict[str, float]], fp16_repeat: dict[tuple[str, str, str, int], dict[str, float]]) -> list[dict[str, Any]]:
+    rows = []
+    for model in sorted(fp16_point):
+        for repeat in (1, 2, 3):
+            rows.append({"model": model, "arm": "fp16", "repeat": repeat, "metrics": fp16_repeat[(model, None, "fp16", repeat)]})
+        rows.append({"model": model, "arm": "fp16", "repeat": "mean", "metrics": fp16_point[model]})
+    return rows
 
 
 def _contrast(points: dict[tuple[str, str, str], dict[str, float]], draws: dict[tuple[str, str, str], list[dict[str, float]]], model: str) -> dict[str, Any]:
@@ -142,7 +183,7 @@ def analyze(root: Path, out_dir: Path, xml_path: Path) -> dict[str, Any]:
         from verify_cctsdb_capture import coco_size
     except ImportError as exc:
         raise RuntimeError("analysis requires numpy, pycocotools, torch and ultralytics") from exc
-    expected, cells = _cell_files(root)
+    expected, cells = _cell_files(root, plan)
     xml_cache: dict[str, Any] = {}
     points_repeat: dict[tuple[str, str, str, int], dict[str, float]] = {}
     evaluators: dict[tuple[str, str, str, int], Any] = {}
@@ -150,6 +191,11 @@ def analyze(root: Path, out_dir: Path, xml_path: Path) -> dict[str, Any]:
         _, model, repeat, selection, arm = key
         payload = read(cell["_prediction_path"]); records = load_records(payload)
         if len(records) != 1636: raise ContractError(f"capture image count differs for {key}")
+        try:
+            from verify_cctsdb_capture import validate_capture
+            validate_capture(payload)
+        except (ValueError, KeyError, TypeError) as exc:
+            raise ContractError(f"same-pass capture validation failed for {key}: {exc}") from exc
         if not xml_cache: xml_cache.update(load_xml(xml_path, records))
         _, evaluator = coco_size(list(records.values()), xml_cache, return_evaluator=True)
         points_repeat[(model, selection, arm, int(repeat))] = _endpoint_values(ap_values(evaluator))
@@ -182,7 +228,10 @@ def analyze(root: Path, out_dir: Path, xml_path: Path) -> dict[str, Any]:
                 for metric in METRICS:
                     values = [points[(model, selection, arm)][endpoint + "." + metric] for selection in ("U42", "U43", "U44")]
                     variation.append({"model": model, "selection": "between_selection_means", "arm": arm, "endpoint": endpoint, "metric": metric, "between_selection_mean_sd_ddof1": sample_sd(values)})
-    summary = {"schema_version": 2, "study": "precision_head_confirmation_analysis_v1", "status": "completed_descriptive_analysis", "estimator_id": "coco_xml_paired_image_bootstrap_v1", "schedule_sha256": schedule["sha256"], "plan_sha256": hashlib.sha256((root / "confirmation_plan.json").read_bytes()).hexdigest(), "images": 1636, "xml_sha256": hashlib.sha256(xml_path.read_bytes()).hexdigest(), "bootstrap": {"generator": "PCG64", "seed": 20260916, "draws": 1000, "shared_image_resampling": True, "duplicates_preserved": True}, "points": points, "fp16_points": fp16_point, "contrasts": {model: _contrast(points, draws, model) for model in ("yolov8n", "yolo26n")}, "fp16_contrasts": {model: _fp16_contrasts(points, draws, model, fp16_point[model], fp16_draw[model]) for model in ("yolov8n", "yolo26n")}, "variation": variation, "limitations": ["AP is pooled from detection-level COCO/XML evaluator records; no per-image AP averaging.", "FP16 controls are three model-level repeats, not nine calibration samples.", "No best-build selection or post-hoc success threshold."]}
+    contrast_tables = {model: _contrast(points, draws, model) for model in ("yolov8n", "yolo26n")}
+    fp16_contrast_tables = {model: _fp16_contrasts(points, draws, model, fp16_point[model], fp16_draw[model]) for model in ("yolov8n", "yolo26n")}
+    sample_plan_bytes = json.dumps(indices, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    summary = {"schema_version": 2, "study": "precision_head_confirmation_analysis_v1", "status": "completed_descriptive_analysis", "estimator_id": "coco_xml_paired_image_bootstrap_v1", "schedule_sha256": schedule["sha256"], "plan_sha256": hashlib.sha256((root / "confirmation_plan.json").read_bytes()).hexdigest(), "images": 1636, "instances": 2706, "xml_sha256": hashlib.sha256(xml_path.read_bytes()).hexdigest(), "bootstrap": {"generator": "PCG64", "seed": 20260916, "draws": 1000, "shared_image_resampling": True, "duplicates_preserved": True, "sample_plan_sha256": hashlib.sha256(sample_plan_bytes).hexdigest()}, "all_cell_points": _point_rows(points, points_repeat), "fp16_points": _fp16_rows(fp16_point, points_repeat), "contrasts": contrast_tables, "fp16_contrasts": fp16_contrast_tables, "variation": variation, "limitations": ["AP is pooled from detection-level COCO/XML evaluator records; no per-image AP averaging.", "FP16 controls are three model-level repeats, not nine calibration samples.", "No best-build selection or post-hoc success threshold."]}
     out_dir.mkdir(parents=True)
     safe_summary = _json_safe(summary)
     (out_dir / "analysis_summary.json").write_text(json.dumps(safe_summary, indent=2, allow_nan=False) + "\n", encoding="utf-8", newline="\n")

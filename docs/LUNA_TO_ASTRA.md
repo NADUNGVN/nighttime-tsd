@@ -3208,3 +3208,80 @@ contract, parent/child runner, analyzer, supertests, runbook, manuscript
 template and `docs/ST_SERVER_01_INTEGRATED_REVIEW_R1.md`. The dirty checkpoint
 `results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt` remains untouched and is
 not part of the packet.
+
+## L2A-053 R2 — consolidated integrated-review remediation packet
+
+2026-09-22. Implemented A2L-047/R2 as one local-only packet. The original
+scientific design, frozen weights/ONNX identities, 84-builder/78-capture
+budget, endpoints, tolerances and no-server boundary are unchanged. No GPU,
+CUDA forward, TensorRT build, export, benchmark or server command was run.
+
+### Closure mapping
+
+- **R2.1 producer/consumer schema:** `mapping_targets` now consumes the nested
+  `mapping.mapping_hash`; `validate_files` emits the nested model evidence
+  consumed by the child and analyzer; the schedule delegates to the accepted
+  readiness producer; child state is created before runtime import; FP16 is an
+  explicit no-target arm with separate phase validation. Tests assert the
+  nested mapping hash and FP16 behavior.
+- **R2.2 calibration/cache identity:** the server child binds the producer's
+  verified materialized YAML and manifest order instead of reconstructing a
+  directory. Auxiliary calibration records ordered image IDs, tensor sequence
+  hash, shape/dtype, manifest/YAML hashes and exact 1,024-batch accounting.
+  Scored INT8 is cache-only with immutable before/after bytes, read counters
+  and zero supplied batches/writes. Each build publishes fresh timing-cache
+  input/output hashes and requested/effective target inspector evidence.
+- **R2.3 capture accounting:** the real child uses an explicit no-warmup
+  backend wrapper, counts backend calls and synchronizations, validates schema
+  2 capture payloads, replays native statistics, rematches native TP decisions,
+  and checks the XML membership/2,706-instance contract. The payload includes
+  capture mode and IoU thresholds. The local integrated fixture uses an
+  external boundary double and therefore does not claim TensorRT execution.
+- **R2.4 lifecycle/telemetry:** state records attempted/completed builder,
+  capture, forward and synchronization counters; cleanup/release is distinct
+  from synchronization; failures and timeout/unknown completion remain
+  fail-closed. Telemetry is sampled before build, after build, after capture
+  and at finalization. Competing background compute is rejected for this
+  confirmation study; desktop exceptions remain explicit. Parent validates
+  child identity, counters, cleanup and same-study GPU identity before
+  dispatching the next job.
+- **R2.5 analysis:** `_cell_files` now binds the plan/schedule and exact ordered
+  84-job manifest, rejects missing/duplicate/nonzero/provenance-invalid cells,
+  validates native/XML evidence, and the success path produces explicit
+  all-cell, FP16, contrast and variation tables. Pooled COCO/XML AP, shared
+  PCG64 image resampling, valid/undefined draw accounting and a reproducible
+  sample-plan hash are serialized; tuple-key stringification is not used as
+  the publication schema.
+- **R2.6 runbook/integration:** the runbook no longer claims unsupported
+  two-host partitioning. The CPU fixture executes the real parent/child
+  dispatch, state persistence, capture artifact publication and analyzer over
+  all 84/78 identities, with external doubles at the runtime/evaluator
+  boundary. It is explicitly labeled synthetic boundary evidence, not
+  TensorRT or frozen-forward evidence.
+
+### Actual local verification
+
+Using the dependency-rich local interpreter
+`D:/Research/paper/local/measurement_audit_env/Scripts/python.exe`:
+
+- `python -m unittest discover -s tests -p test_precision_head_confirmation_super.py -v`:
+  **15/15 PASS, zero skips**. This includes the complete 84-child/78-capture
+  boundary fixture and successful CPU analyzer path with production-shaped
+  artifacts; it does not import TensorRT or run a frozen forward.
+- `python -m unittest discover -s tests -p test_precision_head_trt_feasibility.py -v`:
+  **30/30 PASS** regression.
+- `python -m py_compile` over the changed runner, server executor, contract,
+  producer, analyzer and supertest: **PASS**.
+- `git diff --check`: **PASS**.
+
+### Remaining limitations and gate
+
+The local boundary double does not certify the real TensorRT builder, CUDA
+backend, Ultralytics engine reader or server GPU identity; those remain
+server-observed evidence. The real capture route is fail-closed if the
+producer materialization, runtime package contract, GPU identity, cache bytes,
+XML membership, native matching or lifecycle counters disagree. No two-host
+merge mode is implemented. The integrated packet is submitted for Astra
+review; it does **not** authorize the 84/78 server matrix until that review
+accepts the packet. The modified checkpoint remains untouched and is excluded
+from the scoped commit.

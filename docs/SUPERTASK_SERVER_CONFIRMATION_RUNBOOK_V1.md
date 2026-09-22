@@ -46,9 +46,9 @@ The command dispatches one isolated child per scheduled job, with a bounded
 foreground timeout and no retry/replacement. It must not add a canary,
 warmup, calibration retry, timing-cache reuse, or hidden reference forward.
 
-If two compatible hosts are explicitly offered, split complete model blocks:
-42 builders/39 captures per host. Never split a model's selections or move a
-running block. Otherwise run both blocks sequentially on one compatible GPU.
+Multi-host partition is not implemented in this runner. Do not split or merge
+the study across hosts; run both complete model blocks sequentially on one
+compatible GPU so the locked model-local GPU/runtime comparison is preserved.
 
 ## Scoped publication
 

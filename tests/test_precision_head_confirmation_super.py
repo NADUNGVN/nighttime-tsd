@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -16,6 +17,7 @@ from precision_head_confirmation_contract import (  # noqa: E402
     ContractError,
     ARMS,
     build_schedule,
+    canonical_json_sha256,
     mapping_targets,
     sample_sd,
     selected_targets,
@@ -34,7 +36,7 @@ def graph_fixture(model: str) -> dict:
     return {
         "mapping_status": "verified",
         "mapping_hash": "fixture",
-        "mapping": {"mapping_status": "verified", "active_branch_audit": {
+        "mapping": {"mapping_status": "verified", "mapping_hash": "fixture", "active_branch_audit": {
             branch: {"target_node_names": [f"/model.head/{branch}/{i}/Conv" for i in range(9)]}
             for branch in branches
         }},
@@ -76,9 +78,11 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
     def test_architecture_specific_mapping_and_arms(self):
         for model in ("yolov8n", "yolo26n"):
             mapping = mapping_targets(graph_fixture(model), model)
+            self.assertEqual(mapping["mapping_hash"], "fixture")
             self.assertEqual(len(mapping["bbox"]), 9)
             self.assertEqual(len(mapping["classification"]), 9)
             self.assertEqual(selected_targets(mapping, "baseline_int8"), [])
+            self.assertEqual(selected_targets(mapping, "fp16"), [])
             self.assertEqual(len(selected_targets(mapping, "both_fp32")), 18)
 
     def test_real_accepted_graph_artifacts_use_nested_mapping_schema(self):
@@ -137,7 +141,8 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             plan_path = root / "confirmation_plan.json"
-            plan = {"schedule": {"jobs": build_schedule()}, "models": {}}
+            jobs = build_schedule()
+            plan = {"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {model: {"checkpoint": {"sha256": f"checkpoint-{model}"}, "onnx": {"sha256": f"onnx-{model}"}, "postprocess": f"route-{model}"} for model in ("yolov8n", "yolo26n")}}
             plan_path.write_text(json.dumps(plan), encoding="utf-8")
             out = root / "run"
             args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": out, "device": "0", "child_timeout": 30, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": []})()
@@ -147,11 +152,52 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             self.assertEqual(len(manifest["jobs"]), 84)
             self.assertEqual(len(list(out.glob("jobs/*/cell_metrics.json"))), 78)
 
+    def test_external_runtime_double_artifacts_complete_production_analyzer_path(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            jobs = build_schedule()
+            plan = {"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {model: {"checkpoint": {"sha256": f"checkpoint-{model}"}, "onnx": {"sha256": f"onnx-{model}"}, "postprocess": f"route-{model}"} for model in ("yolov8n", "yolo26n")}}
+            plan_path = root / "confirmation_plan.json"
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            out = root / "run"
+            args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": out, "device": "0", "child_timeout": 30, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": []})()
+            self.assertEqual(run_server_parent(args), 0)
+            (out / "confirmation_plan.json").write_text(plan_path.read_text(encoding="utf-8"), encoding="utf-8")
+            (out / "schedule.json").write_text(json.dumps({"schema_version": 1, "jobs": jobs, "sha256": canonical_json_sha256(jobs)}), encoding="utf-8")
+            xml_path = root / "xml.zip"
+            annotation = "<annotation><size><width>100</width><height>100</height></size></annotation>"
+            with zipfile.ZipFile(xml_path, "w") as archive:
+                for index in range(1636):
+                    archive.writestr(f"{index:04d}.xml", annotation)
+            import audit_cctsdb_measurement as audit
+            import analyze_dev_quantization as quant
+            import verify_cctsdb_capture as verify
+            import numpy as np
+            originals = (verify.coco_size, quant.ap_values, quant.resample_ap)
+            def fake_coco_size(records, xml, *, return_evaluator=False):
+                report = {"metrics": {label: {"map50": 0.5, "map50_95": 0.3} for label in ("all", "xs", "s")}}
+                return (report, object()) if return_evaluator else report
+            def fake_ap_values(_evaluator):
+                return np.asarray([[0.5, 0.3], [0.4, 0.2], [0.3, 0.1]], dtype=float)
+            try:
+                verify.coco_size = fake_coco_size
+                quant.ap_values = fake_ap_values
+                quant.resample_ap = lambda evaluator, sample: fake_ap_values(evaluator)
+                from analyze_precision_head_confirmation import analyze
+                summary = analyze(out, root / "analysis", xml_path)
+            finally:
+                verify.coco_size, quant.ap_values, quant.resample_ap = originals
+            self.assertEqual(summary["status"], "completed_descriptive_analysis")
+            self.assertEqual(len(summary["all_cell_points"]), 96)
+            self.assertEqual(len(summary["fp16_points"]), 8)
+            self.assertTrue((root / "analysis" / "analysis_summary.json").is_file())
+
     def test_parent_timeout_preserves_blocked_partial_inventory(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             plan_path = root / "confirmation_plan.json"
-            plan_path.write_text(json.dumps({"schedule": {"jobs": build_schedule()}, "models": {}}), encoding="utf-8")
+            jobs = build_schedule()
+            plan_path.write_text(json.dumps({"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {model: {"checkpoint": {"sha256": f"checkpoint-{model}"}, "onnx": {"sha256": f"onnx-{model}"}} for model in ("yolov8n", "yolo26n")}}), encoding="utf-8")
             out = root / "run"
             args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": out, "device": "0", "child_timeout": 0, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": []})()
             self.assertEqual(run_server_parent(args), 124)
@@ -160,12 +206,23 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             self.assertEqual(manifest["jobs"][0]["state"]["status"], "timeout")
             self.assertTrue((out / "jobs").exists())
 
+    def test_confirmation_study_rejects_competing_background_workload(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            jobs = build_schedule()
+            plan_path = root / "confirmation_plan.json"
+            plan_path.write_text(json.dumps({"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {"yolov8n": {}, "yolo26n": {}}}), encoding="utf-8")
+            args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": root / "run", "device": "0", "child_timeout": 30, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": ["123=python"]})()
+            with self.assertRaises(ContractError):
+                run_server_parent(args)
+
     def test_analyzer_rejects_missing_cell_and_provenance_mutation(self):
         from analyze_precision_head_confirmation import _cell_files
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            (root / "confirmation_plan.json").write_text("{}", encoding="utf-8")
             jobs = build_schedule()
+            (root / "confirmation_plan.json").write_text(json.dumps({"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {}}), encoding="utf-8")
+            (root / "schedule.json").write_text(json.dumps({"jobs": jobs, "sha256": canonical_json_sha256(jobs)}), encoding="utf-8")
             manifest = {"status": "completed_review_required", "jobs": [{"state": {"status": "completed"}} for _ in jobs]}
             (root / "execution_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
             expected_plan_sha = __import__("hashlib").sha256((root / "confirmation_plan.json").read_bytes()).hexdigest()

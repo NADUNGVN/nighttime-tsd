@@ -130,11 +130,15 @@ def mapping_targets(graph_audit: dict[str, Any], model: str) -> dict[str, list[s
     if set(result["bbox"]) & set(result["classification"]):
         raise ContractError(f"{model} active target sets overlap")
     result["both"] = result["bbox"] + result["classification"]
-    result["mapping_hash"] = graph_audit.get("mapping_hash")
+    result["mapping_hash"] = mapping.get("mapping_hash")
+    if not isinstance(result["mapping_hash"], str) or not result["mapping_hash"]:
+        raise ContractError(f"{model} mapping hash is missing from the accepted mapping object")
     return result
 
 
 def selected_targets(mapping: dict[str, list[str]], arm: str) -> list[str]:
+    if arm == "fp16":
+        return []
     if arm not in ARMS:
         raise ContractError(f"unknown arm: {arm}")
     if arm == "baseline_int8":
@@ -144,6 +148,15 @@ def selected_targets(mapping: dict[str, list[str]], arm: str) -> list[str]:
     if arm == "classification_fp32":
         return list(mapping["classification"])
     return list(mapping["both"])
+
+
+def validate_arm_for_phase(phase: str, arm: str) -> None:
+    if phase == "scored_fp16":
+        if arm != "fp16":
+            raise ContractError(f"FP16 phase requires fp16 arm, got {arm!r}")
+        return
+    if phase in {"auxiliary_calibration", "scored_int8"} and arm not in ARMS:
+        raise ContractError(f"INT8 phase requires one of {ARMS}, got {arm!r}")
 
 
 def verify_cache_only_audit(audit: dict[str, Any], *, scored: bool) -> None:
