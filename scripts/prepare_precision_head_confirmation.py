@@ -790,11 +790,17 @@ def calibration_recipe_evidence(
     ]
     if any(record.get("status") != "verified" for record in records):
         raise ValueError("One or more accepted calibration selections failed producer validation")
+    selections = config["calibration_selections"]
+    requested_sizes = {selection.get("requested_size") for selection in selections}
+    selected_sizes = {selection.get("selected_size") for selection in selections}
+    train_only_values = {selection.get("train_only") for selection in selections}
+    if requested_sizes != {1024} or selected_sizes != {1024} or train_only_values != {True}:
+        raise ValueError("Calibration selection size/train-only contract is not locked to 1024 train-only images")
     return {
         "producer": "scripts/prepare_precision_head_confirmation.py::validate_calibration_manifest + calibration_recipe_evidence",
         "algorithm": config["calibration_recipe"]["algorithm"],
-        "requested_size": config["calibration_recipe"]["requested_size"],
-        "train_only": config["calibration_recipe"]["train_only"],
+        "requested_size": next(iter(requested_sizes)),
+        "train_only": next(iter(train_only_values)),
         "selections": records,
     }
 

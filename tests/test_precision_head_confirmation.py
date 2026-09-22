@@ -84,6 +84,17 @@ class PrecisionHeadConfirmationTests(unittest.TestCase):
         overlap = readiness.calibration_overlap(records)
         self.assertEqual(set(overlap["pairwise_image_id_overlap"]), {"U42:U43", "U42:U44", "U43:U44"})
 
+    def test_calibration_recipe_evidence_reads_size_from_selection_contract(self):
+        with patch.object(
+            readiness,
+            "validate_calibration_manifest",
+            side_effect=lambda *_args, **_kwargs: {"status": "verified"},
+        ):
+            evidence = readiness.calibration_recipe_evidence(REPO, self.config)
+        self.assertEqual(evidence["requested_size"], 1024)
+        self.assertTrue(evidence["train_only"])
+        self.assertEqual(len(evidence["selections"]), 3)
+
     def test_calibration_wrong_seed_dev_path_and_duplicate_are_rejected(self):
         selection = self.config["calibration_selections"][0]
         payload = json.loads(
