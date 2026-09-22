@@ -3352,3 +3352,65 @@ R3 review document, runner/analyzer/protocol/runbook updates and tests. The
 modified frozen checkpoint is deliberately not staged. Astra review is still
 required before the user runs 84 builders/78 captures; no server command is
 being issued in this packet.
+
+## L2A-053 R4 — producer/consumer and publication remediation
+
+2026-09-22. Implemented A2L-049/R4 as a local-only continuation of the same
+supertask. No server, GPU, CUDA forward, TensorRT build, export, benchmark or
+matrix execution was performed. Scientific design, estimator, tolerances,
+budgets and single-host boundary are unchanged.
+
+### R4 closure
+
+- `verify_plan_inputs` now follows the accepted producer layout
+  `resolved_directory/images/<basename>`, checks containment and rehashes the
+  current source/materialized bytes. Tests cover the valid nested layout,
+  changed materialized bytes and a wrong materialization path.
+- Canonical capture validation now projects both observed and accepted
+  readiness records to the equivalent `{image, stem, orig_shape}` schema,
+  derives/checks stem consistency and retains exact order/count/shape checks.
+  The positive test consumes the actual 1,636-record readiness manifest; a
+  shape mutation is rejected.
+- External-runtime tests now enter through the common `build_real` child
+  boundary after plan input verification. The boundary fixture records
+  producer-binding, build and capture phase transitions, validates producer-
+  shaped canonical records when supplied, publishes lifecycle counters and
+  invokes the same analyzer/evaluator path. It remains explicitly synthetic
+  and cannot be treated as TensorRT evidence; production `build_real` still
+  owns the real TensorRT/device callbacks on server only.
+- The existing-plan-in-output-root case is covered and the early branch no
+  longer shadows the module-level `hashlib` import. The external fixture now
+  publishes a nonbinary inspector JSON for every job, so the public-only
+  allowlist is exercised without private engines/caches/tensors.
+- Real child inspector publication is moved to
+  `public/inspectors/<job>.json`; child state records its public SHA-256 and
+  the analyzer accepts only that path. The plan/runbook publication contract
+  explicitly allows these JSON files while still excluding engine,
+  checkpoint, ONNX, cache and raw tensors.
+
+### R4 local verification
+
+Using `D:/Research/paper/local/measurement_audit_env/Scripts/python.exe`:
+
+- `python -m unittest discover -s tests -p test_precision_head_confirmation_super.py -v`:
+  **20/20 PASS**.
+- `python -m unittest discover -s tests -p test_precision_head_trt_feasibility.py -v`:
+  **30/30 PASS**.
+- `python -m py_compile` over the changed runner, server child, analyzer,
+  contract and supertest: **PASS**.
+- `git diff --check`: **PASS**.
+
+The 20-test suite includes the full 84-job/78-capture CPU boundary inventory,
+actual pooled evaluator/bootstrap success, real readiness-schema projection,
+nested calibration verification, existing-output-plan handling, public
+inspector allowlist checks, identity persistence and timeout/lifecycle cases.
+It does not execute frozen models, TensorRT or CUDA. No local test result is
+claimed as end-to-end production validation.
+
+### R4 gate
+
+Status remains **`implementation_complete_integrated_review_required`**;
+there is still **NO-GO** for server 84 builders/78 captures until Astra
+reviews this consolidated packet. A2L-049 and the R4 review document are
+included unchanged, together with scoped code/tests/protocol updates. The
+modified checkpoint remains unstaged. No server command is issued here.

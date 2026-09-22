@@ -116,9 +116,15 @@ def verify_plan_inputs(repo: Path, plan: dict[str, Any]) -> None:
         if not yaml_path.is_file() or hashlib.sha256(yaml_path.read_bytes()).hexdigest() != materialization.get("yaml_sha256"):
             raise ContractError(f"bound calibration YAML changed or is missing: {yaml_path}")
         materialized_dir = Path(materialization.get("resolved_directory", ""))
+        materialized_root = materialized_dir.resolve()
+        image_dir = (materialized_root / "images").resolve()
+        try:
+            image_dir.relative_to(materialized_root)
+        except ValueError as exc:
+            raise ContractError(f"calibration image directory escapes producer root: {image_dir}") from exc
         for item in materialization.get("image_bytes", []):
             source = repo / "data/processed/cctsdb2021_clean" / item["image"]
-            materialized = materialized_dir / Path(item["image"]).name
+            materialized = image_dir / Path(item["image"]).name
             source_hash = hashlib.sha256(source.read_bytes()).hexdigest() if source.is_file() else None
             materialized_hash = hashlib.sha256(materialized.read_bytes()).hexdigest() if materialized.is_file() else None
             if source_hash != item.get("source_sha256") or materialized_hash != item.get("materialized_sha256") or source_hash != materialized_hash:
@@ -130,8 +136,16 @@ def validate_canonical_capture_records(records: list[dict[str, Any]], plan: dict
     expected = reference.get("records", [])
     if len(expected) != 1636:
         raise ContractError("plan is missing the canonical 1,636-image dev reference")
-    observed = [{"image": row.get("image"), "orig_shape": row.get("orig_shape")} for row in records]
-    if observed != expected:
+    def project(row: dict[str, Any]) -> dict[str, Any]:
+        image = row.get("image")
+        stem = row.get("stem", Path(image).stem if image else None)
+        if stem != (Path(image).stem if image else None):
+            raise ContractError(f"canonical dev stem does not agree with image: {image}")
+        return {"image": image, "stem": stem, "orig_shape": row.get("orig_shape")}
+
+    observed = [project(row) for row in records]
+    canonical = [project(row) for row in expected]
+    if observed != canonical:
         raise ContractError("capture image order or original-shape binding differs from canonical dev reference")
 
 
@@ -244,19 +258,32 @@ def runtime_double(job: dict[str, Any], plan: dict[str, Any], out: Path, state_p
     cache_sha = hashlib.sha256(f"cache:{job['model']}:{job['selection']}".encode()).hexdigest()
     timing_in = hashlib.sha256(b"").hexdigest()
     timing_out = hashlib.sha256(f"timing:{job_key(job)}".encode()).hexdigest()
-    state.update({"status": "ready_to_release", "builder_attempted": True, "builder_completed": True, "capture_attempted": bool(job["capture_required"]), "capture_completed": bool(job["capture_required"]), "calibration_batches": 1024 if job["phase"] == "auxiliary_calibration" else 0, "calibration_read_calls": 2 if job["phase"] == "scored_int8" else 0, "calibration_write_calls": 1 if job["phase"] == "auxiliary_calibration" else 0, "synchronization_completed": 1636 if job["capture_required"] else 0, "forward_attempted": 1636 if job["capture_required"] else 0, "forward_completed": 1636 if job["capture_required"] else 0, "warmup_request_count": 0, "warmup_forward_count": 0, "cache_consumed": job["phase"] == "scored_int8", "engine_sha256": engine_sha, "calibration_cache": {"selection": job.get("selection"), "before_sha256": cache_sha if job["phase"] == "scored_int8" else None, "after_sha256": cache_sha if job["phase"] in {"auxiliary_calibration", "scored_int8"} else None, "auxiliary_cache_sha256": cache_sha if job["phase"] == "scored_int8" else None, "immutable": job["phase"] == "scored_int8", "ordered_images_sha256": "runtime-double-ordered-images"}, "timing_cache": {"input_sha256": timing_in, "output_sha256": timing_out, "reused": False}, "precision_inspector": {"requested_targets": selected_targets(model_spec.get("mapping", {}), job["arm"]) if model_spec.get("mapping") else [], "requested_only": True}, "cleanup_started": False, "cleanup_completed": False, "owner_release_status": "pending_child_return", "boundary_fixture": True})
+    study_root = state_path.parents[2]
+    public_inspector_path = study_root / "public" / "inspectors" / f"{job_key(job)}.json"
+    public_inspector = {"schema_version": 1, "source": "external_runtime_boundary_double", "job_id": job_key(job), "requested_precision": "fixture-only", "effective_precision": "unknown"}
+    atomic(public_inspector_path, public_inspector)
+    public_inspector_sha256 = hashlib.sha256(public_inspector_path.read_bytes()).hexdigest()
+    update_state(state_path, state, "external_plan_verified", boundary_fixture=True, producer_bindings_checked=True)
+    state = read(state_path)
+    state.update({"status": "ready_to_release", "builder_attempted": True, "builder_completed": True, "capture_attempted": bool(job["capture_required"]), "capture_completed": bool(job["capture_required"]), "calibration_batches": 1024 if job["phase"] == "auxiliary_calibration" else 0, "calibration_read_calls": 2 if job["phase"] == "scored_int8" else 0, "calibration_write_calls": 1 if job["phase"] == "auxiliary_calibration" else 0, "synchronization_completed": 1636 if job["capture_required"] else 0, "forward_attempted": 1636 if job["capture_required"] else 0, "forward_completed": 1636 if job["capture_required"] else 0, "warmup_request_count": 0, "warmup_forward_count": 0, "cache_consumed": job["phase"] == "scored_int8", "engine_sha256": engine_sha, "engine_inspector": {"path": str(public_inspector_path.relative_to(study_root).as_posix()), "sha256": public_inspector_sha256, "format": "JSON", "source": "external_runtime_boundary_double", "publication": "public_allowlist"}, "calibration_cache": {"selection": job.get("selection"), "before_sha256": cache_sha if job["phase"] == "scored_int8" else None, "after_sha256": cache_sha if job["phase"] in {"auxiliary_calibration", "scored_int8"} else None, "auxiliary_cache_sha256": cache_sha if job["phase"] == "scored_int8" else None, "immutable": job["phase"] == "scored_int8", "ordered_images_sha256": "runtime-double-ordered-images"}, "timing_cache": {"input_sha256": timing_in, "output_sha256": timing_out, "reused": False}, "precision_inspector": {"requested_targets": selected_targets(model_spec.get("mapping", {}), job["arm"]) if model_spec.get("mapping") else [], "requested_only": True}, "cleanup_started": False, "cleanup_completed": False, "owner_release_status": "pending_child_return", "boundary_fixture": True})
     test_identity = plan.get("_test_gpu_identity_by_sequence", {}).get(str(job.get("sequence")))
     if test_identity:
         state["gpu_identity"] = test_identity
     atomic(state_path, state)
+    update_state(state_path, read(state_path), "external_build_complete", parser_completed=True, calibration_callbacks_observed=job["phase"] != "scored_fp16")
     if job["capture_required"]:
-        records = [{"image": f"{index:04d}.jpg", "orig_shape": [100, 100], "xyxy": [], "confidence": [], "class_id": [], "validator_input": {"imgsz": [640, 640], "ratio_pad": [[1.0, 1.0], [0.0, 0.0]], "prediction_xyxy": [], "target_xyxy": [], "target_class_id": []}, "validator_statistics": {"tp": [], "confidence_dtype": "float64", "pred_class_dtype": "float64", "target_class_dtype": "int64"}} for index in range(1636)]
-        records[0] = {"image": "0000.jpg", "orig_shape": [100, 100], "xyxy": [[10.0, 10.0, 20.0, 20.0]], "confidence": [0.1], "class_id": [0], "validator_input": {"imgsz": [640, 640], "ratio_pad": [[1.0, 1.0], [0.0, 0.0]], "prediction_xyxy": [[10.0, 10.0, 20.0, 20.0]], "target_xyxy": [], "target_class_id": []}, "validator_statistics": {"tp": [[False] * 10], "confidence_dtype": "float32", "pred_class_dtype": "int64", "target_class_dtype": "int64"}}
+        canonical = plan.get("dataset", {}).get("canonical_dev_reference", {}).get("records", [])
+        records = [{"image": row.get("image", f"{index:04d}.jpg"), "stem": row.get("stem", Path(row.get("image", f"{index:04d}.jpg")).stem), "orig_shape": row.get("orig_shape", [100, 100]), "xyxy": [], "confidence": [], "class_id": [], "validator_input": {"imgsz": [640, 640], "ratio_pad": [[1.0, 1.0], [0.0, 0.0]], "prediction_xyxy": [], "target_xyxy": [], "target_class_id": []}, "validator_statistics": {"tp": [], "confidence_dtype": "float64", "pred_class_dtype": "float64", "target_class_dtype": "int64"}} for index, row in enumerate(canonical if len(canonical) == 1636 else [{} for _ in range(1636)])]
+        if len(canonical) == 1636:
+            validate_canonical_capture_records(records, plan)
+        first = records[0]
+        records[0] = {**first, "xyxy": [[10.0, 10.0, 20.0, 20.0]], "confidence": [0.1], "class_id": [0], "validator_input": {"imgsz": [640, 640], "ratio_pad": [[1.0, 1.0], [0.0, 0.0]], "prediction_xyxy": [[10.0, 10.0, 20.0, 20.0]], "target_xyxy": [], "target_class_id": []}, "validator_statistics": {"tp": [[False] * 10], "confidence_dtype": "float32", "pred_class_dtype": "int64", "target_class_dtype": "int64"}}
         prediction = {"schema_version": 2, "capture_mode": "same_val_process_batch", "iou_thresholds": [0.5 + 0.05 * index for index in range(10)], "records": records, "model_sha256": state["engine_sha256"]}
         prediction_path = out / "predictions.json"
         atomic(prediction_path, prediction)
         prediction_sha256 = hashlib.sha256(prediction_path.read_bytes()).hexdigest()
         atomic(out / "cell_metrics.json", {"schema_version": 1, "job": job, "job_id": job_key(job), "status": "synthetic_external_runtime_double", "plan_sha256": plan.get("_plan_sha256", "runtime-double-plan-bound-at-test"), "checkpoint_sha256": model_spec.get("checkpoint", {}).get("sha256", "runtime-double-checkpoint"), "onnx_sha256": model_spec.get("onnx", {}).get("sha256", "runtime-double-onnx"), "engine_sha256": state["engine_sha256"], "metrics": {"full": {"ap50": 0.0, "ap50_95": 0.0}, "XS": {"ap50": 0.0, "ap50_95": 0.0}, "S": {"ap50": 0.0, "ap50_95": 0.0}}, "statistics_replay": {"status": "pass", "images": 1636}, "native_matching": {"status": "pass", "changed_tp_decisions": 0}, "xml_validation": {"path": "external-test-xml", "sha256": "external-test-xml", "images": 1636, "instances": 2706}, "prediction_path": "predictions.json", "prediction_sha256": prediction_sha256, "record_count": 1636, "raw_output_source": "external_runtime_double_capture_adapter", "postprocess_route": model_spec.get("postprocess", "double")})
+        update_state(state_path, read(state_path), "external_capture_complete", capture_records_published=1636, synchronization_observed=1636)
 
 
 def finalize_child_state(path: Path) -> None:
@@ -271,7 +298,7 @@ def finalize_child_state(path: Path) -> None:
 def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path, args: argparse.Namespace, state_path: Path, *, external_boundary: bool = False) -> None:
     """Build one real server cell and capture it with the locked validator."""
     validate_arm_for_phase(job["phase"], job["arm"])
-    verify_plan_inputs(repo, plan) if not external_boundary else None
+    verify_plan_inputs(repo, plan)
     if external_boundary:
         # Tests enter through the same child production boundary.  The
         # external fixture replaces only TensorRT/device work; it is never
@@ -283,7 +310,6 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
         state["build_real_entry"] = True
         atomic(state_path, state)
         return
-    import hashlib
     import inspect
     import numpy as np
     import torch
@@ -448,6 +474,10 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
             inspector.get_engine_information(trt.LayerInformationFormat.JSON), encoding="utf-8"
         )
         inspector_sha256 = hashlib.sha256(inspector_path.read_bytes()).hexdigest()
+        public_inspector_path = out / "public" / "inspectors" / f"{job_key(job)}.json"
+        public_inspector_path.parent.mkdir(parents=True, exist_ok=True)
+        public_inspector_path.write_bytes(inspector_path.read_bytes())
+        public_inspector_sha256 = hashlib.sha256(public_inspector_path.read_bytes()).hexdigest()
         del inspector, engine, runtime
         cache_after = hashlib.sha256(cache_path.read_bytes()).hexdigest() if cache_path.is_file() else None
         if job["phase"] == "scored_int8" and cache_before_sha != cache_after:
@@ -457,7 +487,7 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
             calibration_audit = {"selection": calibration_binding["id"], "manifest_sha256": calibration_binding["manifest_sha256"], "yaml_sha256": calibration_binding["yaml_sha256"], "expected_images_sha256": calibration_binding["ordered_images_sha256"], "observed_images_sha256": sha256_bytes(json.dumps(getattr(calibrator, "observed_images", []), separators=(",", ":"), ensure_ascii=False).encode("utf-8")), "tensor_sequence_sha256": getattr(getattr(calibrator, "tensor_hash", None), "hexdigest", lambda: None)(), "batch_count": getattr(calibrator, "batch_calls", 0), "input_shape": [1, 3, 640, 640], "input_dtype": "torch.float32"}
             if job["phase"] == "auxiliary_calibration" and calibration_audit["observed_images_sha256"] != calibration_binding["ordered_images_sha256"]:
                 raise ContractError("calibration loader order audit hash mismatch")
-        update_state(state_path, read(state_path), "build_complete", builder_completed=True, engine_sha256=hashlib.sha256(engine_path.read_bytes()).hexdigest(), engine_inspector={"path": str(inspector_path.relative_to(out).as_posix()), "sha256": inspector_sha256, "format": "JSON", "source": "TensorRT EngineInspector"}, calibration_batches=calibrator.batch_calls if job["phase"] != "scored_fp16" else 0, calibration_read_calls=calibrator.read_calls if job["phase"] != "scored_fp16" else 0, calibration_write_calls=calibrator.write_calls if job["phase"] != "scored_fp16" else 0, cache_consumed=getattr(calibrator, "cache_consumed", False) if job["phase"] != "scored_fp16" else False, calibration_cache={"selection": job.get("selection"), "before_sha256": cache_before_sha, "after_sha256": cache_after, "auxiliary_cache_sha256": auxiliary_cache_sha, "immutable": job["phase"] == "scored_int8", "ordered_images_sha256": calibration_audit["expected_images_sha256"] if calibration_audit else None, "audit": calibration_audit}, timing_cache=timing_audit)
+        update_state(state_path, read(state_path), "build_complete", builder_completed=True, engine_sha256=hashlib.sha256(engine_path.read_bytes()).hexdigest(), engine_inspector={"path": str(public_inspector_path.relative_to(out).as_posix()), "sha256": public_inspector_sha256, "private_source_sha256": inspector_sha256, "format": "JSON", "source": "TensorRT EngineInspector", "publication": "public_allowlist"}, calibration_batches=calibrator.batch_calls if job["phase"] != "scored_fp16" else 0, calibration_read_calls=calibrator.read_calls if job["phase"] != "scored_fp16" else 0, calibration_write_calls=calibrator.write_calls if job["phase"] != "scored_fp16" else 0, cache_consumed=getattr(calibrator, "cache_consumed", False) if job["phase"] != "scored_fp16" else False, calibration_cache={"selection": job.get("selection"), "before_sha256": cache_before_sha, "after_sha256": cache_after, "auxiliary_cache_sha256": auxiliary_cache_sha, "immutable": job["phase"] == "scored_int8", "ordered_images_sha256": calibration_audit["expected_images_sha256"] if calibration_audit else None, "audit": calibration_audit}, timing_cache=timing_audit)
         after_build = snapshot(desktop, background)
         ensure_idle(after_build, background)
         state_after_build = read(state_path)
@@ -577,8 +607,7 @@ def run_parent(args: argparse.Namespace) -> int:
         raise ContractError("plan schedule hash does not match its serialized jobs")
     if set(plan.get("models", {})) != {"yolov8n", "yolo26n"}:
         raise ContractError("plan model evidence must contain exactly both bound models")
-    if not args.runtime_double:
-        verify_plan_inputs(repo, plan)
+    verify_plan_inputs(repo, plan)
     if out.exists():
         existing = {path.name for path in out.iterdir()}
         if existing - {"confirmation_plan.json", "schedule.json"}:

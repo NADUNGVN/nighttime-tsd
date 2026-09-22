@@ -104,7 +104,10 @@ def _cell_files(root: Path, plan: dict[str, Any] | None = None, *, allow_test_do
                 raise ContractError(f"scored cache-only evidence is incomplete: {path}")
         if not allow_test_double:
             inspector = child.get("engine_inspector", {})
-            inspector_path = root / inspector.get("path", "")
+            inspector_rel = Path(inspector.get("path", "")).as_posix()
+            if not inspector_rel.startswith("public/inspectors/") or not inspector_rel.endswith(".json") or "/private/" in f"/{inspector_rel}":
+                raise ContractError(f"engine inspector is outside the public allowlist: {path}")
+            inspector_path = root / inspector_rel
             if not child.get("precision_inspector", {}).get("requested_only") or child.get("precision_inspector", {}).get("effective_precision") != "unknown":
                 raise ContractError(f"precision inspector evidence is not explicitly labeled requested-only/effective-unknown: {path}")
             if not inspector.get("sha256") or not inspector_path.is_file() or hashlib.sha256(inspector_path.read_bytes()).hexdigest() != inspector.get("sha256"):

@@ -157,7 +157,7 @@ def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH
         "schedule": {"sha256": canonical_json_sha256(jobs), "jobs": jobs},
         "accounting": {"auxiliary_cache_builds": 6, "scored_int8_builds": 72, "scored_fp16_builds": 6, "total_builder_invocations": 84, "captures": 78, "dev_image_model_passes": 127608},
         "execution_boundary": {"parent_imports_cuda": False, "parent_imports_tensorrt": False, "server_children_only": True, "go_required": True, "no_resume": True, "no_retry_or_replacement": True},
-        "output": {"root": relative(repo, out_dir), "no_overwrite": True, "private_engines_caches_tensors": True, "published": ["manifests", "reports", "jsonl", "logs", "hashes"]},
+        "output": {"root": relative(repo, out_dir), "no_overwrite": True, "private_engines_caches_tensors": True, "published": ["manifests", "reports", "jsonl", "logs", "hashes", "public/inspectors/*.json"], "public_inspector_contract": "nonbinary EngineInspector JSON only; no engine/checkpoint/ONNX/cache/raw tensors"},
         "limitations": ["Shared lab GPU telemetry is sampled, not isolation proof.", "The 84-job budget is not evidence until server artifacts complete.", "This plan does not select a best build or promise a positive result."],
         "created_utc": datetime.now(timezone.utc).isoformat(),
     }

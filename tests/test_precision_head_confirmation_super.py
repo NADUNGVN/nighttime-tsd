@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -28,6 +29,8 @@ from precision_head_confirmation_contract import (  # noqa: E402
 from run_precision_head_confirmation_server import (  # noqa: E402
     NoWarmupBackendAccounting,
     bind_gpu_identity,
+    validate_canonical_capture_records,
+    verify_plan_inputs,
     run_parent as run_server_parent,
 )
 
@@ -48,6 +51,22 @@ def graph_fixture(model: str) -> dict:
 
 
 class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
+    def runtime_plan(self, root: Path, *, identity_by_sequence: dict[str, dict[str, str]] | None = None) -> tuple[dict, Path]:
+        jobs = build_schedule()
+        model_evidence = {}
+        for model in ("yolov8n", "yolo26n"):
+            checkpoint = root / f"{model}.pt"
+            onnx = root / f"{model}.onnx"
+            checkpoint.write_bytes(f"checkpoint-{model}".encode())
+            onnx.write_bytes(f"onnx-{model}".encode())
+            model_evidence[model] = {"checkpoint": {"path": str(checkpoint), "sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest()}, "onnx": {"path": str(onnx), "sha256": hashlib.sha256(onnx.read_bytes()).hexdigest()}, "postprocess": f"route-{model}"}
+        plan = {"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": model_evidence}
+        if identity_by_sequence is not None:
+            plan["_test_gpu_identity_by_sequence"] = identity_by_sequence
+        plan_path = root / "confirmation_plan.json"
+        plan_path.write_text(json.dumps(plan), encoding="utf-8")
+        return plan, plan_path
+
     def test_production_backend_wrapper_skips_warmup_forward_and_counts_data_completion(self):
         class DummyBackend:
             def __call__(self, value):
@@ -73,6 +92,43 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             bind_gpu_identity(manifest, {**first, "uuid": "GPU-B"})
         with self.assertRaises(ContractError):
             bind_gpu_identity({}, {"uuid": "GPU-A"})
+
+    def test_calibration_verification_uses_producer_nested_images_layout(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "data/processed/cctsdb2021_clean/train/images/00001.jpg"
+            materialized = root / "calibration/U42/images/00001.jpg"
+            source.parent.mkdir(parents=True)
+            materialized.parent.mkdir(parents=True)
+            source.write_bytes(b"calibration-image")
+            materialized.write_bytes(source.read_bytes())
+            yaml_path = root / "calibration/U42/calibration.yaml"
+            yaml_path.write_text("path: .\n", encoding="utf-8")
+            yaml_hash = __import__("hashlib").sha256(yaml_path.read_bytes()).hexdigest()
+            image_hash = __import__("hashlib").sha256(source.read_bytes()).hexdigest()
+            plan = {"models": {}, "provenance_files": [], "dataset": {}, "calibration_producer": {"selections": [{"id": "U42", "materialization": {"yaml": str(yaml_path), "yaml_sha256": yaml_hash, "resolved_directory": str(yaml_path.parent), "image_bytes": [{"image": "train/images/00001.jpg", "source_sha256": image_hash, "materialized_sha256": image_hash}]}}]}}
+            verify_plan_inputs(root, plan)
+            materialized.write_bytes(b"changed")
+            with self.assertRaises(ContractError):
+                verify_plan_inputs(root, plan)
+            materialized.write_bytes(source.read_bytes())
+            plan["calibration_producer"]["selections"][0]["materialization"]["resolved_directory"] = str(root / "calibration/U42/wrong")
+            with self.assertRaises(ContractError):
+                verify_plan_inputs(root, plan)
+
+    def test_canonical_capture_validation_projects_actual_readiness_records(self):
+        readiness_path = REPO / "results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json"
+        if not readiness_path.is_file():
+            self.skipTest("accepted readiness manifest is not in this checkout")
+        readiness = json.loads(readiness_path.read_text(encoding="utf-8"))
+        records = readiness["dev_contract"]["canonical_reference"]["records"]
+        plan = {"dataset": {"canonical_dev_reference": {"records": records}}}
+        observed = [{"image": row["image"], "orig_shape": row["orig_shape"]} for row in records]
+        validate_canonical_capture_records(observed, plan)
+        bad = list(observed)
+        bad[0] = {**bad[0], "orig_shape": [1, 1]}
+        with self.assertRaises(ContractError):
+            validate_canonical_capture_records(bad, plan)
 
     def test_schedule_has_locked_accounting_and_rotated_model_blocks(self):
         jobs = build_schedule()
@@ -170,11 +226,12 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
     def test_external_runtime_double_executes_full_parent_child_inventory(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            plan_path = root / "confirmation_plan.json"
-            jobs = build_schedule()
-            plan = {"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {model: {"checkpoint": {"sha256": f"checkpoint-{model}"}, "onnx": {"sha256": f"onnx-{model}"}, "postprocess": f"route-{model}"} for model in ("yolov8n", "yolo26n")}}
-            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            plan, plan_path = self.runtime_plan(root)
+            jobs = plan["schedule"]["jobs"]
             out = root / "run"
+            out.mkdir()
+            (out / "confirmation_plan.json").write_text(plan_path.read_text(encoding="utf-8"), encoding="utf-8")
+            (out / "schedule.json").write_text(json.dumps({"schema_version": 1, "jobs": jobs, "sha256": canonical_json_sha256(jobs)}), encoding="utf-8")
             args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": out, "device": "0", "child_timeout": 30, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": []})()
             self.assertEqual(run_server_parent(args), 0)
             manifest = json.loads((out / "execution_manifest.json").read_text(encoding="utf-8"))
@@ -184,16 +241,20 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             self.assertTrue(all(item["state"].get("build_real_entry") for item in manifest["jobs"]))
             self.assertTrue(all(item["state"].get("release_boundary") == "run_child_after_build_real_return" for item in manifest["jobs"]))
             self.assertTrue(all(item["state"].get("forward_completed", 0) == 1636 for item in manifest["jobs"] if item["job"]["capture_required"]))
+            self.assertTrue(all("external_plan_verified" in [row["stage"] for row in item["state"]["stage_history"]] for item in manifest["jobs"]))
+            inspector_paths = [item["state"]["engine_inspector"]["path"] for item in manifest["jobs"]]
+            self.assertEqual(len(inspector_paths), 84)
+            self.assertTrue(all(path.startswith("public/inspectors/") and "/private/" not in f"/{path}" for path in inspector_paths))
+            self.assertTrue(all((out / path).is_file() for path in inspector_paths))
+            self.assertFalse((out / "private").exists())
 
     def test_gpu_identity_is_persisted_across_children_and_changed_identity_stops_dispatch(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            jobs = build_schedule()
             first = {"uuid": "GPU-A", "name": "Quadro RTX 8000", "driver_version": "595.71.05", "device": "0"}
             second = {**first, "uuid": "GPU-B"}
-            plan = {"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {model: {"checkpoint": {"sha256": f"checkpoint-{model}"}, "onnx": {"sha256": f"onnx-{model}"}} for model in ("yolov8n", "yolo26n")}, "_test_gpu_identity_by_sequence": {"1": first, "2": second}}
-            plan_path = root / "confirmation_plan.json"
-            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            plan, plan_path = self.runtime_plan(root, identity_by_sequence={"1": first, "2": second})
+            jobs = plan["schedule"]["jobs"]
             out = root / "run"
             args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": out, "device": "0", "child_timeout": 30, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": []})()
             self.assertNotEqual(run_server_parent(args), 0)
@@ -206,10 +267,8 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
     def test_external_runtime_double_artifacts_complete_production_analyzer_path(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            jobs = build_schedule()
-            plan = {"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {model: {"checkpoint": {"sha256": f"checkpoint-{model}"}, "onnx": {"sha256": f"onnx-{model}"}, "postprocess": f"route-{model}"} for model in ("yolov8n", "yolo26n")}}
-            plan_path = root / "confirmation_plan.json"
-            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            plan, plan_path = self.runtime_plan(root)
+            jobs = plan["schedule"]["jobs"]
             out = root / "run"
             args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": out, "device": "0", "child_timeout": 30, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": []})()
             self.assertEqual(run_server_parent(args), 0)
@@ -238,9 +297,7 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
     def test_parent_timeout_preserves_blocked_partial_inventory(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            plan_path = root / "confirmation_plan.json"
-            jobs = build_schedule()
-            plan_path.write_text(json.dumps({"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {model: {"checkpoint": {"sha256": f"checkpoint-{model}"}, "onnx": {"sha256": f"onnx-{model}"}} for model in ("yolov8n", "yolo26n")}}), encoding="utf-8")
+            plan, plan_path = self.runtime_plan(root)
             out = root / "run"
             args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": out, "device": "0", "child_timeout": 0, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": []})()
             self.assertEqual(run_server_parent(args), 124)
@@ -252,9 +309,7 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
     def test_confirmation_study_rejects_competing_background_workload(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            jobs = build_schedule()
-            plan_path = root / "confirmation_plan.json"
-            plan_path.write_text(json.dumps({"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {"yolov8n": {}, "yolo26n": {}}}), encoding="utf-8")
+            plan, plan_path = self.runtime_plan(root)
             args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": root / "run", "device": "0", "child_timeout": 30, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": ["123=python"]})()
             with self.assertRaises(ContractError):
                 run_server_parent(args)
