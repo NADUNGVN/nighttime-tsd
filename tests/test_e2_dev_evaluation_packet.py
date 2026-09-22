@@ -40,6 +40,10 @@ from edge_readiness.e2_dev_evaluation_packet import (  # noqa: E402
     StagePermissions,
     run_source_reference_stage,
     run_target_execution_stage,
+    ImageStreamSource,
+    postprocess_saved_outputs,
+    validate_reference_artifact,
+    run_canonical_analysis_stage,
     stream_bound_images,
 )
 import edge_readiness.e2_dev_evaluation_packet as packet_module
@@ -56,7 +60,7 @@ def canonical_ids():
 
 def package_inventory():
     ids = canonical_ids()
-    return {"source_manifest_sha256": SOURCE_MANIFEST_SHA256, "source_onnx_sha256": SOURCE_ONNX_SHA256, "target_manifest_sha256": TARGET_MANIFEST_SHA256, "engine_sha256": ENGINE_SHA256, "engine_bytes": ENGINE_BYTES, "engine_public": False, "raw_tensors_public": False, "image_ids": ids, "canonical_image_ids_sha256": CANONICAL_DEV_IMAGE_IDS_SHA256, "canonical_image_ids_source": CANONICAL_DEV_IMAGE_IDS_SOURCE, "input_contract": {"shape": [1, 3, 640, 640], "dtype": "float32", "byteorder": "little", "finite": True, "bytes_per_image": 3 * 640 * 640 * 4}, "input_storage_mode": "streaming_manifest_only", "raw_input_tensor_bundle_forbidden": True, "input_records": [{"image_id": image_id, "path": "private/inputs/{}.bin".format(image_id), "bytes": 3 * 640 * 640 * 4, "sha256": "a" * 64, "shape": [1, 3, 640, 640], "dtype": "float32", "byteorder": "little", "finite": True} for image_id in ids], "input_producer": {"mode": "bound_image_preprocess_stream", "preprocess": "scripts.edge_readiness.e2_source_bundle:UltralyticsSourceRuntime.preprocess", "output_contract": {"shape": [1, 3, 640, 640], "dtype": "float32", "byteorder": "little", "finite": True}, "image_records": [{"image_id": image_id, "path": "private/images/{}.jpg".format(image_id), "bytes": 1, "sha256": "b" * 64} for image_id in ids]}, "reference_identity": {"source_onnx_sha256": SOURCE_ONNX_SHA256, "server_trt_predictions_sha256": SERVER_TRT_REFERENCE_PREDICTIONS_SHA256, "server_trt_is_source_onnx": False, "source_onnx_cpu_reference_status": "pending_not_executed", "source_onnx_cpu_predictions_sha256": None, "xml_sha256": "a" * 64}}
+    return {"source_manifest_sha256": SOURCE_MANIFEST_SHA256, "source_onnx_sha256": SOURCE_ONNX_SHA256, "target_manifest_sha256": TARGET_MANIFEST_SHA256, "engine_sha256": ENGINE_SHA256, "engine_bytes": ENGINE_BYTES, "engine_public": False, "raw_tensors_public": False, "image_ids": ids, "canonical_image_ids_sha256": CANONICAL_DEV_IMAGE_IDS_SHA256, "canonical_image_ids_source": CANONICAL_DEV_IMAGE_IDS_SOURCE, "input_contract": {"shape": [1, 3, 640, 640], "dtype": "float32", "byteorder": "little", "finite": True, "bytes_per_image": 3 * 640 * 640 * 4}, "input_storage_mode": "streaming_manifest_only", "raw_input_tensor_bundle_forbidden": True, "input_records": [{"image_id": image_id, "path": "private/inputs/{}.bin".format(image_id), "bytes": 3 * 640 * 640 * 4, "sha256": "a" * 64, "shape": [1, 3, 640, 640], "dtype": "float32", "byteorder": "little", "finite": True} for image_id in ids], "input_producer": {"mode": "bound_image_preprocess_stream", "preprocess": "scripts.edge_readiness.e2_source_bundle:UltralyticsSourceRuntime.preprocess", "output_contract": {"shape": [1, 3, 640, 640], "dtype": "float32", "byteorder": "little", "finite": True}, "image_records": [{"image_id": image_id, "path": "private/images/{}.jpg".format(image_id), "bytes": 1, "sha256": "b" * 64, "orig_shape": [640, 640], "resized_shape": [640, 640]} for image_id in ids]}, "reference_identity": {"source_onnx_sha256": SOURCE_ONNX_SHA256, "server_trt_predictions_sha256": SERVER_TRT_REFERENCE_PREDICTIONS_SHA256, "server_trt_is_source_onnx": False, "source_onnx_cpu_reference_status": "pending_not_executed", "source_onnx_cpu_predictions_sha256": None, "xml_sha256": "a" * 64}}
 
 
 class E2DevEvaluationPacketTests(unittest.TestCase):
@@ -264,32 +268,133 @@ class E2DevEvaluationPacketTests(unittest.TestCase):
             run_source_reference_stage([], Path("."), Path("missing"), Path(tempfile.gettempdir()) / "unused-e2l1-027", permissions=StagePermissions())
         ids = ["00001.jpg"]
         tensor = b"\x00" * (3 * 640 * 640 * 4)
-        input_record = {"image_id": ids[0], "bytes": len(tensor), "shape": [1, 3, 640, 640], "dtype": "float32", "byteorder": "little", "finite": True, "sha256": __import__("hashlib").sha256(tensor).hexdigest()}
+        image = tensor
+        input_record = {"image_id": ids[0], "path": "images/00001.jpg", "bytes": len(image), "sha256": __import__("hashlib").sha256(image).hexdigest(), "orig_shape": [640, 640], "resized_shape": [640, 640]}
         runtime = AdapterRuntimeDouble()
         with tempfile.TemporaryDirectory() as temp:
-            result = run_target_execution_stage([input_record], ids, lambda item: tensor, runtime, Path(temp) / "target", permissions=StagePermissions(allow_target_inference=True))
+            result = run_target_execution_stage([input_record], ids, lambda item: image, runtime, Path(temp) / "target", permissions=StagePermissions(allow_target_inference=True), image_source=ImageStreamSource([input_record], Path(temp), synthetic_inputs={ids[0]: image}))
             self.assertEqual(result["status"], "complete")
             self.assertEqual(result["attempted_completed"]["target_calls_completed"], 1)
-            self.assertIn("mock_buffers_released", runtime.events)
-            self.assertIn("mock_stream_closed", runtime.events)
+            self.assertIn('"event": "child_finalized"', (Path(temp) / "target" / "events.jsonl").read_text())
 
     def test_source_stage_binds_image_bytes_and_private_output_with_double(self):
         tensor = b"\x00" * (7 * 8400 * 4)
         image = b"bound-image"
         record = {"image_id": "00001.jpg", "path": "images/00001.jpg", "bytes": len(image), "sha256": __import__("hashlib").sha256(image).hexdigest()}
         class SourceDouble:
-            def prepare(self): return {"device": "cpu"}
-            def load_model(self, checkpoint): return object()
+            def prepare(self): return {"device": "cpu", "ort_providers_required": ["CPUExecutionProvider"]}
+            def validate_onnx(self, path): return {"input_name": "images", "output_name": "output0", "input_shape": [1, 3, 640, 640], "output_shape": [1, 7, 8400]}
+            def open_ort(self, path): self.ort_opened = True; return object()
             def preprocess(self, path): return SimpleNamespace(payload=b"\x00" * (3 * 640 * 640 * 4))
-            def native_forward(self, model, input_tensor): return SimpleNamespace(payload=tensor, shape=(1, 7, 8400), dtype="float32")
+            def ort_forward(self, session, input_tensor): self.ort_called = True; return SimpleNamespace(payload=tensor, shape=(1, 7, 8400), dtype="float32")
             def close(self): self.closed = True
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             (root / "images").mkdir()
             (root / "images/00001.jpg").write_bytes(image)
-            result = run_source_reference_stage([record], root, root / "checkpoint.pt", root / "source", permissions=StagePermissions(allow_source_forward=True), runtime=SourceDouble(), commit="test")
-            self.assertEqual(result["status"], "complete")
-            self.assertEqual(result["attempted_completed"]["source_forwards_completed"], 1)
-            self.assertTrue((root / "source/private/native_reference/00001.jpg.bin").is_file())
+            onnx = root / "best.onnx"
+            onnx.write_bytes(b"onnx")
+            runtime = SourceDouble()
+            result = run_source_reference_stage([record], root, onnx, root / "source", permissions=StagePermissions(allow_source_forward=True), runtime=runtime, commit="test", expected_onnx_sha256=__import__("hashlib").sha256(b"onnx").hexdigest())
+            self.assertEqual(result["status"], "verified")
+            self.assertEqual(result["attempted_completed"]["source_onnx_forwards_completed"], 1)
+            self.assertTrue(runtime.ort_opened)
+            self.assertTrue(runtime.ort_called)
+            self.assertTrue((root / "source/private/onnx_reference/00001.jpg.bin").is_file())
+
+    def test_source_stage_rejects_hash_or_provider_before_forward(self):
+        image = b"guarded-image"
+        record = {"image_id": "00001.jpg", "path": "images/00001.jpg", "bytes": len(image), "sha256": __import__("hashlib").sha256(image).hexdigest()}
+        class GuardedRuntime:
+            def __init__(self, providers): self.providers = providers; self.forwarded = False
+            def prepare(self): return {"device": "cpu", "ort_providers_required": self.providers}
+            def validate_onnx(self, path): return {}
+            def open_ort(self, path): return object()
+            def ort_forward(self, session, tensor): self.forwarded = True; raise AssertionError("forward must be guarded")
+            def close(self): pass
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); (root / "images").mkdir(); (root / "images/00001.jpg").write_bytes(image)
+            onnx = root / "best.onnx"; onnx.write_bytes(b"onnx")
+            wrong_hash_runtime = GuardedRuntime(["CPUExecutionProvider"])
+            wrong_hash = run_source_reference_stage([record], root, onnx, root / "wrong-hash", permissions=StagePermissions(allow_source_forward=True), runtime=wrong_hash_runtime)
+            self.assertEqual(wrong_hash["status"], "failed_partial")
+            self.assertIn("SOURCE_ONNX_HASH_MISMATCH", wrong_hash["error"]["message"])
+            self.assertFalse(wrong_hash_runtime.forwarded)
+            provider_runtime = GuardedRuntime(["CUDAExecutionProvider"])
+            onnx_hash = __import__("hashlib").sha256(b"onnx").hexdigest()
+            wrong_provider = run_source_reference_stage([record], root, onnx, root / "wrong-provider", permissions=StagePermissions(allow_source_forward=True), runtime=provider_runtime, expected_onnx_sha256=onnx_hash)
+            self.assertEqual(wrong_provider["status"], "failed_partial")
+            self.assertIn("SOURCE_ORT_PROVIDER_POLICY_MISMATCH", wrong_provider["error"]["message"])
+            self.assertFalse(provider_runtime.forwarded)
+
+    def test_raw_output_postprocess_feeds_canonical_record_schema(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            raw_root = root / "raw"
+            raw_root.mkdir()
+            raw_path = raw_root / "00001.jpg.bin"
+            values = [0.0] * (7 * 8400)
+            values[0] = 10.0; values[8400] = 10.0; values[2 * 8400] = 4.0; values[3 * 8400] = 4.0; values[4 * 8400] = 0.9
+            raw_path.write_bytes(struct.pack("<{}f".format(len(values)), *values))
+            raw_manifest = root / "raw_manifest.json"
+            raw_manifest.write_text(json.dumps({"records": [{"image_id": "00001.jpg", "path": "00001.jpg.bin", "bytes": raw_path.stat().st_size, "sha256": __import__("hashlib").sha256(raw_path.read_bytes()).hexdigest()}]}), encoding="utf-8")
+            result = postprocess_saved_outputs(raw_manifest, raw_root, [{"image_id": "00001.jpg", "orig_shape": [640, 640], "resized_shape": [640, 640]}], root / "post", source_label="synthetic_ort")
+            record = result["records"][0]
+            self.assertEqual(record["image"], "00001.jpg")
+            self.assertEqual(len(record["xyxy"]), 1)
+            self.assertEqual(record["postprocess"]["input_shape"], [1, 7, 8400])
+            self.assertTrue(record["postprocess"]["input_unchanged"])
+
+    def test_target_stage_exact_child_timeout_and_no_late_success(self):
+        ids = ["00001.jpg"]
+        image = b"\x00" * (3 * 640 * 640 * 4)
+        record = {"image_id": ids[0], "path": "images/00001.jpg", "bytes": len(image), "sha256": __import__("hashlib").sha256(image).hexdigest(), "orig_shape": [640, 640], "resized_shape": [640, 640]}
+        with tempfile.TemporaryDirectory() as temp:
+            runtime = MockRuntime({ids[0]: output(1)}, hang_image=ids[0])
+            result = run_target_execution_stage([record], ids, None, runtime, Path(temp) / "target", permissions=StagePermissions(allow_target_inference=True), image_source=ImageStreamSource([record], Path(temp), synthetic_inputs={ids[0]: image}), timeout_seconds=0.5)
+            self.assertEqual(result["status"], "failed_partial")
+            self.assertEqual(result["error"]["code"], "STAGE_TIMEOUT")
+            self.assertEqual(result["unknown_completion_state"], "unknown")
+            self.assertNotIn('"status": "complete"', (Path(temp) / "target" / "manifest.json").read_text())
+
+    def test_target_dispatch_rejects_pending_package_before_runtime(self):
+        inventory = package_inventory()
+        with tempfile.TemporaryDirectory() as temp:
+            with self.assertRaisesRegex(PacketError, "PACKAGE_NOT_EXECUTION_READY"):
+                run_target_execution_stage([], [], None, AdapterRuntimeDouble(), Path(temp) / "target", permissions=StagePermissions(allow_target_inference=True), image_source=ImageStreamSource([], Path(temp), synthetic_inputs={}), inventory=inventory, package_root=Path(temp), require_execution_ready=True)
+
+    def test_full_chain_ort_postprocess_package_target_and_canonical_analysis(self):
+        raw_values = [0.0] * (7 * 8400)
+        raw_values[0] = 10.0; raw_values[8400] = 10.0; raw_values[2 * 8400] = 4.0; raw_values[3 * 8400] = 4.0; raw_values[4 * 8400] = 0.9
+        raw = struct.pack("<{}f".format(len(raw_values)), *raw_values)
+        image = b"chain-image"
+        input_tensor = b"\x00" * (3 * 640 * 640 * 4)
+        image_record = {"image_id": "00001.jpg", "path": "images/00001.jpg", "bytes": len(image), "sha256": __import__("hashlib").sha256(image).hexdigest(), "orig_shape": [640, 640], "resized_shape": [640, 640]}
+        class OrtDouble:
+            def prepare(self): return {"device": "cpu", "ort_providers_required": ["CPUExecutionProvider"]}
+            def validate_onnx(self, path): return {"input_name": "images", "output_name": "output0", "input_shape": [1, 3, 640, 640], "output_shape": [1, 7, 8400]}
+            def open_ort(self, path): return object()
+            def preprocess(self, path): return SimpleNamespace(payload=input_tensor)
+            def ort_forward(self, session, tensor): return SimpleNamespace(payload=raw, shape=(1, 7, 8400), dtype="float32")
+            def close(self): pass
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); (root / "images").mkdir(); (root / "images/00001.jpg").write_bytes(image); onnx = root / "best.onnx"; onnx.write_bytes(b"onnx")
+            source_dir = root / "source"
+            test_onnx_hash = __import__("hashlib").sha256(b"onnx").hexdigest()
+            with mock.patch.object(packet_module, "SOURCE_ONNX_SHA256", test_onnx_hash), mock.patch.object(packet_module, "DEV_IMAGES", 1):
+                source = run_source_reference_stage([image_record], root, onnx, source_dir, permissions=StagePermissions(allow_source_forward=True), runtime=OrtDouble(), expected_onnx_sha256=test_onnx_hash)
+                self.assertEqual(validate_reference_artifact(source_dir / "manifest.json", package_root=source_dir)["status"], "verified")
+            source_post = postprocess_saved_outputs(source_dir / "manifest.json", source_dir, [image_record], root / "source-post", source_label="onnx_cpu")
+            target_dir = root / "target"
+            target = run_target_execution_stage([image_record], ["00001.jpg"], None, MockRuntime({"00001.jpg": raw}), target_dir, permissions=StagePermissions(allow_target_inference=True), image_source=ImageStreamSource([image_record], root, synthetic_inputs={"00001.jpg": input_tensor}, synthetic_image_bytes={"00001.jpg": image}), timeout_seconds=3.0)
+            self.assertEqual(target["status"], "complete")
+            target_post = postprocess_saved_outputs(target_dir / "manifest.json", target_dir, [image_record], root / "target-post", source_label="e2_target")
+            xml = root / "labels.zip"
+            with zipfile.ZipFile(xml, "w") as archive:
+                archive.writestr("00001.xml", "<annotation><size><width>640</width><height>640</height></size><object><name>prohibitory</name><bndbox><xmin>8</xmin><ymin>8</ymin><xmax>12</xmax><ymax>12</ymax></bndbox></object></annotation>")
+            analysis = run_canonical_analysis_stage(root / "source-post/records.json", root / "target-post/records.json", xml, root / "analysis", resamples=3)
+            self.assertEqual(analysis["backend"], "coco_xml_paired_image_bootstrap_v1")
+            self.assertEqual(analysis["image_count"], 1)
+            self.assertEqual(analysis["source_point"][0][0], analysis["target_point"][0][0])
 if __name__ == "__main__":
     unittest.main()

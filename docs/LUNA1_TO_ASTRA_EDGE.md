@@ -2117,3 +2117,45 @@ Closing packet hashes: `contract.json` 5937 bytes /
 `0d7b4c135611c2c54fe7459874324d9033e32d3fbea697418b05ff6fe17f7c0f`.
 
 **terminal.** `edge_dev_packet_canonical_reference_pending`.
+
+## L1A-028 — C1-C4 integrated execution-chain package (2026-09-22)
+
+**implementation_verified_local.** E2L1-028 completes the existing ST-EDGE-03
+chain locally as one package. C1 now hashes the pinned ONNX before opening it,
+requires exactly `CPUExecutionProvider`, uses the existing
+`UltralyticsSourceRuntime` ORT boundary, and records native-forward counters
+as zero. C2 verifies private raw-output membership/bytes/hashes, calls the
+accepted `ultralytics.utils.nms.non_max_suppression` helper on a copied
+`[1,7,8400]` float32 tensor, checks input immutability, maps boxes to original
+image coordinates and emits the canonical analyzer record schema.
+
+C3 now dispatches the target through one bounded child process with durable
+append/flush/fsync events, preserved partial counters, explicit unknown
+completion on timeout, no retry and cleanup-known gating. C4 now gates target
+dispatch on the execution-ready package inventory, verifies the canonical
+image-ID digest and allowlisted files, and streams bound image bytes through
+the existing source preprocess path one image at a time. The production path
+does not consume a precomputed tensor bundle; synthetic input is limited to
+explicit tests.
+
+**analyzed.** Dependency-rich focused tests pass **32/32** and full edge
+regression passes **108/108**. Added coverage includes ORT hash/provider
+fail-closed guards, a complete ORT → saved raw output → real CPU NMS → target
+child → canonical XML/AP integration double, exact bounded timeout/no-late-
+success behavior, package execution-ready rejection, stream binding and
+cleanup. No source forward, SSH, transfer, export, build, E2 inference or
+benchmark was run; source reference remains `0/1636`.
+
+**packet_ready.** One public metadata-only package was generated at
+`results/edge_readiness_v1/e2l1-028-c1c4-packet/` with `contract.json`,
+`runbook.md` and `index.json`; no binary, engine, input or raw prediction
+payload is included. SHA-256 receipts: `contract.json` 6248 bytes /
+`aa33d75bd20442c4deb3ac8b872134b2a504d8171853e6defa58bbd4cf2e5424`;
+`index.json` 1685 bytes /
+`f8813442a4235fbbf209a797d75dfac8d416b89ef5934250d1015f3cdd878913`;
+`runbook.md` 3355 bytes /
+`f75de732fa5fe368b781f85cf07c26e0c846088dc6e4a66edff87603095fbcce`.
+
+The packet terminal is `edge_c1c4_chain_ready_no_execution`. It supplies the
+future guarded commands but does not authorize an additional smoke; historical
+E2 attempts and private evidence remain unchanged.
