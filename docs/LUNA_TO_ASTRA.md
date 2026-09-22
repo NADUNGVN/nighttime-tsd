@@ -3285,3 +3285,70 @@ merge mode is implemented. The integrated packet is submitted for Astra
 review; it does **not** authorize the 84/78 server matrix until that review
 accepts the packet. The modified checkpoint remains untouched and is excluded
 from the scoped commit.
+
+## L2A-053 R3 — production-boundary and lifecycle remediation
+
+2026-09-22. Implemented A2L-048/R3 as the same local-only packet. No server,
+GPU, CUDA forward, TensorRT build, export, benchmark or matrix execution was
+performed. The earlier R2 statement that the synthetic fixture covered the
+production path is corrected here: it now enters the common `build_real` child
+boundary with an explicitly labeled external-runtime fixture, while the
+TensorRT/device boundary itself remains unexecuted locally. Production
+analysis still rejects `synthetic_external_runtime_double`.
+
+### R3 closure
+
+- Warmup accounting now distinguishes a framework warmup request from an
+  actual backend forward. The production wrapper performs zero warmup
+  forwards and counts data attempts, completions and stream synchronizations
+  separately; a test exercises the wrapper directly.
+- GPU identity is bound into the same manifest object that receives each child
+  record. A changed UUID/name/driver or incomplete identity blocks the next
+  dispatch; the integration test verifies persistence and stop-after-second-
+  child behavior.
+- Child state is `ready_to_release` until the child build boundary returns.
+  `finalize_child_state` then records `released_after_child_return`; tests
+  inspect the complete 84/78 inventory, release boundary and capture counts.
+  Production state does not claim synchronization from owner release.
+- The production plan binds and rechecks checkpoint/ONNX/helper/config bytes,
+  calibration YAML and source/materialized calibration images. Scored INT8
+  cache evidence is linked to the auxiliary producer hash. XML is an explicit
+  read-only plan input and is validated as exactly 1,636 dev images / 2,706
+  instances before dispatch. The canonical ordered image/shape reference is
+  carried into capture validation.
+- Requested layer constraints are labeled as requested only; effective engine
+  precision remains unknown unless supported by public EngineInspector JSON,
+  whose path and SHA-256 are published in child state. The analyzer checks
+  that evidence for production cells and never infers an INT8 fraction.
+- The production analyzer now audits lifecycle, counters, cache mode, engine
+  identity, inspector hash, XML/native evidence, prediction hashes and replay
+  status. Its local success fixture uses the real COCO/XML evaluator and
+  pooled AP/bootstrap code with known positive/false-positive records and
+  duplicate-image resampling; monkeypatched constant metrics were removed.
+
+### R3 local verification
+
+Using `D:/Research/paper/local/measurement_audit_env/Scripts/python.exe`:
+
+- `python -m unittest discover -s tests -p test_precision_head_confirmation_super.py -v`:
+  **18/18 PASS**.
+- `python -m unittest discover -s tests -p test_precision_head_trt_feasibility.py -v`:
+  **30/30 PASS**.
+- `python -m py_compile` over the changed runner, server child, analyzer,
+  contract and supertest: **PASS**.
+- `git diff --check`: **PASS**.
+
+The 18-test suite includes the complete 84-child/78-capture external-boundary
+inventory, actual evaluator/bootstrap integration, identity persistence,
+warmup semantics and post-return release checks. This is contract evidence,
+not TensorRT end-to-end evidence. The real `build_real` path remains subject
+to the server runtime/GPU and must be reviewed before any matrix command.
+
+### R3 gate and handoff
+
+Status remains **`implementation_complete_integrated_review_required`**,
+not server-authorized. The scoped commit includes the unchanged A2L-048 inbox,
+R3 review document, runner/analyzer/protocol/runbook updates and tests. The
+modified frozen checkpoint is deliberately not staged. Astra review is still
+required before the user runs 84 builders/78 captures; no server command is
+being issued in this packet.

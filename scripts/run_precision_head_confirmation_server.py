@@ -16,6 +16,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -91,6 +92,49 @@ def _calibration_binding(plan: dict[str, Any], selection: str, repo: Path) -> di
     }
 
 
+def verify_plan_inputs(repo: Path, plan: dict[str, Any]) -> None:
+    """Recheck plan-bound bytes immediately before any production child."""
+    for model, evidence in plan.get("models", {}).items():
+        for key in ("checkpoint", "onnx"):
+            item = evidence.get(key, {})
+            path = repo / item.get("path", "")
+            if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item.get("sha256"):
+                raise ContractError(f"bound {model} {key} changed or is missing: {path}")
+    for item in plan.get("provenance_files", []):
+        path = repo / item.get("path", "")
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != item.get("sha256"):
+            raise ContractError(f"bound helper/config changed or is missing: {path}")
+    dataset = plan.get("dataset", {})
+    xml_validation = dataset.get("xml_validation")
+    if xml_validation:
+        xml_path = Path(xml_validation.get("path", ""))
+        if not xml_path.is_file() or hashlib.sha256(xml_path.read_bytes()).hexdigest() != xml_validation.get("sha256"):
+            raise ContractError(f"bound XML archive changed or is missing: {xml_path}")
+    for selection in plan.get("calibration_producer", {}).get("selections", []):
+        materialization = selection.get("materialization", {})
+        yaml_path = Path(materialization.get("yaml", ""))
+        if not yaml_path.is_file() or hashlib.sha256(yaml_path.read_bytes()).hexdigest() != materialization.get("yaml_sha256"):
+            raise ContractError(f"bound calibration YAML changed or is missing: {yaml_path}")
+        materialized_dir = Path(materialization.get("resolved_directory", ""))
+        for item in materialization.get("image_bytes", []):
+            source = repo / "data/processed/cctsdb2021_clean" / item["image"]
+            materialized = materialized_dir / Path(item["image"]).name
+            source_hash = hashlib.sha256(source.read_bytes()).hexdigest() if source.is_file() else None
+            materialized_hash = hashlib.sha256(materialized.read_bytes()).hexdigest() if materialized.is_file() else None
+            if source_hash != item.get("source_sha256") or materialized_hash != item.get("materialized_sha256") or source_hash != materialized_hash:
+                raise ContractError(f"bound calibration image changed or is missing: {item.get('image')}")
+
+
+def validate_canonical_capture_records(records: list[dict[str, Any]], plan: dict[str, Any]) -> None:
+    reference = plan.get("dataset", {}).get("canonical_dev_reference", {})
+    expected = reference.get("records", [])
+    if len(expected) != 1636:
+        raise ContractError("plan is missing the canonical 1,636-image dev reference")
+    observed = [{"image": row.get("image"), "orig_shape": row.get("orig_shape")} for row in records]
+    if observed != expected:
+        raise ContractError("capture image order or original-shape binding differs from canonical dev reference")
+
+
 def _gpu_identity(device: str) -> dict[str, str]:
     index = str(device)
     result = subprocess.run(
@@ -113,6 +157,22 @@ def _release_state(path: Path, state: dict[str, Any], *, status: str, error: str
     atomic(path, state)
 
 
+def _auxiliary_cache_sha(out: Path, model: str, selection: str) -> str:
+    manifest_path = out / "execution_manifest.json"
+    if not manifest_path.is_file():
+        raise ContractError("execution manifest is missing before scored cache reuse")
+    manifest = read(manifest_path)
+    matches = [item for item in manifest.get("jobs", []) if item.get("job", {}).get("model") == model and item.get("job", {}).get("selection") == selection and item.get("job", {}).get("phase") == "auxiliary_calibration"]
+    if len(matches) != 1:
+        raise ContractError(f"expected exactly one auxiliary cache producer for {model}/{selection}")
+    state = matches[0].get("state", {})
+    cache = state.get("calibration_cache", {})
+    value = cache.get("after_sha256")
+    if not value or state.get("calibration_batches") != 1024 or state.get("calibration_write_calls") != 1:
+        raise ContractError(f"auxiliary cache provenance is incomplete for {model}/{selection}")
+    return value
+
+
 def _validate_completed_child(job: dict[str, Any], state: dict[str, Any]) -> None:
     if state.get("status") != "completed" or state.get("job") != job:
         raise ContractError("child completion state is missing or has the wrong job identity")
@@ -123,14 +183,60 @@ def _validate_completed_child(job: dict[str, Any], state: dict[str, Any]) -> Non
             raise ContractError("child capture lifecycle counters are incomplete")
         if state.get("forward_attempted") != 1636 or state.get("forward_completed") != 1636 or state.get("synchronization_completed") != 1636:
             raise ContractError("child forward/synchronization accounting is not exactly 1636")
-        if state.get("warmup_calls") != 0:
-            raise ContractError("child reported an uncounted warmup")
-    if state.get("owner_release_status") != "released" or not state.get("cleanup_completed"):
+        if state.get("warmup_forward_count") != 0:
+            raise ContractError("child reported an uncounted warmup forward")
+    if state.get("owner_release_status") != "released_after_child_return" or not state.get("cleanup_completed"):
         raise ContractError("child owner lifecycle was not released after cleanup")
 
 
+def bind_gpu_identity(manifest: dict[str, Any], identity: dict[str, str]) -> None:
+    """Bind the first production GPU identity and compare every later child."""
+    if not identity or not identity.get("uuid") or not identity.get("name") or not identity.get("driver_version"):
+        raise ContractError("production child did not publish a complete GPU identity")
+    previous = manifest.get("gpu_identity")
+    if previous is not None and previous != identity:
+        raise ContractError("GPU identity changed within one confirmation study")
+    manifest["gpu_identity"] = dict(identity)
+
+
+class NoWarmupBackendAccounting:
+    """Mixin for the actual validator backend wrapper.
+
+    A framework warmup request is observable, but this study does not turn it
+    into a forward. Data forwards and their completion/synchronization are
+    counted separately by the concrete child wrapper below.
+    """
+
+    warmup_request_count = 0
+    warmup_forward_count = 0
+    forward_attempt_count = 0
+    forward_completed_count = 0
+    synchronization_completed_count = 0
+    last_instance = None
+
+    @classmethod
+    def reset_accounting(cls) -> None:
+        cls.warmup_request_count = 0
+        cls.warmup_forward_count = 0
+        cls.forward_attempt_count = 0
+        cls.forward_completed_count = 0
+        cls.synchronization_completed_count = 0
+        cls.last_instance = None
+
+    def warmup(self, *warmup_args: Any, **warmup_kwargs: Any) -> None:
+        type(self).warmup_request_count += 1
+        # Deliberately do not call the framework implementation: that would
+        # issue an uncounted engine forward.
+
+    def __call__(self, *call_args: Any, **call_kwargs: Any) -> Any:
+        type(self).forward_attempt_count += 1
+        result = super().__call__(*call_args, **call_kwargs)
+        type(self).forward_completed_count += 1
+        return result
+
+
 def runtime_double(job: dict[str, Any], plan: dict[str, Any], out: Path, state_path: Path) -> None:
-    """Synthetic external adapter used only by CPU integration tests."""
+    """External-boundary fixture; production never enables this switch."""
     state = read(state_path) if state_path.is_file() else child_state(state_path, job)
     validate_arm_for_phase(job["phase"], job["arm"])
     model_spec = plan.get("models", {}).get(job["model"], {})
@@ -138,10 +244,14 @@ def runtime_double(job: dict[str, Any], plan: dict[str, Any], out: Path, state_p
     cache_sha = hashlib.sha256(f"cache:{job['model']}:{job['selection']}".encode()).hexdigest()
     timing_in = hashlib.sha256(b"").hexdigest()
     timing_out = hashlib.sha256(f"timing:{job_key(job)}".encode()).hexdigest()
-    state.update({"status": "completed", "builder_attempted": True, "builder_completed": True, "capture_attempted": bool(job["capture_required"]), "capture_completed": bool(job["capture_required"]), "calibration_batches": 1024 if job["phase"] == "auxiliary_calibration" else 0, "calibration_read_calls": 2 if job["phase"] == "scored_int8" else 0, "calibration_write_calls": 1 if job["phase"] == "auxiliary_calibration" else 0, "synchronization_completed": 1636 if job["capture_required"] else 0, "forward_attempted": 1636 if job["capture_required"] else 0, "forward_completed": 1636 if job["capture_required"] else 0, "warmup_calls": 0, "cache_consumed": job["phase"] == "scored_int8", "engine_sha256": engine_sha, "calibration_cache": {"selection": job.get("selection"), "before_sha256": cache_sha if job["phase"] == "scored_int8" else None, "after_sha256": cache_sha if job["phase"] in {"auxiliary_calibration", "scored_int8"} else None, "immutable": job["phase"] == "scored_int8", "ordered_images_sha256": "runtime-double-ordered-images"}, "timing_cache": {"input_sha256": timing_in, "output_sha256": timing_out, "reused": False}, "precision_inspector": {"requested_targets": selected_targets(model_spec.get("mapping", {}), job["arm"]) if model_spec.get("mapping") else [], "effective_targets": [], "effective_precision": "fp16" if job["phase"] == "scored_fp16" else "int8"}, "cleanup_started": True, "cleanup_completed": True, "owner_release_status": "released"})
+    state.update({"status": "ready_to_release", "builder_attempted": True, "builder_completed": True, "capture_attempted": bool(job["capture_required"]), "capture_completed": bool(job["capture_required"]), "calibration_batches": 1024 if job["phase"] == "auxiliary_calibration" else 0, "calibration_read_calls": 2 if job["phase"] == "scored_int8" else 0, "calibration_write_calls": 1 if job["phase"] == "auxiliary_calibration" else 0, "synchronization_completed": 1636 if job["capture_required"] else 0, "forward_attempted": 1636 if job["capture_required"] else 0, "forward_completed": 1636 if job["capture_required"] else 0, "warmup_request_count": 0, "warmup_forward_count": 0, "cache_consumed": job["phase"] == "scored_int8", "engine_sha256": engine_sha, "calibration_cache": {"selection": job.get("selection"), "before_sha256": cache_sha if job["phase"] == "scored_int8" else None, "after_sha256": cache_sha if job["phase"] in {"auxiliary_calibration", "scored_int8"} else None, "auxiliary_cache_sha256": cache_sha if job["phase"] == "scored_int8" else None, "immutable": job["phase"] == "scored_int8", "ordered_images_sha256": "runtime-double-ordered-images"}, "timing_cache": {"input_sha256": timing_in, "output_sha256": timing_out, "reused": False}, "precision_inspector": {"requested_targets": selected_targets(model_spec.get("mapping", {}), job["arm"]) if model_spec.get("mapping") else [], "requested_only": True}, "cleanup_started": False, "cleanup_completed": False, "owner_release_status": "pending_child_return", "boundary_fixture": True})
+    test_identity = plan.get("_test_gpu_identity_by_sequence", {}).get(str(job.get("sequence")))
+    if test_identity:
+        state["gpu_identity"] = test_identity
     atomic(state_path, state)
     if job["capture_required"]:
         records = [{"image": f"{index:04d}.jpg", "orig_shape": [100, 100], "xyxy": [], "confidence": [], "class_id": [], "validator_input": {"imgsz": [640, 640], "ratio_pad": [[1.0, 1.0], [0.0, 0.0]], "prediction_xyxy": [], "target_xyxy": [], "target_class_id": []}, "validator_statistics": {"tp": [], "confidence_dtype": "float64", "pred_class_dtype": "float64", "target_class_dtype": "int64"}} for index in range(1636)]
+        records[0] = {"image": "0000.jpg", "orig_shape": [100, 100], "xyxy": [[10.0, 10.0, 20.0, 20.0]], "confidence": [0.1], "class_id": [0], "validator_input": {"imgsz": [640, 640], "ratio_pad": [[1.0, 1.0], [0.0, 0.0]], "prediction_xyxy": [[10.0, 10.0, 20.0, 20.0]], "target_xyxy": [], "target_class_id": []}, "validator_statistics": {"tp": [[False] * 10], "confidence_dtype": "float32", "pred_class_dtype": "int64", "target_class_dtype": "int64"}}
         prediction = {"schema_version": 2, "capture_mode": "same_val_process_batch", "iou_thresholds": [0.5 + 0.05 * index for index in range(10)], "records": records, "model_sha256": state["engine_sha256"]}
         prediction_path = out / "predictions.json"
         atomic(prediction_path, prediction)
@@ -149,8 +259,30 @@ def runtime_double(job: dict[str, Any], plan: dict[str, Any], out: Path, state_p
         atomic(out / "cell_metrics.json", {"schema_version": 1, "job": job, "job_id": job_key(job), "status": "synthetic_external_runtime_double", "plan_sha256": plan.get("_plan_sha256", "runtime-double-plan-bound-at-test"), "checkpoint_sha256": model_spec.get("checkpoint", {}).get("sha256", "runtime-double-checkpoint"), "onnx_sha256": model_spec.get("onnx", {}).get("sha256", "runtime-double-onnx"), "engine_sha256": state["engine_sha256"], "metrics": {"full": {"ap50": 0.0, "ap50_95": 0.0}, "XS": {"ap50": 0.0, "ap50_95": 0.0}, "S": {"ap50": 0.0, "ap50_95": 0.0}}, "statistics_replay": {"status": "pass", "images": 1636}, "native_matching": {"status": "pass", "changed_tp_decisions": 0}, "xml_validation": {"path": "external-test-xml", "sha256": "external-test-xml", "images": 1636, "instances": 2706}, "prediction_path": "predictions.json", "prediction_sha256": prediction_sha256, "record_count": 1636, "raw_output_source": "external_runtime_double_capture_adapter", "postprocess_route": model_spec.get("postprocess", "double")})
 
 
-def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path, args: argparse.Namespace, state_path: Path) -> None:
+def finalize_child_state(path: Path) -> None:
+    """Mark release only after the production child function has returned."""
+    state = read(path)
+    if state.get("status") not in {"ready_to_release", "completed"}:
+        return
+    state.update({"status": "completed", "cleanup_started": True, "cleanup_completed": True, "owner_release_status": "released_after_child_return", "release_boundary": "run_child_after_build_real_return"})
+    atomic(path, state)
+
+
+def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path, args: argparse.Namespace, state_path: Path, *, external_boundary: bool = False) -> None:
     """Build one real server cell and capture it with the locked validator."""
+    validate_arm_for_phase(job["phase"], job["arm"])
+    verify_plan_inputs(repo, plan) if not external_boundary else None
+    if external_boundary:
+        # Tests enter through the same child production boundary.  The
+        # external fixture replaces only TensorRT/device work; it is never
+        # accepted by the production runbook or production analyzer.
+        plan.setdefault("_plan_sha256", hashlib.sha256((out / "confirmation_plan.json").read_bytes()).hexdigest() if (out / "confirmation_plan.json").is_file() else "external-boundary-plan")
+        update_state(state_path, read(state_path), "build_real_external_boundary", build_real_entry=True, boundary_fixture=True)
+        runtime_double(job, plan, out / "jobs" / job_key(job), state_path)
+        state = read(state_path)
+        state["build_real_entry"] = True
+        atomic(state_path, state)
+        return
     import hashlib
     import inspect
     import numpy as np
@@ -166,6 +298,7 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
 
     model = job["model"]
     validate_arm_for_phase(job["phase"], job["arm"])
+    verify_plan_inputs(repo, plan)
     model_evidence = plan["models"][model]
     checkpoint = repo / model_evidence["checkpoint"]["path"]
     onnx = repo / model_evidence["onnx"]["path"]
@@ -177,10 +310,12 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
     cache_path = out / "private" / "calibration" / model / f"{job['selection']}.cache"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     calibration_binding = _calibration_binding(plan, job["selection"], repo) if job["phase"] in {"auxiliary_calibration", "scored_int8"} else None
+    auxiliary_cache_sha = _auxiliary_cache_sha(out, model, job["selection"]) if job["phase"] == "scored_int8" else None
     desktop = parse_desktop_confirmations(args.confirm_desktop_process)
     if args.confirm_background_process:
         raise ContractError("confirmation build-variation study does not authorize competing background compute")
     background = parse_background_confirmations([])
+    logger = builder = network = parser = config = timing = calibrator = exporter = loader = validator = None
     with GpuPhaseLock(repo / "results/architecture_matrix_v1/.gpu_phase.lock", f"confirmation_{job_key(job)}"):
         before = snapshot(desktop, background)
         ensure_idle(before, background)
@@ -190,13 +325,15 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
         for key in ("torch", "ultralytics", "tensorrt", "cuda"):
             if runtime_contract.get(key) and observed_runtime[key] != runtime_contract[key]:
                 raise ContractError(f"runtime {key} differs: expected={runtime_contract[key]!r} observed={observed_runtime[key]!r}")
-        update_state(state_path, read(state_path), "runtime_loaded", runtime=observed_runtime, gpu_identity=gpu_identity)
+        update_state(state_path, read(state_path), "runtime_loaded", runtime=observed_runtime, gpu_identity=gpu_identity, input_identity={"checkpoint_sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest(), "onnx_sha256": hashlib.sha256(onnx.read_bytes()).hexdigest()})
         logger = trt.Logger(trt.Logger.VERBOSE)
         builder = trt.Builder(logger)
         network = builder.create_network(0)
         parser = trt.OnnxParser(network, logger)
         if not parser.parse_from_file(str(onnx)):
             raise RuntimeError("TensorRT ONNX parse failed: " + "; ".join(str(parser.get_error(i)) for i in range(parser.num_errors)))
+        if hashlib.sha256(onnx.read_bytes()).hexdigest() != model_evidence["onnx"]["sha256"] or hashlib.sha256(checkpoint.read_bytes()).hexdigest() != model_evidence["checkpoint"]["sha256"]:
+            raise ContractError("bound checkpoint/ONNX bytes changed during parse")
         expected_shape = tuple(model_evidence["output_shape"])
         if network.num_inputs != 1 or tuple(network.get_input(0).shape) != (1, 3, 640, 640):
             raise RuntimeError(f"unexpected TensorRT input contract: {network.get_input(0).shape}")
@@ -272,6 +409,8 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
             calibrator = CacheOnly()
             config.int8_calibrator = calibrator
         cache_before_sha = hashlib.sha256(cache_path.read_bytes()).hexdigest() if job["phase"] == "scored_int8" and cache_path.is_file() else None
+        if job["phase"] == "scored_int8" and cache_before_sha != auxiliary_cache_sha:
+            raise ContractError("scored cache bytes do not match the auxiliary producer cache")
         targets = set(selected_targets(mapping, job["arm"]))
         observed_constraints = []
         effective_precision = {}
@@ -286,7 +425,7 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
                 effective_precision[layer.name] = {"precision": str(layer.precision), "outputs": [str(layer.get_output_type(output_index)) for output_index in range(layer.num_outputs)]}
         if observed_constraints != sorted(targets) and set(observed_constraints) != targets:
             raise RuntimeError(f"precision target mismatch: expected {sorted(targets)}, observed {observed_constraints}")
-        update_state(state_path, read(state_path), "build", builder_attempted=True, precision_constraints=observed_constraints, precision_inspector={"requested_targets": sorted(targets), "effective_targets": sorted(effective_precision), "effective_precision": effective_precision})
+        update_state(state_path, read(state_path), "build", builder_attempted=True, precision_constraints=observed_constraints, precision_inspector={"requested_targets": sorted(targets), "requested_layer_settings": effective_precision, "requested_only": True, "effective_precision": "unknown", "effective_engine_precision": "not_inferred_from_layer_flags"})
         serialized = builder.build_serialized_network(network, config)
         if serialized is None: raise RuntimeError("TensorRT builder returned no engine")
         if job["phase"] == "auxiliary_calibration":
@@ -304,9 +443,11 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
         if engine is None:
             raise RuntimeError("TensorRT runtime could not deserialize the just-built engine")
         inspector = engine.create_engine_inspector()
-        (private / "inspector.json").write_text(
+        inspector_path = private / "inspector.json"
+        inspector_path.write_text(
             inspector.get_engine_information(trt.LayerInformationFormat.JSON), encoding="utf-8"
         )
+        inspector_sha256 = hashlib.sha256(inspector_path.read_bytes()).hexdigest()
         del inspector, engine, runtime
         cache_after = hashlib.sha256(cache_path.read_bytes()).hexdigest() if cache_path.is_file() else None
         if job["phase"] == "scored_int8" and cache_before_sha != cache_after:
@@ -316,7 +457,7 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
             calibration_audit = {"selection": calibration_binding["id"], "manifest_sha256": calibration_binding["manifest_sha256"], "yaml_sha256": calibration_binding["yaml_sha256"], "expected_images_sha256": calibration_binding["ordered_images_sha256"], "observed_images_sha256": sha256_bytes(json.dumps(getattr(calibrator, "observed_images", []), separators=(",", ":"), ensure_ascii=False).encode("utf-8")), "tensor_sequence_sha256": getattr(getattr(calibrator, "tensor_hash", None), "hexdigest", lambda: None)(), "batch_count": getattr(calibrator, "batch_calls", 0), "input_shape": [1, 3, 640, 640], "input_dtype": "torch.float32"}
             if job["phase"] == "auxiliary_calibration" and calibration_audit["observed_images_sha256"] != calibration_binding["ordered_images_sha256"]:
                 raise ContractError("calibration loader order audit hash mismatch")
-        update_state(state_path, read(state_path), "build_complete", builder_completed=True, engine_sha256=hashlib.sha256(engine_path.read_bytes()).hexdigest(), calibration_batches=calibrator.batch_calls if job["phase"] != "scored_fp16" else 0, calibration_read_calls=calibrator.read_calls if job["phase"] != "scored_fp16" else 0, calibration_write_calls=calibrator.write_calls if job["phase"] != "scored_fp16" else 0, cache_consumed=getattr(calibrator, "cache_consumed", False) if job["phase"] != "scored_fp16" else False, calibration_cache={"selection": job.get("selection"), "before_sha256": cache_before_sha, "after_sha256": cache_after, "immutable": job["phase"] == "scored_int8", "ordered_images_sha256": calibration_audit["expected_images_sha256"] if calibration_audit else None, "audit": calibration_audit}, timing_cache=timing_audit)
+        update_state(state_path, read(state_path), "build_complete", builder_completed=True, engine_sha256=hashlib.sha256(engine_path.read_bytes()).hexdigest(), engine_inspector={"path": str(inspector_path.relative_to(out).as_posix()), "sha256": inspector_sha256, "format": "JSON", "source": "TensorRT EngineInspector"}, calibration_batches=calibrator.batch_calls if job["phase"] != "scored_fp16" else 0, calibration_read_calls=calibrator.read_calls if job["phase"] != "scored_fp16" else 0, calibration_write_calls=calibrator.write_calls if job["phase"] != "scored_fp16" else 0, cache_consumed=getattr(calibrator, "cache_consumed", False) if job["phase"] != "scored_fp16" else False, calibration_cache={"selection": job.get("selection"), "before_sha256": cache_before_sha, "after_sha256": cache_after, "auxiliary_cache_sha256": auxiliary_cache_sha, "immutable": job["phase"] == "scored_int8", "ordered_images_sha256": calibration_audit["expected_images_sha256"] if calibration_audit else None, "audit": calibration_audit}, timing_cache=timing_audit)
         after_build = snapshot(desktop, background)
         ensure_idle(after_build, background)
         state_after_build = read(state_path)
@@ -329,28 +470,33 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
             data.write_text(f"path: {dev.as_posix()}\ntrain: images\nval: images\nnames:\n  0: prohibitory\n  1: mandatory\n  2: warning\nnc: 3\n", encoding="utf-8")
             from ultralytics.engine import validator as validator_module
             backend_base = validator_module.AutoBackend
-            class CountingNoWarmupBackend(backend_base):
-                total_calls = 0
-                warmup_calls = 0
-                last_instance = None
+            class CountingNoWarmupBackend(NoWarmupBackendAccounting, backend_base):
                 def __init__(self, *backend_args: Any, **backend_kwargs: Any) -> None:
                     super().__init__(*backend_args, **backend_kwargs)
                     type(self).last_instance = self
-                def warmup(self, *warmup_args: Any, **warmup_kwargs: Any) -> None:
-                    type(self).warmup_calls += 1
                 def __call__(self, *call_args: Any, **call_kwargs: Any) -> Any:
-                    type(self).total_calls += 1
-                    return super().__call__(*call_args, **call_kwargs)
+                    type(self).forward_attempt_count += 1
+                    result = super(NoWarmupBackendAccounting, self).__call__(*call_args, **call_kwargs)
+                    type(self).forward_completed_count += 1
+                    torch.cuda.current_stream(torch.device(f"cuda:{args.device}")).synchronize()
+                    type(self).synchronization_completed_count += 1
+                    return result
+            CountingNoWarmupBackend.reset_accounting()
             validator_module.AutoBackend = CountingNoWarmupBackend
-            validator = CaptureValidator(args={"model": str(engine_path), "data": str(data), "split": "val", "device": args.device, "imgsz": 640, "batch": 1, "workers": 0, "conf": 0.001, "iou": 0.7, "max_det": 300, "rect": False, "plots": False, "verbose": False}, save_dir=private / "validator")
             try:
-                validator(model=str(engine_path))
+                validator = CaptureValidator(args={"model": str(engine_path), "data": str(data), "split": "val", "device": args.device, "imgsz": 640, "batch": 1, "workers": 0, "conf": 0.001, "iou": 0.7, "max_det": 300, "rect": False, "plots": False, "verbose": False}, save_dir=private / "validator")
+                try:
+                    validator(model=str(engine_path))
+                except Exception:
+                    update_state(state_path, read(state_path), "capture_failed", forward_attempted=CountingNoWarmupBackend.forward_attempt_count, forward_completed=CountingNoWarmupBackend.forward_completed_count, synchronization_completed=CountingNoWarmupBackend.synchronization_completed_count, warmup_request_count=CountingNoWarmupBackend.warmup_request_count, warmup_forward_count=CountingNoWarmupBackend.warmup_forward_count, cleanup_started=False, cleanup_completed=False, owner_release_status="pending_child_return")
+                    raise
             finally:
                 validator_module.AutoBackend = backend_base
             records = validator.capture_records
             if len(records) != 1636 or len({record["image"] for record in records}) != 1636: raise RuntimeError("capture did not cover dev exactly once")
-            if CountingNoWarmupBackend.total_calls != 1636 or CountingNoWarmupBackend.warmup_calls != 0:
-                raise RuntimeError(f"capture forward accounting mismatch: calls={CountingNoWarmupBackend.total_calls}, warmup={CountingNoWarmupBackend.warmup_calls}")
+            validate_canonical_capture_records(records, plan)
+            if CountingNoWarmupBackend.forward_attempt_count != 1636 or CountingNoWarmupBackend.forward_completed_count != 1636 or CountingNoWarmupBackend.synchronization_completed_count != 1636 or CountingNoWarmupBackend.warmup_forward_count != 0:
+                raise RuntimeError(f"capture accounting mismatch: attempted={CountingNoWarmupBackend.forward_attempt_count}, completed={CountingNoWarmupBackend.forward_completed_count}, synchronized={CountingNoWarmupBackend.synchronization_completed_count}, warmup_forwards={CountingNoWarmupBackend.warmup_forward_count}")
             predictions = private / "validator_predictions.json"
             predictions.write_text(json.dumps({"schema_version": 2, "capture_mode": "same_val_process_batch", "iou_thresholds": [0.5 + 0.05 * index for index in range(10)], "records": records, "model_sha256": hashlib.sha256(engine_path.read_bytes()).hexdigest()}, allow_nan=False) + "\n", encoding="utf-8")
             from capture_cctsdb_validator import replay_statistics
@@ -371,20 +517,26 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
             public_predictions = state_path.parent / "predictions.json"
             public_predictions.write_bytes(predictions.read_bytes())
             metrics = metric_summary(validator.metrics)
-            atomic(state_path.parent / "cell_metrics.json", {"schema_version": 1, "job": job, "job_id": job_key(job), "plan_sha256": hashlib.sha256((out / "confirmation_plan.json").read_bytes()).hexdigest(), "checkpoint_sha256": model_evidence["checkpoint"]["sha256"], "onnx_sha256": model_evidence["onnx"]["sha256"], "engine_sha256": hashlib.sha256(engine_path.read_bytes()).hexdigest(), "metrics": {"full": {"ap50": metrics["map50"], "ap50_95": metrics["map50_95"]}}, "statistics_replay": replay, "native_matching": matching, "xml_validation": {"path": plan.get("dataset", {}).get("xml_path"), "sha256": hashlib.sha256(xml_path.read_bytes()).hexdigest(), "images": len(xml), "instances": sum(len(value["rows"]) for value in xml.values())}, "prediction_path": str(public_predictions.relative_to(out).as_posix()), "prediction_sha256": hashlib.sha256(public_predictions.read_bytes()).hexdigest(), "record_count": len(records), "raw_output_source": "CaptureValidator._process_batch", "postprocess_route": plan["models"][model]["postprocess"]})
-            update_state(state_path, read(state_path), "capture_complete", capture_completed=True, synchronization_completed=1636, forward_attempted=CountingNoWarmupBackend.total_calls, forward_completed=CountingNoWarmupBackend.total_calls, warmup_calls=CountingNoWarmupBackend.warmup_calls, backend_metadata={"format": str(getattr(CountingNoWarmupBackend.last_instance, "format", "unknown")), "stride": int(getattr(CountingNoWarmupBackend.last_instance, "stride", 0)), "end2end": bool(getattr(CountingNoWarmupBackend.last_instance, "end2end", False))})
+            replay_delta = {key: float(replay[key] - metrics[key]) for key in ("map50", "map50_95", "precision", "recall")}
+            if any(abs(value) > 1e-12 for value in replay_delta.values()):
+                raise ContractError(f"captured statistics replay differs from validator metrics: {replay_delta}")
+            atomic(state_path.parent / "cell_metrics.json", {"schema_version": 1, "job": job, "job_id": job_key(job), "plan_sha256": hashlib.sha256((out / "confirmation_plan.json").read_bytes()).hexdigest(), "checkpoint_sha256": model_evidence["checkpoint"]["sha256"], "onnx_sha256": model_evidence["onnx"]["sha256"], "engine_sha256": hashlib.sha256(engine_path.read_bytes()).hexdigest(), "metrics": {"full": {"ap50": metrics["map50"], "ap50_95": metrics["map50_95"]}}, "statistics_replay": replay, "statistics_replay_delta": replay_delta, "statistics_replay_match": True, "native_matching": matching, "xml_validation": {"path": plan.get("dataset", {}).get("xml_path"), "sha256": hashlib.sha256(xml_path.read_bytes()).hexdigest(), "images": len(xml), "instances": sum(len(value["rows"]) for value in xml.values())}, "prediction_path": str(public_predictions.relative_to(out).as_posix()), "prediction_sha256": hashlib.sha256(public_predictions.read_bytes()).hexdigest(), "record_count": len(records), "raw_output_source": "CaptureValidator._process_batch", "postprocess_route": plan["models"][model]["postprocess"], "backend_metadata": {"format": str(getattr(CountingNoWarmupBackend.last_instance, "format", "unknown")), "stride": int(getattr(CountingNoWarmupBackend.last_instance, "stride", 0)), "end2end": bool(getattr(CountingNoWarmupBackend.last_instance, "end2end", False))}})
+            update_state(state_path, read(state_path), "capture_complete", capture_completed=True, synchronization_completed=CountingNoWarmupBackend.synchronization_completed_count, forward_attempted=CountingNoWarmupBackend.forward_attempt_count, forward_completed=CountingNoWarmupBackend.forward_completed_count, warmup_request_count=CountingNoWarmupBackend.warmup_request_count, warmup_forward_count=CountingNoWarmupBackend.warmup_forward_count, backend_metadata={"format": str(getattr(CountingNoWarmupBackend.last_instance, "format", "unknown")), "stride": int(getattr(CountingNoWarmupBackend.last_instance, "stride", 0)), "end2end": bool(getattr(CountingNoWarmupBackend.last_instance, "end2end", False))})
             after_capture = snapshot(desktop, background)
             ensure_idle(after_capture, background)
             state_after_capture = read(state_path)
             state_after_capture.setdefault("telemetry", {}).update({"after_capture": after_capture})
             atomic(state_path, state_after_capture)
+            CountingNoWarmupBackend.last_instance = None
             del validator, records, checked_records, xml, matching, replay
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.synchronize(device=torch.device(f"cuda:{args.device}"))
         after = snapshot(desktop, background)
         ensure_idle(after, background)
-        state = read(state_path); state.update({"status": "completed", "telemetry": {**state.get("telemetry", {}), "final": after}, "cleanup_started": True, "cleanup_completed": True, "owner_release_status": "released"}); atomic(state_path, state)
+        logger = builder = network = parser = config = timing = calibrator = exporter = loader = validator = None
+        gc.collect()
+        state = read(state_path); state.update({"status": "ready_to_release", "telemetry": {**state.get("telemetry", {}), "final": after}, "cleanup_started": True, "cleanup_completed": False, "owner_release_status": "pending_child_return", "release_boundary": "after_local_owner_clear_before_child_return"}); atomic(state_path, state)
 
 
 def run_child(args: argparse.Namespace) -> int:
@@ -402,15 +554,15 @@ def run_child(args: argparse.Namespace) -> int:
     job_out.mkdir(parents=True, exist_ok=False)
     child_state(state_path, job, plan_sha256=plan_sha256)
     try:
-        if args.runtime_double:
-            plan["_plan_sha256"] = plan_sha256
-            runtime_double(job, plan, job_out, state_path)
-        else:
-            build_real(job, plan, Path(args.repo).resolve(), out, args, state_path)
+        plan["_plan_sha256"] = plan_sha256
+        build_real(job, plan, Path(args.repo).resolve(), out, args, state_path, external_boundary=args.runtime_double)
+        finalize_child_state(state_path)
     except Exception as exc:
         state = read(state_path) if state_path.exists() else {"schema_version": 1, "job": job, "status": "unknown", "stage": "unknown", "stage_history": [], "unknown_completion": True}
         state.update({"status": "failed", "error_type": type(exc).__name__, "error": str(exc), "no_retry": True, "cleanup_started": True, "cleanup_completed": False, "owner_release_status": "cleanup_failed_or_unknown"})
         atomic(state_path, state)
+        traceback.clear_frames(exc.__traceback__)
+        gc.collect()
         return 1
     return 0
 
@@ -425,6 +577,8 @@ def run_parent(args: argparse.Namespace) -> int:
         raise ContractError("plan schedule hash does not match its serialized jobs")
     if set(plan.get("models", {})) != {"yolov8n", "yolo26n"}:
         raise ContractError("plan model evidence must contain exactly both bound models")
+    if not args.runtime_double:
+        verify_plan_inputs(repo, plan)
     if out.exists():
         existing = {path.name for path in out.iterdir()}
         if existing - {"confirmation_plan.json", "schedule.json"}:
@@ -458,20 +612,19 @@ def run_parent(args: argparse.Namespace) -> int:
         if inventory.get("job") != job:
             exit_code = exit_code or 1
             inventory["identity_error"] = "child state job differs from dispatched job"
+        manifest = read(out / "execution_manifest.json")
         if exit_code == 0:
             try:
                 _validate_completed_child(job, inventory)
                 identity = inventory.get("gpu_identity")
-                manifest = read(out / "execution_manifest.json")
                 if identity:
-                    prior = manifest.get("gpu_identity")
-                    if prior and prior != identity:
-                        raise ContractError("GPU identity changed within one confirmation study")
-                    manifest["gpu_identity"] = identity
+                    bind_gpu_identity(manifest, identity)
+                elif not args.runtime_double:
+                    raise ContractError("production child did not publish GPU identity")
             except Exception as exc:
                 exit_code = 1
                 inventory["contract_error"] = f"{type(exc).__name__}:{exc}"
-        manifest = read(out / "execution_manifest.json"); manifest["jobs"].append({"job": job, "exit_code": exit_code, "state": inventory}); atomic(out / "execution_manifest.json", manifest)
+        manifest["jobs"].append({"job": job, "exit_code": exit_code, "state": inventory}); atomic(out / "execution_manifest.json", manifest)
         if exit_code != 0:
             manifest["status"] = "incomplete_blocked"; atomic(out / "execution_manifest.json", manifest); return exit_code
     manifest = read(out / "execution_manifest.json"); manifest["status"] = "completed_review_required"; manifest["finished_utc"] = datetime.now(timezone.utc).isoformat(); atomic(out / "execution_manifest.json", manifest); return 0

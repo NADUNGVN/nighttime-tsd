@@ -27,10 +27,11 @@ CPU-only parent; it verifies the actual checkpoint/ONNX bytes, nested graph
 mapping schema, mapping hashes and the exact canonical schedule:
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/run_precision_head_confirmation.py --phase plan --out-dir results/measurement_audit_v1/server_precision_head_confirmation_v1
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/run_precision_head_confirmation.py --phase plan --xml /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip --out-dir results/measurement_audit_v1/server_precision_head_confirmation_v1
 ```
 
-This command must finish before the scored command and must not create ONNX,
+This command must finish before the scored command, must verify the XML archive
+against the exact 1,636-image/2,706-instance dev contract, and must not create ONNX,
 engine, calibration or timing binaries.
 
 ## Scored execution after GO

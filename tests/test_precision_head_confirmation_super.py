@@ -25,7 +25,11 @@ from precision_head_confirmation_contract import (  # noqa: E402
     validate_schedule,
     verify_cache_only_audit,
 )
-from run_precision_head_confirmation_server import run_parent as run_server_parent  # noqa: E402
+from run_precision_head_confirmation_server import (  # noqa: E402
+    NoWarmupBackendAccounting,
+    bind_gpu_identity,
+    run_parent as run_server_parent,
+)
 
 
 def graph_fixture(model: str) -> dict:
@@ -44,6 +48,32 @@ def graph_fixture(model: str) -> dict:
 
 
 class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
+    def test_production_backend_wrapper_skips_warmup_forward_and_counts_data_completion(self):
+        class DummyBackend:
+            def __call__(self, value):
+                return value + 1
+        class Wrapped(NoWarmupBackendAccounting, DummyBackend):
+            pass
+        Wrapped.reset_accounting()
+        backend = Wrapped()
+        backend.warmup("dummy")
+        self.assertEqual(Wrapped.warmup_request_count, 1)
+        self.assertEqual(Wrapped.warmup_forward_count, 0)
+        self.assertEqual(backend(4), 5)
+        self.assertEqual(Wrapped.forward_attempt_count, 1)
+        self.assertEqual(Wrapped.forward_completed_count, 1)
+
+    def test_gpu_identity_is_persisted_and_changed_identity_blocks(self):
+        manifest = {}
+        first = {"uuid": "GPU-A", "name": "Quadro RTX 8000", "driver_version": "595.71.05", "device": "0"}
+        bind_gpu_identity(manifest, first)
+        bind_gpu_identity(manifest, dict(first))
+        self.assertEqual(manifest["gpu_identity"], first)
+        with self.assertRaises(ContractError):
+            bind_gpu_identity(manifest, {**first, "uuid": "GPU-B"})
+        with self.assertRaises(ContractError):
+            bind_gpu_identity({}, {"uuid": "GPU-A"})
+
     def test_schedule_has_locked_accounting_and_rotated_model_blocks(self):
         jobs = build_schedule()
         validate_schedule(jobs)
@@ -151,6 +181,27 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             self.assertEqual(manifest["status"], "completed_review_required")
             self.assertEqual(len(manifest["jobs"]), 84)
             self.assertEqual(len(list(out.glob("jobs/*/cell_metrics.json"))), 78)
+            self.assertTrue(all(item["state"].get("build_real_entry") for item in manifest["jobs"]))
+            self.assertTrue(all(item["state"].get("release_boundary") == "run_child_after_build_real_return" for item in manifest["jobs"]))
+            self.assertTrue(all(item["state"].get("forward_completed", 0) == 1636 for item in manifest["jobs"] if item["job"]["capture_required"]))
+
+    def test_gpu_identity_is_persisted_across_children_and_changed_identity_stops_dispatch(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            jobs = build_schedule()
+            first = {"uuid": "GPU-A", "name": "Quadro RTX 8000", "driver_version": "595.71.05", "device": "0"}
+            second = {**first, "uuid": "GPU-B"}
+            plan = {"schedule": {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}, "models": {model: {"checkpoint": {"sha256": f"checkpoint-{model}"}, "onnx": {"sha256": f"onnx-{model}"}} for model in ("yolov8n", "yolo26n")}, "_test_gpu_identity_by_sequence": {"1": first, "2": second}}
+            plan_path = root / "confirmation_plan.json"
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            out = root / "run"
+            args = type("Args", (), {"repo": REPO, "plan": plan_path, "out_dir": out, "device": "0", "child_timeout": 30, "runtime_double": True, "confirm_desktop_process": [], "confirm_background_process": []})()
+            self.assertNotEqual(run_server_parent(args), 0)
+            manifest = json.loads((out / "execution_manifest.json").read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "incomplete_blocked")
+            self.assertEqual(manifest["gpu_identity"], first)
+            self.assertEqual(len(manifest["jobs"]), 2)
+            self.assertIn("GPU identity changed", manifest["jobs"][1]["state"].get("contract_error", ""))
 
     def test_external_runtime_double_artifacts_complete_production_analyzer_path(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -165,28 +216,20 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             (out / "confirmation_plan.json").write_text(plan_path.read_text(encoding="utf-8"), encoding="utf-8")
             (out / "schedule.json").write_text(json.dumps({"schema_version": 1, "jobs": jobs, "sha256": canonical_json_sha256(jobs)}), encoding="utf-8")
             xml_path = root / "xml.zip"
-            annotation = "<annotation><size><width>100</width><height>100</height></size></annotation>"
+            def annotation(index: int) -> str:
+                count = 2 if index < 1070 else 1
+                objects = "".join(
+                    f"<object><name>{'prohibitory' if object_index == 0 else 'mandatory'}</name><bndbox><xmin>{1 + object_index * 20}</xmin><ymin>1</ymin><xmax>{10 + object_index * 20}</xmax><ymax>10</ymax></bndbox></object>"
+                    for object_index in range(count)
+                )
+                return f"<annotation><size><width>100</width><height>100</height></size>{objects}</annotation>"
             with zipfile.ZipFile(xml_path, "w") as archive:
                 for index in range(1636):
-                    archive.writestr(f"{index:04d}.xml", annotation)
-            import audit_cctsdb_measurement as audit
-            import analyze_dev_quantization as quant
-            import verify_cctsdb_capture as verify
-            import numpy as np
-            originals = (verify.coco_size, quant.ap_values, quant.resample_ap)
-            def fake_coco_size(records, xml, *, return_evaluator=False):
-                report = {"metrics": {label: {"map50": 0.5, "map50_95": 0.3} for label in ("all", "xs", "s")}}
-                return (report, object()) if return_evaluator else report
-            def fake_ap_values(_evaluator):
-                return np.asarray([[0.5, 0.3], [0.4, 0.2], [0.3, 0.1]], dtype=float)
-            try:
-                verify.coco_size = fake_coco_size
-                quant.ap_values = fake_ap_values
-                quant.resample_ap = lambda evaluator, sample: fake_ap_values(evaluator)
-                from analyze_precision_head_confirmation import analyze
-                summary = analyze(out, root / "analysis", xml_path)
-            finally:
-                verify.coco_size, quant.ap_values, quant.resample_ap = originals
+                    archive.writestr(f"{index:04d}.xml", annotation(index))
+            from analyze_precision_head_confirmation import analyze
+            with self.assertRaises(ContractError):
+                analyze(out, root / "production-analysis", xml_path)
+            summary = analyze(out, root / "analysis", xml_path, allow_test_double=True, bootstrap_draws=2)
             self.assertEqual(summary["status"], "completed_descriptive_analysis")
             self.assertEqual(len(summary["all_cell_points"]), 96)
             self.assertEqual(len(summary["fp16_points"]), 8)

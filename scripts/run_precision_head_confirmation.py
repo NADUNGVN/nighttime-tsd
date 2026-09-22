@@ -95,7 +95,23 @@ def validate_files(repo: Path, contract: dict[str, Any]) -> dict[str, Any]:
     return evidence
 
 
-def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH) -> dict[str, Any]:
+def validate_xml_binding(repo: Path, xml_path: Path, expected_images: int, expected_instances: int) -> dict[str, Any]:
+    xml_path = xml_path.resolve()
+    if not xml_path.is_file():
+        raise FileNotFoundError(f"missing canonical XML archive: {xml_path}")
+    dev_dir = repo / "data/processed/cctsdb2021_clean/dev/images"
+    image_names = sorted(path.name for path in dev_dir.iterdir() if path.is_file()) if dev_dir.is_dir() else []
+    if len(image_names) != expected_images:
+        raise ContractError(f"dev image inventory is not {expected_images}: {len(image_names)}")
+    from audit_cctsdb_measurement import load_xml
+    xml = load_xml(xml_path, {name: {} for name in image_names})
+    instances = sum(len(value["rows"]) for value in xml.values())
+    if len(xml) != expected_images or instances != expected_instances:
+        raise ContractError(f"XML binding is not exactly {expected_images}/{expected_instances}: {len(xml)}/{instances}")
+    return {"path": str(xml_path), "sha256": sha256_file(xml_path), "images": len(xml), "instances": instances}
+
+
+def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH, xml_path: Path | None = None) -> dict[str, Any]:
     contract = read_json(repo / contract_path)
     producer = __import__("prepare_precision_head_confirmation")
     readiness_config_path = repo / contract["accepted_readiness_config"]["path"]
@@ -110,6 +126,20 @@ def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH
     if readiness.get("status") not in {"ready_for_server_prepare_review", "ready_for_server_run"}:
         raise ContractError(f"readiness status is not accepted: {readiness.get('status')}")
     calibration = producer.calibration_recipe_evidence(repo, readiness_config)
+    xml_binding = validate_xml_binding(repo, xml_path, contract["analysis"]["dev_images"], contract["analysis"]["dev_instances"]) if xml_path is not None else None
+    provenance_paths = [
+        contract_path,
+        readiness_path,
+        Path("scripts/prepare_precision_head_confirmation.py"),
+        Path("scripts/prepare_precision_head_confirmation_graph.py"),
+        Path("scripts/capture_cctsdb_validator.py"),
+        Path("scripts/verify_cctsdb_capture.py"),
+        Path("scripts/analyze_dev_quantization.py"),
+    ]
+    provenance = [{"path": relative(repo, repo / path), "sha256": sha256_file(repo / path)} for path in provenance_paths]
+    canonical_reference = readiness.get("dev_contract", {}).get("canonical_reference")
+    if not isinstance(canonical_reference, dict) or len(canonical_reference.get("records", [])) != contract["analysis"]["dev_images"]:
+        raise ContractError("accepted readiness manifest does not contain the canonical dev image/shape reference")
     return {
         "schema_version": SCHEMA_VERSION,
         "study": "precision_head_confirmation_v1",
@@ -122,7 +152,8 @@ def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH
         "prepare_root": relative(repo, repo / PREP_ROOT),
         "models": evidence,
         "runtime": contract["runtime"],
-        "dataset": {"dev_images": contract["analysis"]["dev_images"], "dev_instances": contract["analysis"]["dev_instances"], "xml_path": "data/raw/CCTSDB2021/xml.zip"},
+        "dataset": {"dev_images": contract["analysis"]["dev_images"], "dev_instances": contract["analysis"]["dev_instances"], "xml_path": xml_binding["path"] if xml_binding else "data/raw/CCTSDB2021/xml.zip", "xml_sha256": xml_binding["sha256"] if xml_binding else None, "xml_validation": xml_binding, "canonical_dev_reference": {"commit": canonical_reference.get("commit"), "capture_report_sha256": canonical_reference.get("capture_report_sha256"), "predictions_sha256": canonical_reference.get("predictions_sha256"), "ordered_ids_sha256": canonical_reference.get("ordered_ids_sha256"), "shape_reference_sha256": canonical_reference.get("shape_reference_sha256"), "records": canonical_reference.get("records")}},
+        "provenance_files": provenance,
         "schedule": {"sha256": canonical_json_sha256(jobs), "jobs": jobs},
         "accounting": {"auxiliary_cache_builds": 6, "scored_int8_builds": 72, "scored_fp16_builds": 6, "total_builder_invocations": 84, "captures": 78, "dev_image_model_passes": 127608},
         "execution_boundary": {"parent_imports_cuda": False, "parent_imports_tensorrt": False, "server_children_only": True, "go_required": True, "no_resume": True, "no_retry_or_replacement": True},
@@ -132,10 +163,10 @@ def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH
     }
 
 
-def write_plan(repo: Path, out_dir: Path) -> Path:
+def write_plan(repo: Path, out_dir: Path, *, xml_path: Path | None = None) -> Path:
     if out_dir.exists():
         raise FileExistsError(f"fresh output root required: {out_dir}")
-    plan = build_plan(repo, out_dir=out_dir)
+    plan = build_plan(repo, out_dir=out_dir, xml_path=xml_path)
     out_dir.mkdir(parents=True)
     atomic_json(out_dir / "confirmation_plan.json", plan)
     atomic_json(out_dir / "schedule.json", {"schema_version": SCHEMA_VERSION, "jobs": plan["schedule"]["jobs"], "sha256": plan["schedule"]["sha256"]})
@@ -153,15 +184,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--confirm-desktop-process", action="append", default=[])
     parser.add_argument("--confirm-background-process", action="append", default=[])
     parser.add_argument("--runtime-double", action="store_true", help=argparse.SUPPRESS)
+    parser.add_argument("--xml", type=Path, help="Canonical read-only XML archive; required for a production plan")
     args = parser.parse_args(argv)
     repo = args.repo.resolve()
     out_dir = args.out_dir if args.out_dir.is_absolute() else repo / args.out_dir
     if args.phase == "plan":
-        print(f"PLAN: {write_plan(repo, out_dir)}")
+        print(f"PLAN: {write_plan(repo, out_dir, xml_path=args.xml)}")
         return 0
     if args.go_token != "ASTRA_INTEGRATED_GO_REQUIRED":
         raise SystemExit("Refusing server phase: integrated Astra GO is required after local implementation review")
     if args.phase == "scored":
+        plan_data = read_json(out_dir / "confirmation_plan.json")
+        if not args.runtime_double and not plan_data.get("dataset", {}).get("xml_validation"):
+            raise SystemExit("Production scored phase requires a plan bound to --xml with 1636/2706 validation")
         from run_precision_head_confirmation_server import run_parent as run_server_parent
         plan_path = out_dir / "confirmation_plan.json"
         if not plan_path.is_file():
