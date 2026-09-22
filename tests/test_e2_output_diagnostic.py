@@ -16,6 +16,8 @@ from edge_readiness.e2_output_diagnostic import (
     decode_candidates,
     load_tensor,
     raw_strata,
+    audit_logs,
+    verify_pinned_manifest,
 )
 from edge_readiness.e2_output_compare import ComparisonPolicy
 
@@ -41,6 +43,25 @@ class E2OutputDiagnosticTests(unittest.TestCase):
             self.assertEqual(len(load_tensor(path, hashlib.sha256(path.read_bytes()).hexdigest())), OUTPUT_ELEMENTS)
             self.assertEqual(path.stat().st_size, OUTPUT_BYTES)
 
+            values = synthetic()
+            values[0] = float("nan")
+            path.write_bytes(tensor_bytes(values))
+            with self.assertRaisesRegex(ValueError, "TENSOR_NONFINITE"):
+                load_tensor(path, hashlib.sha256(path.read_bytes()).hexdigest())
+
+    def test_wrong_source_manifest_and_retained_log_hash_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            manifest = root / "manifest.json"
+            manifest.write_text("{}", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "SOURCE_MANIFEST_HASH_MISMATCH"):
+                verify_pinned_manifest(manifest, "0" * 64, "source")
+            logs = root / "logs"
+            logs.mkdir()
+            (logs / "build_events.jsonl").write_text("{}\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "RETAINED_LOG_HASH_MISMATCH"):
+                audit_logs(logs)
+
     def test_raw_replay_and_domain_strata_preserve_score_tolerance_semantics(self):
         reference = synthetic()
         target = synthetic()
@@ -64,15 +85,19 @@ class E2OutputDiagnosticTests(unittest.TestCase):
 
     def test_nms_is_class_aware_and_does_not_mutate_input(self):
         values = synthetic()
-        values[0 * 8400 + 1:0 * 8400 + 3] = [10.0, 10.0]
-        values[1 * 8400 + 1:1 * 8400 + 3] = [10.0, 10.0]
-        values[2 * 8400 + 1:2 * 8400 + 3] = [10.0, 10.0]
+        for channel, coordinate in enumerate((10.0, 10.0, 8.0, 8.0)):
+            values[channel * 8400 + 1] = coordinate
+            values[channel * 8400 + 2] = coordinate
+            values[channel * 8400 + 3] = coordinate
         values[4 * 8400 + 1] = 0.9
         values[4 * 8400 + 2] = 0.8
+        values[5 * 8400 + 3] = 0.7
         before = list(values)
         detections = decode_candidates(values)
         kept = class_aware_nms(detections, iou_threshold=0.7)
-        self.assertEqual(len(kept), len(detections))
+        self.assertEqual(len(detections), 3)
+        self.assertEqual(len(kept), 2)
+        self.assertEqual({item.class_id for item in kept}, {0, 1})
         self.assertEqual(values, before)
 
     def test_nms_tie_break_and_postprocess_unmatched(self):
@@ -90,6 +115,18 @@ class E2OutputDiagnosticTests(unittest.TestCase):
         result = compare_postprocess(values, changed)
         self.assertGreaterEqual(result["detection_matching"]["right_unmatched"], 0)
         self.assertIn("supplementary_one_to_one_matches", result["detection_matching"])
+
+    def test_nms_boundary_iou_and_max_det(self):
+        values = synthetic()
+        for anchor, score, x in ((0, 0.9, 10.0), (1, 0.8, 10.5), (2, 0.7, 30.0)):
+            values[anchor] = x
+            values[8400 + anchor] = 10.0
+            values[2 * 8400 + anchor] = 8.0
+            values[3 * 8400 + anchor] = 8.0
+            values[4 * 8400 + anchor] = score
+        self.assertEqual(len(class_aware_nms(decode_candidates(values), iou_threshold=0.7, max_detections=1)), 1)
+        self.assertEqual(len(class_aware_nms(decode_candidates(values), iou_threshold=0.7, max_detections=3)), 2)
+        self.assertEqual(len(class_aware_nms(decode_candidates(values), iou_threshold=1.0, max_detections=3)), 3)
 
 
 if __name__ == "__main__":

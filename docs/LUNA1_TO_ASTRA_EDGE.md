@@ -1855,10 +1855,12 @@ CPU postprocess retained the same candidate and NMS counts: `00006` source
 `00028` source `20 -> 2`, target `20 -> 2`. All kept detections had the same
 anchor/class lineage. Nevertheless, same-lineage box coordinates differed;
 the maximum per-detection coordinate deltas were `0.0971832`, `0.212311`, and
-`0.263626` pixels, with corresponding box IoU values `0.992440`, `0.987351`,
-and `0.994679`. These observations do not establish final-detection or
-ground-truth accuracy impact. No AP, recall, safety or deployment claim is
-made from three train fixtures.
+`0.263626` pixels. The corresponding per-fixture IoU ranges were
+`0.992440–0.992440`, `0.979394–0.987351`, and `0.993441–0.994679`; the
+maximum coordinate delta and IoU extrema are not asserted to belong to the same
+detection. These observations do not establish final-detection or ground-truth
+accuracy impact. No AP, recall, safety or deployment claim is made from three
+train fixtures.
 
 Public scoped evidence is at
 `results/edge_readiness_v1/e2l1-023-output-diagnostic/`:
@@ -1871,7 +1873,7 @@ The analyzer/test source bindings are
 
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |
-| `analysis.json` | 137627 | `b9df6015385a5597e1eefdc5253553638bd2a39237ac22c1163cd7c8c2058` |
+| `analysis.json` | 137627 | `b9df6015385a5595997e1eefdc5253553638bd2a39237ac22c1163cd7c8c2058` |
 | `inventory.json` | 3579 | `7977637e8abfc0e1c248689ccd8d9c7eda14f3b1a87b9d95f718a2c74d92cd79` |
 | `report.md` | 1586 | `39fb049f8fda17b92cf7406dd30eee39f8743d4c7b8ae20213baa7b152e1c704` |
 | `index.json` | 276 | `42d9a9ac53b42081cca26502371890b4462a6ed14369d2a3e4634f1334d9a3b2` |
@@ -1883,3 +1885,70 @@ accuracy impact. One proposed next experiment is retained for scientific
 review only: a separately authorized FP16-reference/target postprocess
 comparison on a predeclared evaluation slice. No third build, new inference,
 benchmark or tolerance relaxation was performed.
+
+## L1A-024 — saved-output closure and prospective dev packet (2026-09-22)
+
+**implementation_verified.** The E2L1-023 analyzer was tightened to accept
+source expectations only from the pinned source manifest
+`60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08`, verify
+the target public manifest
+`29954570c5b1f44af928e283ce2ab89885c224b165ab85b4f69de6d5ae6a4e74`, bind all
+eight retained log hashes, and recheck all three input hashes before/after
+analysis. The accepted postprocess binding is Ultralytics `8.4.102`,
+`ultralytics.utils.ops.non_max_suppression`, CPU, `return_idxs=True`; the local
+dependency-free helper remains explicitly marked as a descriptive fallback,
+not exact helper equivalence. Tests cover positive-area same-class suppression,
+different-class retention, confidence/IoU/max-det boundaries, tie handling,
+immutability, nonfinite/shape/hash rejection, wrong log hash, timeout partial
+publication and cleanup failure. Focused analyzer tests pass `7/7`; the edge
+regression remains `108/108 PASS`.
+The analyzer/test source hashes are respectively
+`e0598851b19a28acd3140b77b7f9100c2456fcd39c9c3bc0ed1ce12f20441a11` and
+`ace3ef994c9c1b545cf424972e637a6b079084ec9c3f36923a387068adb14dcc`; the
+packet/test hashes are
+`d37923feb5b44a2941107248b00b35cea7b003075d4073db78b573b90779fddd` and
+`87637ce6928602da9a2d40b19eb2bcf34ec8540962c19d04a626a0cf8973fa68`.
+
+**analyzed.** A fresh audit root was generated without touching E2 or the
+published L1A-023 v1 directory. It retains all five same-origin rows and
+correctly reports separate extrema: for `00006`, `00009`, `00028`, maximum box
+coordinate deltas are `0.0971832`, `0.212311`, `0.263626` input pixels, while
+IoU ranges are `0.992440–0.992440`, `0.979394–0.987351`,
+`0.993441–0.994679`. The independent accepted-helper review found custom
+float32 conversion differences up to `1.52587890625e-05` pixels. This is
+replay evidence only; raw FAILs remain and no box correction, tolerance change,
+new inference or accuracy claim was made.
+
+**packet_ready.** The prospective packet is
+`results/edge_readiness_v1/e2l1-024-dev-packet/`. It freezes the existing
+engine hash `581a9ea2eafdae690f25f57ab88ba1bcffdafa99e5322ea50ee43678520e7f56`
+and source ONNX identity, exactly 1636 dev-image target passes and 2706
+instances, zero builder/warmup/probe/retry calls, and reference calls either
+zero when reusable predictions are identity-bound or 1636 in a separately
+counted CPU reference capture. It specifies paired COCO/XML AP50/AP50-95,
+XS/S and class/coordinate diagnostics with the accepted 1000-resample paired
+image bootstrap (`seed=20260916`), without inventing a noninferiority margin.
+The runbook divides server CPU materialization, Luna1 E2 execution and Astra
+review; public artifacts contain hashes/metadata only, while engine/ONNX/input
+and raw predictions remain private. The CPU/mock packet tests pass `7/7`,
+including successful synthetic artifact-to-analysis, package/hash/dataset
+guards, output shape, partial timeout, no-retry and cleanup failure behavior.
+
+Public audit hashes are:
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `e2l1-024-saved-output-audit/analysis.json` | 142251 | `0eedd680c2dd1c14426bfdcfcb67273341ae10e405dcae7c77d33ee380adc053` |
+| `e2l1-024-saved-output-audit/inventory.json` | 4563 | `634574dcb9fb7576fa6e3277f5d7e52d2eb60b6514020d6c50d8231de74f419b` |
+| `e2l1-024-saved-output-audit/report.md` | 2324 | `3c6c2b374ebf856393376b0d48f100d5daa1e047dc80b1cbb7d6293b28c9d8d0` |
+| `e2l1-024-saved-output-audit/index.json` | 276 | `42d9a9ac53b42081cca26502371890b4462a6ed14369d2a3e4634f1334d9a3b2` |
+| `e2l1-024-dev-packet/contract.json` | 3926 | `0df5a3a2874762bc901f22d41a93af0162f664dc597f8a80cbc2bae90e077978` |
+| `e2l1-024-dev-packet/runbook.md` | 2426 | `589b1cd7a5a632e5780ded9566ed639d868a64dc79ff7de6f5bbcb0835523862` |
+| `e2l1-024-dev-packet/index.json` | 243 | `96a463c275cfaeab8d0aaf809131516f443ff4ac9329becd8352d129bf9e2f9e` |
+
+**terminal.** `edge_dev_packet_implementation_review_required`. E2L1-024
+does not authorize the proposed development study; later execution remains
+NO-GO pending integrated review of source identity, dev membership/XML,
+private package, engine availability and call accounting. No SSH, transfer,
+source forward, export, build, E2 inference or benchmark was performed in
+this packet.

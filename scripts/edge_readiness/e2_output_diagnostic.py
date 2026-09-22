@@ -32,6 +32,19 @@ FIXTURE_IDS = ("00006", "00009", "00028")
 POSTPROCESS_CONFIDENCE = 0.001
 POSTPROCESS_IOU = 0.7
 POSTPROCESS_MAX_DETECTIONS = 300
+CANONICAL_SOURCE_MANIFEST_SHA256 = "60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08"
+CANONICAL_SOURCE_ONNX_SHA256 = "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7"
+ACCEPTED_TARGET_MANIFEST_SHA256 = "29954570c5b1f44af928e283ce2ab89885c224b165ab85b4f69de6d5ae6a4e74"
+ACCEPTED_RETAINED_LOG_HASHES = {
+    "build_events.jsonl": "93074ef910d64cbcdba864807f14ae8a356ce65517c9744cc9ccc1927ffbf2f2",
+    "build_result.json": "8f7e5109cbc16e4efc2d9a970fb1668b56cd23e8d1faf3b767c8ad1eb6f03812",
+    "build_stdout.log": "494d324db36d900857824e4831396f55844bcab5bbd5244e8865a1f757eb285d",
+    "build_stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "inference_events.jsonl": "28dfdb6814f57498584a1d409b5de81d2c79af4e7fbbe2faa39b14000c8a5dc1",
+    "inference_result.json": "c5e019fbba9b3907e141666dae77875fc2cbf530dfc920027c10f4e4a570c00d",
+    "inference_stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "inference_stderr.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+}
 
 STRICT_POLICY = ComparisonPolicy(
     source_compute_mode="fp32_reference",
@@ -61,7 +74,47 @@ def load_tensor(path: Path, expected_sha256: str) -> Tuple[float, ...]:
     values = struct.unpack("<{}f".format(OUTPUT_ELEMENTS), payload)
     if len(values) != OUTPUT_ELEMENTS:
         raise ValueError("TENSOR_ELEMENT_COUNT_MISMATCH")
+    if any(not math.isfinite(value) for value in values):
+        raise ValueError("TENSOR_NONFINITE")
     return values
+
+
+def verify_pinned_manifest(path: Path, expected_sha256: str, label: str) -> Dict[str, Any]:
+    """Verify an accepted manifest before deriving any expected payload hash."""
+    observed = sha256_file(path)
+    if observed != expected_sha256:
+        raise ValueError("{}_MANIFEST_HASH_MISMATCH: {} != {}".format(label.upper(), observed, expected_sha256))
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise ValueError("{}_MANIFEST_INVALID".format(label.upper())) from exc
+    return {"label": label, "path": str(path.resolve()), "sha256": observed, "schema_version": payload.get("schema_version"), "payload": payload}
+
+
+def _inventory_hash(manifest: Mapping[str, Any], relative_suffix: str) -> str:
+    matches = [item for item in manifest.get("private_inventory", []) if str(item.get("path", "")).replace("\\", "/").endswith(relative_suffix)]
+    if len(matches) != 1 or not isinstance(matches[0].get("sha256"), str):
+        raise ValueError("SOURCE_INVENTORY_BINDING_MISSING: {}".format(relative_suffix))
+    return str(matches[0]["sha256"])
+
+
+def expected_bindings(source_manifest: Mapping[str, Any], target_manifest: Mapping[str, Any]) -> Dict[str, Dict[str, str]]:
+    """Derive source/target hashes only from the two verified manifests."""
+    onnx_sha = str(source_manifest.get("onnx", {}).get("sha256", ""))
+    if onnx_sha != CANONICAL_SOURCE_ONNX_SHA256:
+        raise ValueError("SOURCE_ONNX_MANIFEST_HASH_MISMATCH")
+    expected: Dict[str, Dict[str, str]] = {}
+    for image_id in FIXTURE_IDS:
+        target = target_manifest.get("target_outputs", {}).get(image_id, {})
+        if target.get("sha256") is None:
+            raise ValueError("TARGET_OUTPUT_BINDING_MISSING: {}".format(image_id))
+        expected[image_id] = {
+            "input_sha256": _inventory_hash(source_manifest, "private/inputs/{}.bin".format(image_id)),
+            "native_sha256": _inventory_hash(source_manifest, "private/native_reference/{}.bin".format(image_id)),
+            "onnx_sha256": _inventory_hash(source_manifest, "private/onnx_reference/{}.bin".format(image_id)),
+            "target_sha256": str(target["sha256"]),
+        }
+    return expected
 
 
 def _quantile(values: Sequence[float], probability: float) -> Optional[float]:
@@ -235,7 +288,11 @@ def _match_detections(left: Sequence[Detection], right: Sequence[Detection]) -> 
         "same_origin_score_abs_delta_quantiles": {key: _quantile([item["score_abs_delta"] for item in exact_rows], value) for key, value in (("q50", 0.5), ("q90", 0.9), ("q100", 1.0))},
         "same_origin_box_max_abs_delta_quantiles": {key: _quantile([item["box_max_abs_delta"] for item in exact_rows], value) for key, value in (("q50", 0.5), ("q90", 0.9), ("q100", 1.0))},
         "same_origin_box_iou_quantiles": {key: _quantile([item["box_iou"] for item in exact_rows], value) for key, value in (("q50", 0.5), ("q90", 0.9), ("q100", 1.0))},
-        "same_origin_examples": exact_rows[:20],
+        "same_origin_box_iou_min": min((item["box_iou"] for item in exact_rows), default=None),
+        "same_origin_box_iou_max": max((item["box_iou"] for item in exact_rows), default=None),
+        "same_origin_box_max_abs_delta": max((item["box_max_abs_delta"] for item in exact_rows), default=None),
+        "same_origin_score_max_abs_delta": max((item["score_abs_delta"] for item in exact_rows), default=None),
+        "same_origin_rows": exact_rows,
         "supplementary_one_to_one_matches": len(supplementary),
         "left_unmatched": len(left) - len(exact_keys) - len(supplementary),
         "right_unmatched": len(right) - len(exact_keys) - len(supplementary),
@@ -256,7 +313,7 @@ def _file_record(path: Path, label: str) -> Dict[str, Any]:
     return {"label": label, "bytes": path.stat().st_size, "sha256": sha256_file(path)}
 
 
-def audit_logs(log_root: Path) -> Dict[str, Any]:
+def audit_logs(log_root: Path, expected_hashes: Mapping[str, str] = ACCEPTED_RETAINED_LOG_HASHES) -> Dict[str, Any]:
     records = []
     for relative in ("build_events.jsonl", "build_result.json", "build_stdout.log", "build_stderr.log", "inference_events.jsonl", "inference_result.json", "inference_stdout.log", "inference_stderr.log"):
         path = log_root / relative
@@ -264,6 +321,10 @@ def audit_logs(log_root: Path) -> Dict[str, Any]:
             records.append({"label": relative, "status": "missing"})
             continue
         record = _file_record(path, relative)
+        record["accepted_sha256"] = expected_hashes.get(relative)
+        record["hash_match"] = record["sha256"] == record["accepted_sha256"]
+        if not record["hash_match"]:
+            raise ValueError("RETAINED_LOG_HASH_MISMATCH: {}".format(relative))
         if relative.endswith("events.jsonl"):
             rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
             counts = Counter(row.get("event") for row in rows)
@@ -292,8 +353,19 @@ def analyze_fixture(image_id: str, expected: Mapping[str, str], source_root: Pat
     }
 
 
-def run_analysis(source_root: Path, target_root: Path, expected_by_fixture: Mapping[str, Mapping[str, str]], log_root: Path, out_dir: Path) -> Dict[str, Any]:
+def run_analysis(source_root: Path, target_root: Path, expected_by_fixture: Mapping[str, Mapping[str, str]], log_root: Path, out_dir: Path, *, source_manifest_record: Mapping[str, Any], target_manifest_record: Mapping[str, Any]) -> Dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=False)
+    input_hash_audit = []
+    for image_id in FIXTURE_IDS:
+        path = source_root / "private/inputs/{}.bin".format(image_id)
+        before = sha256_file(path)
+        expected = expected_by_fixture[image_id]["input_sha256"]
+        if before != expected:
+            raise ValueError("INPUT_HASH_MISMATCH_BEFORE: {}".format(image_id))
+        after = sha256_file(path)
+        if after != before:
+            raise ValueError("INPUT_HASH_CHANGED_DURING_ANALYSIS: {}".format(image_id))
+        input_hash_audit.append({"image_id": image_id, "expected_sha256": expected, "before_sha256": before, "after_sha256": after, "unchanged": True})
     fixtures = {image_id: analyze_fixture(image_id, expected_by_fixture[image_id], source_root, target_root) for image_id in FIXTURE_IDS}
     analyzer_path = Path(__file__).resolve()
     test_path = analyzer_path.parents[2] / "tests/test_e2_output_diagnostic.py"
@@ -301,7 +373,8 @@ def run_analysis(source_root: Path, target_root: Path, expected_by_fixture: Mapp
         "schema_version": "e2l1-output-diagnostic-v1",
         "status": "output_diagnostic_completed_review_required",
         "code_provenance": {"analyzer": {"path_label": "scripts/edge_readiness/e2_output_diagnostic.py", "sha256": sha256_file(analyzer_path)}, "tests": {"path_label": "tests/test_e2_output_diagnostic.py", "sha256": sha256_file(test_path)}},
-        "execution_policy": {"cpu_only": True, "new_build": False, "new_inference": False, "benchmark": False, "postprocess": {"confidence": POSTPROCESS_CONFIDENCE, "iou": POSTPROCESS_IOU, "max_detections": POSTPROCESS_MAX_DETECTIONS}},
+        "evidence_bindings": {"source_manifest": {key: source_manifest_record[key] for key in ("path", "sha256", "schema_version")}, "target_manifest": {key: target_manifest_record[key] for key in ("path", "sha256", "schema_version")}, "input_hash_audit": input_hash_audit},
+        "execution_policy": {"cpu_only": True, "new_build": False, "new_inference": False, "benchmark": False, "postprocess": {"confidence": POSTPROCESS_CONFIDENCE, "iou": POSTPROCESS_IOU, "max_detections": POSTPROCESS_MAX_DETECTIONS, "accepted_helper_binding": {"package": "ultralytics", "version": "8.4.102", "symbol": "ultralytics.utils.ops.non_max_suppression", "device": "cpu", "return_idxs": True, "evidence": "E2L1-024 independent replay"}, "local_custom_diagnostic": {"symbol": "e2_output_diagnostic.class_aware_nms", "float_conversion": "Python float64 arithmetic", "confidence_boundary": ">= confidence", "equivalence_status": "descriptive fallback; not exact helper equivalence"}}},
         "fixtures": fixtures,
         "logs": audit_logs(log_root),
         "limitations": ["Saved-target replay is not repeatability testing.", "Raw box mismatch does not establish task-level accuracy degradation.", "Three selected train fixtures provide no AP, dev accuracy, recall, safety or deployment claim.", "Postprocess uses frozen 640x640 input coordinates; no original-image scale-back was applied."],
@@ -311,9 +384,9 @@ def run_analysis(source_root: Path, target_root: Path, expected_by_fixture: Mapp
     inventory = {"schema_version": payload["schema_version"], "status": payload["status"], "code_provenance": payload["code_provenance"], "target_outputs": [{"image_id": image_id, "bytes": OUTPUT_BYTES, "sha256": expected_by_fixture[image_id]["target_sha256"]} for image_id in FIXTURE_IDS], "logs": payload["logs"], "private_policy": "target tensors, engine and full logs are not published"}
     (out_dir / "inventory.json").write_text(json.dumps(inventory, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     (out_dir / "index.json").write_text(json.dumps(public_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
-    lines = ["# E2L1-023 saved-output diagnosis", "", "Status: `output_diagnostic_completed_review_required`.", "", "CPU-only replay of the saved target tensors used raw output0 comparison and fixed postprocess conf=0.001, IoU=0.7, max_det=300. The raw target FAIL is in box elements; score values are assessed by tolerance, not exact equality. This report does not claim accuracy impact, AP, recall, safety or deployment readiness.", ""]
-    lines.append("| Fixture | Source export | TRT box/score mismatches | Selected anchors / box mismatches | NMS source -> target | Same-lineage box delta q100 / IoU q100 |")
-    lines.append("| --- | --- | ---: | ---: | ---: | ---: |")
+    lines = ["# E2L1-024 saved-output audit addendum", "", "Status: `output_diagnostic_completed_review_required`.", "", "CPU-only replay of the saved target tensors used raw output0 comparison and fixed postprocess conf=0.001, IoU=0.7, max_det=300. The raw target FAIL is in box elements; score values are assessed by tolerance, not exact equality. This report does not claim accuracy impact, AP, recall, safety or deployment readiness.", "", "The row-level maximum box delta and IoU minimum are separate extrema; they are not asserted to belong to the same detection.", ""]
+    lines.append("| Fixture | Source export | TRT box/score mismatches | Selected anchors / box mismatches | NMS source -> target | Score Δmax | Box Δmax | IoU min–max |")
+    lines.append("| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |")
     for image_id in FIXTURE_IDS:
         row = fixtures[image_id]
         source = row["source_native_vs_onnx"]
@@ -321,7 +394,11 @@ def run_analysis(source_root: Path, target_root: Path, expected_by_fixture: Mapp
         post = row["postprocess_target_vs_source_onnx"]
         selected = row["raw_strata_target_vs_source_onnx"]["strata"]["source_onnx_max_score_ge_0.001"]
         matching = post["detection_matching"]
-        lines.append("| `{}` | {} | {}/{} | {}/{} | {} -> {} / {} -> {} | {:.6g} / {:.6g} |".format(image_id, source["status"], target["boxes"]["mismatches"], target["scores"]["mismatches"], selected["anchor_count"], selected["domains"]["boxes"]["mismatches"], post["reference"]["nms_kept_count"], post["target"]["nms_kept_count"], post["reference"]["raw_candidate_count"], post["target"]["raw_candidate_count"], matching["same_origin_box_max_abs_delta_quantiles"]["q100"] or 0.0, matching["same_origin_box_iou_quantiles"]["q100"] or 0.0))
+        lines.append("| `{}` | {} | {}/{} | {}/{} | {} -> {} / {} -> {} | {:.6g} | {:.6g} | {:.6g}–{:.6g} |".format(image_id, source["status"], target["boxes"]["mismatches"], target["scores"]["mismatches"], selected["anchor_count"], selected["domains"]["boxes"]["mismatches"], post["reference"]["nms_kept_count"], post["target"]["nms_kept_count"], post["reference"]["raw_candidate_count"], post["target"]["raw_candidate_count"], matching["same_origin_score_max_abs_delta"] or 0.0, matching["same_origin_box_max_abs_delta"] or 0.0, matching["same_origin_box_iou_min"] or 0.0, matching["same_origin_box_iou_max"] or 0.0))
+    lines.extend(["", "All retained same-origin rows (source ONNX -> TRT) are:", "", "| Fixture | Anchor | Class | Score abs delta | Box max abs delta | Box IoU |", "| --- | ---: | ---: | ---: | ---: | ---: |"])
+    for image_id in FIXTURE_IDS:
+        for item in fixtures[image_id]["postprocess_target_vs_source_onnx"]["detection_matching"]["same_origin_rows"]:
+            lines.append("| `{}` | {} | {} | {:.9g} | {:.9g} | {:.9g} |".format(image_id, item["anchor"], item["class_id"], item["score_abs_delta"], item["box_max_abs_delta"], item["box_iou"]))
     lines.extend(["", "Observed: the saved bytes replay the accepted raw comparison and permit deterministic CPU postprocess diagnostics. The score domain has zero policy violations in all three fixtures, and selected-anchor threshold membership is unchanged at 0.001 and 0.25; this is not exact-score equality. NMS counts and same-origin lineages are unchanged, while the retained box coordinates differ. Unknown: whether those coordinate changes alter final task detections or ground-truth accuracy under a valid evaluation protocol. Proposed next experiment: after scientific review, run one separately authorized FP16-reference/target postprocess comparison on a predeclared evaluation slice; do not relax the raw comparator or infer accuracy from this train-only trio.", ""])
     (out_dir / "report.md").write_text("\n".join(lines), encoding="utf-8", newline="\n")
     return payload
@@ -332,12 +409,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--source-root", type=Path, required=True)
     parser.add_argument("--target-root", type=Path, required=True)
     parser.add_argument("--log-root", type=Path, required=True)
-    parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument("--source-manifest", type=Path, required=True)
+    parser.add_argument("--target-manifest", "--manifest", dest="target_manifest", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
     args = parser.parse_args(argv)
-    manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
-    expected = {image_id: {"native_sha256": sha256_file(args.source_root / "private/native_reference/{}.bin".format(image_id)), "onnx_sha256": sha256_file(args.source_root / "private/onnx_reference/{}.bin".format(image_id)), "target_sha256": manifest["target_outputs"][image_id]["sha256"]} for image_id in FIXTURE_IDS}
-    payload = run_analysis(args.source_root, args.target_root, expected, args.log_root, args.out_dir)
+    source_record = verify_pinned_manifest(args.source_manifest, CANONICAL_SOURCE_MANIFEST_SHA256, "source")
+    target_record = verify_pinned_manifest(args.target_manifest, ACCEPTED_TARGET_MANIFEST_SHA256, "target")
+    expected = expected_bindings(source_record["payload"], target_record["payload"])
+    payload = run_analysis(args.source_root, args.target_root, expected, args.log_root, args.out_dir, source_manifest_record=source_record, target_manifest_record=target_record)
     print(json.dumps({"status": payload["status"], "out_dir": str(args.out_dir.resolve()), "fixtures": list(FIXTURE_IDS)}, sort_keys=True))
     return 0
 

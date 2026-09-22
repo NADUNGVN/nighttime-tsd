@@ -1,0 +1,10 @@
+{
+  "private_policy": "no engine/ONNX/input/raw prediction bytes",
+  "public_artifacts": [
+    "contract.json",
+    "runbook.md",
+    "index.json"
+  ],
+  "schema_version": "e2l1-dev-evaluation-packet-v1",
+  "status": "prepared_not_executed"
+}

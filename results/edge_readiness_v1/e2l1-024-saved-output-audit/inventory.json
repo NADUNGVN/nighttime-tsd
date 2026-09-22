@@ -1,0 +1,127 @@
+{
+  "code_provenance": {
+    "analyzer": {
+      "path_label": "scripts/edge_readiness/e2_output_diagnostic.py",
+      "sha256": "e0598851b19a28acd3140b77b7f9100c2456fcd39c9c3bc0ed1ce12f20441a11"
+    },
+    "tests": {
+      "path_label": "tests/test_e2_output_diagnostic.py",
+      "sha256": "ace3ef994c9c1b545cf424972e637a6b079084ec9c3f36923a387068adb14dcc"
+    }
+  },
+  "logs": {
+    "private_content_policy": "full logs remain outside public Git; only size/hash/event metadata is published",
+    "records": [
+      {
+        "accepted_sha256": "93074ef910d64cbcdba864807f14ae8a356ce65517c9744cc9ccc1927ffbf2f2",
+        "bytes": 100950,
+        "event_count": 206,
+        "event_counts": {
+          "build_attempted": 1,
+          "build_completed": 1,
+          "complete": 1,
+          "dispatch": 1,
+          "finished": 1,
+          "heartbeat": 198,
+          "parser_attempted": 1,
+          "parser_completed": 1,
+          "started": 1
+        },
+        "first_utc": "2026-09-21T17:22:33.966555+00:00",
+        "hash_match": true,
+        "label": "build_events.jsonl",
+        "last_utc": "2026-09-21T17:39:08.624887+00:00",
+        "sha256": "93074ef910d64cbcdba864807f14ae8a356ce65517c9744cc9ccc1927ffbf2f2"
+      },
+      {
+        "accepted_sha256": "8f7e5109cbc16e4efc2d9a970fb1668b56cd23e8d1faf3b767c8ad1eb6f03812",
+        "bytes": 900,
+        "hash_match": true,
+        "label": "build_result.json",
+        "sha256": "8f7e5109cbc16e4efc2d9a970fb1668b56cd23e8d1faf3b767c8ad1eb6f03812"
+      },
+      {
+        "accepted_sha256": "494d324db36d900857824e4831396f55844bcab5bbd5244e8865a1f757eb285d",
+        "bytes": 24143,
+        "hash_match": true,
+        "label": "build_stdout.log",
+        "sha256": "494d324db36d900857824e4831396f55844bcab5bbd5244e8865a1f757eb285d"
+      },
+      {
+        "accepted_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "hash_match": true,
+        "label": "build_stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "accepted_sha256": "28dfdb6814f57498584a1d409b5de81d2c79af4e7fbbe2faa39b14000c8a5dc1",
+        "bytes": 15232,
+        "event_count": 32,
+        "event_counts": {
+          "complete": 1,
+          "d2h_copy_attempted": 3,
+          "d2h_copy_completed": 3,
+          "d2h_copy_synchronized": 3,
+          "dispatch": 1,
+          "engine_load_attempted": 1,
+          "engine_load_completed": 1,
+          "enqueue_attempted": 3,
+          "enqueue_completed": 3,
+          "enqueue_synchronized": 3,
+          "finished": 1,
+          "h2d_copy_attempted": 3,
+          "h2d_copy_completed": 3,
+          "heartbeat": 2,
+          "started": 1
+        },
+        "first_utc": "2026-09-21T17:39:08.630615+00:00",
+        "hash_match": true,
+        "label": "inference_events.jsonl",
+        "last_utc": "2026-09-21T17:39:21.901528+00:00",
+        "sha256": "28dfdb6814f57498584a1d409b5de81d2c79af4e7fbbe2faa39b14000c8a5dc1"
+      },
+      {
+        "accepted_sha256": "c5e019fbba9b3907e141666dae77875fc2cbf530dfc920027c10f4e4a570c00d",
+        "bytes": 1296,
+        "hash_match": true,
+        "label": "inference_result.json",
+        "sha256": "c5e019fbba9b3907e141666dae77875fc2cbf530dfc920027c10f4e4a570c00d"
+      },
+      {
+        "accepted_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "hash_match": true,
+        "label": "inference_stdout.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "accepted_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "bytes": 0,
+        "hash_match": true,
+        "label": "inference_stderr.log",
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  "private_policy": "target tensors, engine and full logs are not published",
+  "schema_version": "e2l1-output-diagnostic-v1",
+  "status": "output_diagnostic_completed_review_required",
+  "target_outputs": [
+    {
+      "bytes": 235200,
+      "image_id": "00006",
+      "sha256": "d22fdb65d0affaae165c527c2f7d067e989911ae3f42391ada6387aed596bd9e"
+    },
+    {
+      "bytes": 235200,
+      "image_id": "00009",
+      "sha256": "d67bba2dbcc840a09f3eca943352f653f15160caefb3ff6d7c350236d7837320"
+    },
+    {
+      "bytes": 235200,
+      "image_id": "00028",
+      "sha256": "cab60f96c43af4835493d90b73052334e121b2b285be41216a088c73347b9a3c"
+    }
+  ]
+}

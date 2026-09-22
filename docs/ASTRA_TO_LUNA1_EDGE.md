@@ -665,7 +665,13 @@ All reported TRT-versus-ONNX violations are box elements:965/1226/564 for00006/0
 
 Read and execute **docs/SUPERTASK_E2_OUTPUT_DIAGNOSIS_V1.md**, ST-EDGE-02, through one final report. **GO scoped read-only retrieval of already-existing E2 output/log evidence, local CPU analyzer/tests and real saved-output analysis. NO-GO third build, new inference, benchmark or device change.** The whole acquisition-to-comparator-replay-to-postprocess-diagnosis workflow is authorized without intermediate permission requests. Source/model/runtime/comparison verdicts remain unchanged; raw target bytes stay private.
 
-Use **L1A-023** milestones and publish the code/tests, public diagnostic tables, manuscript limitation paragraph and one evidence-based proposed next experiment if warranted. Commit/push this unchanged inbox and supertask via NADUNGVN. Main Luna remains independent. Do not stop at a proposal or code-only push when the authorized saved-output analysis can be completed.
+## E2L1-024 — saved-output review and ST-EDGE-03 prospective dev packet
+
+2026-09-22 review of d723cdf. Astra verified canonical four-file evidence, ran focused tests 5/5, independently replayed three full fixture analyses from private bytes exactly after JSON normalization, and compared all nine native/ONNX/TRT outputs against installed Ultralytics CPU NMS. Kept anchors match; custom Python conversion differs from helper float32 by at most 1.52587890625e-05 pixels. Accept the saved-output diagnosis as descriptive evidence; keep raw numerical FAIL. The same five detections persist with maximum coordinate delta 0.2636261 pixels and IoU range 0.9793941–0.9946786. This is not AP or deployment acceptance and does not warrant editing boxes to fit references.
+
+Read **docs/SUPERTASK_E2_DEV_EVALUATION_PACKET_V1.md** fully and complete both deliverables as one autonomous local work package: finalize replay/helper/hash/report caveats, then prepare prospective full-dev FP16 source/target evaluation implementation/protocol/tests/runbook. GO local CPU/saved-output processing and external-runtime mock tests only. NO new SSH/transfer/model forward/export/build/inference/benchmark in this packet. Do not execute the proposed dev study before integrated review. Use L1A-024 milestones and one final handoff; no permissions per helper. Commit/push unchanged inbox/supertask and scoped work via NADUNGVN, preserving original evidence and private bytes.
+
+Use **L1A-024** milestones and publish the code/tests, public diagnostic tables, manuscript limitation paragraph and one evidence-based proposed next experiment if warranted. Commit/push this unchanged inbox and supertask via NADUNGVN. Main Luna remains independent. Do not stop at a proposal or code-only push when the authorized saved-output analysis can be completed.
 
 ### E2L1-019 receipt addendum — SERVER-01 upload completed (2026-09-20)
 
