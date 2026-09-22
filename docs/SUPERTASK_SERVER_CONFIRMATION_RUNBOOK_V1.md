@@ -2,22 +2,31 @@
 
 Luna does not SSH and does not run TensorRT locally. The operator runs these
 commands on the selected server in a foreground shell. Do not use `nohup`.
-The commands below are gated by the single integrated Astra GO; the current
-handoff is not yet an authorization to execute them.
+The commands below are gated by the single integrated Astra conditional GO in
+`docs/ST_SERVER_01_INTEGRATED_GO_R5.md`. The operator must complete the fresh
+prerequisite checks below before dispatching the scored phase.
 
 ## Pull and immutable preflight
 
-Replace `FULL_COMMIT` with the full SHA printed in L2A-053 after push.
+Replace `FULL_COMMIT` with the full SHA printed in the current L2A-053
+operator handoff. The executable revision for this handoff is
+`46f695acf60b010173222eb666da89f6e0322087`; a later documentation-only
+handoff commit must use its own full SHA in the equality check.
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "FULL_COMMIT" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git diff --exit-code FULL_COMMIT -- configs/precision_head_confirmation_execution_v1.json scripts/precision_head_confirmation_contract.py scripts/run_precision_head_confirmation.py scripts/run_precision_head_confirmation_server.py scripts/analyze_precision_head_confirmation.py scripts/prepare_precision_head_confirmation.py scripts/prepare_precision_head_confirmation_graph.py scripts/capture_cctsdb_validator.py scripts/verify_cctsdb_capture.py scripts/analyze_dev_quantization.py scripts/verify_cctsdb_capture.py && test ! -e results/measurement_audit_v1/server_precision_head_confirmation_v1 && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "FULL_COMMIT" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git hash-object configs/precision_head_confirmation_v1.json configs/precision_head_confirmation_execution_v1.json && sha256sum configs/precision_head_confirmation_v1.json configs/precision_head_confirmation_execution_v1.json scripts/precision_head_confirmation_contract.py scripts/run_precision_head_confirmation.py scripts/run_precision_head_confirmation_server.py scripts/analyze_precision_head_confirmation.py scripts/prepare_precision_head_confirmation.py scripts/prepare_precision_head_confirmation_graph.py scripts/capture_cctsdb_validator.py scripts/verify_cctsdb_capture.py scripts/analyze_dev_quantization.py scripts/audit_cctsdb_measurement.py scripts/run_architecture_matrix.py scripts/uniform_build_repeat.py && test ! -e results/measurement_audit_v1/server_precision_head_confirmation_v1
 ```
 
 The operator must also record GPU UUID/name/driver, temperature/power/clocks,
 compute PIDs and exact `ps` commands, runtime package versions, checkpoint/
-ONNX/config hashes, and output absence. Desktop exceptions use the current
-exact PID/path confirmation. Unknown or non-desktop compute remains a block;
-do not kill, pause, reprioritize, or change another user's process.
+ONNX/config hashes, disk space, and output absence. The accepted bindings are:
+YOLOv8n checkpoint `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b`,
+YOLO26n checkpoint `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e`,
+YOLOv8n ONNX `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603`,
+and YOLO26n ONNX `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc`.
+Desktop exceptions use the current exact PID/path confirmation. Unknown or
+non-desktop compute remains a block; do not kill, pause, reprioritize, or
+change another user's process. A sampled idle state is not isolation proof.
 
 ## Read-only plan preparation
 

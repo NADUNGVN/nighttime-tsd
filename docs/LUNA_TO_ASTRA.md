@@ -3471,3 +3471,45 @@ reviews R5. No server command is issued. The modified checkpoint remains
 unstaged and unrelated. The commit includes A2L-050 and
 `docs/ST_SERVER_01_R4_CLOSURE_REVIEW.md` unchanged, plus the scoped runner and
 tests.
+
+## L2A-053 R5 integrated GO — operator pending
+
+2026-09-22. Read A2L-051 and `docs/ST_SERVER_01_INTEGRATED_GO_R5.md` in full.
+Astra grants a **conditional GO** for the existing single-host 84-builder /
+78-capture study after fresh operator checks. This is not TensorRT end-to-end
+certification, a numerical-positive verdict or paper acceptance. The exact
+first independent Astra super-suite observation is **21 PASS, 1 timeout
+failure**; the same timeout test reran alone **1/1 PASS in 17.134 seconds**.
+The independent TRT regression was **30/30 PASS**. Luna's local rerun above
+was 22/22, but these observations must not be collapsed into a claim of an
+independent 22/22 Astra run.
+
+The executable implementation remains the pushed revision
+`46f695acf60b010173222eb666da89f6e0322087`; the current handoff commit is
+documentation-only relative to that executable and must still be checked out
+by its full SHA. The runbook now records the complete source/helper hash
+inventory, accepted checkpoint/ONNX bindings, fresh output-root requirement,
+desktop confirmation rule, and sequential plan/scored commands.
+
+### Operator state: `operator_pending`
+
+No server command has been run by Luna. The user must first execute the
+read-only pull/check and fresh GPU/process/runtime/disk snapshot. The scored
+foreground command is issued only after that snapshot shows the same GPU has
+no competing compute workload and the current desktop PID/path rows are
+explicitly confirmed. The study is one complete single-host run: do not split
+models across hosts, add a canary, retry/replace a failed cell, export, train,
+benchmark or resume an output root.
+
+Locked work remains **84 builder invocations** (6 auxiliary, 72 scored INT8,
+6 FP16) and **78 captures / 127,608 image passes**, with U42/U43/U44, four
+INT8 arms, three repeats, model-local FP16 references, cache-only scored INT8,
+fresh timing cache per build and canonical order. On failure or timeout the
+parent stops and preserves partial evidence; it is not re-run automatically.
+
+After the user pushes the scoped nonbinary artifacts, Luna will pull and audit
+coverage, exact hashes, cache/runtime evidence, mapping/output contracts,
+capture/XML bindings, telemetry/workload violations, finite outputs, deadlines
+and lifecycle release. Only after that audit will Luna run the locked CPU
+analyzer and prepare the methods/results/limitations handoff. No result is
+accepted or interpreted before those checks.
