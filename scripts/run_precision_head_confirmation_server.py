@@ -295,6 +295,23 @@ def finalize_child_state(path: Path) -> None:
     atomic(path, state)
 
 
+def load_production_dependencies() -> dict[str, Any]:
+    """Load external runtime boundaries; tests replace this loader only."""
+    import numpy as np
+    import torch
+    import tensorrt as trt
+    import ultralytics
+    from types import SimpleNamespace
+    from ultralytics.engine.exporter import Exporter
+    from ultralytics.engine import validator as validator_module
+    from capture_cctsdb_validator import CaptureValidator, metric_summary, replay_statistics
+    from run_architecture_matrix import GpuPhaseLock
+    from uniform_build_repeat import ensure_idle, parse_background_confirmations, parse_desktop_confirmations, snapshot
+    from verify_cctsdb_capture import rematch_native, validate_capture
+    from audit_cctsdb_measurement import load_xml
+    return locals()
+
+
 def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path, args: argparse.Namespace, state_path: Path, *, external_boundary: bool = False) -> None:
     """Build one real server cell and capture it with the locked validator."""
     validate_arm_for_phase(job["phase"], job["arm"])
@@ -310,17 +327,23 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
         state["build_real_entry"] = True
         atomic(state_path, state)
         return
-    import inspect
-    import numpy as np
-    import torch
-    import tensorrt as trt
-    import ultralytics
-    from ultralytics import YOLO
-    from ultralytics.engine.exporter import Exporter
-
-    from capture_cctsdb_validator import CaptureValidator, metric_summary
-    from run_architecture_matrix import GpuPhaseLock
-    from uniform_build_repeat import ensure_idle, parse_background_confirmations, parse_desktop_confirmations, snapshot
+    dependencies = load_production_dependencies()
+    np = dependencies["np"]
+    torch = dependencies["torch"]
+    trt = dependencies["trt"]
+    ultralytics = dependencies["ultralytics"]
+    Exporter = dependencies["Exporter"]
+    CaptureValidator = dependencies["CaptureValidator"]
+    metric_summary = dependencies["metric_summary"]
+    replay_statistics = dependencies["replay_statistics"]
+    GpuPhaseLock = dependencies["GpuPhaseLock"]
+    ensure_idle = dependencies["ensure_idle"]
+    parse_background_confirmations = dependencies["parse_background_confirmations"]
+    parse_desktop_confirmations = dependencies["parse_desktop_confirmations"]
+    snapshot = dependencies["snapshot"]
+    rematch_native = dependencies["rematch_native"]
+    validate_capture = dependencies["validate_capture"]
+    load_xml = dependencies["load_xml"]
 
     model = job["model"]
     validate_arm_for_phase(job["phase"], job["arm"])
@@ -386,11 +409,10 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
 
             loader = None
             if job["phase"] == "auxiliary_calibration":
-                from types import SimpleNamespace
                 calibration_yaml = calibration_binding["yaml"]
                 exporter = Exporter(overrides={"format": "engine", "data": str(calibration_yaml), "imgsz": 640, "batch": 1, "fraction": 1.0, "split": "val", "rect": False, "device": str(args.device)})
                 exporter.imgsz = (640, 640)
-                exporter.model = SimpleNamespace(task="detect")
+                exporter.model = dependencies["SimpleNamespace"](task="detect")
                 loader = iter(exporter.get_int8_calibration_dataloader())
 
             class CacheOnly(trt.IInt8Calibrator):
@@ -498,7 +520,7 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
             data = private / "dev.yaml"
             dev = repo / "data/processed/cctsdb2021_clean/dev"
             data.write_text(f"path: {dev.as_posix()}\ntrain: images\nval: images\nnames:\n  0: prohibitory\n  1: mandatory\n  2: warning\nnc: 3\n", encoding="utf-8")
-            from ultralytics.engine import validator as validator_module
+            validator_module = dependencies["validator_module"]
             backend_base = validator_module.AutoBackend
             class CountingNoWarmupBackend(NoWarmupBackendAccounting, backend_base):
                 def __init__(self, *backend_args: Any, **backend_kwargs: Any) -> None:
@@ -529,9 +551,6 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
                 raise RuntimeError(f"capture accounting mismatch: attempted={CountingNoWarmupBackend.forward_attempt_count}, completed={CountingNoWarmupBackend.forward_completed_count}, synchronized={CountingNoWarmupBackend.synchronization_completed_count}, warmup_forwards={CountingNoWarmupBackend.warmup_forward_count}")
             predictions = private / "validator_predictions.json"
             predictions.write_text(json.dumps({"schema_version": 2, "capture_mode": "same_val_process_batch", "iou_thresholds": [0.5 + 0.05 * index for index in range(10)], "records": records, "model_sha256": hashlib.sha256(engine_path.read_bytes()).hexdigest()}, allow_nan=False) + "\n", encoding="utf-8")
-            from capture_cctsdb_validator import replay_statistics
-            from verify_cctsdb_capture import rematch_native, validate_capture
-            from audit_cctsdb_measurement import load_xml
             payload = json.loads(predictions.read_text(encoding="utf-8"))
             checked_records, thresholds = validate_capture(payload)
             if len(checked_records) != 1636 or sum(len(row["validator_input"]["target_class_id"]) for row in checked_records) != 2706:

@@ -3414,3 +3414,60 @@ there is still **NO-GO** for server 84 builders/78 captures until Astra
 reviews this consolidated packet. A2L-049 and the R4 review document are
 included unchanged, together with scoped code/tests/protocol updates. The
 modified checkpoint remains unstaged. No server command is issued here.
+
+## L2A-053 R5 — normal-path integration closure for A2L-050
+
+2026-09-22. Implemented A2L-050/R5 locally. No server, GPU, CUDA forward,
+TensorRT build, export, benchmark or confirmation matrix was run. The
+scientific design, two-model frozen contracts, three-phase calibration/cache
+contract, schedule, estimators, tolerances and single-host boundary are
+unchanged.
+
+### R5 implementation
+
+- Added a narrow `load_production_dependencies()` seam in the server child.
+  The normal `build_real(..., external_boundary=False)` path now loads and
+  uses the production parser, calibration, builder, precision-constraint,
+  capture, validation, evaluator, inspector and lifecycle dependencies. The
+  existing explicitly synthetic external-boundary simulator remains only for
+  its prior parent/child contract tests.
+- Added external-library doubles that exercise the normal path for both
+  `yolov8n` and `yolo26n` across auxiliary calibration, scored cache-only
+  INT8 and scored FP16. The fake builder invokes the actual calibration
+  callback contract: auxiliary consumes 1,024 ordered batches and writes the
+  cache; scored INT8 reads the cache without consuming batches or writing it.
+- The capture double instantiates the injected backend base, invokes the
+  production no-warmup wrapper once per canonical dev record, and exercises
+  synchronization/completion accounting. Tests assert output shape, target
+  precision names/flags, fresh timing-cache handling, public inspector
+  publication, release and zero warmup forwards.
+- Added normal-path parser and capture failure cases. They assert failed child
+  state and primary errors rather than accepting phase labels or simulator
+  counters. Existing schedule/analyzer and lifecycle tests remain
+  complementary.
+
+### R5 local verification
+
+Using `D:/Research/paper/local/measurement_audit_env/Scripts/python.exe`:
+
+- `python -m unittest discover -s tests -p test_precision_head_confirmation_super.py -v`:
+  **22/22 PASS**.
+- `python -m unittest discover -s tests -p test_precision_head_trt_feasibility.py -v`:
+  **30/30 PASS**.
+- `python -m py_compile` over the changed server runner, supertest, parent
+  runner, analyzer and contract: **PASS**.
+- `git diff --check`: **PASS**.
+
+These results are CPU test evidence with synthetic external-library doubles.
+They do not establish TensorRT/GPU execution, frozen-model forward correctness
+or server resource isolation.
+
+### R5 gate and handoff
+
+The remaining normal-path test requirement is implemented and locally tested,
+but the integrated packet is now **`implementation_complete_integrated_review_required`**:
+**NO-GO** remains in force for dispatching 84 builders/78 captures until Astra
+reviews R5. No server command is issued. The modified checkpoint remains
+unstaged and unrelated. The commit includes A2L-050 and
+`docs/ST_SERVER_01_R4_CLOSURE_REVIEW.md` unchanged, plus the scoped runner and
+tests.

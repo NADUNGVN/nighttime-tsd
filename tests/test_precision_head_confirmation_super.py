@@ -9,6 +9,8 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from types import SimpleNamespace
+from unittest.mock import patch
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -29,6 +31,10 @@ from precision_head_confirmation_contract import (  # noqa: E402
 from run_precision_head_confirmation_server import (  # noqa: E402
     NoWarmupBackendAccounting,
     bind_gpu_identity,
+    build_real,
+    child_state,
+    finalize_child_state,
+    job_key,
     validate_canonical_capture_records,
     verify_plan_inputs,
     run_parent as run_server_parent,
@@ -67,6 +73,168 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
         plan_path.write_text(json.dumps(plan), encoding="utf-8")
         return plan, plan_path
 
+    def normal_path_fixture(self, root: Path, model: str, job: dict, *, parser_ok: bool = True, output_ok: bool = True, capture_ok: bool = True):
+        """Producer-shaped plan plus external-library doubles for build_real."""
+        source_root = root / "data/processed/cctsdb2021_clean/train/images"
+        source_root.mkdir(parents=True, exist_ok=True)
+        calibration_selections = []
+        for selection in ("U42", "U43", "U44"):
+            materialized_root = root / "calibration" / selection
+            image_root = materialized_root / "images"
+            image_root.mkdir(parents=True, exist_ok=True)
+            rows = []
+            for index in range(1024):
+                name = f"{index:04d}.jpg"
+                source = source_root / name
+                source.write_bytes(b"calibration-image-" + name.encode())
+                (image_root / name).write_bytes(source.read_bytes())
+                digest = hashlib.sha256(source.read_bytes()).hexdigest()
+                rows.append({"image": f"train/images/{name}", "source_sha256": digest, "materialized_sha256": digest})
+            yaml_path = materialized_root / "calibration.yaml"
+            yaml_path.write_text("path: .\n", encoding="utf-8")
+            calibration_selections.append({"id": selection, "status": "verified", "canonical_sha256": f"manifest-{selection}", "manifest": f"manifest-{selection}", "manifest_contract": {"status": "canonical_manifest_valid", "image_ids": [row["image"] for row in rows]}, "materialization": {"status": "complete", "yaml": str(yaml_path), "yaml_sha256": hashlib.sha256(yaml_path.read_bytes()).hexdigest(), "resolved_directory": str(materialized_root), "image_bytes": rows}})
+        checkpoint = root / f"{model}.pt"
+        onnx = root / f"{model}.onnx"
+        checkpoint.write_bytes(f"checkpoint-{model}".encode())
+        onnx.write_bytes(f"onnx-{model}".encode())
+        target_names = ["/model.22/cv2.0/cv2.0.0/conv/Conv", "/model.22/cv3.0/cv3.0.0/conv/Conv"] if model == "yolov8n" else ["/model.23/one2one_cv2.0/one2one_cv2.0.0/conv/Conv", "/model.23/one2one_cv3.0/one2one_cv3.0.0/one2one_cv3.0.0.0/conv/Conv"]
+        canonical = [{"image": f"dev/{index:04d}.jpg", "stem": f"{index:04d}", "orig_shape": [100, 100]} for index in range(1636)]
+        plan = {"runtime": {}, "models": {model: {"checkpoint": {"path": str(checkpoint), "sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest()}, "onnx": {"path": str(onnx), "sha256": hashlib.sha256(onnx.read_bytes()).hexdigest()}, "output_shape": [1, 7, 8400] if model == "yolov8n" else [1, 300, 6], "mapping": {"targets": {"bbox": target_names[:1], "classification": target_names[1:], "both": target_names}}, "postprocess": f"route-{model}"}}, "provenance_files": [], "dataset": {"canonical_dev_reference": {"records": canonical}, "xml_path": str(root / "xml.zip")}, "calibration_producer": {"selections": calibration_selections}, "schedule": {"jobs": [job], "sha256": canonical_json_sha256([job])}}
+        (root / "xml.zip").write_bytes(b"synthetic-xml")
+
+        class FakeTensor:
+            def to(self, **_kwargs): return self
+            def __truediv__(self, _value): return self
+            def contiguous(self): return self
+            def data_ptr(self): return 1234
+            def detach(self): return self
+            def cpu(self): return self
+            def numpy(self): return SimpleNamespace(tobytes=lambda: b"calibration-tensor")
+
+        class FakeStream:
+            def synchronize(self): self.synced = True
+
+        class FakeCuda:
+            @staticmethod
+            def current_stream(_device): return FakeStream()
+            @staticmethod
+            def is_available(): return False
+
+        class FakeTorch:
+            __version__ = "2.5.1+cu121"
+            version = SimpleNamespace(cuda="12.1")
+            cuda = FakeCuda()
+            float32 = "float32"
+            @staticmethod
+            def device(value): return value
+
+        class FakeLayer:
+            type = "CONVOLUTION"
+            num_outputs = 1
+            def __init__(self, name): self.name = name; self.precision = None; self.output_types = []
+            def set_output_type(self, _index, value): self.output_types.append(value)
+            def get_output_type(self, _index): return self.output_types[0] if self.output_types else "unknown"
+
+        class FakeNetwork:
+            num_inputs = 1
+            num_outputs = 1
+            def __init__(self):
+                self.layers = [FakeLayer(name) for name in target_names]
+            def get_input(self, _index): return SimpleNamespace(shape=(1, 3, 640, 640))
+            def get_output(self, _index): return SimpleNamespace(shape=plan["models"][model]["output_shape"] if output_ok else [1, 1, 1])
+            @property
+            def num_layers(self): return len(self.layers)
+            def get_layer(self, index): return self.layers[index]
+
+        class FakeConfig:
+            def __init__(self): self.flags = set(); self.int8_calibrator = None
+            def set_memory_pool_limit(self, _pool, value): self.workspace = value
+            def set_flag(self, flag): self.flags.add(flag)
+            def clear_flag(self, flag): self.flags.discard(flag)
+            def set_timing_cache(self, _cache, ignore_mismatch): self.ignore_mismatch = ignore_mismatch; return True
+            def create_timing_cache(self, value): return SimpleNamespace(serialize=lambda: b"timing", initial=value)
+
+        class FakeEngine:
+            def create_engine_inspector(self): return SimpleNamespace(get_engine_information=lambda _format: '{"layers": []}')
+
+        class FakeTrt:
+            __version__ = "10.16.1.11"
+            float32 = "float32"
+            class Logger:
+                VERBOSE = "verbose"
+                def __init__(self, _level): pass
+            class LayerType: CONVOLUTION = "CONVOLUTION"
+            class MemoryPoolType: WORKSPACE = "workspace"
+            class BuilderFlag: TF32 = "tf32"; FP16 = "fp16"; INT8 = "int8"; OBEY_PRECISION_CONSTRAINTS = "obey"
+            class ProfilingVerbosity: DETAILED = "detailed"
+            class LayerInformationFormat: JSON = "json"
+            class CalibrationAlgoType: MINMAX_CALIBRATION = "minmax"
+            class IInt8Calibrator: pass
+            class Builder:
+                def __init__(self, _logger): pass
+                def create_network(self, _flags): return FakeNetwork()
+                def create_builder_config(self): return FakeConfig()
+                def build_serialized_network(self, _network, config):
+                    calibrator = getattr(config, "int8_calibrator", None)
+                    if calibrator is not None:
+                        if job["phase"] == "auxiliary_calibration":
+                            self.assertion = calibrator.read_calibration_cache()
+                            for _ in range(1024):
+                                calibrator.get_batch(["input"])
+                            calibrator.get_batch(["input"])
+                            calibrator.write_calibration_cache(b"cache-" + model.encode())
+                        else:
+                            calibrator.read_calibration_cache()
+                    return b"serialized-" + model.encode() + job["phase"].encode()
+            class OnnxParser:
+                def __init__(self, network, _logger): self.network = network; self.num_errors = 0
+                def parse_from_file(self, _path): return parser_ok
+                def get_error(self, _index): return "synthetic parser failure"
+            class Runtime:
+                def __init__(self, _logger): pass
+                def deserialize_cuda_engine(self, _serialized): return FakeEngine()
+
+        class FakeExporter:
+            def __init__(self, **_kwargs): pass
+            def get_int8_calibration_dataloader(self):
+                return ({"im_file": [f"{index:04d}.jpg"], "img": FakeTensor()} for index in range(1024))
+
+        records = []
+        for index, row in enumerate(canonical):
+            target_count = 2 if index < 1070 else 1
+            records.append({"image": row["image"], "stem": row["stem"], "orig_shape": row["orig_shape"], "xyxy": [], "confidence": [], "class_id": [], "validator_input": {"imgsz": [640, 640], "ratio_pad": [[1.0, 1.0], [0.0, 0.0]], "prediction_xyxy": [], "target_xyxy": [[1.0, 1.0, 10.0, 10.0]] * target_count, "target_class_id": [0] * target_count}, "validator_statistics": {"tp": [], "confidence_dtype": "float64", "pred_class_dtype": "float64", "target_class_dtype": "int64"}})
+
+        class FixtureBackend:
+            def __init__(self, *args, **kwargs):
+                self.format = "fixture"
+                self.stride = 32
+                self.end2end = False
+            def warmup(self, *_args, **_kwargs):
+                return None
+            def __call__(self, _value):
+                return None
+
+        validator_module = SimpleNamespace(AutoBackend=FixtureBackend)
+
+        class FakeValidator:
+            def __init__(self, *args, **kwargs): self.capture_records = records; self.metrics = SimpleNamespace(box=SimpleNamespace(map50=0.0, map=0.0, mp=0.0, mr=0.0))
+            def __call__(self, **_kwargs):
+                if not capture_ok: raise RuntimeError("synthetic capture failure")
+                backend = validator_module.AutoBackend(model="fixture")
+                backend.warmup(None)
+                for _ in records:
+                    backend(None)
+                return None
+
+        class Lock:
+            def __init__(self, *args): pass
+            def __enter__(self): return self
+            def __exit__(self, *_args): return False
+
+        def load_xml(_path, requested): return {name: {"shape": [100, 100], "rows": [(0, [1.0, 1.0, 10.0, 10.0])] * (2 if index < 1070 else 1)} for index, name in enumerate(requested)}
+        dependencies = {"np": SimpleNamespace(), "torch": FakeTorch, "trt": FakeTrt, "ultralytics": SimpleNamespace(__version__="8.4.102"), "Exporter": FakeExporter, "CaptureValidator": FakeValidator, "metric_summary": lambda _metrics: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "replay_statistics": lambda _records: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "GpuPhaseLock": Lock, "ensure_idle": lambda *_args: None, "parse_background_confirmations": lambda _args: [], "parse_desktop_confirmations": lambda _args: [], "snapshot": lambda *_args: {"gpu": "fixture"}, "rematch_native": lambda _records, _thresholds: {"status": "pass", "changed_tp_decisions": 0}, "validate_capture": lambda payload: (payload["records"], payload["iou_thresholds"]), "load_xml": load_xml, "SimpleNamespace": SimpleNamespace, "validator_module": validator_module}
+        return plan, dependencies
+
     def test_production_backend_wrapper_skips_warmup_forward_and_counts_data_completion(self):
         class DummyBackend:
             def __call__(self, value):
@@ -81,6 +249,113 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
         self.assertEqual(backend(4), 5)
         self.assertEqual(Wrapped.forward_attempt_count, 1)
         self.assertEqual(Wrapped.forward_completed_count, 1)
+
+    def test_normal_build_real_path_runs_both_models_all_three_phases(self):
+        from run_precision_head_confirmation_server import read as read_state
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            out = root / "study"
+            out.mkdir()
+            (out / "public").mkdir()
+            identity = {"uuid": "GPU-fixture", "name": "fixture-gpu", "driver_version": "fixture-driver", "device": "0"}
+            args = SimpleNamespace(device="0", confirm_desktop_process=[], confirm_background_process=[])
+            all_states = []
+            for model in ("yolov8n", "yolo26n"):
+                jobs = [job for job in build_schedule() if job["model"] == model]
+                aux_job = next(job for job in jobs if job["phase"] == "auxiliary_calibration" and job["selection"] == "U42")
+                aux_plan, aux_deps = self.normal_path_fixture(root, model, aux_job)
+                plan_path = root / f"{model}-plan.json"
+                plan_path.write_text(json.dumps(aux_plan), encoding="utf-8")
+                (out / "confirmation_plan.json").write_text(plan_path.read_text(encoding="utf-8"), encoding="utf-8")
+                aux_state_path = out / "jobs" / f"{job_key(aux_job)}" / "child_state.json"
+                aux_state_path.parent.mkdir(parents=True)
+                child_state(aux_state_path, aux_job, plan_sha256=hashlib.sha256(plan_path.read_bytes()).hexdigest())
+                with patch("run_precision_head_confirmation_server.load_production_dependencies", return_value=aux_deps), patch("run_precision_head_confirmation_server._gpu_identity", return_value=identity):
+                    build_real(aux_job, aux_plan, root, out, args, aux_state_path, external_boundary=False)
+                finalize_child_state(aux_state_path)
+                aux_state = read_state(aux_state_path)
+                self.assertEqual(aux_state["calibration_batches"], 1024)
+                self.assertEqual(aux_state["calibration_write_calls"], 1)
+                self.assertTrue(aux_state["builder_completed"])
+                all_states.append(aux_state)
+                manifest = {"jobs": [{"job": aux_job, "state": aux_state}]}
+                (out / "execution_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+
+                int8_job = next(job for job in jobs if job["phase"] == "scored_int8" and job["selection"] == "U42" and job["arm"] == "baseline_int8")
+                int8_plan, int8_deps = self.normal_path_fixture(root, model, int8_job)
+                int8_plan_path = root / f"{model}-int8-plan.json"
+                int8_plan_path.write_text(json.dumps(int8_plan), encoding="utf-8")
+                (out / "confirmation_plan.json").write_text(int8_plan_path.read_text(encoding="utf-8"), encoding="utf-8")
+                int8_state_path = out / "jobs" / f"{job_key(int8_job)}" / "child_state.json"
+                int8_state_path.parent.mkdir(parents=True)
+                child_state(int8_state_path, int8_job, plan_sha256=hashlib.sha256(int8_plan_path.read_bytes()).hexdigest())
+                with patch("run_precision_head_confirmation_server.load_production_dependencies", return_value=int8_deps), patch("run_precision_head_confirmation_server._gpu_identity", return_value=identity):
+                    build_real(int8_job, int8_plan, root, out, args, int8_state_path, external_boundary=False)
+                finalize_child_state(int8_state_path)
+                int8_state = read_state(int8_state_path)
+                self.assertEqual(int8_state["calibration_batches"], 0)
+                self.assertEqual(int8_state["calibration_write_calls"], 0)
+                self.assertGreaterEqual(int8_state["calibration_read_calls"], 1)
+                self.assertTrue(int8_state["calibration_cache"]["immutable"])
+                self.assertEqual(int8_state["forward_completed"], 1636)
+                all_states.append(int8_state)
+
+                fp16_job = next(job for job in jobs if job["phase"] == "scored_fp16" and job["repeat"] == 1)
+                fp16_plan, fp16_deps = self.normal_path_fixture(root, model, fp16_job)
+                fp16_plan_path = root / f"{model}-fp16-plan.json"
+                fp16_plan_path.write_text(json.dumps(fp16_plan), encoding="utf-8")
+                (out / "confirmation_plan.json").write_text(fp16_plan_path.read_text(encoding="utf-8"), encoding="utf-8")
+                fp16_state_path = out / "jobs" / f"{job_key(fp16_job)}" / "child_state.json"
+                fp16_state_path.parent.mkdir(parents=True)
+                child_state(fp16_state_path, fp16_job, plan_sha256=hashlib.sha256(fp16_plan_path.read_bytes()).hexdigest())
+                with patch("run_precision_head_confirmation_server.load_production_dependencies", return_value=fp16_deps), patch("run_precision_head_confirmation_server._gpu_identity", return_value=identity):
+                    build_real(fp16_job, fp16_plan, root, out, args, fp16_state_path, external_boundary=False)
+                finalize_child_state(fp16_state_path)
+                fp16_state = read_state(fp16_state_path)
+                self.assertEqual(fp16_state["calibration_batches"], 0)
+                self.assertEqual(fp16_state["forward_completed"], 1636)
+                self.assertEqual(fp16_state["warmup_forward_count"], 0)
+                self.assertTrue(fp16_state["engine_inspector"]["path"].startswith("public/inspectors/"))
+                all_states.append(fp16_state)
+            self.assertEqual(len(all_states), 6)
+
+    def test_normal_build_real_parser_and_output_failures_are_not_success(self):
+        from run_precision_head_confirmation_server import run_child
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            out = root / "study"
+            out.mkdir()
+            job = next(job for job in build_schedule() if job["model"] == "yolov8n" and job["phase"] == "scored_fp16")
+            plan, deps = self.normal_path_fixture(root, "yolov8n", job, parser_ok=False)
+            plan["schedule"] = {"jobs": build_schedule(), "sha256": canonical_json_sha256(build_schedule())}
+            plan_path = root / "plan.json"
+            job_path = root / "job.json"
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            job_path.write_text(json.dumps(job), encoding="utf-8")
+            args = SimpleNamespace(job_json=job_path, out_dir=out, plan=plan_path, repo=root, device="0", runtime_double=False, confirm_desktop_process=[], confirm_background_process=[])
+            with patch("run_precision_head_confirmation_server.load_production_dependencies", return_value=deps), patch("run_precision_head_confirmation_server._gpu_identity", return_value={"uuid": "GPU-fixture", "name": "fixture-gpu", "driver_version": "fixture-driver", "device": "0"}):
+                self.assertEqual(run_child(args), 1)
+            states = list((out / "jobs").glob("*/child_state.json"))
+            self.assertEqual(len(states), 1)
+            state = json.loads(states[0].read_text(encoding="utf-8"))
+            self.assertEqual(state["status"], "failed")
+            self.assertIn("TensorRT ONNX parse failed", state["error"])
+
+            out2 = root / "study-output-failure"
+            out2.mkdir()
+            plan2, deps2 = self.normal_path_fixture(root, "yolov8n", job, capture_ok=False)
+            plan2["schedule"] = {"jobs": build_schedule(), "sha256": canonical_json_sha256(build_schedule())}
+            plan2_path = root / "plan2.json"
+            job2_path = root / "job2.json"
+            plan2_path.write_text(json.dumps(plan2), encoding="utf-8")
+            job2_path.write_text(json.dumps(job), encoding="utf-8")
+            args2 = SimpleNamespace(job_json=job2_path, out_dir=out2, plan=plan2_path, repo=root, device="0", runtime_double=False, confirm_desktop_process=[], confirm_background_process=[])
+            with patch("run_precision_head_confirmation_server.load_production_dependencies", return_value=deps2), patch("run_precision_head_confirmation_server._gpu_identity", return_value={"uuid": "GPU-fixture", "name": "fixture-gpu", "driver_version": "fixture-driver", "device": "0"}):
+                self.assertEqual(run_child(args2), 1)
+            state2 = json.loads(next((out2 / "jobs").glob("*/child_state.json")).read_text(encoding="utf-8"))
+            self.assertEqual(state2["status"], "failed")
+            self.assertIn("synthetic capture failure", state2["error"])
+            self.assertEqual(state2["forward_completed"], 0)
 
     def test_gpu_identity_is_persisted_and_changed_identity_blocks(self):
         manifest = {}
