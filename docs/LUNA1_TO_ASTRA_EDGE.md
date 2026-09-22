@@ -1952,3 +1952,49 @@ NO-GO pending integrated review of source identity, dev membership/XML,
 private package, engine availability and call accounting. No SSH, transfer,
 source forward, export, build, E2 inference or benchmark was performed in
 this packet.
+
+## L1A-025 — ST-EDGE-03 integrated review repair (2026-09-22)
+
+**implementation_verified.** E2L1-025 repairs the gaps identified in
+`docs/ST_EDGE_03_INTEGRATED_REVIEW_R1.md` without touching E2. The dev packet
+now uses contract schema v2 and compares every frozen identity/runtime/budget
+field, including the canonical engine hash, `warmup=0`, zero probes/debug/
+retries/builds, the canonical `ultralytics.utils.nms.non_max_suppression`
+binding, and streaming input storage. Package validation checks complete
+1636-ID ordered membership, shape/dtype/little-endian/finiteness, source/
+reference/XML identity, and actual declared file path/size/SHA256, symlink and
+undeclared-file policy. The engine remains E2-private and is not loaded locally.
+
+The CPU/mock workflow now has AP50/AP50-95 synthetic evaluation with nonzero
+ground truth and paired duplicate-image bootstrap CI, plus an external child
+process with append+flush+fsync events, bounded timeout, durable partial
+counters, unknown completion state and no retry. The runtime boundary records
+the existing `TensorRTProvider` / `CudaRuntimeMemoryOwner` /
+`JetsonRuntimeAdapter` ownership; no new device framework or model call was
+introduced. Saved-output diagnosis binds the corrected NMS module through an
+executable resolver, compares a copied CPU tensor, hashes input after fixture
+processing, and records native/ONNX/TRT output bytes and hashes separately
+from input audit.
+
+**analyzed.** Focused packet and diagnostic tests pass `18/18`, including wrong
+engine hash, nonzero warmup, wrong reference count, actual file hash,
+unexpected file, AP/CI, durable child timeout, corrected helper binding and
+the prior shape/hash/cleanup regressions. A fresh public packet root was
+generated at `results/edge_readiness_v1/e2l1-025-dev-packet-r1/`; it contains
+only `contract.json`, `runbook.md` and `index.json`. Prior E2L1-024 roots
+remain unchanged. No build, inference, benchmark, SSH, transfer or device
+configuration was performed.
+
+**packet_ready.** The local implementation is ready for later integrated
+review of the private package and owner-side E2 preflight. This is not an E2
+GO: the packet remains `prepared_not_executed`, and the canonical XML/AP
+evaluator still belongs to the future approved workflow.
+
+**terminal.** `edge_dev_packet_implementation_review_required`.
+
+R1 public packet hashes: `contract.json` 4165 bytes /
+`60a2bacc0b8828d71322572485d9ceb75a35a51d0a336e4643392f63d836868a`;
+`runbook.md` 2003 bytes /
+`b9402fe631d323c1e2020d124540219e0659455774ad8806f1e8aa1290174309`;
+`index.json` 609 bytes /
+`f1a56d68398bb4ff810a9c564752b1fce87b1cd19df144a77cb67fe4f83a075d`.

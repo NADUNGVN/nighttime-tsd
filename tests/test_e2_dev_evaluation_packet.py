@@ -17,7 +17,11 @@ from edge_readiness.e2_dev_evaluation_packet import (  # noqa: E402
     MockRuntime,
     PacketError,
     DEV_IMAGES,
+    BoxPrediction,
+    GroundTruth,
+    evaluate_predictions,
     mock_evaluator,
+    run_durable_child_study,
     run_mock_study,
     study_contract,
     validate_output_payload,
@@ -37,17 +41,37 @@ class E2DevEvaluationPacketTests(unittest.TestCase):
         self.assertEqual(contract["call_budget"]["builder_invocations"], 0)
         self.assertEqual(contract["runtime_contract"]["warmup"], 0)
         bad = dict(contract, scope=dict(contract["scope"], images=1635))
-        with self.assertRaisesRegex(PacketError, "DEV_DATASET_CONTRACT_MISMATCH"):
+        with self.assertRaisesRegex(PacketError, "PACKET_CONTRACT_MISMATCH"):
             validate_study_contract(bad)
 
+    def test_contract_rejects_engine_hash_warmup_and_reference_count_changes(self):
+        contract = study_contract()
+        for changed in (
+            dict(contract, immutable_inputs=dict(contract["immutable_inputs"], engine_sha256="0" * 64)),
+            dict(contract, runtime_contract=dict(contract["runtime_contract"], warmup=1)),
+            dict(contract, call_budget=dict(contract["call_budget"], warmup_calls=1)),
+        ):
+            with self.assertRaisesRegex(PacketError, "PACKET_CONTRACT_MISMATCH"):
+                validate_study_contract(changed)
+
     def test_package_binding_rejects_wrong_source_or_public_engine(self):
-        inventory = {"source_manifest_sha256": SOURCE_MANIFEST_SHA256, "source_onnx_sha256": SOURCE_ONNX_SHA256, "target_manifest_sha256": TARGET_MANIFEST_SHA256, "engine_sha256": ENGINE_SHA256, "engine_bytes": ENGINE_BYTES, "engine_public": False, "raw_tensors_public": False}
+        inventory = {"source_manifest_sha256": SOURCE_MANIFEST_SHA256, "source_onnx_sha256": SOURCE_ONNX_SHA256, "target_manifest_sha256": TARGET_MANIFEST_SHA256, "engine_sha256": ENGINE_SHA256, "engine_bytes": ENGINE_BYTES, "engine_public": False, "raw_tensors_public": False, "image_ids": ["%05d" % index for index in range(DEV_IMAGES)], "input_contract": {"shape": [1, 3, 640, 640], "dtype": "float32", "byteorder": "little", "finite": True, "bytes_per_image": 3 * 640 * 640 * 4}, "input_storage_mode": "streaming_manifest_only", "raw_input_tensor_bundle_forbidden": True, "reference_identity": {"source_onnx_sha256": SOURCE_ONNX_SHA256, "predictions_sha256": "5c23d0fa7d4bbf09858b2f1a4dbf45c35650c474aaedebe40d845e3c9acc410a", "xml_sha256": "a" * 64}}
         self.assertEqual(validate_package_inventory(inventory)["status"], "package_binding_verified")
         bad = dict(inventory, source_onnx_sha256="0" * 64)
         with self.assertRaisesRegex(PacketError, "PACKAGE_BINDING_MISMATCH"):
             validate_package_inventory(bad)
         with self.assertRaisesRegex(PacketError, "PRIVATE_ARTIFACT_LEAK_POLICY"):
             validate_package_inventory(dict(inventory, engine_public=True))
+
+    def test_package_checks_actual_file_hash_and_unexpected_file(self):
+        inventory = {"source_manifest_sha256": SOURCE_MANIFEST_SHA256, "source_onnx_sha256": SOURCE_ONNX_SHA256, "target_manifest_sha256": TARGET_MANIFEST_SHA256, "engine_sha256": ENGINE_SHA256, "engine_bytes": ENGINE_BYTES, "image_ids": ["%05d" % index for index in range(DEV_IMAGES)], "input_contract": {"shape": [1, 3, 640, 640], "dtype": "float32", "byteorder": "little", "finite": True, "bytes_per_image": 3 * 640 * 640 * 4}, "input_storage_mode": "streaming_manifest_only", "raw_input_tensor_bundle_forbidden": True, "reference_identity": {"source_onnx_sha256": SOURCE_ONNX_SHA256, "predictions_sha256": "5c23d0fa7d4bbf09858b2f1a4dbf45c35650c474aaedebe40d845e3c9acc410a" , "xml_sha256": "a" * 64}}
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp); path = root / "manifest.json"; path.write_text("ok", encoding="utf-8")
+            inventory["allowed_files"] = [{"path": "manifest.json", "bytes": path.stat().st_size, "sha256": __import__("hashlib").sha256(path.read_bytes()).hexdigest()}]
+            self.assertEqual(validate_package_inventory(inventory, root)["files_checked"], 1)
+            (root / "unexpected.bin").write_bytes(b"x")
+            with self.assertRaisesRegex(PacketError, "PACKAGE_UNDECLARED_FILE"):
+                validate_package_inventory(inventory, root)
 
     def test_output_shape_and_nonfinite_guards(self):
         with self.assertRaisesRegex(PacketError, "OUTPUT_SHAPE_MISMATCH"):
@@ -96,10 +120,26 @@ class E2DevEvaluationPacketTests(unittest.TestCase):
             self.assertIn("cleanup_failed", events)
             self.assertNotIn("retry", events.lower())
 
-    def test_mock_evaluator_is_cpu_artifact_only(self):
+    def test_mock_evaluator_and_ap_ci_are_cpu_artifact_analysis(self):
         row = mock_evaluator("00006", output(1))
-        self.assertEqual(row["metric_status"], "synthetic_contract_only")
-        self.assertFalse(row["ap_available"])
+        self.assertEqual(row["metric_status"], "synthetic_cpu_evaluated")
+        self.assertTrue(row["ap_available"])
+        predictions = [BoxPrediction("a", 0, 0.9, (0.0, 0.0, 10.0, 10.0)), BoxPrediction("b", 0, 0.8, (20.0, 20.0, 30.0, 30.0))]
+        truths = [GroundTruth("a", 0, (0.0, 0.0, 10.0, 10.0)), GroundTruth("b", 0, (0.0, 0.0, 10.0, 10.0))]
+        metrics = evaluate_predictions(predictions, truths, ["a", "b"])
+        self.assertGreater(metrics["metrics"]["AP50"], 0.0)
+        self.assertIn("AP50_95", metrics["metrics"])
+
+    def test_durable_child_timeout_preserves_partial_events(self):
+        ids = ("00006", "00009")
+        payloads = {image_id: output(index + 1) for index, image_id in enumerate(ids)}
+        with tempfile.TemporaryDirectory() as temp:
+            result = run_durable_child_study(ids, payloads, Path(temp) / "child", timeout_seconds=3.0, hang_at="00009")
+            self.assertEqual(result["status"], "failed_partial")
+            self.assertEqual(result["error"]["code"], "STAGE_TIMEOUT")
+            self.assertEqual(result["unknown_completion_state"], "unknown")
+            events = (Path(temp) / "child" / "events.jsonl").read_text(encoding="utf-8")
+            self.assertIn("target_call_hanging", events)
 
 
 if __name__ == "__main__":

@@ -17,6 +17,8 @@ from edge_readiness.e2_output_diagnostic import (
     load_tensor,
     raw_strata,
     audit_logs,
+    compare_with_accepted_helper,
+    resolve_accepted_nms,
     verify_pinned_manifest,
 )
 from edge_readiness.e2_output_compare import ComparisonPolicy
@@ -31,6 +33,19 @@ def synthetic(value=0.0):
 
 
 class E2OutputDiagnosticTests(unittest.TestCase):
+    def test_accepted_helper_binds_nms_module_and_executes_cpu_comparison(self):
+        class Module:
+            @staticmethod
+            def non_max_suppression(values, **kwargs):
+                self.assertTrue(kwargs["return_idxs"])
+                return values[:1]
+        helper, metadata = resolve_accepted_nms(lambda name: Module, lambda name: "8.4.102")
+        self.assertEqual(metadata["symbol"], "ultralytics.utils.nms.non_max_suppression")
+        comparison = compare_with_accepted_helper([0.0, 1.0], helper)
+        self.assertEqual(comparison["input_elements"], 2)
+        with self.assertRaisesRegex(ValueError, "ACCEPTED_NMS_SYMBOL_MISSING"):
+            resolve_accepted_nms(lambda name: object(), lambda name: "8.4.102")
+
     def test_binary_shape_and_hash_guard(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "output.bin"

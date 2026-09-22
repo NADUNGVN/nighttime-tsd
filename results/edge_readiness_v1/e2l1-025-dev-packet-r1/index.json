@@ -1,0 +1,18 @@
+{
+  "private_policy": "no engine/ONNX/input/raw prediction bytes",
+  "public_artifacts": [
+    "contract.json",
+    "runbook.md",
+    "index.json"
+  ],
+  "runtime_boundary": {
+    "adapter": "scripts.edge_readiness.jetson_adapter.JetsonRuntimeAdapter",
+    "double": "MockRuntime/child process",
+    "model_calls": false,
+    "new_framework": false,
+    "owner": "scripts.edge_readiness.cuda_runtime_owner.CudaRuntimeMemoryOwner",
+    "provider": "scripts.edge_readiness.jetson_runtime_provider.TensorRTProvider"
+  },
+  "schema_version": "e2l1-dev-evaluation-packet-v2",
+  "status": "prepared_not_executed"
+}
