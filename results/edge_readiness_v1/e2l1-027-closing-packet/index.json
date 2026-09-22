@@ -1,0 +1,41 @@
+{
+  "execution_chain": {
+    "analysis": {
+      "entrypoint": "run_canonical_analysis_stage",
+      "permission": "CPU-only; source and target records must already exist",
+      "runtime": "coco_xml_paired_image_bootstrap_v1",
+      "undefined_metrics": "JSON null"
+    },
+    "source": {
+      "entrypoint": "run_source_reference_stage",
+      "permission": "--allow-source-forward",
+      "public_outputs": [
+        "manifest.json",
+        "index.json",
+        "events.jsonl"
+      ],
+      "raw_outputs": "private/",
+      "runtime": "edge_readiness.e2_source_bundle.UltralyticsSourceRuntime"
+    },
+    "target": {
+      "entrypoint": "run_target_execution_stage",
+      "one_pass_per_image": true,
+      "permission": "--allow-target-inference",
+      "public_outputs": [
+        "manifest.json",
+        "index.json",
+        "events.jsonl"
+      ],
+      "raw_outputs": "private/",
+      "runtime": "ExistingE2TargetRuntime -> E2TensorRTRuntime -> TensorRTProvider/CudaRuntimeMemoryOwner/JetsonRuntimeAdapter"
+    }
+  },
+  "private_policy": "no model/engine/input/raw tensor bytes",
+  "public_artifacts": [
+    "contract.json",
+    "runbook.md",
+    "index.json"
+  ],
+  "schema_version": "e2l1-dev-evaluation-packet-v4",
+  "status": "prepared_not_executed"
+}

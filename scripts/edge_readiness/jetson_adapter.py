@@ -307,9 +307,17 @@ class MockStream:
     def __post_init__(self) -> None:
         if self.events is None:
             self.events = []
+        self.closed = False
 
     def synchronize(self, stage: str) -> None:
+        if self.closed:
+            raise AdapterError("MOCK_STREAM_CLOSED", "mock stream was used after close")
         self.events.append(f"sync:{stage}")
+
+    def close(self) -> None:
+        if not self.closed:
+            self.closed = True
+            self.events.append("mock_stream_closed")
 
 
 @dataclass
@@ -357,11 +365,14 @@ class MockBuffers:
         self._pending_outputs: set[str] = set()
         self._ready = False
         self._host_outputs: dict[str, HostTensor] = {}
+        self._released = False
 
     def copy_stream_handle(self) -> int:
         return self.stream_handle
 
     def begin_inference(self) -> None:
+        if self._released:
+            raise AdapterError("MOCK_BUFFERS_RELEASED", "mock buffers were released")
         self._pending_outputs.clear()
         self._ready = False
         self._host_outputs.clear()
@@ -401,6 +412,14 @@ class MockBuffers:
         if not self._ready:
             raise AdapterError("OUTPUT_NOT_READY", "host outputs are unavailable before final stream completion")
         return dict(self._host_outputs)
+
+    def release(self) -> None:
+        if not self._released:
+            self._pending_outputs.clear()
+            self._host_outputs.clear()
+            self.allocations = {}
+            self._released = True
+            self.events.append("mock_buffers_released")
 
 
 @dataclass(frozen=True)

@@ -2053,3 +2053,67 @@ COCO/XML evaluation must occur later in their approved dependency environment
 and be separately counted.
 
 **terminal.** `edge_dev_packet_canonical_reference_pending`.
+
+### L1A-026 verification correction — dependency-rich closure review (2026-09-22)
+
+The earlier `21/21` statement was environment-specific and incomplete. In the
+specified dependency-rich CPU environment, the initial R2 review was **20
+PASS, 1 ERROR**: `load_xml` was given a list instead of its accepted
+name-keyed record mapping. The source/server provenance and real NMS tensor
+repair were accepted. E2L1-027 fixes that evaluator contract and adds the
+previously missing integration stages; the corrected focused result is
+reported below.
+
+The canonical image-ID digest is also corrected to the declared serialization
+(`sorted image names joined by actual UTF-8 newline bytes`):
+`14cedb5d6984d303c494a840fea9f3dc77d8f329d8f23bf086648e16ad6e4c1c`.
+The prior `5fab...` value represented literal backslash-n separators and is
+not used by the closing packet. Historical R2 artifacts remain unchanged.
+
+## L1A-027 — ST-EDGE-03 R2 closure (2026-09-22)
+
+**implementation_verified_local.** The canonical evaluator now normalizes the
+accepted name-keyed XML loader contract, rejects duplicate image identities,
+shape mismatches and array-length mismatches, and delegates COCO/XML AP plus
+paired PCG64 resampling to the repository's locked evaluator. Undefined
+support is serialized as JSON `null`, never NaN. Tests cover perfect,
+changed, empty/all-wrong, size-endpoint/unsupported support and duplicate-ID
+cases using real XML content and the dependency-rich CPU environment.
+
+The package contract now recomputes the canonical image-ID digest from the
+supplied IDs, requires an explicit bound-image/preprocess producer contract,
+and distinguishes `metadata_pending` from `execution_ready`. A concrete
+image-byte/hash → preprocessing → one bounded float32 input-tensor stream is
+implemented with changed/missing/order guards. Verified source-reference/XML
+artifacts must be represented by actual hash-bound allowlisted files.
+
+The executable chain is no longer metadata-only: `run_source_reference_stage`
+reuses `e2_source_bundle.UltralyticsSourceRuntime`; the target factory
+reuses `E2TensorRTRuntime`, `TensorRTProvider`, `CudaRuntimeMemoryOwner`,
+`OwnedBuffers` and `JetsonRuntimeAdapter`; and
+`run_canonical_analysis_stage` is a CPU-only terminal analyzer. All model and
+device stages fail closed without explicit `--allow-source-forward` or
+`--allow-target-inference`. The durable child writes its final result only
+after cleanup is known, and the adapter double now releases buffers and
+closes its stream rather than only appending a label.
+
+**analyzed.** In the dependency-rich CPU environment, the focused packet and
+diagnostic suites pass **27/27** (the diagnostic subset is `8/8`); compile and
+JSON `allow_nan=False` checks pass. Full edge regression passes **108/108**.
+No source forward, SSH, transfer, build, E2 inference or benchmark was run;
+source reference remains `0/1636`.
+
+**packet_ready.** A fresh closing packet is published at
+`results/edge_readiness_v1/e2l1-027-closing-packet/`. It contains only
+contract/runbook/index metadata; raw images, ONNX, engine, input and tensor
+bytes remain private. The packet is locally executable after later approved
+source/target execution, but is not an E2 GO under this entry.
+
+Closing packet hashes: `contract.json` 5937 bytes /
+`1075f8e30fdb575f63e07d75cbf98fba8891bbaac13433e725ce25ca152963c5`;
+`index.json` 1270 bytes /
+`b544a95e0cd0d8c3ecafab6b560b3bac05b7928430a427ed4ff00e5f658b1da0`;
+`runbook.md` 2130 bytes /
+`0d7b4c135611c2c54fe7459874324d9033e32d3fbea697418b05ff6fe17f7c0f`.
+
+**terminal.** `edge_dev_packet_canonical_reference_pending`.

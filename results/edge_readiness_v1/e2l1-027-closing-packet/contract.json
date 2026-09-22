@@ -1,0 +1,166 @@
+{
+  "call_budget": {
+    "automatic_retries": 0,
+    "builder_invocations": 0,
+    "debug_calls": 0,
+    "reference_image_passes_if_reuse_not_verified": 1636,
+    "reference_passes_if_reuse_verified": 0,
+    "shape_probe_calls": 0,
+    "target_image_passes": 1636,
+    "target_passes_per_image": 1,
+    "warmup_calls": 0
+  },
+  "endpoints": {
+    "bootstrap": {
+      "estimator": "coco_xml_paired_image_bootstrap_v1",
+      "noninferiority_margin": null,
+      "paired_image_sampling": true,
+      "resamples": 1000,
+      "seed": 20260916
+    },
+    "primary": [
+      "paired_source_onnx_vs_e2_fp16_COCO_bbox_AP50",
+      "paired_source_onnx_vs_e2_fp16_COCO_bbox_AP50_95"
+    ],
+    "secondary": [
+      "XS/S_AP50",
+      "XS/S_AP50_95",
+      "per_class_counts",
+      "coordinate_and_threshold_diagnostics"
+    ]
+  },
+  "execution_chain": {
+    "analysis": {
+      "entrypoint": "run_canonical_analysis_stage",
+      "permission": "CPU-only; source and target records must already exist",
+      "runtime": "coco_xml_paired_image_bootstrap_v1",
+      "undefined_metrics": "JSON null"
+    },
+    "source": {
+      "entrypoint": "run_source_reference_stage",
+      "permission": "--allow-source-forward",
+      "public_outputs": [
+        "manifest.json",
+        "index.json",
+        "events.jsonl"
+      ],
+      "raw_outputs": "private/",
+      "runtime": "edge_readiness.e2_source_bundle.UltralyticsSourceRuntime"
+    },
+    "target": {
+      "entrypoint": "run_target_execution_stage",
+      "one_pass_per_image": true,
+      "permission": "--allow-target-inference",
+      "public_outputs": [
+        "manifest.json",
+        "index.json",
+        "events.jsonl"
+      ],
+      "raw_outputs": "private/",
+      "runtime": "ExistingE2TargetRuntime -> E2TensorRTRuntime -> TensorRTProvider/CudaRuntimeMemoryOwner/JetsonRuntimeAdapter"
+    }
+  },
+  "forbidden_now": [
+    "SSH",
+    "transfer",
+    "source model forward",
+    "ONNX export",
+    "TensorRT build",
+    "E2 inference",
+    "benchmark",
+    "install",
+    "device configuration"
+  ],
+  "immutable_inputs": {
+    "dataset_manifest": "results/paper_artifacts/v1/metadata/dataset_manifest.json",
+    "dataset_manifest_commit": "3154b7ad2308ff8802ea1c15532951c86ed66a96",
+    "dataset_manifest_sha256": "5d1b6f1c6df475efe14c8bc6e41c6312b5121dcb828041ec81bbcb2733ac0a2e",
+    "dev_yaml": "results/measurement_audit_v1/server_fp16_capture_v1/dev_absolute.yaml",
+    "dev_yaml_sha256": "ea8f40ba75920b2a67c2b5e1fd18c3d2eaf760686f11d0efea9bb7f26d5f5479",
+    "engine_bytes": 7158097,
+    "engine_sha256": "581a9ea2eafdae690f25f57ab88ba1bcffdafa99e5322ea50ee43678520e7f56",
+    "engine_storage": "private E2 path only; never download/load locally",
+    "server_trt_reference_is_source_onnx": false,
+    "server_trt_reference_predictions_sha256": "5c23d0fa7d4bbf09858b2f1a4dbf45c35650c474aaedebe40d845e3c9acc410a",
+    "source_manifest_sha256": "60744680973a73d2986bdf59ce3c6bc956119aeeebbd2106960df57947665c08",
+    "source_onnx_cpu_reference_producer": "scripts/edge_readiness/e2_dev_evaluation_packet.py:write_source_reference_pending",
+    "source_onnx_cpu_reference_status": "pending_not_executed",
+    "source_onnx_sha256": "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7",
+    "target_manifest_sha256": "29954570c5b1f44af928e283ce2ab89885c224b165ab85b4f69de6d5ae6a4e74",
+    "xml_identity_required": true
+  },
+  "ownership": {
+    "astra_reviewer": [
+      "review packet and prerequisites",
+      "approve or reject later target execution",
+      "review final paired metrics"
+    ],
+    "luna1_operator": [
+      "validate package on local CPU",
+      "after later integrated GO, transfer only approved package to E2",
+      "run one target pass per image with existing engine",
+      "audit counters/hashes and publish sanitized metrics"
+    ],
+    "server_operator": [
+      "materialize/verify source ONNX, dev images/labels/XML, input mapping and reference predictions when reusable",
+      "publish hashes and private transfer package"
+    ]
+  },
+  "real_device_execution": false,
+  "resource_requirements": {
+    "available_memory_gib_min": 4,
+    "bounded_input_bytes": 4915200,
+    "fresh_e2_output_root": true,
+    "input_storage_mode": "streaming_manifest_only",
+    "per_image_target_output_bytes": 235200,
+    "private_output_storage_gib_min": 1,
+    "raw_input_tensor_bundle_forbidden": true,
+    "retain_raw_tensors": "private optional; public hashes/metrics only",
+    "stage_timeout_seconds": 54000,
+    "streaming_required": true,
+    "timeout_per_image_seconds": 30
+  },
+  "runtime_contract": {
+    "batch": 1,
+    "conf": 0.001,
+    "debug_forwards": 0,
+    "duplicate_nms": false,
+    "energy_benchmark": false,
+    "existing_engine_only": true,
+    "imgsz": 640,
+    "iou": 0.7,
+    "latency_benchmark": false,
+    "max_det": 300,
+    "postprocess_helper": {
+      "device": "cpu/reference and E2 target-owned postprocess",
+      "input_dtype": "torch.float32",
+      "input_shape": [
+        1,
+        7,
+        8400
+      ],
+      "package": "ultralytics",
+      "return_idxs": true,
+      "symbol": "ultralytics.utils.nms.non_max_suppression",
+      "version": "8.4.102"
+    },
+    "rect": false,
+    "runtime": "E2 original TRT 8.5.2.2",
+    "warmup": 0,
+    "workers": 0
+  },
+  "schema_version": "e2l1-dev-evaluation-packet-v4",
+  "scope": {
+    "canonical_image_ids_sha256": "14cedb5d6984d303c494a840fea9f3dc77d8f329d8f23bf086648e16ad6e4c1c",
+    "canonical_image_ids_source": "results/measurement_audit_v1/server_fp16_capture_v1/validator_predictions.json:records[].image sorted UTF-8 newline-delimited",
+    "images": 1636,
+    "instances": 2706,
+    "model": "YOLO11n",
+    "official_test_used": false,
+    "split": "CCTSDB2021/dev",
+    "target": "E2"
+  },
+  "source_reference_status": "pending_not_executed",
+  "status": "prepared_not_executed",
+  "terminal_status": "edge_dev_packet_canonical_reference_pending"
+}
