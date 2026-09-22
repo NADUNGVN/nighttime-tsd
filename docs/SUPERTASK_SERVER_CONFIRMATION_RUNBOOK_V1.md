@@ -10,7 +10,7 @@ prerequisite checks below before dispatching the scored phase.
 
 Replace `FULL_COMMIT` with the full SHA printed in the current L2A-053
 operator handoff. The executable revision for this handoff is
-`46f695acf60b010173222eb666da89f6e0322087`; a later documentation-only
+`82e4473a17a4653f0b66fcd246c7fcd62af89c68`; a later documentation-only
 handoff commit must use its own full SHA in the equality check.
 
 ```bash

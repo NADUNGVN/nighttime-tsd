@@ -3484,10 +3484,10 @@ The independent TRT regression was **30/30 PASS**. Luna's local rerun above
 was 22/22, but these observations must not be collapsed into a claim of an
 independent 22/22 Astra run.
 
-The executable implementation remains the pushed revision
-`46f695acf60b010173222eb666da89f6e0322087`; the current handoff commit is
-documentation-only relative to that executable and must still be checked out
-by its full SHA. The runbook now records the complete source/helper hash
+The executable implementation now includes the server-discovered calibration
+contract fix at `82e4473a17a4653f0b66fcd246c7fcd62af89c68`; the operator must
+use the later full handoff SHA after its documentation commit is pushed. The
+runbook records the complete source/helper hash
 inventory, accepted checkpoint/ONNX bindings, fresh output-root requirement,
 desktop confirmation rule, and sequential plan/scored commands.
 
@@ -3513,3 +3513,27 @@ capture/XML bindings, telemetry/workload violations, finite outputs, deadlines
 and lifecycle release. Only after that audit will Luna run the locked CPU
 analyzer and prepare the methods/results/limitations handoff. No result is
 accepted or interpreted before those checks.
+
+### R5 operator feedback and correction
+
+The first CPU plan attempt on SERVER-01 stopped before creating the output
+root with `KeyError: 'requested_size'` in
+`prepare_precision_head_confirmation.py::calibration_recipe_evidence`.
+This was a real producer/consumer schema mismatch: the accepted config stores
+`requested_size`, `selected_size` and `train_only` on each U42/U43/U44
+selection, not under the `calibration_recipe` object. No builder, TensorRT
+engine, capture or GPU study work ran, and the output root remained absent.
+
+The fix reads and validates those fields from all three selection records,
+requiring 1024 requested/selected images and train-only status, then publishes
+the normalized evidence. A regression test covers this exact canonical config
+shape. Executable fix commit `82e4473a17a4653f0b66fcd246c7fcd62af89c68` was
+pushed through `NADUNGVN`; the next operator handoff must check out the full
+documentation handoff SHA and rerun only the plan command first.
+
+Local verification after the fix: targeted calibration-contract test PASS,
+super suite **22/22 PASS**, TRT regression **30/30 PASS**, py_compile PASS and
+git diff --check PASS. The readiness suite still reports two pre-existing
+local data-inventory failures because this local checkout lacks the full dev
+image inventory; this is not claimed as a pass. No local TensorRT/GPU/export
+was run.
