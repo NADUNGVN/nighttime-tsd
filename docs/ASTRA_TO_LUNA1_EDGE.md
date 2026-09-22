@@ -698,3 +698,9 @@ manifest hash matched, and the private allowlist contained ten verified
 files. E2 transfer was attempted only after a fresh-path read-only check, but
 two bounded SSH attempts to `nx` timed out. No E2 build, inference, or smoke
 was run; the one-smoke authorization remains unused.
+
+## E2L1-026 — ST-EDGE-03 R2, correct reference identity and finish real pipeline
+
+2026-09-22 review of `7885e59`: Astra ran **18/18 focused tests PASS**, but reproduced failure of the actual Ultralytics helper adapter and positive AP for zero predictions. The pinned reference prediction hash belongs to SERVER TensorRT FP16, not source ONNX CPU. The packet still lacks an executable real-runtime chain. **NO-GO dev execution; GO autonomous local completion of the same supertask.** This is not a new experiment or additional scientific rule.
+
+Read `docs/ST_EDGE_03_INTEGRATED_REVIEW_R2.md` fully. Repair provenance, use the accepted evaluator and paired source-target resampling, implement the actual lazy runtime/CLI chain and validate it with external-runtime doubles plus real CPU postprocessing/metrics. No model forward is needed to test these boundaries. Preserve historical FAILs and accepted diagnostic results; do not correct boxes or loosen tolerance. No SSH/transfer/build/inference/benchmark is authorized. Return one consolidated L1A-026 packet with truthful milestones and executable prospective runbook, not another metadata-only packet. Commit/push this unchanged inbox and R2 with scoped work through NADUNGVN.

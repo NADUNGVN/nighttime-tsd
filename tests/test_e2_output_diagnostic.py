@@ -34,15 +34,23 @@ def synthetic(value=0.0):
 
 class E2OutputDiagnosticTests(unittest.TestCase):
     def test_accepted_helper_binds_nms_module_and_executes_cpu_comparison(self):
+        class FakeTensor:
+            shape = (1, 7, 8400)
+            dtype = "torch.float32"
+            def __init__(self, raw):
+                self.raw_bytes = raw
         class Module:
             @staticmethod
             def non_max_suppression(values, **kwargs):
                 self.assertTrue(kwargs["return_idxs"])
-                return values[:1]
+                self.assertEqual(values.shape, (1, 7, 8400))
+                return [values]
         helper, metadata = resolve_accepted_nms(lambda name: Module, lambda name: "8.4.102")
         self.assertEqual(metadata["symbol"], "ultralytics.utils.nms.non_max_suppression")
-        comparison = compare_with_accepted_helper([0.0, 1.0], helper)
-        self.assertEqual(comparison["input_elements"], 2)
+        comparison = compare_with_accepted_helper([0.0] * OUTPUT_ELEMENTS, helper, tensor_factory=lambda raw, shape: FakeTensor(raw))
+        self.assertEqual(comparison["input_shape"], [1, 7, 8400])
+        self.assertTrue(comparison["input_unchanged"])
+        self.assertIn("detections", comparison)
         with self.assertRaisesRegex(ValueError, "ACCEPTED_NMS_SYMBOL_MISSING"):
             resolve_accepted_nms(lambda name: object(), lambda name: "8.4.102")
 

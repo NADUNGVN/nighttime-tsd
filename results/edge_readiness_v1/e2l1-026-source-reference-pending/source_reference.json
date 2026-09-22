@@ -1,0 +1,11 @@
+{
+  "cpu_evaluator": "coco_xml_paired_image_bootstrap_v1",
+  "executed_image_passes": 0,
+  "model_forward": false,
+  "planned_image_passes": 1636,
+  "producer": "scripts/edge_readiness/e2_dev_evaluation_packet.py:write_source_reference_pending",
+  "provenance_note": "The SERVER TensorRT FP16 prediction hash is retained separately and is not source-ONNX evidence.",
+  "schema_version": "e2l1-source-onnx-reference-v1",
+  "source_onnx_sha256": "bd20b36d640c502358c44edbbde51f05267eda2518b0c0a4cfe84ca18a00d4b7",
+  "status": "pending_not_executed"
+}

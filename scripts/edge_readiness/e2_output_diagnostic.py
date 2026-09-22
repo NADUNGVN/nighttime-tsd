@@ -79,16 +79,48 @@ def resolve_accepted_nms(module_loader=importlib.import_module, version_provider
     return helper, {"package": "ultralytics", "version": version, "symbol": ACCEPTED_NMS_MODULE + "." + ACCEPTED_NMS_NAME, "device": "cpu", "return_idxs": True}
 
 
-def compare_with_accepted_helper(values: Sequence[float], helper) -> Dict[str, Any]:
-    """Execute an injected CPU helper over a copied saved tensor.
+def _json_safe(value: Any) -> Any:
+    if hasattr(value, "detach") and hasattr(value, "cpu"):
+        return value.detach().cpu().tolist()
+    if isinstance(value, (tuple, list)):
+        return [_json_safe(item) for item in value]
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return {"type": type(value).__name__}
 
-    The injected callable is used by tests and by the later environment-bound
-    runner. The production binding is obtained only through
-    :func:`resolve_accepted_nms`, so `ops.non_max_suppression` cannot pass.
-    """
-    copied = tuple(float(value) for value in values)
-    result = helper(copied, conf_thres=POSTPROCESS_CONFIDENCE, iou_thres=POSTPROCESS_IOU, max_det=POSTPROCESS_MAX_DETECTIONS, return_idxs=True)
-    return {"input_elements": len(copied), "input_sha256": hashlib.sha256(struct.pack("<{}f".format(len(copied)), *copied)).hexdigest(), "helper_output_type": type(result).__name__, "binding": ACCEPTED_NMS_MODULE + "." + ACCEPTED_NMS_NAME}
+
+def _tensor_bytes(value: Any) -> bytes:
+    if hasattr(value, "raw_bytes"):
+        return bytes(value.raw_bytes)
+    try:
+        return value.detach().cpu().contiguous().numpy().tobytes()
+    except AttributeError as exc:
+        raise ValueError("HELPER_TENSOR_BYTES_UNAVAILABLE") from exc
+
+
+def compare_with_accepted_helper(values: Sequence[float], helper, tensor_factory=None) -> Dict[str, Any]:
+    """Run the accepted helper on a copied CPU float32 ``[1,7,8400]`` tensor."""
+    if len(values) != OUTPUT_ELEMENTS:
+        raise ValueError("HELPER_INPUT_ELEMENT_COUNT_MISMATCH")
+    raw = struct.pack("<{}f".format(len(values)), *[float(value) for value in values])
+    if tensor_factory is not None:
+        tensor = tensor_factory(raw, (1, 7, 8400))
+    else:
+        try:
+            import torch
+            tensor = torch.frombuffer(bytearray(raw), dtype=torch.float32).reshape(1, 7, 8400).clone()
+        except ImportError as exc:
+            raise ValueError("HELPER_CPU_DEPENDENCY_MISSING:torch") from exc
+    shape = tuple(getattr(tensor, "shape", ()))
+    dtype = str(getattr(tensor, "dtype", ""))
+    if shape != (1, 7, 8400) or "float32" not in dtype:
+        raise ValueError("HELPER_INPUT_TENSOR_CONTRACT_MISMATCH")
+    before = _tensor_bytes(tensor)
+    if before != raw:
+        raise ValueError("HELPER_INPUT_BYTES_MISMATCH_BEFORE")
+    result = helper(tensor, conf_thres=POSTPROCESS_CONFIDENCE, iou_thres=POSTPROCESS_IOU, max_det=POSTPROCESS_MAX_DETECTIONS, nc=3, return_idxs=True)
+    after = _tensor_bytes(tensor)
+    return {"input_shape": list(shape), "input_dtype": dtype, "input_sha256": hashlib.sha256(raw).hexdigest(), "input_unchanged": after == raw, "output_sha256": hashlib.sha256(json.dumps(_json_safe(result), sort_keys=True).encode("utf-8")).hexdigest(), "detections": _json_safe(result), "binding": ACCEPTED_NMS_MODULE + "." + ACCEPTED_NMS_NAME}
 
 
 def load_tensor(path: Path, expected_sha256: str) -> Tuple[float, ...]:
@@ -361,13 +393,21 @@ def audit_logs(log_root: Path, expected_hashes: Mapping[str, str] = ACCEPTED_RET
     return {"records": records, "private_content_policy": "full logs remain outside public Git; only size/hash/event metadata is published"}
 
 
-def analyze_fixture(image_id: str, expected: Mapping[str, str], source_root: Path, target_root: Path) -> Dict[str, Any]:
+def analyze_fixture(image_id: str, expected: Mapping[str, str], source_root: Path, target_root: Path, accepted_helper=None) -> Dict[str, Any]:
     native = load_tensor(source_root / "private/native_reference/{}.bin".format(image_id), expected["native_sha256"])
     onnx = load_tensor(source_root / "private/onnx_reference/{}.bin".format(image_id), expected["onnx_sha256"])
     target = load_tensor(target_root / "{}.bin".format(image_id), expected["target_sha256"])
     source_result = compare_output0(native, onnx, STRICT_POLICY).as_dict()
     target_onnx = compare_output0(onnx, target, TARGET_POLICY).as_dict()
     target_native = compare_output0(native, target, TARGET_POLICY).as_dict()
+    helper_audit: Dict[str, Any]
+    if accepted_helper is None:
+        helper_audit = {"status": "not_run", "reason": "accepted_helper_unavailable"}
+    else:
+        try:
+            helper_audit = {"status": "completed", "source_onnx": compare_with_accepted_helper(onnx, accepted_helper), "target_trt": compare_with_accepted_helper(target, accepted_helper)}
+        except (ValueError, RuntimeError) as exc:
+            helper_audit = {"status": "failed", "error": str(exc)}
     return {
         "image_id": image_id,
         "input_coordinate_contract": "xywh boxes in 640x640 letterboxed input pixels; output shape [1,7,8400]; little-endian float32",
@@ -379,6 +419,7 @@ def analyze_fixture(image_id: str, expected: Mapping[str, str], source_root: Pat
         "raw_strata_target_vs_source_onnx": raw_strata(onnx, target),
         "postprocess_target_vs_source_onnx": compare_postprocess(onnx, target),
         "postprocess_target_vs_source_native": compare_postprocess(native, target),
+        "accepted_helper_postprocess": helper_audit,
     }
 
 
@@ -386,13 +427,19 @@ def run_analysis(source_root: Path, target_root: Path, expected_by_fixture: Mapp
     out_dir.mkdir(parents=True, exist_ok=False)
     input_hash_audit = []
     fixtures = {}
+    try:
+        accepted_helper, helper_binding = resolve_accepted_nms()
+        helper_binding_status = {"status": "resolved", **helper_binding}
+    except (ImportError, ValueError) as exc:
+        accepted_helper = None
+        helper_binding_status = {"status": "unavailable", "error": str(exc), "symbol": ACCEPTED_NMS_MODULE + "." + ACCEPTED_NMS_NAME}
     for image_id in FIXTURE_IDS:
         path = source_root / "private/inputs/{}.bin".format(image_id)
         before = sha256_file(path)
         expected = expected_by_fixture[image_id]["input_sha256"]
         if before != expected:
             raise ValueError("INPUT_HASH_MISMATCH_BEFORE: {}".format(image_id))
-        fixtures[image_id] = analyze_fixture(image_id, expected_by_fixture[image_id], source_root, target_root)
+        fixtures[image_id] = analyze_fixture(image_id, expected_by_fixture[image_id], source_root, target_root, accepted_helper)
         # Hash after all CPU analysis for this fixture, not before it.
         after = sha256_file(path)
         if after != before:
@@ -405,7 +452,7 @@ def run_analysis(source_root: Path, target_root: Path, expected_by_fixture: Mapp
         "status": "output_diagnostic_completed_review_required",
         "code_provenance": {"analyzer": {"path_label": "scripts/edge_readiness/e2_output_diagnostic.py", "sha256": sha256_file(analyzer_path)}, "tests": {"path_label": "tests/test_e2_output_diagnostic.py", "sha256": sha256_file(test_path)}},
         "evidence_bindings": {"source_manifest": {key: source_manifest_record[key] for key in ("path", "sha256", "schema_version")}, "target_manifest": {key: target_manifest_record[key] for key in ("path", "sha256", "schema_version")}, "input_hash_audit": input_hash_audit},
-        "execution_policy": {"cpu_only": True, "new_build": False, "new_inference": False, "benchmark": False, "postprocess": {"confidence": POSTPROCESS_CONFIDENCE, "iou": POSTPROCESS_IOU, "max_detections": POSTPROCESS_MAX_DETECTIONS, "accepted_helper_binding": {"package": "ultralytics", "version": "8.4.102", "symbol": "ultralytics.utils.nms.non_max_suppression", "device": "cpu", "return_idxs": True, "evidence": "E2L1-025 binding correction; executable resolver"}, "local_custom_diagnostic": {"symbol": "e2_output_diagnostic.class_aware_nms", "float_conversion": "Python float64 arithmetic", "confidence_boundary": ">= confidence", "equivalence_status": "descriptive fallback; accepted helper comparison requires explicit binding"}}},
+        "execution_policy": {"cpu_only": True, "new_build": False, "new_inference": False, "benchmark": False, "postprocess": {"confidence": POSTPROCESS_CONFIDENCE, "iou": POSTPROCESS_IOU, "max_detections": POSTPROCESS_MAX_DETECTIONS, "accepted_helper_binding": {"package": "ultralytics", "version": "8.4.102", "symbol": "ultralytics.utils.nms.non_max_suppression", "device": "cpu", "return_idxs": True, "input_shape": [1, 7, 8400], "input_dtype": "torch.float32", "status": helper_binding_status}, "local_custom_diagnostic": {"symbol": "e2_output_diagnostic.class_aware_nms", "equivalence_status": "descriptive historical diagnostic only; not the accepted evaluator"}}},
         "fixtures": fixtures,
         "logs": audit_logs(log_root),
         "limitations": ["Saved-target replay is not repeatability testing.", "Raw box mismatch does not establish task-level accuracy degradation.", "Three selected train fixtures provide no AP, dev accuracy, recall, safety or deployment claim.", "Postprocess uses frozen 640x640 input coordinates; no original-image scale-back was applied."],

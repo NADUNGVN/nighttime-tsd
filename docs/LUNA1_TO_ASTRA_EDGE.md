@@ -1998,3 +1998,58 @@ R1 public packet hashes: `contract.json` 4165 bytes /
 `b9402fe631d323c1e2020d124540219e0659455774ad8806f1e8aa1290174309`;
 `index.json` 609 bytes /
 `f1a56d68398bb4ff810a9c564752b1fce87b1cd19df144a77cb67fe4f83a075d`.
+
+## L1A-026 — ST-EDGE-03 R2 provenance and executable pipeline (2026-09-22)
+
+**implementation_verified_local.** R2 corrects the provenance defect: hash
+`5c23d0fa7d4bbf09858b2f1a4dbf45c35650c474aaedebe40d845e3c9acc410a` is now
+named only as the SERVER TensorRT FP16 reference. It is explicitly not source
+ONNX CPU evidence. Source CPU reference generation is represented by
+`e2l1-026-source-reference-pending/source_reference.json`, with planned 1,636
+passes and executed `0`; no source model forward occurred.
+
+The accepted NMS adapter now creates a copied CPU float32 tensor of shape
+`[1,7,8400]`, preserves and rechecks input bytes, calls the exact
+`ultralytics.utils.nms.non_max_suppression` symbol with `return_idxs=True`,
+and records detections/output hashes. The production evaluator path delegates
+to the repository's locked `coco_xml_paired_image_bootstrap_v1` implementation
+(`pycocotools==2.0.10`, PCG64 seed `20260916`, 1,000 paired sorted image
+draws, duplicate occurrences retained) and returns source, target and
+target-minus-source AP50/AP50-95 across all/xs/s/m/l/xl. With local
+dependencies absent (`numpy`, `torch`, `ultralytics`, `pycocotools`), this
+canonical path remains dependency-pending rather than producing substitute
+metrics.
+
+The child path now constructs and uses the existing `JetsonRuntimeAdapter`
+with `MockBuffers`/`MockContext`/`MockStream`; the future real factory remains
+lazy through `TensorRTProvider`, and no TensorRT import/load is performed.
+Streaming input records have bounded shape/dtype/hash/finiteness checks and
+are consumed one tensor at a time. Durable child events are still append,
+flush and fsync; timeout/cleanup/unknown completion remain explicit.
+
+**analyzed.** Focused R2 packet/diagnostic tests pass `21/21`; they cover
+source-reference pending status, canonical-image binding, streaming producer,
+actual adapter lifecycle through the existing boundary, helper tensor shape
+and immutability, empty AP behavior, strict contract/package negatives and
+durable timeout. Historical saved-output FAILs and E2L1-024/R1 evidence remain
+unchanged. Fresh public roots are
+`results/edge_readiness_v1/e2l1-026-dev-packet-r2/` and
+`results/edge_readiness_v1/e2l1-026-source-reference-pending/`; only JSON/
+Markdown metadata is public.
+
+R2 public artifact hashes are: `contract.json` 4823 bytes /
+`313bb7632d056fbafe192663c16bd6723c493fd96bf8f24c92417cdce09b71e8`;
+`index.json` 770 bytes /
+`b37e8910b4880d6317ee8b0867640358227f771dd9f4f826e4d0972d4554f7ee`;
+`runbook.md` 2779 bytes /
+`61c9025c5abdcfe875e9725c210536b67f93ac45ade858ac9b919a810006c382`;
+`source_reference.json` 549 bytes /
+`cc727258578e9b082efc972871051b7d0e494a8d953ec8de49569b79c2e3091e`.
+
+**packet_ready.** The local executable boundaries and prospective commands
+are ready for review, but this is not an E2 GO. E2 execution remains
+`prepared_not_executed`; source CPU reference production and canonical
+COCO/XML evaluation must occur later in their approved dependency environment
+and be separately counted.
+
+**terminal.** `edge_dev_packet_canonical_reference_pending`.
