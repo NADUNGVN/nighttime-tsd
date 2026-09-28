@@ -22,6 +22,12 @@ from pathlib import Path
 from typing import Any
 
 from precision_head_confirmation_contract import ContractError, selected_targets, validate_arm_for_phase, validate_schedule
+from precision_head_calibration_order import (
+    CalibrationOrderError,
+    build_manifest_ordered_calibration_dataloader,
+    canonical_json_sha256,
+    verify_pinned_source_contract,
+)
 
 
 def read(path: Path) -> Any:
@@ -79,6 +85,8 @@ def _calibration_binding(plan: dict[str, Any], selection: str, repo: Path) -> di
     if not yaml_path.is_file():
         raise FileNotFoundError(f"producer-verified calibration YAML is absent: {yaml_path}")
     image_names = [Path(item).name for item in expected]
+    materialized_dir = Path(materialization.get("resolved_directory", ""))
+    ordered_paths = [materialized_dir / "images" / name for name in image_names]
     return {
         "id": selection,
         "manifest": record["manifest"],
@@ -87,6 +95,8 @@ def _calibration_binding(plan: dict[str, Any], selection: str, repo: Path) -> di
         "yaml_sha256": materialization.get("yaml_sha256"),
         "materialized_directory": materialization.get("resolved_directory"),
         "ordered_images": expected,
+        "ordered_image_paths": [str(path.resolve()) for path in ordered_paths],
+        "ordered_ids_sha256": canonical_json_sha256(expected),
         "ordered_images_sha256": sha256_bytes(json.dumps(image_names, separators=(",", ":"), ensure_ascii=False).encode("utf-8")),
         "source_bytes": materialization.get("image_bytes", []),
     }
@@ -302,6 +312,7 @@ def load_production_dependencies() -> dict[str, Any]:
     import tensorrt as trt
     import ultralytics
     from types import SimpleNamespace
+    from ultralytics.engine import exporter as exporter_module
     from ultralytics.engine.exporter import Exporter
     from ultralytics.engine import validator as validator_module
     from capture_cctsdb_validator import CaptureValidator, metric_summary, replay_statistics
@@ -309,7 +320,16 @@ def load_production_dependencies() -> dict[str, Any]:
     from uniform_build_repeat import ensure_idle, parse_background_confirmations, parse_desktop_confirmations, snapshot
     from verify_cctsdb_capture import rematch_native, validate_capture
     from audit_cctsdb_measurement import load_xml
-    return locals()
+    return {
+        **locals(),
+        "verify_calibration_source": lambda: verify_pinned_source_contract(
+            ultralytics.__version__, Exporter,
+            exporter_module.build_yolo_dataset,
+            exporter_module.check_det_dataset,
+            exporter_module.build_dataloader,
+        ),
+        "build_calibration_loader": build_manifest_ordered_calibration_dataloader,
+    }
 
 
 def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path, args: argparse.Namespace, state_path: Path, *, external_boundary: bool = False) -> None:
@@ -397,6 +417,7 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
         if not config.set_timing_cache(timing, False):
             raise RuntimeError("fresh timing cache was not accepted")
         config.clear_flag(trt.BuilderFlag.TF32)
+        calibration_callback_audit = None
         if job["phase"] == "scored_fp16":
             config.set_flag(trt.BuilderFlag.FP16)
             config.clear_flag(trt.BuilderFlag.INT8)
@@ -408,52 +429,180 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
                 raise FileNotFoundError(f"auxiliary cache missing: {cache_path}")
 
             loader = None
+            calibration_loader_audit = None
+            loader_source = None
             if job["phase"] == "auxiliary_calibration":
                 calibration_yaml = calibration_binding["yaml"]
                 exporter = Exporter(overrides={"format": "engine", "data": str(calibration_yaml), "imgsz": 640, "batch": 1, "fraction": 1.0, "split": "val", "rect": False, "device": str(args.device)})
                 exporter.imgsz = (640, 640)
                 exporter.model = dependencies["SimpleNamespace"](task="detect")
-                loader = iter(exporter.get_int8_calibration_dataloader())
+                loader_source = dependencies["verify_calibration_source"]()
+                dataloader, calibration_loader_audit = dependencies["build_calibration_loader"](
+                    exporter,
+                    ordered_image_ids=calibration_binding["ordered_images"],
+                    expected_image_paths=calibration_binding["ordered_image_paths"],
+                    expected_count=1024,
+                )
+                loader = iter(dataloader)
+
+            calibration_callback_audit = None
+            observed_id_hash = hashlib.sha256()
+            observed_id_hash.update(b"[")
+            tensor_sequence_hash = hashlib.sha256()
+            if job["phase"] == "auxiliary_calibration":
+                calibration_callback_audit = {
+                    "schema_version": 1,
+                    "status": "ready",
+                    "loader": calibration_loader_audit,
+                    "ultralytics_source_sha256": loader_source,
+                    "expected_items": 1024,
+                    "callback_attempts": 0,
+                    "items_yielded": 0,
+                    "items_validated": 0,
+                    "tensors_delivered": 0,
+                    "eos_calls": 0,
+                    "cache_read_calls": 0,
+                    "cache_write_calls": 0,
+                    "cache_read_outcomes": [],
+                    "cache_write_outcomes": [],
+                    "observed_image_ids_prefix_sha256": observed_id_hash.hexdigest(),
+                    "tensor_sequence_prefix_sha256": tensor_sequence_hash.hexdigest(),
+                    "first_exception": None,
+                    "secondary_builder_error": None,
+                }
+
+            def persist_calibration_callback(status: str | None = None) -> None:
+                if calibration_callback_audit is None:
+                    return
+                if status is not None:
+                    calibration_callback_audit["status"] = status
+                calibration_callback_audit["observed_image_ids_prefix_sha256"] = observed_id_hash.hexdigest()
+                calibration_callback_audit["tensor_sequence_prefix_sha256"] = tensor_sequence_hash.hexdigest()
+                state_value = read(state_path)
+                state_value["calibration_callback"] = calibration_callback_audit
+                state_value["calibration_callback_attempts"] = calibration_callback_audit["callback_attempts"]
+                state_value["calibration_items_yielded"] = calibration_callback_audit["items_yielded"]
+                state_value["calibration_items_validated"] = calibration_callback_audit["items_validated"]
+                state_value["calibration_tensors_delivered"] = calibration_callback_audit["tensors_delivered"]
+                state_value["calibration_batches"] = calibration_callback_audit["items_yielded"]
+                state_value["calibration_eos_calls"] = calibration_callback_audit["eos_calls"]
+                state_value["calibration_read_calls"] = calibration_callback_audit["cache_read_calls"]
+                state_value["calibration_write_calls"] = calibration_callback_audit["cache_write_calls"]
+                atomic(state_path, state_value)
+
+            def record_calibration_callback_exception(exc: BaseException, batch: Any = None, *, index: int | None = None) -> None:
+                if calibration_callback_audit is None:
+                    return
+                if calibration_callback_audit["first_exception"] is None:
+                    item_index = calibration_callback_audit["items_yielded"] if index is None else index
+                    expected_ids = calibration_binding["ordered_images"]
+                    expected_paths = calibration_binding["ordered_image_paths"]
+                    expected_id = expected_ids[item_index] if item_index < len(expected_ids) else None
+                    expected_path = expected_paths[item_index] if item_index < len(expected_paths) else None
+                    raw_names = (batch.get("im_file") or batch.get("im_files") or []) if isinstance(batch, dict) else []
+                    observed = raw_names[0] if isinstance(raw_names, list) and raw_names else raw_names if isinstance(raw_names, str) else None
+                    calibration_callback_audit["first_exception"] = {
+                        "callback": "get_batch",
+                        "attempt": calibration_callback_audit["callback_attempts"],
+                        "manifest_index": item_index,
+                        "expected_image_id": expected_id,
+                        "expected_path": expected_path,
+                        "observed_path": str(observed) if observed is not None else None,
+                        "type": type(exc).__name__,
+                        "message": str(exc),
+                    }
+                persist_calibration_callback("callback_failed")
+
+            persist_calibration_callback()
 
             class CacheOnly(trt.IInt8Calibrator):
                 def __init__(self) -> None:
-                    super().__init__(); self.read_calls = 0; self.write_calls = 0; self.batch_calls = 0; self.eos_calls = 0; self.cache_consumed = False; self.tensor = None; self.observed_images = []; self.tensor_hash = hashlib.sha256()
+                    super().__init__(); self.read_calls = 0; self.write_calls = 0; self.batch_calls = 0; self.eos_calls = 0; self.cache_consumed = False; self.tensor = None; self.observed_images = []; self.observed_image_ids = []; self.tensor_hash = hashlib.sha256()
                 def get_batch_size(self) -> int: return 1
                 def get_algorithm(self) -> Any: return trt.CalibrationAlgoType.MINMAX_CALIBRATION
                 def read_calibration_cache(self) -> bytes:
                     self.read_calls += 1
+                    if calibration_callback_audit is not None:
+                        calibration_callback_audit["cache_read_calls"] += 1
                     if job["phase"] == "scored_int8":
                         self.cache_consumed = True
                         if not cache_path.is_file():
                             raise FileNotFoundError(f"scored cache missing: {cache_path}")
-                        return cache_path.read_bytes()
+                        result = cache_path.read_bytes()
+                        if calibration_callback_audit is not None:
+                            calibration_callback_audit["cache_read_outcomes"].append({"status": "read", "bytes": len(result), "sha256": hashlib.sha256(result).hexdigest()})
+                            persist_calibration_callback()
+                        return result
+                    if calibration_callback_audit is not None:
+                        calibration_callback_audit["cache_read_outcomes"].append({"status": "cache_miss_requested_for_calibration"})
+                        persist_calibration_callback()
                     return None
                 def write_calibration_cache(self, data: Any) -> None:
                     self.write_calls += 1
-                    if job["phase"] == "scored_int8": raise RuntimeError("scored cache write")
-                    cache_path.write_bytes(bytes(data))
-                def get_batch(self, names: Any) -> Any:
-                    if job["phase"] == "scored_int8": raise RuntimeError("scored calibration batch")
+                    if calibration_callback_audit is not None:
+                        calibration_callback_audit["cache_write_calls"] += 1
                     try:
+                        if job["phase"] == "scored_int8": raise RuntimeError("scored cache write")
+                        cache_bytes = bytes(data)
+                        cache_path.write_bytes(cache_bytes)
+                        if calibration_callback_audit is not None:
+                            calibration_callback_audit["cache_write_outcomes"].append({"status": "written", "bytes": len(cache_bytes), "sha256": hashlib.sha256(cache_bytes).hexdigest()})
+                    except BaseException as exc:
+                        if calibration_callback_audit is not None and calibration_callback_audit["first_exception"] is None:
+                            calibration_callback_audit["first_exception"] = {"callback": "write_calibration_cache", "type": type(exc).__name__, "message": str(exc)}
+                        persist_calibration_callback("callback_failed")
+                        raise
+                    persist_calibration_callback()
+                def get_batch(self, names: Any) -> Any:
+                    try:
+                        if calibration_callback_audit is not None:
+                            calibration_callback_audit["callback_attempts"] += 1
+                        if job["phase"] == "scored_int8": raise RuntimeError("scored calibration batch")
                         batch = next(loader)
                     except StopIteration:
                         self.eos_calls += 1
+                        if calibration_callback_audit is not None:
+                            calibration_callback_audit["eos_calls"] += 1
+                            persist_calibration_callback("end_of_stream")
                         return None
-                    self.batch_calls += 1
-                    image_names = batch.get("im_file") or batch.get("im_files") or []
-                    if isinstance(image_names, (str, Path)):
-                        image_names = [str(image_names)]
-                    if len(image_names) != 1:
-                        raise ContractError(f"calibration batch is not batch=1: {image_names!r}")
-                    observed_name = Path(str(image_names[0])).name
-                    expected_name = Path(calibration_binding["ordered_images"][self.batch_calls - 1]).name
-                    if observed_name != expected_name:
-                        raise ContractError(f"calibration order mismatch at batch {self.batch_calls}: {observed_name} != {expected_name}")
-                    image = batch["img"].to(device=torch.device(f"cuda:{args.device}"), dtype=torch.float32) / 255.0
-                    self.tensor = image.contiguous()
-                    self.observed_images.append(observed_name)
-                    self.tensor_hash.update(self.tensor.detach().cpu().numpy().tobytes())
-                    return [int(self.tensor.data_ptr())]
+                    except BaseException as exc:
+                        record_calibration_callback_exception(exc)
+                        raise
+                    try:
+                        self.batch_calls += 1
+                        if calibration_callback_audit is not None:
+                            calibration_callback_audit["items_yielded"] += 1
+                        image_names = batch.get("im_file") or batch.get("im_files") or []
+                        if isinstance(image_names, (str, Path)):
+                            image_names = [str(image_names)]
+                        if len(image_names) != 1:
+                            raise ContractError(f"calibration batch is not batch=1: {image_names!r}")
+                        index = self.batch_calls - 1
+                        observed_path = Path(str(image_names[0])).resolve()
+                        expected_id = calibration_binding["ordered_images"][index]
+                        expected_path = Path(calibration_binding["ordered_image_paths"][index]).resolve()
+                        if observed_path != expected_path or observed_path.name != Path(expected_id).name:
+                            raise CalibrationOrderError(
+                                f"calibration order mismatch at callback {calibration_callback_audit['callback_attempts'] if calibration_callback_audit else self.batch_calls}: index={index} expected_id={expected_id} expected_path={expected_path} observed_path={observed_path}"
+                            )
+                        if calibration_callback_audit is not None:
+                            calibration_callback_audit["items_validated"] += 1
+                            if calibration_callback_audit["items_validated"] > 1:
+                                observed_id_hash.update(b",")
+                            observed_id_hash.update(json.dumps(expected_id, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+                        image = batch["img"].to(device=torch.device(f"cuda:{args.device}"), dtype=torch.float32) / 255.0
+                        self.tensor = image.contiguous()
+                        self.observed_images.append(Path(expected_id).name)
+                        self.observed_image_ids.append(expected_id)
+                        tensor_bytes = self.tensor.detach().cpu().numpy().tobytes()
+                        self.tensor_hash.update(tensor_bytes)
+                        tensor_sequence_hash.update(tensor_bytes)
+                        if calibration_callback_audit is not None:
+                            calibration_callback_audit["tensors_delivered"] += 1
+                        return [int(self.tensor.data_ptr())]
+                    except BaseException as exc:
+                        record_calibration_callback_exception(exc, batch, index=max(0, self.batch_calls - 1))
+                        raise
             calibrator = CacheOnly()
             config.int8_calibrator = calibrator
         cache_before_sha = hashlib.sha256(cache_path.read_bytes()).hexdigest() if job["phase"] == "scored_int8" and cache_path.is_file() else None
@@ -474,11 +623,34 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
         if observed_constraints != sorted(targets) and set(observed_constraints) != targets:
             raise RuntimeError(f"precision target mismatch: expected {sorted(targets)}, observed {observed_constraints}")
         update_state(state_path, read(state_path), "build", builder_attempted=True, precision_constraints=observed_constraints, precision_inspector={"requested_targets": sorted(targets), "requested_layer_settings": effective_precision, "requested_only": True, "effective_precision": "unknown", "effective_engine_precision": "not_inferred_from_layer_flags"})
-        serialized = builder.build_serialized_network(network, config)
-        if serialized is None: raise RuntimeError("TensorRT builder returned no engine")
+        try:
+            serialized = builder.build_serialized_network(network, config)
+        except BaseException as exc:
+            if calibration_callback_audit is not None:
+                calibration_callback_audit["secondary_builder_error"] = {"type": type(exc).__name__, "message": str(exc)}
+                persist_calibration_callback("builder_failed")
+                if calibration_callback_audit["first_exception"] is not None:
+                    first = calibration_callback_audit["first_exception"]
+                    raise CalibrationOrderError(f"calibration callback primary failure: {first}; secondary builder exception: {type(exc).__name__}: {exc}") from exc
+            raise
+        if serialized is None:
+            if calibration_callback_audit is not None:
+                calibration_callback_audit["secondary_builder_error"] = {"type": "RuntimeError", "message": "TensorRT builder returned no engine"}
+                persist_calibration_callback("builder_returned_no_engine")
+                if calibration_callback_audit["first_exception"] is not None:
+                    raise CalibrationOrderError(f"calibration callback primary failure: {calibration_callback_audit['first_exception']}; secondary builder result: TensorRT builder returned no engine")
+            raise RuntimeError("TensorRT builder returned no engine")
+        if calibration_callback_audit is not None and calibration_callback_audit["first_exception"] is not None:
+            calibration_callback_audit["secondary_builder_error"] = {"type": "RuntimeError", "message": "TensorRT returned an engine after a recorded calibration callback failure"}
+            persist_calibration_callback("callback_failure_with_engine_return")
+            raise CalibrationOrderError(f"calibration callback failed but TensorRT returned an engine: {calibration_callback_audit['first_exception']}")
+        if calibration_callback_audit is not None:
+            persist_calibration_callback("builder_returned_engine")
         if job["phase"] == "auxiliary_calibration":
-            if calibrator.batch_calls != 1024 or calibrator.write_calls != 1:
-                raise RuntimeError(f"auxiliary calibration audit mismatch: batches={calibrator.batch_calls}, writes={calibrator.write_calls}")
+            if calibrator.batch_calls != 1024 or calibrator.write_calls != 1 or calibrator.eos_calls < 1:
+                raise RuntimeError(f"auxiliary calibration audit mismatch: batches={calibrator.batch_calls}, eos={calibrator.eos_calls}, writes={calibrator.write_calls}")
+            if calibration_callback_audit["items_yielded"] != 1024 or calibration_callback_audit["items_validated"] != 1024 or calibration_callback_audit["tensors_delivered"] != 1024:
+                raise RuntimeError(f"durable calibration callback accounting mismatch: {calibration_callback_audit}")
         elif job["phase"] == "scored_int8":
             if calibrator.read_calls < 1 or not calibrator.cache_consumed or calibrator.batch_calls != 0 or calibrator.write_calls != 0:
                 raise RuntimeError("scored INT8 cache-only audit mismatch")
@@ -506,9 +678,15 @@ def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path,
             raise ContractError("scored calibration cache changed during build")
         calibration_audit = None
         if calibration_binding is not None:
-            calibration_audit = {"selection": calibration_binding["id"], "manifest_sha256": calibration_binding["manifest_sha256"], "yaml_sha256": calibration_binding["yaml_sha256"], "expected_images_sha256": calibration_binding["ordered_images_sha256"], "observed_images_sha256": sha256_bytes(json.dumps(getattr(calibrator, "observed_images", []), separators=(",", ":"), ensure_ascii=False).encode("utf-8")), "tensor_sequence_sha256": getattr(getattr(calibrator, "tensor_hash", None), "hexdigest", lambda: None)(), "batch_count": getattr(calibrator, "batch_calls", 0), "input_shape": [1, 3, 640, 640], "input_dtype": "torch.float32"}
+            calibration_audit = {"selection": calibration_binding["id"], "manifest_sha256": calibration_binding["manifest_sha256"], "yaml_sha256": calibration_binding["yaml_sha256"], "expected_ids_sha256": calibration_binding["ordered_ids_sha256"], "expected_images_sha256": calibration_binding["ordered_images_sha256"], "observed_images_sha256": sha256_bytes(json.dumps(getattr(calibrator, "observed_images", []), separators=(",", ":"), ensure_ascii=False).encode("utf-8")), "observed_ids_sha256": sha256_bytes(json.dumps(getattr(calibrator, "observed_image_ids", []), separators=(",", ":"), ensure_ascii=False).encode("utf-8")), "tensor_sequence_sha256": getattr(getattr(calibrator, "tensor_hash", None), "hexdigest", lambda: None)(), "batch_count": getattr(calibrator, "batch_calls", 0), "input_shape": [1, 3, 640, 640], "input_dtype": "torch.float32", "preprocessing": "ultralytics_8.4.102_val_letterbox_uint8_then_float32_div_255"}
+            if job["phase"] == "auxiliary_calibration":
+                calibration_audit["callback_evidence"] = calibration_callback_audit
             if job["phase"] == "auxiliary_calibration" and calibration_audit["observed_images_sha256"] != calibration_binding["ordered_images_sha256"]:
                 raise ContractError("calibration loader order audit hash mismatch")
+            if job["phase"] == "auxiliary_calibration" and calibration_audit["observed_ids_sha256"] != calibration_binding["ordered_ids_sha256"]:
+                raise ContractError("calibration loader ID audit hash mismatch")
+            if calibration_callback_audit is not None:
+                persist_calibration_callback("completed")
         update_state(state_path, read(state_path), "build_complete", builder_completed=True, engine_sha256=hashlib.sha256(engine_path.read_bytes()).hexdigest(), engine_inspector={"path": str(public_inspector_path.relative_to(out).as_posix()), "sha256": public_inspector_sha256, "private_source_sha256": inspector_sha256, "format": "JSON", "source": "TensorRT EngineInspector", "publication": "public_allowlist"}, calibration_batches=calibrator.batch_calls if job["phase"] != "scored_fp16" else 0, calibration_read_calls=calibrator.read_calls if job["phase"] != "scored_fp16" else 0, calibration_write_calls=calibrator.write_calls if job["phase"] != "scored_fp16" else 0, cache_consumed=getattr(calibrator, "cache_consumed", False) if job["phase"] != "scored_fp16" else False, calibration_cache={"selection": job.get("selection"), "before_sha256": cache_before_sha, "after_sha256": cache_after, "auxiliary_cache_sha256": auxiliary_cache_sha, "immutable": job["phase"] == "scored_int8", "ordered_images_sha256": calibration_audit["expected_images_sha256"] if calibration_audit else None, "audit": calibration_audit}, timing_cache=timing_audit)
         after_build = snapshot(desktop, background)
         ensure_idle(after_build, background)
@@ -593,6 +771,8 @@ def run_child(args: argparse.Namespace) -> int:
     out = Path(args.out_dir).resolve()
     plan_path = Path(args.plan).resolve()
     plan = read(plan_path)
+    if not args.runtime_double and plan.get("attempt", {}).get("id") != "server_precision_head_confirmation_v2":
+        raise ContractError("production child is restricted to the reviewed fresh v2 attempt")
     jobs = plan.get("schedule", {}).get("jobs", [])
     validate_schedule(jobs)
     if job not in jobs:
@@ -608,16 +788,37 @@ def run_child(args: argparse.Namespace) -> int:
         finalize_child_state(state_path)
     except Exception as exc:
         state = read(state_path) if state_path.exists() else {"schema_version": 1, "job": job, "status": "unknown", "stage": "unknown", "stage_history": [], "unknown_completion": True}
-        state.update({"status": "failed", "error_type": type(exc).__name__, "error": str(exc), "no_retry": True, "cleanup_started": True, "cleanup_completed": False, "owner_release_status": "cleanup_failed_or_unknown"})
+        callback = state.get("calibration_callback", {})
+        primary = callback.get("first_exception")
+        secondary = callback.get("secondary_builder_error")
+        if primary is not None:
+            state["primary_calibration_error"] = primary
+            state["secondary_builder_error"] = secondary
+            state["error_type"] = primary.get("type", type(exc).__name__)
+            state["error"] = primary.get("message", str(exc))
+        else:
+            state.update({"error_type": type(exc).__name__, "error": str(exc)})
+            if secondary is not None:
+                state["secondary_builder_error"] = secondary
+        state.update({"status": "failed", "no_retry": True, "cleanup_started": True, "cleanup_completed": None, "cleanup_observation": "not_verified_after_child_failure", "owner_release_status": "cleanup_failed_or_unknown"})
         atomic(state_path, state)
         traceback.clear_frames(exc.__traceback__)
-        gc.collect()
+        try:
+            state["gc_collect_objects"] = gc.collect()
+        except Exception as cleanup_exc:
+            state["cleanup_error"] = f"{type(cleanup_exc).__name__}:{cleanup_exc}"
+        atomic(state_path, state)
         return 1
     return 0
 
 
 def run_parent(args: argparse.Namespace) -> int:
     repo = Path(args.repo).resolve(); out = Path(args.out_dir).resolve(); plan_path = Path(args.plan).resolve(); plan = read(plan_path)
+    if not args.runtime_double:
+        if out.name != "server_precision_head_confirmation_v2" or plan.get("attempt", {}).get("id") != "server_precision_head_confirmation_v2":
+            raise ContractError("production dispatch is restricted to a fresh v2 root; v1 is immutable")
+        if plan.get("status") != "implementation_complete_review_required":
+            raise ContractError("v2 plan is not the integrated-review candidate")
     if args.confirm_background_process:
         raise ContractError("confirmation build-variation study does not authorize competing background compute")
     jobs = plan["schedule"]["jobs"]; validate_schedule(jobs)
@@ -654,7 +855,7 @@ def run_parent(args: argparse.Namespace) -> int:
             (job_dir / "child.log").write_text(stdout + "\nTIMEOUT\n" + stderr, encoding="utf-8", newline="\n")
             state_path = job_dir / "child_state.json"
             inventory = read(state_path) if state_path.is_file() else {"status": "timeout", "job": job, "no_retry": True}
-            inventory.update({"status": "timeout", "error_type": "TimeoutExpired", "no_retry": True, "unknown_completion": True, "cleanup_started": True, "cleanup_completed": False, "owner_release_status": "timeout_unknown"})
+            inventory.update({"status": "timeout", "error_type": "TimeoutExpired", "no_retry": True, "unknown_completion": True, "cleanup_started": True, "cleanup_completed": None, "cleanup_observation": "unknown_after_parent_timeout", "owner_release_status": "timeout_unknown"})
             atomic(state_path, inventory)
             exit_code = 124
         if inventory.get("job") != job:

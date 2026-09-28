@@ -3624,3 +3624,94 @@ dispatch. Request one decision from Astra: either close this study as
 incomplete with no scientific comparison, or authorize a reviewed correction
 and specify a fresh-root replacement/budget rule. Until that decision, no new
 plan/scored command is issued and no numerical results are inferred.
+
+## L2A-053 recovery update — A2L-052 calibration-order repair
+
+2026-09-29. The study remains open. The v1 server attempt is preserved as an
+immutable partial failure: one auxiliary U42 builder was attempted, the
+callback rejected its first shuffled yield (`18709.jpg` instead of manifest
+index 0 `00006.jpg`), and no scored build, capture, or scientific metric was
+produced. No GPU/server command was run during this recovery work.
+
+### Implementation delivered for integrated review
+
+- Added `scripts/precision_head_calibration_order.py`, a shared
+  manifest-indexed loader producer. It checks the exact selection count and
+  unique IDs/paths, validates actual Ultralytics dataset membership, builds a
+  manifest-indexed dataset view, and calls the pinned dataloader with
+  explicit `shuffle=False`, batch 1, workers 0 and drop-last contract. The
+  installed Ultralytics version plus source hashes for the exporter loader,
+  dataset builder, YAML checker and dataloader must match the accepted 8.4.102
+  implementation. The common server build path uses this for both models.
+- Updated `scripts/run_precision_head_confirmation_server.py` to bind every
+  observed full materialized path to its expected manifest index and ID,
+  and to persist callback attempts, yielded/validated/delivered counts, EOS,
+  cache events and digest evidence. On failure, the first callback error is
+  retained as primary while TensorRT's generic no-engine/exception result is
+  preserved separately. Exception/timeout owner cleanup remains `unknown`
+  unless it is actually observed. Successful item counters are persisted at
+  callback failure/EOS/cache events and builder return, avoiding per-item
+  filesystem writes during otherwise successful calibration.
+- Updated the plan producer to default to the fresh
+  `server_precision_head_confirmation_v2` root, status
+  `implementation_complete_review_required`, and prospective attempt/budget
+  provenance. It binds the full `repo_head` and exact hashes/byte counts for
+  all executed runner, child, shared loader, config and imported helper files.
+  Production dispatch is restricted to the v2 attempt/root; no changes are
+  made to v1. The schedule remains exactly 84 builders / 78 captures.
+- Updated the execution protocol and runbook. The old scored command is
+  replaced with an explicit HOLD; no new foreground GPU command is supplied
+  before Astra review. The v2 cumulative ceiling is 85 attempted builders
+  (one failed v1 + one complete v2 budget), and v2 has no retry/resume/canary.
+- Added tests for real pinned-loader integration, shuffled dataset discovery
+  reordered to manifest, missing/extra/duplicate rejection, invariant
+  preprocessing controls, durable callback primary/secondary failure, and
+  immutability of the v1 dispatch root.
+
+### Real-image CPU order receipts
+
+The audit is in
+`results/measurement_audit_v1/precision_head_calibration_order_audit_v2/`.
+It used Python 3.11.9, torch 2.8.0+cu129, Ultralytics 8.4.102 and NumPy
+2.4.2; this is a local CPU environment, not the SERVER-01 runtime. For each
+of U42/U43/U44 it yielded, validated and normalized exactly 1,024/1,024
+images, verified canonical order IDs and exact image source/materialized
+hashes, and hashed the actual normalized float32 input sequence. All three
+per-selection canonical/observed ID digests match. No model forward,
+TensorRT import/build, cache read/write or CUDA allocation occurred.
+
+The accepted Linux calibration materialization paths were not available in
+this Windows checkout. The audit verified all local source image bytes against
+the accepted inventory and copied them to isolated temporary materializations
+for the real Ultralytics loader, then removed those temporary directories.
+There is a known non-input metadata difference: the local Windows annotation
+files use CRLF, while the accepted inventory uses LF. All 2,853 unique local
+labels match the accepted content after CRLF-to-LF normalization. The runner's
+calibration callback consumes only image tensors; it does not pass labels to
+TensorRT. This limitation is explicitly recorded in each audit receipt and
+the report. An initial stricter audit stopped on this byte-level EOL
+difference before loader iteration; it produced no scientific data and did
+not alter source files.
+
+### Verification, artifacts and decision requested
+
+- Real pinned Ultralytics CPU integration and helper contract: 5 tests PASS.
+- Production-boundary confirmation super-suite on the final server-callback
+  implementation: 24/24 PASS in 99.923 s.
+- TensorRT-feasibility regression suite: 30/30 PASS. This suite uses mocks;
+  it is not a local TensorRT runtime/build validation.
+- Existing readiness-contract suite: 17/19 pass; the two failures are the
+  pre-existing local dev-image inventory gap (`dev/images` is absent from this
+  checkout), not a calibration-loader failure. No dataset files were added to
+  disguise the gap.
+- The full-order run is an actual image-loader/tensor audit, not TensorRT
+  end-to-end validation. No training, export, engine build, benchmark or
+  scored inference was run locally.
+- The operator's SERVER-01 v1 artifact remains the only server execution
+  evidence. No v2 plan, server runtime receipt or new artifact exists yet.
+- Astra's A2L-052 and `docs/ST_SERVER_01_CALIBRATION_ORDER_RECOVERY.md` are
+  preserved unchanged and included in the scoped handoff.
+
+Please review the integrated code, tests, source fingerprints and CPU receipts.
+Until accepted, the server runbook remains HOLD; this entry does not request
+or imply approval to dispatch v2.

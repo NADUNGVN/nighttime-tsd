@@ -1,0 +1,64 @@
+{
+  "calibration_readiness_sha256": "5b2a4888071b779edbaaa0fa9b4aaaeef57ab08219c7b34b125d879eb0f2be01",
+  "completed_selections": 3,
+  "completed_utc": "2026-09-28T17:24:03.973524+00:00",
+  "created_utc": "2026-09-28T17:23:15.343783+00:00",
+  "dataset_root": "D:\\Research\\paper\\data\\processed\\cctsdb2021_clean",
+  "execution_limits": {
+    "cache_reads": 0,
+    "cache_writes": 0,
+    "cuda_visible_devices": "-1",
+    "engine_builds": 0,
+    "model_forward_calls": 0,
+    "tensorrt_imported": false,
+    "torch_cuda_allocations": 0
+  },
+  "readiness_manifest_sha256": "e6b6c4df4363ec7e1ff057cafe9a6d2d1e69eab5fa88323b7cd2a60c98daa75d",
+  "runtime": {
+    "numpy": "2.4.2",
+    "python": "3.11.9",
+    "torch": "2.8.0+cu129",
+    "ultralytics": "8.4.102"
+  },
+  "schema_version": 1,
+  "selections": [
+    {
+      "canonical_ids_sha256": "53f7d89de7d82b358d51e04445c70756bf8945d407a99c37667cb1c77a5592eb",
+      "count": 1024,
+      "id": "U42",
+      "normalized_tensor_sequence_sha256": "fa038a97a19d4ad94123ff6301a8bff983cf80ddbcfee16170f0fe7331cc3f3a",
+      "observed_ids_sha256": "53f7d89de7d82b358d51e04445c70756bf8945d407a99c37667cb1c77a5592eb",
+      "receipt": "selection_U42.json",
+      "receipt_sha256": "5881a7e90143e8c6a121b6a27d87e1996137521a5184f792987c876e4b399d31",
+      "status": "pass"
+    },
+    {
+      "canonical_ids_sha256": "c0ac44386505d8dd2ac593bed09c2f812899af12f7fd8ac2963224ff77ff8fb7",
+      "count": 1024,
+      "id": "U43",
+      "normalized_tensor_sequence_sha256": "8ad61e1f28c7e799f015448eb1f45b3f53fac15ac438525588b8db98ace5a23e",
+      "observed_ids_sha256": "c0ac44386505d8dd2ac593bed09c2f812899af12f7fd8ac2963224ff77ff8fb7",
+      "receipt": "selection_U43.json",
+      "receipt_sha256": "dd29e2c092c80e0322d2af29cfb07f6a8edbe9813e2f37ee20560ea8abd40651",
+      "status": "pass"
+    },
+    {
+      "canonical_ids_sha256": "0fa0b03e8dc687b9af6e2668fc8294ccac48afdf0c7104e6f39cae454d3b4fe6",
+      "count": 1024,
+      "id": "U44",
+      "normalized_tensor_sequence_sha256": "9f1789a4b357770b7d623c2d127a55c4d0e2f66c92933722ebbe1a1fcf532fb4",
+      "observed_ids_sha256": "0fa0b03e8dc687b9af6e2668fc8294ccac48afdf0c7104e6f39cae454d3b4fe6",
+      "receipt": "selection_U44.json",
+      "receipt_sha256": "904bdccb9894233118ade4c0cb96cae2611ba45e13f02044f2abae346332956c",
+      "status": "pass"
+    }
+  ],
+  "status": "completed_review_required",
+  "study": "precision_head_calibration_order_cpu_audit_v1",
+  "ultralytics_source_sha256": {
+    "build_dataloader": "3526a3fbca169de6bdfde5e6128a5be128d16135725458475728a3d145a65164",
+    "build_yolo_dataset": "cc30939a9a049a201481a43b84f1b41eea32f0e68bfe57aba3bbada5c9433e49",
+    "check_det_dataset": "180a0628c120d35a930fb2ba7681c6bc646658ab7555e66357aa611c53d04ee2",
+    "exporter_calibration_method": "c3083ef89201276d5ea73e217846a0ddcaeed92b4909f75a2545c4ef2016b44c"
+  }
+}

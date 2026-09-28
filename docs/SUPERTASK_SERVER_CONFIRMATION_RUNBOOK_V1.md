@@ -1,20 +1,19 @@
-# ST-SERVER-01 operator runbook
+# ST-SERVER-01 operator runbook — A2L-052 recovery candidate
 
-Luna does not SSH and does not run TensorRT locally. The operator runs these
-commands on the selected server in a foreground shell. Do not use `nohup`.
-The commands below are gated by the single integrated Astra conditional GO in
-`docs/ST_SERVER_01_INTEGRATED_GO_R5.md`. The operator must complete the fresh
-prerequisite checks below before dispatching the scored phase.
+Luna does not SSH and does not run TensorRT locally. This document now records
+the recovery protocol, not permission to dispatch. Astra's A2L-052 supersedes
+the prior R5 conditional GO: **do not run any scored/GPU command until Astra
+reviews the corrected implementation and the real-image CPU receipts**. Do
+not use `nohup`. Preserve the failed v1 root byte-for-byte; use only a new v2
+root after review.
 
 ## Pull and immutable preflight
 
-Replace `FULL_COMMIT` with the full SHA printed in the current L2A-053
-operator handoff. The executable revision for this handoff is
-`82e4473a17a4653f0b66fcd246c7fcd62af89c68`; a later documentation-only
-handoff commit must use its own full SHA in the equality check.
+After Astra review, replace `FULL_COMMIT` with the full SHA printed in the
+current L2A-053 handoff. The pre-review revision is not a dispatch revision.
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "FULL_COMMIT" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git hash-object configs/precision_head_confirmation_v1.json configs/precision_head_confirmation_execution_v1.json && sha256sum configs/precision_head_confirmation_v1.json configs/precision_head_confirmation_execution_v1.json scripts/precision_head_confirmation_contract.py scripts/run_precision_head_confirmation.py scripts/run_precision_head_confirmation_server.py scripts/analyze_precision_head_confirmation.py scripts/prepare_precision_head_confirmation.py scripts/prepare_precision_head_confirmation_graph.py scripts/capture_cctsdb_validator.py scripts/verify_cctsdb_capture.py scripts/analyze_dev_quantization.py scripts/audit_cctsdb_measurement.py scripts/run_architecture_matrix.py scripts/uniform_build_repeat.py && test ! -e results/measurement_audit_v1/server_precision_head_confirmation_v1
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD)" = "FULL_COMMIT" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch && sha256sum configs/precision_head_confirmation_v1.json configs/precision_head_confirmation_execution_v1.json scripts/precision_head_confirmation_contract.py scripts/precision_head_calibration_order.py scripts/run_precision_head_confirmation.py scripts/run_precision_head_confirmation_server.py scripts/analyze_precision_head_confirmation.py scripts/prepare_precision_head_confirmation.py scripts/prepare_precision_head_confirmation_graph.py scripts/capture_cctsdb_validator.py scripts/verify_cctsdb_capture.py scripts/analyze_dev_quantization.py scripts/audit_cctsdb_measurement.py scripts/run_architecture_matrix.py scripts/uniform_build_repeat.py && test -f results/measurement_audit_v1/server_precision_head_confirmation_v1/execution_manifest.json && test ! -e results/measurement_audit_v1/server_precision_head_confirmation_v2
 ```
 
 The operator must also record GPU UUID/name/driver, temperature/power/clocks,
@@ -31,30 +30,28 @@ change another user's process. A sampled idle state is not isolation proof.
 ## Read-only plan preparation
 
 Do not rerun graph preparation or export. The accepted ONNX and graph-audit
-artifacts are read-only inputs. After GO, create the fresh study plan with the
-CPU-only parent; it verifies the actual checkpoint/ONNX bytes, nested graph
-mapping schema, mapping hashes and the exact canonical schedule:
+artifacts are read-only inputs. Only after Astra accepts this recovery packet,
+create the fresh v2 study plan with the CPU-only parent. It verifies the
+checkpoint/ONNX bytes, nested graph mapping, calibration readiness, XML and
+schedule, and binds exact executable-helper hashes prospectively:
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/run_precision_head_confirmation.py --phase plan --xml /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip --out-dir results/measurement_audit_v1/server_precision_head_confirmation_v1
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && CUDA_VISIBLE_DEVICES=-1 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 YOLO_AUTOINSTALL=0 ULTRALYTICS_SKIP_REQUIREMENTS_CHECKS=1 PIP_NO_INDEX=1 PIP_DISABLE_PIP_VERSION_CHECK=1 local/g0_size_env/bin/python scripts/run_precision_head_confirmation.py --phase plan --xml /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip --out-dir results/measurement_audit_v1/server_precision_head_confirmation_v2
 ```
 
 This command must finish before the scored command, must verify the XML archive
 against the exact 1,636-image/2,706-instance dev contract, and must not create ONNX,
 engine, calibration or timing binaries.
 
-## Scored execution after GO
+## Scored execution — HOLD
 
-The foreground command uses the current desktop PID/path from the immediately
-preceding snapshot. Replace both placeholders; never use historical PIDs:
-
-```bash
-conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/run_precision_head_confirmation.py --phase scored --go-token ASTRA_INTEGRATED_GO_REQUIRED --out-dir results/measurement_audit_v1/server_precision_head_confirmation_v1 --device 0 --confirm-desktop-process CURRENT_PID=CURRENT_ALLOWLISTED_PATH
-```
-
-The command dispatches one isolated child per scheduled job, with a bounded
-foreground timeout and no retry/replacement. It must not add a canary,
-warmup, calibration retry, timing-cache reuse, or hidden reference forward.
+There is deliberately no scored command in this recovery handoff. The old R5
+command points at immutable failed v1 and must not be reused. After Astra's
+integrated review/GO and a fresh operator snapshot, Luna will provide the exact
+foreground v2 command using current desktop confirmations. The reviewed v2
+attempt is one 84-builder/78-capture run, with a cumulative ceiling of 85
+attempted builders across v1+v2. Any v2 failure stops; no retry, resume,
+canary, replacement, or additional cell.
 
 Multi-host partition is not implemented in this runner. Do not split or merge
 the study across hosts; run both complete model blocks sequentially on one
@@ -80,7 +77,7 @@ violations, finite outputs, deadlines, lifecycle release and partial files.
 Then Luna runs the CPU analysis command on the pulled artifact only:
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/analyze_precision_head_confirmation.py --root results/measurement_audit_v1/server_precision_head_confirmation_v1 --xml /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip --out-dir results/measurement_audit_v1/server_precision_head_confirmation_analysis_v1
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scripts/analyze_precision_head_confirmation.py --root results/measurement_audit_v1/server_precision_head_confirmation_v2 --xml /home/ubuntu/Dung_TDTU/nighttime-tsd/data/raw/CCTSDB2021/xml.zip --out-dir results/measurement_audit_v1/server_precision_head_confirmation_analysis_v2
 ```
 
 The analyzer reconstructs pooled COCO/XML AP from detection records and uses

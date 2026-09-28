@@ -1,0 +1,11 @@
+{
+  "completed_selections": 0,
+  "cuda_visible_devices": "-1",
+  "error": "accepted source label binding differs for train/images/00006.jpg: sha256=dd84662a1aa7b1928087a18a83c461a7005e65c568d1e20279da2ec0899a29d6, bytes=39",
+  "error_type": "CalibrationOrderError",
+  "no_model_forward": true,
+  "no_tensorrt_build": true,
+  "schema_version": 1,
+  "status": "failed",
+  "traceback": "Traceback (most recent call last):\n  File \"D:\\Research\\paper-review039\\scripts\\audit_precision_head_calibration_order.py\", line 296, in main\n    receipt = audit_selection(\n              ^^^^^^^^^^^^^^^^\n  File \"D:\\Research\\paper-review039\\scripts\\audit_precision_head_calibration_order.py\", line 138, in audit_selection\n    ids, source_receipts = verify_source_rows(selection, dataset_root)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"D:\\Research\\paper-review039\\scripts\\audit_precision_head_calibration_order.py\", line 82, in verify_source_rows\n    raise CalibrationOrderError(f\"accepted source {kind} binding differs for {image_id}: sha256={observed_hash}, bytes={observed_bytes}\")\nprecision_head_calibration_order.CalibrationOrderError: accepted source label binding differs for train/images/00006.jpg: sha256=dd84662a1aa7b1928087a18a83c461a7005e65c568d1e20279da2ec0899a29d6, bytes=39\n"
+}

@@ -73,7 +73,7 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
         plan_path.write_text(json.dumps(plan), encoding="utf-8")
         return plan, plan_path
 
-    def normal_path_fixture(self, root: Path, model: str, job: dict, *, parser_ok: bool = True, output_ok: bool = True, capture_ok: bool = True):
+    def normal_path_fixture(self, root: Path, model: str, job: dict, *, parser_ok: bool = True, output_ok: bool = True, capture_ok: bool = True, swallow_calibration_callback: bool = False, calibration_order_mismatch: bool = False):
         """Producer-shaped plan plus external-library doubles for build_real."""
         source_root = root / "data/processed/cctsdb2021_clean/train/images"
         source_root.mkdir(parents=True, exist_ok=True)
@@ -99,7 +99,7 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
         onnx.write_bytes(f"onnx-{model}".encode())
         target_names = ["/model.22/cv2.0/cv2.0.0/conv/Conv", "/model.22/cv3.0/cv3.0.0/conv/Conv"] if model == "yolov8n" else ["/model.23/one2one_cv2.0/one2one_cv2.0.0/conv/Conv", "/model.23/one2one_cv3.0/one2one_cv3.0.0/one2one_cv3.0.0.0/conv/Conv"]
         canonical = [{"image": f"dev/{index:04d}.jpg", "stem": f"{index:04d}", "orig_shape": [100, 100]} for index in range(1636)]
-        plan = {"runtime": {}, "models": {model: {"checkpoint": {"path": str(checkpoint), "sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest()}, "onnx": {"path": str(onnx), "sha256": hashlib.sha256(onnx.read_bytes()).hexdigest()}, "output_shape": [1, 7, 8400] if model == "yolov8n" else [1, 300, 6], "mapping": {"targets": {"bbox": target_names[:1], "classification": target_names[1:], "both": target_names}}, "postprocess": f"route-{model}"}}, "provenance_files": [], "dataset": {"canonical_dev_reference": {"records": canonical}, "xml_path": str(root / "xml.zip")}, "calibration_producer": {"selections": calibration_selections}, "schedule": {"jobs": [job], "sha256": canonical_json_sha256([job])}}
+        plan = {"attempt": {"id": "server_precision_head_confirmation_v2"}, "runtime": {}, "models": {model: {"checkpoint": {"path": str(checkpoint), "sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest()}, "onnx": {"path": str(onnx), "sha256": hashlib.sha256(onnx.read_bytes()).hexdigest()}, "output_shape": [1, 7, 8400] if model == "yolov8n" else [1, 300, 6], "mapping": {"targets": {"bbox": target_names[:1], "classification": target_names[1:], "both": target_names}}, "postprocess": f"route-{model}"}}, "provenance_files": [], "dataset": {"canonical_dev_reference": {"records": canonical}, "xml_path": str(root / "xml.zip")}, "calibration_producer": {"selections": calibration_selections}, "schedule": {"jobs": [job], "sha256": canonical_json_sha256([job])}}
         (root / "xml.zip").write_bytes(b"synthetic-xml")
 
         class FakeTensor:
@@ -179,8 +179,14 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
                     if calibrator is not None:
                         if job["phase"] == "auxiliary_calibration":
                             self.assertion = calibrator.read_calibration_cache()
-                            for _ in range(1024):
-                                calibrator.get_batch(["input"])
+                            try:
+                                for _ in range(1024):
+                                    calibrator.get_batch(["input"])
+                            except Exception:
+                                if swallow_calibration_callback:
+                                    self.swallowed_callback_error = True
+                                    return None
+                                raise
                             calibrator.get_batch(["input"])
                             calibrator.write_calibration_cache(b"cache-" + model.encode())
                         else:
@@ -198,6 +204,16 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             def __init__(self, **_kwargs): pass
             def get_int8_calibration_dataloader(self):
                 return ({"im_file": [f"{index:04d}.jpg"], "img": FakeTensor()} for index in range(1024))
+
+        def build_calibration_loader(_exporter, *, ordered_image_ids, expected_image_paths, expected_count):
+            paths = list(expected_image_paths)
+            if calibration_order_mismatch:
+                paths[0], paths[1] = paths[1], paths[0]
+            rows = ({"im_file": [str(path)], "img": FakeTensor()} for path in paths)
+            return rows, {"status": "fixture_loader", "shuffle": False, "expected_count": expected_count, "ids_sha256": hashlib.sha256(json.dumps(list(ordered_image_ids), separators=(",", ":")).encode()).hexdigest()}
+
+        def verify_calibration_source():
+            return {"fixture": hashlib.sha256(b"pinned-loader-fixture").hexdigest()}
 
         records = []
         for index, row in enumerate(canonical):
@@ -232,7 +248,7 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             def __exit__(self, *_args): return False
 
         def load_xml(_path, requested): return {name: {"shape": [100, 100], "rows": [(0, [1.0, 1.0, 10.0, 10.0])] * (2 if index < 1070 else 1)} for index, name in enumerate(requested)}
-        dependencies = {"np": SimpleNamespace(), "torch": FakeTorch, "trt": FakeTrt, "ultralytics": SimpleNamespace(__version__="8.4.102"), "Exporter": FakeExporter, "CaptureValidator": FakeValidator, "metric_summary": lambda _metrics: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "replay_statistics": lambda _records: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "GpuPhaseLock": Lock, "ensure_idle": lambda *_args: None, "parse_background_confirmations": lambda _args: [], "parse_desktop_confirmations": lambda _args: [], "snapshot": lambda *_args: {"gpu": "fixture"}, "rematch_native": lambda _records, _thresholds: {"status": "pass", "changed_tp_decisions": 0}, "validate_capture": lambda payload: (payload["records"], payload["iou_thresholds"]), "load_xml": load_xml, "SimpleNamespace": SimpleNamespace, "validator_module": validator_module}
+        dependencies = {"np": SimpleNamespace(), "torch": FakeTorch, "trt": FakeTrt, "ultralytics": SimpleNamespace(__version__="8.4.102"), "Exporter": FakeExporter, "build_calibration_loader": build_calibration_loader, "verify_calibration_source": verify_calibration_source, "CaptureValidator": FakeValidator, "metric_summary": lambda _metrics: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "replay_statistics": lambda _records: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "GpuPhaseLock": Lock, "ensure_idle": lambda *_args: None, "parse_background_confirmations": lambda _args: [], "parse_desktop_confirmations": lambda _args: [], "snapshot": lambda *_args: {"gpu": "fixture"}, "rematch_native": lambda _records, _thresholds: {"status": "pass", "changed_tp_decisions": 0}, "validate_capture": lambda payload: (payload["records"], payload["iou_thresholds"]), "load_xml": load_xml, "SimpleNamespace": SimpleNamespace, "validator_module": validator_module}
         return plan, dependencies
 
     def test_production_backend_wrapper_skips_warmup_forward_and_counts_data_completion(self):
@@ -276,6 +292,14 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
                 aux_state = read_state(aux_state_path)
                 self.assertEqual(aux_state["calibration_batches"], 1024)
                 self.assertEqual(aux_state["calibration_write_calls"], 1)
+                self.assertEqual(aux_state["calibration_callback"]["callback_attempts"], 1025)
+                self.assertEqual(aux_state["calibration_callback"]["items_yielded"], 1024)
+                self.assertEqual(aux_state["calibration_callback"]["items_validated"], 1024)
+                self.assertEqual(aux_state["calibration_callback"]["tensors_delivered"], 1024)
+                self.assertEqual(aux_state["calibration_callback"]["eos_calls"], 1)
+                self.assertEqual(aux_state["calibration_callback"]["status"], "completed")
+                self.assertEqual(len(aux_state["calibration_callback"]["cache_read_outcomes"]), 1)
+                self.assertEqual(len(aux_state["calibration_callback"]["cache_write_outcomes"]), 1)
                 self.assertTrue(aux_state["builder_completed"])
                 all_states.append(aux_state)
                 manifest = {"jobs": [{"job": aux_job, "state": aux_state}]}
@@ -356,6 +380,50 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             self.assertEqual(state2["status"], "failed")
             self.assertIn("synthetic capture failure", state2["error"])
             self.assertEqual(state2["forward_completed"], 0)
+
+    def test_calibration_callback_failure_is_durable_when_builder_swallows_it(self):
+        from run_precision_head_confirmation_server import run_child
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            out = root / "study"
+            out.mkdir()
+            job = next(job for job in build_schedule() if job["model"] == "yolov8n" and job["phase"] == "auxiliary_calibration" and job["selection"] == "U42")
+            plan, deps = self.normal_path_fixture(root, "yolov8n", job, swallow_calibration_callback=True, calibration_order_mismatch=True)
+            jobs = build_schedule()
+            plan["schedule"] = {"jobs": jobs, "sha256": canonical_json_sha256(jobs)}
+            plan_path = root / "plan.json"
+            job_path = root / "job.json"
+            plan_path.write_text(json.dumps(plan), encoding="utf-8")
+            job_path.write_text(json.dumps(job), encoding="utf-8")
+            args = SimpleNamespace(job_json=job_path, out_dir=out, plan=plan_path, repo=root, device="0", runtime_double=False, confirm_desktop_process=[], confirm_background_process=[])
+            identity = {"uuid": "GPU-fixture", "name": "fixture-gpu", "driver_version": "fixture-driver", "device": "0"}
+            with patch("run_precision_head_confirmation_server.load_production_dependencies", return_value=deps), patch("run_precision_head_confirmation_server._gpu_identity", return_value=identity):
+                self.assertEqual(run_child(args), 1)
+            state = json.loads(next((out / "jobs").glob("*/child_state.json")).read_text(encoding="utf-8"))
+            callback = state["calibration_callback"]
+            self.assertEqual(state["status"], "failed")
+            self.assertEqual(callback["callback_attempts"], 1)
+            self.assertEqual(callback["items_yielded"], 1)
+            self.assertEqual(callback["items_validated"], 0)
+            self.assertEqual(callback["tensors_delivered"], 0)
+            self.assertEqual(callback["first_exception"]["manifest_index"], 0)
+            self.assertEqual(callback["first_exception"]["expected_image_id"], "train/images/0000.jpg")
+            self.assertTrue(callback["first_exception"]["observed_path"].endswith("0001.jpg"))
+            self.assertEqual(callback["secondary_builder_error"]["message"], "TensorRT builder returned no engine")
+            self.assertEqual(state["error"], callback["first_exception"]["message"])
+            self.assertEqual(state["calibration_batches"], 1)
+            self.assertEqual(state["primary_calibration_error"], callback["first_exception"])
+            self.assertIsNone(state["cleanup_completed"])
+            self.assertEqual(state["owner_release_status"], "cleanup_failed_or_unknown")
+
+    def test_production_parent_rejects_immutable_v1_root(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            plan_path = root / "plan.json"
+            plan_path.write_text(json.dumps({"attempt": {"id": "server_precision_head_confirmation_v1"}}), encoding="utf-8")
+            args = SimpleNamespace(repo=root, out_dir=root / "server_precision_head_confirmation_v1", plan=plan_path, runtime_double=False, confirm_background_process=[], confirm_desktop_process=[], device="0")
+            with self.assertRaisesRegex(ContractError, "fresh v2 root; v1 is immutable"):
+                run_server_parent(args)
 
     def test_gpu_identity_is_persisted_and_changed_identity_blocks(self):
         manifest = {}

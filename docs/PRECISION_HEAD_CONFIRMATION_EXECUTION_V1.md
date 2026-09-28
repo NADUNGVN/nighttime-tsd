@@ -81,3 +81,55 @@ token and run the foreground server sequence. A complete artifact set ends in
 `confirmation_completed_review_required`; missing, invalid, timed-out or
 contaminated cells end in `confirmation_incomplete_blocked`. Neither status
 selects a deployment arm or opens B/C/15-model work.
+
+## A2L-052 calibration-order recovery (current protocol)
+
+The failed `server_precision_head_confirmation_v1` attempt is immutable. Its
+first auxiliary calibration callback observed `18709.jpg` where the locked
+manifest expected `00006.jpg`; no scored build/capture or scientific result
+exists. Do not edit, resume, or overwrite that root.
+
+For the prospective fresh v2 attempt, both models use the shared
+`precision_head_calibration_order.build_manifest_ordered_calibration_dataloader`
+producer. It mirrors the pinned Ultralytics 8.4.102 detection validation
+dataset construction and explicit LetterBox shape, then maps the actual
+discovered dataset indices onto the accepted manifest order and calls the
+existing dataloader with `batch=1`, `workers=0`, `shuffle=False`, and
+`drop_last=True`. Before a builder starts it rejects missing/extra/duplicate
+membership, a changed batch/fraction/split/rect contract, and non-unique or
+missing materialized paths. It does not seed or mutate the library/global RNG.
+The installed package version and source fingerprints for the exporter method,
+dataset builder, YAML validator and dataloader are pinned and recorded.
+
+The TensorRT callback verifies the full observed path against the expected
+manifest index before converting the uint8 image tensor to contiguous
+float32/255. Durable callback state distinguishes callback attempts, yielded
+items, validated items, delivered tensors, EOS, cache reads/writes and ordered
+ID/tensor digests. Callback exceptions are persisted before re-raising. If
+TensorRT swallows one and returns no engine, the first callback error remains
+the primary failure and the generic builder result is retained separately.
+Timeout/exception cleanup is reported as unknown unless release is actually
+observed; no false cleanup-success claim is made.
+
+The CPU-only full-order receipt is
+`results/measurement_audit_v1/precision_head_calibration_order_audit_v2/`.
+It records all 1,024 ordered image IDs, exact source/materialized image hashes,
+loader output bindings and normalized tensor hashes for U42/U43/U44. Since the
+accepted Linux materialization paths are not present in the local Windows
+checkout, the CPU audit copied hash-verified local source files into isolated
+temporary directories and removed those directories on completion. Local
+annotation files differ only by CRLF versus accepted LF bytes; every one of
+2,853 unique labels matches after CRLF-to-LF normalization, and the
+calibration callback consumes only the image tensor. This is local CPU/source
+evidence, not a server-runtime test.
+
+The next candidate plan is prospective and fresh under
+`results/measurement_audit_v1/server_precision_head_confirmation_v2/`. Its
+84-builder/78-capture schedule and numerical contract are unchanged. It binds
+the full Git revision plus exact hashes/byte counts for the executed runner,
+server child, shared calibration helper, configs and imported audit/runtime
+helpers before dispatch. The cumulative ceiling is 85 attempted builders
+(one failed v1 attempt plus one complete v2 budget). No retry, resume, canary,
+extra cell, export, training or GPU dispatch is authorized by this local
+protocol update; Astra must review the consolidated implementation and real
+image receipts first.

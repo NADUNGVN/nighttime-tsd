@@ -35,8 +35,10 @@ from precision_head_confirmation_contract import (
 SCHEMA_VERSION = 1
 CONTRACT_PATH = Path("configs/precision_head_confirmation_execution_v1.json")
 READINESS_PATH = Path("results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/readiness_manifest.json")
+CALIBRATION_READINESS_PATH = Path("results/measurement_audit_v1/server_precision_head_confirmation_readiness_v2/calibration_readiness.json")
 GRAPH_ROOT = Path("results/measurement_audit_v1/precision_head_confirmation_graph_audit_v4")
 PREP_ROOT = Path("results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2")
+ATTEMPT_ID = "server_precision_head_confirmation_v2"
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -130,21 +132,38 @@ def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH
     provenance_paths = [
         contract_path,
         readiness_path,
+        CALIBRATION_READINESS_PATH,
+        Path("configs/precision_head_confirmation_v1.json"),
+        Path("configs/precision_head_confirmation_execution_v1.json"),
+        Path("scripts/precision_head_confirmation_contract.py"),
+        Path("scripts/precision_head_calibration_order.py"),
+        Path("scripts/run_precision_head_confirmation.py"),
+        Path("scripts/run_precision_head_confirmation_server.py"),
         Path("scripts/prepare_precision_head_confirmation.py"),
         Path("scripts/prepare_precision_head_confirmation_graph.py"),
         Path("scripts/capture_cctsdb_validator.py"),
         Path("scripts/verify_cctsdb_capture.py"),
         Path("scripts/analyze_dev_quantization.py"),
+        Path("scripts/analyze_precision_head_confirmation.py"),
+        Path("scripts/audit_cctsdb_measurement.py"),
+        Path("scripts/run_architecture_matrix.py"),
+        Path("scripts/uniform_build_repeat.py"),
     ]
-    provenance = [{"path": relative(repo, repo / path), "sha256": sha256_file(repo / path)} for path in provenance_paths]
+    provenance_paths.extend(Path(selection["manifest"]) for selection in contract["calibration_selections"])
+    provenance_paths.append(Path(readiness_config["dataset_inventory_reference"]["manifest"]))
+    provenance = [{"path": relative(repo, repo / path), "sha256": sha256_file(repo / path), "bytes": (repo / path).stat().st_size} for path in provenance_paths]
+    executable_provenance = [item for item in provenance if item["path"].startswith("scripts/")]
+    executable_provenance_sha256 = canonical_json_sha256(executable_provenance)
     canonical_reference = readiness.get("dev_contract", {}).get("canonical_reference")
     if not isinstance(canonical_reference, dict) or len(canonical_reference.get("records", [])) != contract["analysis"]["dev_images"]:
         raise ContractError("accepted readiness manifest does not contain the canonical dev image/shape reference")
     return {
         "schema_version": SCHEMA_VERSION,
         "study": "precision_head_confirmation_v1",
-        "status": "implementation_incomplete_remediation_in_progress",
+        "status": "implementation_complete_review_required",
+        "attempt": {"id": ATTEMPT_ID, "attempt_number": 2, "predecessor": {"id": "server_precision_head_confirmation_v1", "status": "incomplete_blocked", "immutable": True, "attempted_builders": 1}, "fresh_output_required": True, "retry_resume_canary_forbidden": True, "cumulative_attempted_builder_cap": 85},
         "repo_head": git_head(repo),
+        "executed_executable_provenance_sha256": executable_provenance_sha256,
         "contract": {"path": relative(repo, repo / contract_path), "sha256": sha256_file(repo / contract_path)},
         "readiness": {"path": relative(repo, readiness_path), "status": readiness.get("status")},
         "calibration_producer": calibration,
@@ -156,7 +175,7 @@ def build_plan(repo: Path, *, out_dir: Path, contract_path: Path = CONTRACT_PATH
         "provenance_files": provenance,
         "schedule": {"sha256": canonical_json_sha256(jobs), "jobs": jobs},
         "accounting": {"auxiliary_cache_builds": 6, "scored_int8_builds": 72, "scored_fp16_builds": 6, "total_builder_invocations": 84, "captures": 78, "dev_image_model_passes": 127608},
-        "execution_boundary": {"parent_imports_cuda": False, "parent_imports_tensorrt": False, "server_children_only": True, "go_required": True, "no_resume": True, "no_retry_or_replacement": True},
+        "execution_boundary": {"parent_imports_cuda": False, "parent_imports_tensorrt": False, "server_children_only": True, "go_required": True, "dispatch_status": "hold_pending_integrated_review", "no_resume": True, "no_retry_or_replacement": True},
         "output": {"root": relative(repo, out_dir), "no_overwrite": True, "private_engines_caches_tensors": True, "published": ["manifests", "reports", "jsonl", "logs", "hashes", "public/inspectors/*.json"], "public_inspector_contract": "nonbinary EngineInspector JSON only; no engine/checkpoint/ONNX/cache/raw tensors"},
         "limitations": ["Shared lab GPU telemetry is sampled, not isolation proof.", "The 84-job budget is not evidence until server artifacts complete.", "This plan does not select a best build or promise a positive result."],
         "created_utc": datetime.now(timezone.utc).isoformat(),
@@ -176,7 +195,7 @@ def write_plan(repo: Path, out_dir: Path, *, xml_path: Path | None = None) -> Pa
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path(__file__).resolve().parents[1])
-    parser.add_argument("--out-dir", type=Path, default=Path("results/measurement_audit_v1/server_precision_head_confirmation_v1"))
+    parser.add_argument("--out-dir", type=Path, default=Path("results/measurement_audit_v1/server_precision_head_confirmation_v2"))
     parser.add_argument("--phase", choices=("plan", "scored", "analysis"), default="plan")
     parser.add_argument("--go-token", help=argparse.SUPPRESS)
     parser.add_argument("--device", default="0")
@@ -195,6 +214,8 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit("Refusing server phase: integrated Astra GO is required after local implementation review")
     if args.phase == "scored":
         plan_data = read_json(out_dir / "confirmation_plan.json")
+        if out_dir.name != "server_precision_head_confirmation_v2" or plan_data.get("attempt", {}).get("id") != ATTEMPT_ID:
+            raise SystemExit("Refusing server phase: only the reviewed fresh v2 attempt root is eligible; v1 is immutable")
         if not args.runtime_double and not plan_data.get("dataset", {}).get("xml_validation"):
             raise SystemExit("Production scored phase requires a plan bound to --xml with 1636/2706 validation")
         from run_precision_head_confirmation_server import run_parent as run_server_parent

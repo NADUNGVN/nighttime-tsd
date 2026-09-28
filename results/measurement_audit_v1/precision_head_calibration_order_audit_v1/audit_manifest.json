@@ -1,0 +1,32 @@
+{
+  "calibration_readiness_sha256": "5b2a4888071b779edbaaa0fa9b4aaaeef57ab08219c7b34b125d879eb0f2be01",
+  "created_utc": "2026-09-28T17:20:18.035979+00:00",
+  "dataset_root": "D:\\Research\\paper\\data\\processed\\cctsdb2021_clean",
+  "execution_limits": {
+    "cache_reads": 0,
+    "cache_writes": 0,
+    "cuda_visible_devices": "-1",
+    "engine_builds": 0,
+    "model_forward_calls": 0,
+    "tensorrt_imported": false,
+    "torch_cuda_allocations": 0
+  },
+  "failure": "failure.json",
+  "readiness_manifest_sha256": "e6b6c4df4363ec7e1ff057cafe9a6d2d1e69eab5fa88323b7cd2a60c98daa75d",
+  "runtime": {
+    "numpy": "2.4.2",
+    "python": "3.11.9",
+    "torch": "2.8.0+cu129",
+    "ultralytics": "8.4.102"
+  },
+  "schema_version": 1,
+  "selections": [],
+  "status": "failed",
+  "study": "precision_head_calibration_order_cpu_audit_v1",
+  "ultralytics_source_sha256": {
+    "build_dataloader": "3526a3fbca169de6bdfde5e6128a5be128d16135725458475728a3d145a65164",
+    "build_yolo_dataset": "cc30939a9a049a201481a43b84f1b41eea32f0e68bfe57aba3bbada5c9433e49",
+    "check_det_dataset": "180a0628c120d35a930fb2ba7681c6bc646658ab7555e66357aa611c53d04ee2",
+    "exporter_calibration_method": "c3083ef89201276d5ea73e217846a0ddcaeed92b4909f75a2545c4ef2016b44c"
+  }
+}
