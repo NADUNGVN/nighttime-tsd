@@ -2269,3 +2269,9 @@ Luna1 could not check these remote paths for prior existence; each operator
 command must abort if its fresh path already exists. No source pass, target
 enqueue, engine build/load, warmup, extra smoke or benchmark ran in this
 checkpoint. Preserve all prior FAILs and do not add binaries to Git.
+
+**Published handoff.** Full commit
+`015c3c654c28845e4ddac997d9fba3e0f4cf97a2` was pushed to
+`luna1/e2l1-006-jetson-adapter-smoke` using the authenticated GitHub account
+`NADUNGVN`. It contains the unchanged inbox/decision, this scoped report and
+the source CPU runbook.
