@@ -2222,3 +2222,50 @@ build, inference or benchmark was run here. Real source reference remains
 prospective, with zero build budget, and needs integrated review plus a new
 explicit GO before source/E2 model calls. Terminal status:
 `prepared_not_executed_integrated_review_required`.
+
+## L1A-030 — P1-P4 accepted; CPU handoff and E2 prerequisite hold (2026-09-28)
+
+**implementation_review_accepted; operator_pending; operational_hold.** Read
+`docs/ST_EDGE_03_P1P4_INTEGRATED_GO.md` in full. Astra accepts the reviewed
+P1-P4 implementation at code revision
+`988bd6f715df99da6998914404ce507204e10790`; no numerical behavior was changed
+in this handoff. Full code/helper SHA-256 bindings are recorded in the scoped
+runbook. Current source and target execution counts for E2L1-030 remain
+`0/1636` each.
+
+**CPU/mock prerequisites.** On Windows, `py -3.10 -m unittest discover -s
+tests -p 'test_e2_*.py' -v` collected 40 tests: **36 PASS, 4 SKIP**. Three
+skips require pinned Ultralytics 8.4.102 CPU dependencies; the independent
+review ran those cases in its pinned environment. The POSIX TERM-ignore
+escalation test was then attempted under WSL Ubuntu/Python 3.12.3, but skipped
+because NumPy/OpenCV are unavailable there. It has **not** passed and remains a
+pre-dispatch gate; no dependency was installed. The POSIX test must run in an
+already dependency-complete Linux environment before target dispatch.
+
+**Bounded E2 check.** At report time 2026-09-28 16:29 UTC, one
+`ssh -T -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=yes
+nx 'timeout 40s bash -s'` read-only attempt timed out connecting to the
+configured `nx` endpoint (SSH exit 255). No alternate host was tried and no
+retry or scan was run. Consequently current E2 identity, NumPy/OpenCV,
+TensorRT/CUDA libraries, engine hash, memory/storage and active workloads
+could not be revalidated. The prior L1A-022 engine hash is historical evidence
+only, not a current prerequisite pass. No device files/processes/configuration
+were changed.
+
+The concrete user-operated source-only command is in
+`docs/E2L1-030_SOURCE_CPU_RUNBOOK.md`. It uses the already accepted ONNX on
+SERVER-01, disables CUDA and auto-install, binds all canonical dev image bytes
+and shapes, checks the actual ORT `CPUExecutionProvider`, then permits at most
+one pass of 1,636 ONNX CPU forwards and verifies saved artifacts. Luna1 does
+not SSH to SERVER-01. Do not start E2 until source verification, private
+package validation/transfer, the POSIX mock test and a fresh bounded E2
+identity/resource check all pass.
+
+Planned full paths are SERVER-01
+`/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-030-source-reference-v1`,
+E2 `/tmp/luna1-e2l1-030-target-dev-v1`, and SERVER-01
+`/home/ubuntu/Dung_TDTU/nighttime-tsd-new/results/edge_readiness_v1/e2l1-030-analysis-v1`.
+Luna1 could not check these remote paths for prior existence; each operator
+command must abort if its fresh path already exists. No source pass, target
+enqueue, engine build/load, warmup, extra smoke or benchmark ran in this
+checkpoint. Preserve all prior FAILs and do not add binaries to Git.
