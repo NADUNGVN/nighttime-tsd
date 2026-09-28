@@ -2275,3 +2275,19 @@ checkpoint. Preserve all prior FAILs and do not add binaries to Git.
 `luna1/e2l1-006-jetson-adapter-smoke` using the authenticated GitHub account
 `NADUNGVN`. It contains the unchanged inbox/decision, this scoped report and
 the source CPU runbook.
+
+### L1A-030 operator handoff update (2026-09-29)
+
+**source_runbook_ready; source_operator_pending.** Re-read the new E2L1-030
+reviewer checkpoint. The existing full foreground source command is retained
+in `docs/E2L1-030_SOURCE_CPU_RUNBOOK.md` and includes exact revision/11 helper
+hashes, detached worktree setup, absent-root guards, canonical image-byte/hash/
+shape preparation, pinned source environment/provider checks, one source CPU
+stage and saved-output audit. It also runs only the requested POSIX
+TERM-ignore/kill-escalation mock test in that same existing Linux environment.
+The POSIX result is recorded exactly (`Ran 1 test`, exit status and no-skip
+requirement); failure/skip leaves E2 held but does not block the separately
+authorized source CPU pass. No source command was run by Luna1; actual counts
+remain source `0/1636`, target `0/1636`. Source-stage output still requires
+operator audit before any package/target decision. No E2 SSH retry, alternate
+host probe, binary transfer, inference, build or benchmark was performed.

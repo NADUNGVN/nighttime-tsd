@@ -84,10 +84,32 @@ HASHES
 mkdir -p "$(dirname "$ROOT")"
 mkdir "$ROOT"
 mkdir "$ROOT/input"
+mkdir "$ROOT/prereq"
 export LUNA030_REPO="$REPO" LUNA030_ROOT="$ROOT" LUNA030_ONNX="$ONNX" LUNA030_CODE="$CODE" LUNA030_PY="$PY"
 export PYTHONPATH="$CODE/scripts"
 export CUDA_VISIBLE_DEVICES= YOLO_AUTOINSTALL=false ULTRALYTICS_AUTOUPDATE=false
 export OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2
+
+# Run the one POSIX-only mock termination prerequisite in this existing
+# dependency-complete Linux environment. It is not a model call and does not
+# gate the authorized source CPU pass. It must pass without skips before E2.
+set +e
+"$PY" -m unittest discover \
+  -s "$CODE/tests" \
+  -p 'test_e2_dev_evaluation_packet.py' \
+  -k test_target_timeout_escalates_to_kill_when_child_ignores_terminate \
+  -v >"$ROOT/prereq/posix_termination_test.log" 2>&1
+POSIX_TEST_EXIT=$?
+set -e
+cat "$ROOT/prereq/posix_termination_test.log"
+if [ "$POSIX_TEST_EXIT" -eq 0 ] && \
+   grep -Eq '^Ran 1 test in ' "$ROOT/prereq/posix_termination_test.log" && \
+   grep -Eq '^OK$' "$ROOT/prereq/posix_termination_test.log"; then
+  POSIX_TEST_STATUS=PASS
+else
+  POSIX_TEST_STATUS=HOLD_FOR_E2
+fi
+printf 'POSIX_TEST_STATUS=%s POSIX_TEST_EXIT=%s\n' "$POSIX_TEST_STATUS" "$POSIX_TEST_EXIT"
 
 # Bind the canonical ordered IDs to actual image bytes and decoded shapes.
 # This is metadata/preprocessing only; it makes no model call.
@@ -218,6 +240,8 @@ PY
 ```
 
 Return only sanitized status/counters, observed versions/provider, code/helper
-hashes and manifest/index/events/stdout/stderr hashes. Keep images, ONNX,
-raw outputs and private package bytes out of Git. Do not upload a transfer
-archive until Luna1 verifies the exact allowlist and archive hash.
+hashes, the POSIX test's exact unittest summary/status, and
+manifest/index/events/stdout/stderr hashes. If the POSIX test fails or skips,
+the source CPU pass may still proceed, but E2 stays on hold. Keep images,
+ONNX, raw outputs and private package bytes out of Git. Do not upload a
+transfer archive until Luna1 verifies the exact allowlist and archive hash.
