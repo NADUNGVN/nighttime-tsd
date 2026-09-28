@@ -328,8 +328,45 @@ def load_production_dependencies() -> dict[str, Any]:
             exporter_module.check_det_dataset,
             exporter_module.build_dataloader,
         ),
-        "build_calibration_loader": build_manifest_ordered_calibration_dataloader,
+        "build_calibration_loader": bind_production_calibration_loader(
+            check_det_dataset=exporter_module.check_det_dataset,
+            build_yolo_dataset=exporter_module.build_yolo_dataset,
+            build_dataloader=exporter_module.build_dataloader,
+        ),
     }
+
+
+def bind_production_calibration_loader(
+    *,
+    check_det_dataset: Any,
+    build_yolo_dataset: Any,
+    build_dataloader: Any,
+) -> Any:
+    """Bind the pinned Ultralytics helpers into the runner-facing loader API.
+
+    The returned callable accepts only the per-selection inputs used by
+    ``build_real``. Keeping this adapter explicit makes it difficult for the
+    production path to accidentally omit a required dataset/dataloader
+    dependency while leaving the shared manifest-order producer unchanged.
+    """
+    def build_calibration_loader(
+        exporter: Any,
+        *,
+        ordered_image_ids: Any,
+        expected_image_paths: Any,
+        expected_count: int = 1024,
+    ) -> Any:
+        return build_manifest_ordered_calibration_dataloader(
+            exporter,
+            ordered_image_ids=ordered_image_ids,
+            expected_image_paths=expected_image_paths,
+            check_det_dataset=check_det_dataset,
+            build_yolo_dataset=build_yolo_dataset,
+            build_dataloader=build_dataloader,
+            expected_count=expected_count,
+        )
+
+    return build_calibration_loader
 
 
 def build_real(job: dict[str, Any], plan: dict[str, Any], repo: Path, out: Path, args: argparse.Namespace, state_path: Path, *, external_boundary: bool = False) -> None:

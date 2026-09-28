@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import importlib.util
+import inspect
 import json
 import subprocess
 import sys
@@ -31,6 +32,7 @@ from precision_head_confirmation_contract import (  # noqa: E402
 from run_precision_head_confirmation_server import (  # noqa: E402
     NoWarmupBackendAccounting,
     bind_gpu_identity,
+    bind_production_calibration_loader,
     build_real,
     child_state,
     finalize_child_state,
@@ -201,16 +203,61 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
                 def deserialize_cuda_engine(self, _serialized): return FakeEngine()
 
         class FakeExporter:
-            def __init__(self, **_kwargs): pass
+            def __init__(self, **kwargs):
+                self.args = SimpleNamespace(**kwargs["overrides"])
+                self.imgsz = (640, 640)
             def get_int8_calibration_dataloader(self):
-                return ({"im_file": [f"{index:04d}.jpg"], "img": FakeTensor()} for index in range(1024))
+                raise AssertionError("implicit-shuffle Exporter loader must not be used")
 
-        def build_calibration_loader(_exporter, *, ordered_image_ids, expected_image_paths, expected_count):
-            paths = list(expected_image_paths)
-            if calibration_order_mismatch:
-                paths[0], paths[1] = paths[1], paths[0]
-            rows = ({"im_file": [str(path)], "img": FakeTensor()} for path in paths)
-            return rows, {"status": "fixture_loader", "shuffle": False, "expected_count": expected_count, "ids_sha256": hashlib.sha256(json.dumps(list(ordered_image_ids), separators=(",", ":")).encode()).hexdigest()}
+        loader_observations = []
+
+        class FakeCalibrationDataset:
+            def __init__(self, paths):
+                self.im_files = [str(path) for path in paths]
+                self.collate_fn = lambda rows: rows
+                self.transforms = SimpleNamespace(transforms=[])
+                self.augment = False
+                self.rect = False
+
+            def __len__(self):
+                return len(self.im_files)
+
+            def __getitem__(self, index):
+                observed_path = Path(self.im_files[index])
+                if calibration_order_mismatch and observed_path.name == "0000.jpg":
+                    observed_path = observed_path.with_name("0001.jpg")
+                return {"im_file": [str(observed_path)], "img": FakeTensor()}
+
+        def check_det_dataset(data_path, *, split):
+            self.assertEqual(split, "val")
+            image_root = Path(data_path).parent / "images"
+            # Deliberately expose discovery order in reverse; the real shared
+            # producer must map indices back to the locked manifest sequence.
+            discovered = sorted(image_root.glob("*.jpg"), reverse=True)
+            return {"val": [str(path) for path in discovered]}
+
+        def build_yolo_dataset(_cfg, image_paths, batch, _data, *, mode, fraction):
+            self.assertEqual((batch, mode, fraction), (1, "val", 1.0))
+            return FakeCalibrationDataset(image_paths)
+
+        def build_dataloader(dataset, *, batch, workers, shuffle, drop_last):
+            loader_observations.append({
+                "dataset_type": type(dataset).__name__,
+                "count": len(dataset),
+                "first_path": Path(dataset.im_files[0]).name,
+                "shuffle": shuffle,
+                "batch": batch,
+                "workers": workers,
+                "drop_last": drop_last,
+                "manifest_indices": list(dataset.indices),
+            })
+            return dataset
+
+        build_calibration_loader = bind_production_calibration_loader(
+            check_det_dataset=check_det_dataset,
+            build_yolo_dataset=build_yolo_dataset,
+            build_dataloader=build_dataloader,
+        )
 
         def verify_calibration_source():
             return {"fixture": hashlib.sha256(b"pinned-loader-fixture").hexdigest()}
@@ -248,7 +295,7 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
             def __exit__(self, *_args): return False
 
         def load_xml(_path, requested): return {name: {"shape": [100, 100], "rows": [(0, [1.0, 1.0, 10.0, 10.0])] * (2 if index < 1070 else 1)} for index, name in enumerate(requested)}
-        dependencies = {"np": SimpleNamespace(), "torch": FakeTorch, "trt": FakeTrt, "ultralytics": SimpleNamespace(__version__="8.4.102"), "Exporter": FakeExporter, "build_calibration_loader": build_calibration_loader, "verify_calibration_source": verify_calibration_source, "CaptureValidator": FakeValidator, "metric_summary": lambda _metrics: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "replay_statistics": lambda _records: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "GpuPhaseLock": Lock, "ensure_idle": lambda *_args: None, "parse_background_confirmations": lambda _args: [], "parse_desktop_confirmations": lambda _args: [], "snapshot": lambda *_args: {"gpu": "fixture"}, "rematch_native": lambda _records, _thresholds: {"status": "pass", "changed_tp_decisions": 0}, "validate_capture": lambda payload: (payload["records"], payload["iou_thresholds"]), "load_xml": load_xml, "SimpleNamespace": SimpleNamespace, "validator_module": validator_module}
+        dependencies = {"np": SimpleNamespace(), "torch": FakeTorch, "trt": FakeTrt, "ultralytics": SimpleNamespace(__version__="8.4.102"), "Exporter": FakeExporter, "build_calibration_loader": build_calibration_loader, "fixture_loader_observations": loader_observations, "verify_calibration_source": verify_calibration_source, "CaptureValidator": FakeValidator, "metric_summary": lambda _metrics: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "replay_statistics": lambda _records: {"map50": 0.0, "map50_95": 0.0, "precision": 0.0, "recall": 0.0}, "GpuPhaseLock": Lock, "ensure_idle": lambda *_args: None, "parse_background_confirmations": lambda _args: [], "parse_desktop_confirmations": lambda _args: [], "snapshot": lambda *_args: {"gpu": "fixture"}, "rematch_native": lambda _records, _thresholds: {"status": "pass", "changed_tp_decisions": 0}, "validate_capture": lambda payload: (payload["records"], payload["iou_thresholds"]), "load_xml": load_xml, "SimpleNamespace": SimpleNamespace, "validator_module": validator_module}
         return plan, dependencies
 
     def test_production_backend_wrapper_skips_warmup_forward_and_counts_data_completion(self):
@@ -288,6 +335,15 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
                 child_state(aux_state_path, aux_job, plan_sha256=hashlib.sha256(plan_path.read_bytes()).hexdigest())
                 with patch("run_precision_head_confirmation_server.load_production_dependencies", return_value=aux_deps), patch("run_precision_head_confirmation_server._gpu_identity", return_value=identity):
                     build_real(aux_job, aux_plan, root, out, args, aux_state_path, external_boundary=False)
+                self.assertEqual(len(aux_deps["fixture_loader_observations"]), 1)
+                loader_observation = aux_deps["fixture_loader_observations"][0]
+                self.assertEqual(loader_observation["dataset_type"], "ManifestIndexedDataset")
+                self.assertEqual(loader_observation["count"], 1024)
+                self.assertEqual(loader_observation["first_path"], "0000.jpg")
+                self.assertFalse(loader_observation["shuffle"])
+                self.assertEqual(loader_observation["batch"], 1)
+                self.assertEqual(loader_observation["workers"], 0)
+                self.assertTrue(loader_observation["drop_last"])
                 finalize_child_state(aux_state_path)
                 aux_state = read_state(aux_state_path)
                 self.assertEqual(aux_state["calibration_batches"], 1024)
@@ -342,6 +398,47 @@ class PrecisionHeadConfirmationSuperTests(unittest.TestCase):
                 self.assertTrue(fp16_state["engine_inspector"]["path"].startswith("public/inspectors/"))
                 all_states.append(fp16_state)
             self.assertEqual(len(all_states), 6)
+
+    def test_production_calibration_loader_binding_contract_and_both_model_routes(self):
+        # This adapter is the exact factory used by load_production_dependencies.
+        # Verify its public call signature requires no hidden Ultralytics args.
+        helper = lambda *args, **kwargs: None
+        bound = bind_production_calibration_loader(
+            check_det_dataset=helper,
+            build_yolo_dataset=helper,
+            build_dataloader=helper,
+        )
+        inspect.signature(bound).bind(
+            object(),
+            ordered_image_ids=["train/images/0000.jpg"],
+            expected_image_paths=[Path("0000.jpg")],
+            expected_count=1,
+        )
+
+        for model in ("yolov8n", "yolo26n"):
+            with self.subTest(model=model), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                job = next(job for job in build_schedule() if job["model"] == model and job["phase"] == "auxiliary_calibration" and job["selection"] == "U42")
+                plan, dependencies = self.normal_path_fixture(root, model, job)
+                loader = dependencies["build_calibration_loader"]
+                self.assertEqual(
+                    set(inspect.signature(loader).parameters),
+                    {"exporter", "ordered_image_ids", "expected_image_paths", "expected_count"},
+                )
+                out = root / "study"
+                out.mkdir()
+                (out / "public").mkdir()
+                plan_path = root / "plan.json"
+                plan_path.write_text(json.dumps(plan), encoding="utf-8")
+                (out / "confirmation_plan.json").write_text(plan_path.read_text(encoding="utf-8"), encoding="utf-8")
+                state_path = out / "jobs" / job_key(job) / "child_state.json"
+                state_path.parent.mkdir(parents=True)
+                child_state(state_path, job, plan_sha256=hashlib.sha256(plan_path.read_bytes()).hexdigest())
+                args = SimpleNamespace(device="0", confirm_desktop_process=[], confirm_background_process=[])
+                identity = {"uuid": "GPU-fixture", "name": "fixture-gpu", "driver_version": "fixture-driver", "device": "0"}
+                with patch("run_precision_head_confirmation_server.load_production_dependencies", return_value=dependencies), patch("run_precision_head_confirmation_server._gpu_identity", return_value=identity):
+                    build_real(job, plan, root, out, args, state_path, external_boundary=False)
+                self.assertEqual(len(dependencies["fixture_loader_observations"]), 1)
 
     def test_normal_build_real_parser_and_output_failures_are_not_success(self):
         from run_precision_head_confirmation_server import run_child

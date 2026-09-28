@@ -3715,3 +3715,47 @@ not alter source files.
 Please review the integrated code, tests, source fingerprints and CPU receipts.
 Until accepted, the server runbook remains HOLD; this entry does not request
 or imply approval to dispatch v2.
+
+## L2A-053 recovery closure — bind the production loader dependencies
+
+2026-09-29. Implemented the targeted A2L-053 repair on top of
+`0b030bd4df4e879e583469cea9ccea468b57fe04`; no calibration selection,
+preprocessing, ordering logic, numerical settings, schedule or budget changed.
+
+`load_production_dependencies()` now constructs the runner-facing loader via
+`bind_production_calibration_loader()`. That adapter closes over the actual
+pinned `Exporter` module functions `check_det_dataset`, `build_yolo_dataset`
+and `build_dataloader`; `build_real()` supplies only per-selection inputs.
+The test checks the adapter's public signature and executes the actual shared
+`build_manifest_ordered_calibration_dataloader` from the normal auxiliary
+`build_real()` route for both YOLOv8n and YOLO26n. Its dataset fixture reports
+discovery paths in reverse order, so the shared producer must restore canonical
+manifest order before the callback. Assertions cover 1,024 rows, batch 1,
+workers 0, `shuffle=False`, drop-last and the canonical first image. The
+implicit exporter loader is made an assertion failure in the fixture. The
+existing callback-mismatch/swallowed-error regression also now passes through
+the real shared loader, with only external dataset/dataloader operations
+substituted.
+
+The earlier U42/U43/U44 receipts remain accepted and unchanged. They prove the
+shared producer's 1,024-item real-image CPU order/tensor audit, not server
+dependency injection. The new runner integration tests close that separate
+binding claim; no second expensive image audit is needed because the shared
+producer/preprocessing code is byte-unchanged.
+
+Verification on the available Windows Python 3.11 environment:
+
+- Targeted runner-boundary tests: 3 passed, including both model-route
+  subtests.
+- Combined loader/super/feasibility regressions: 57 passed, 2 skipped, 1
+  unrelated analyzer test errored before its expected assertion because this
+  interpreter lacks `ultralytics`. The two skips are dependency-gated tests.
+- `py_compile` and `git diff --check` pass. No GPU, TensorRT, model forward,
+  export, cache build or server operation was run.
+
+The failed v1 remains immutable; v2 remains prospective and on HOLD for
+integrated review. The 84-builder/78-capture design and cumulative ceiling of
+85 attempted builders are unchanged. The unrelated dirty checkpoint remains
+unstaged. The A2L-053 inbox entry and Astra binding-review file are included
+unchanged with this scoped patch. Please review the production binding and
+regression; this handoff does not authorize server dispatch.
