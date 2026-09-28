@@ -155,27 +155,8 @@ def validate_package_inventory(inventory: Mapping[str, Any], package_root: Optio
         raise PacketError("PACKAGE_CANONICAL_IMAGE_BINDING_MISSING")
     if inventory.get("canonical_image_ids_sha256") != CANONICAL_DEV_IMAGE_IDS_SHA256 or inventory.get("canonical_image_ids_source") != CANONICAL_DEV_IMAGE_IDS_SOURCE:
         raise PacketError("PACKAGE_CANONICAL_IMAGE_BINDING_MISMATCH")
-    if inventory.get("input_contract") != {"shape": INPUT_SHAPE, "dtype": "float32", "byteorder": "little", "finite": True, "bytes_per_image": 3 * 640 * 640 * 4}:
-        raise PacketError("PACKAGE_INPUT_CONTRACT_MISMATCH")
-    if inventory.get("input_storage_mode") != "streaming_manifest_only" or inventory.get("raw_input_tensor_bundle_forbidden") is not True:
-        raise PacketError("PACKAGE_INPUT_STORAGE_POLICY")
-    input_records = inventory.get("input_records")
-    if not isinstance(input_records, list) or len(input_records) != DEV_IMAGES or [record.get("image_id") for record in input_records] != image_ids:
-        raise PacketError("PACKAGE_INPUT_PRODUCER_MEMBERSHIP_MISMATCH")
-    producer = inventory.get("input_producer")
-    if not isinstance(producer, Mapping) or producer.get("mode") != "bound_image_preprocess_stream" or producer.get("preprocess") != "scripts.edge_readiness.e2_source_bundle:UltralyticsSourceRuntime.preprocess" or producer.get("output_contract") != {"shape": INPUT_SHAPE, "dtype": "float32", "byteorder": "little", "finite": True}:
-        raise PacketError("PACKAGE_INPUT_PRODUCER_BINDING_MISSING")
-    image_records = producer.get("image_records")
-    if not isinstance(image_records, list) or len(image_records) != DEV_IMAGES or [record.get("image_id") for record in image_records] != image_ids:
-        raise PacketError("PACKAGE_IMAGE_PRODUCER_MEMBERSHIP_MISMATCH")
-    for record in image_records:
-        if (not isinstance(record, Mapping) or not isinstance(record.get("path"), str) or Path(record["path"]).is_absolute() or ".." in Path(record["path"]).parts or not isinstance(record.get("bytes"), int) or record.get("bytes") <= 0 or not isinstance(record.get("sha256"), str) or len(record["sha256"]) != 64 or not isinstance(record.get("orig_shape"), list) or len(record["orig_shape"]) != 2 or any(type(value) is not int or value <= 0 for value in record["orig_shape"]) or not isinstance(record.get("resized_shape", [640, 640]), list) or len(record.get("resized_shape", [640, 640])) != 2):
-            raise PacketError("PACKAGE_IMAGE_PRODUCER_CONTRACT_MISMATCH")
-    for record in input_records:
-        if (not isinstance(record, Mapping) or not isinstance(record.get("path"), str) or Path(record["path"]).is_absolute() or ".." in Path(record["path"]).parts or record.get("bytes") != 3 * 640 * 640 * 4 or record.get("shape") != INPUT_SHAPE or record.get("dtype") != "float32" or record.get("byteorder") != "little" or record.get("finite") is not True or not isinstance(record.get("sha256"), str) or len(record["sha256"]) != 64):
-            raise PacketError("PACKAGE_INPUT_PRODUCER_CONTRACT_MISMATCH")
     identity = inventory.get("reference_identity", {})
-    if identity.get("source_onnx_sha256") != SOURCE_ONNX_SHA256 or identity.get("server_trt_predictions_sha256") != SERVER_TRT_REFERENCE_PREDICTIONS_SHA256 or identity.get("server_trt_is_source_onnx") is not False:
+    if not isinstance(identity, Mapping) or identity.get("source_onnx_sha256") != SOURCE_ONNX_SHA256 or identity.get("server_trt_predictions_sha256") != SERVER_TRT_REFERENCE_PREDICTIONS_SHA256 or identity.get("server_trt_is_source_onnx") is not False:
         raise PacketError("PACKAGE_REFERENCE_IDENTITY_MISMATCH")
     reference_status = identity.get("source_onnx_cpu_reference_status")
     if reference_status not in ("pending_not_executed", "verified"):
@@ -185,6 +166,29 @@ def validate_package_inventory(inventory: Mapping[str, Any], package_root: Optio
         raise PacketError("PACKAGE_SOURCE_REFERENCE_HASH_PREMATURE")
     if reference_status == "verified" and (not isinstance(source_reference_hash, str) or len(source_reference_hash) != 64):
         raise PacketError("PACKAGE_SOURCE_REFERENCE_HASH_MISSING")
+    if inventory.get("input_contract") != {"shape": INPUT_SHAPE, "dtype": "float32", "byteorder": "little", "finite": True, "bytes_per_image": 3 * 640 * 640 * 4}:
+        raise PacketError("PACKAGE_INPUT_CONTRACT_MISMATCH")
+    if inventory.get("input_storage_mode") != "streaming_manifest_only" or inventory.get("raw_input_tensor_bundle_forbidden") is not True:
+        raise PacketError("PACKAGE_INPUT_STORAGE_POLICY")
+    input_records = inventory.get("input_records")
+    if not isinstance(input_records, list) or len(input_records) != DEV_IMAGES or [record.get("image_id") for record in input_records] != image_ids:
+        raise PacketError("PACKAGE_INPUT_PRODUCER_MEMBERSHIP_MISMATCH")
+    producer = inventory.get("input_producer")
+    if not isinstance(producer, Mapping) or producer.get("mode") != "bound_image_preprocess_stream" or producer.get("preprocess") != "scripts.edge_readiness.e2_image_preprocess:preprocess_image_bytes" or producer.get("output_contract") != {"shape": INPUT_SHAPE, "dtype": "float32", "byteorder": "little", "finite": True}:
+        raise PacketError("PACKAGE_INPUT_PRODUCER_BINDING_MISSING")
+    image_records = producer.get("image_records")
+    if not isinstance(image_records, list) or len(image_records) != DEV_IMAGES or [record.get("image_id") for record in image_records] != image_ids:
+        raise PacketError("PACKAGE_IMAGE_PRODUCER_MEMBERSHIP_MISMATCH")
+    for record in image_records:
+        if (not isinstance(record, Mapping) or not isinstance(record.get("path"), str) or Path(record["path"]).is_absolute() or ".." in Path(record["path"]).parts or not isinstance(record.get("bytes"), int) or record.get("bytes") <= 0 or not isinstance(record.get("sha256"), str) or len(record["sha256"]) != 64 or not isinstance(record.get("orig_shape"), list) or len(record["orig_shape"]) != 2 or any(type(value) is not int or value <= 0 for value in record["orig_shape"]) or not isinstance(record.get("resized_shape", [640, 640]), list) or len(record.get("resized_shape", [640, 640])) != 2):
+            raise PacketError("PACKAGE_IMAGE_PRODUCER_CONTRACT_MISMATCH")
+    for record in input_records:
+        if not isinstance(record, Mapping) or not isinstance(record.get("image_id"), str):
+            raise PacketError("PACKAGE_INPUT_PRODUCER_CONTRACT_MISMATCH")
+        if "path" in record or any(key in record for key in ("tensor_path", "payload_path")):
+            raise PacketError("PACKAGE_PRECOMPUTED_INPUT_PATH_FORBIDDEN")
+        if reference_status == "verified" and (record.get("bytes") != 3 * 640 * 640 * 4 or record.get("shape") != INPUT_SHAPE or record.get("dtype") != "float32" or record.get("byteorder") != "little" or record.get("finite") is not True or not isinstance(record.get("sha256"), str) or len(record["sha256"]) != 64 or not isinstance(record.get("preprocessing"), Mapping)):
+            raise PacketError("PACKAGE_INPUT_FINGERPRINT_MISSING")
     xml_hash = identity.get("xml_sha256")
     if not isinstance(xml_hash, str) or len(xml_hash) != 64 or any(char not in "0123456789abcdef" for char in xml_hash.lower()):
         raise PacketError("PACKAGE_XML_IDENTITY_MISSING")
@@ -217,7 +221,49 @@ def validate_package_inventory(inventory: Mapping[str, Any], package_root: Optio
         unexpected = [path for path in root.rglob("*") if path.is_file() and not path.is_symlink() and path.relative_to(root).as_posix() not in declared]
         if unexpected:
             raise PacketError("PACKAGE_UNDECLARED_FILE")
-    return {"status": "execution_ready" if reference_status == "verified" else "metadata_pending", "engine_private": True, "raw_tensors_private": True, "files_checked": len(allowed) if package_root is not None else 0, "image_count": len(image_ids), "source_reference_status": reference_status, "streaming_producer_verified": True}
+    source_input_records = None
+    source_reference_manifest_sha256 = None
+    if reference_status == "verified":
+        if package_root is None:
+            raise PacketError("PACKAGE_ROOT_REQUIRED_FOR_REFERENCE")
+        for key in ("source_reference_file", "xml_file"):
+            binding = identity.get(key)
+            if not isinstance(binding, Mapping) or not isinstance(binding.get("path"), str) or not isinstance(binding.get("bytes"), int) or not isinstance(binding.get("sha256"), str) or len(binding["sha256"]) != 64:
+                raise PacketError("PACKAGE_REFERENCE_FILE_BINDING_MISSING:" + key)
+            if not any(isinstance(item, Mapping) and item.get("path") == binding["path"] and item.get("bytes") == binding["bytes"] and item.get("sha256") == binding["sha256"] for item in allowed):
+                raise PacketError("PACKAGE_REFERENCE_FILE_NOT_ALLOWLISTED:" + key)
+        root = package_root.resolve()
+        source_binding = identity["source_reference_file"]
+        source_relative = Path(source_binding["path"])
+        xml_relative = Path(identity["xml_file"]["path"])
+        if source_relative.is_absolute() or ".." in source_relative.parts or xml_relative.is_absolute() or ".." in xml_relative.parts:
+            raise PacketError("PACKAGE_REFERENCE_PATH_INVALID")
+        source_manifest_path = (root / source_relative).resolve()
+        xml_path = (root / xml_relative).resolve()
+        if root not in source_manifest_path.parents or root not in xml_path.parents or not source_manifest_path.is_file() or not xml_path.is_file():
+            raise PacketError("PACKAGE_REFERENCE_FILE_MISSING")
+        if (source_manifest_path.stat().st_size != source_binding["bytes"] or sha256_file(source_manifest_path) != source_binding["sha256"] or
+                xml_path.stat().st_size != identity["xml_file"]["bytes"] or sha256_file(xml_path) != identity["xml_file"]["sha256"] or sha256_file(xml_path) != identity["xml_sha256"]):
+            raise PacketError("PACKAGE_REFERENCE_FILE_HASH_MISMATCH")
+        source_validation = validate_reference_artifact(source_manifest_path, package_root=root, allowed_files=allowed)
+        if source_validation.get("status") != "verified" or source_validation.get("test_only") is not False:
+            raise PacketError("PACKAGE_SOURCE_REFERENCE_NOT_PRODUCTION_VERIFIED")
+        if source_validation.get("predictions_sha256") != source_reference_hash or source_validation.get("image_ids") != image_ids:
+            raise PacketError("PACKAGE_SOURCE_REFERENCE_IDENTITY_MISMATCH")
+        source_reference_manifest_sha256 = source_validation["artifact_sha256"]
+        source_input_records = source_validation["source_input_records"]
+        for image_record, input_record in zip(image_records, input_records):
+            source_row = source_input_records.get(image_record["image_id"])
+            if (not isinstance(source_row, Mapping) or input_record.get("sha256") != source_row.get("sha256") or input_record.get("preprocessing") != source_row.get("preprocessing") or
+                    image_record.get("path") != source_row.get("image_path") or image_record.get("bytes") != source_row.get("image_bytes") or image_record.get("sha256") != source_row.get("image_sha256") or image_record.get("orig_shape") != source_row.get("orig_shape")):
+                raise PacketError("PACKAGE_SOURCE_INPUT_PROVENANCE_MISMATCH:" + str(image_record.get("image_id")))
+            image_path = (root / Path(image_record["path"])).resolve()
+            if root not in image_path.parents or not image_path.is_file() or image_path.stat().st_size != image_record["bytes"] or sha256_file(image_path) != image_record["sha256"]:
+                raise PacketError("PACKAGE_IMAGE_FILE_BINDING_MISMATCH:" + str(image_record.get("image_id")))
+            relative_image = image_path.relative_to(root).as_posix()
+            if not any(isinstance(item, Mapping) and item.get("path") == relative_image and item.get("bytes") == image_record["bytes"] and item.get("sha256") == image_record["sha256"] for item in allowed):
+                raise PacketError("PACKAGE_IMAGE_FILE_NOT_ALLOWLISTED:" + str(image_record.get("image_id")))
+    return {"status": "execution_ready" if reference_status == "verified" else "metadata_pending", "engine_private": True, "raw_tensors_private": True, "files_checked": len(allowed) if package_root is not None else 0, "image_count": len(image_ids), "source_reference_status": reference_status, "source_input_records": source_input_records, "source_reference_manifest_sha256": source_reference_manifest_sha256, "streaming_producer_verified": True}
 
 
 def stream_input_records(input_records: Iterable[Mapping[str, Any]], image_ids: Sequence[str], payload_loader: Callable[[Mapping[str, Any]], bytes]) -> Iterable[Tuple[str, bytes]]:
@@ -271,15 +317,15 @@ def stream_bound_images(image_records: Iterable[Mapping[str, Any]], image_ids: S
         raise PacketError("STREAM_IMAGE_COUNT_MISMATCH")
 
 
-def validate_reference_artifact(path: Path, *, package_root: Optional[Path] = None) -> Dict[str, Any]:
-    """Validate a source-reference artifact and bind its bytes when available."""
+def validate_reference_artifact(path: Path, *, package_root: Optional[Path] = None, allowed_files: Optional[Sequence[Mapping[str, Any]]] = None) -> Dict[str, Any]:
+    """Validate source identity, every saved output, and every input fingerprint."""
     if not path.is_file():
         raise PacketError("SOURCE_REFERENCE_MISSING:" + str(path))
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
         raise PacketError("SOURCE_REFERENCE_INVALID:" + str(path)) from exc
-    if payload.get("schema_version") != "e2l1-source-onnx-reference-v1":
+    if payload.get("schema_version") != "e2l1-source-onnx-reference-v2":
         raise PacketError("SOURCE_REFERENCE_SCHEMA_INVALID")
     status = payload.get("status")
     if status not in ("pending_not_executed", "verified"):
@@ -288,38 +334,113 @@ def validate_reference_artifact(path: Path, *, package_root: Optional[Path] = No
         raise PacketError("SOURCE_REFERENCE_ONNX_MISMATCH")
     if status == "pending_not_executed" and payload.get("executed_image_passes") != 0:
         raise PacketError("SOURCE_REFERENCE_PENDING_COUNTER_INVALID")
+    source_inputs: Dict[str, Dict[str, Any]] = {}
     if status == "verified":
-        if payload.get("executed_image_passes") != DEV_IMAGES or payload.get("model_forward") is not True:
+        test_only = payload.get("test_only") is True
+        image_ids = payload.get("image_ids")
+        if not isinstance(image_ids, list) or len(image_ids) != len(set(image_ids)) or image_ids != [row.get("image_id") for row in payload.get("records", [])]:
+            raise PacketError("SOURCE_REFERENCE_IMAGE_MEMBERSHIP_INVALID")
+        if not test_only and (len(image_ids) != DEV_IMAGES or canonical_image_ids_digest(image_ids) != CANONICAL_DEV_IMAGE_IDS_SHA256):
+            raise PacketError("SOURCE_REFERENCE_CANONICAL_SCOPE_MISMATCH")
+        counters = payload.get("attempted_completed", {})
+        if (payload.get("executed_image_passes") != len(image_ids) or payload.get("model_forward") is not True or
+                counters.get("source_onnx_forwards_attempted") != len(image_ids) or
+                counters.get("source_onnx_forwards_completed") != len(image_ids) or
+                counters.get("native_forwards_attempted") != 0 or counters.get("native_forwards_completed") != 0):
             raise PacketError("SOURCE_REFERENCE_EXECUTION_INCOMPLETE")
-        output_path = payload.get("predictions_path")
-        output_hash = payload.get("predictions_sha256")
-        if not isinstance(output_path, str) or not isinstance(output_hash, str) or len(output_hash) != 64:
+        if payload.get("onnx_sha256_before") != SOURCE_ONNX_SHA256 or payload.get("onnx_sha256_after") != SOURCE_ONNX_SHA256 or payload.get("onnx_sha256") != SOURCE_ONNX_SHA256:
+            raise PacketError("SOURCE_REFERENCE_ONNX_AFTER_HASH_MISMATCH")
+        if payload.get("ort_session_providers") != ["CPUExecutionProvider"]:
+            raise PacketError("SOURCE_REFERENCE_ORT_PROVIDER_MISMATCH")
+        cleanup = payload.get("cleanup", {})
+        if not isinstance(cleanup, Mapping) or cleanup.get("status") not in ("completed", "not_required"):
+            raise PacketError("SOURCE_REFERENCE_CLEANUP_UNKNOWN")
+        if not isinstance(payload.get("predictions_path"), str) or not isinstance(payload.get("predictions_sha256"), str) or len(payload["predictions_sha256"]) != 64:
             raise PacketError("SOURCE_REFERENCE_OUTPUT_BINDING_MISSING")
-        if package_root is not None:
-            root = package_root.resolve()
-            relative = Path(output_path)
-            if relative.is_absolute() or ".." in relative.parts:
-                raise PacketError("SOURCE_REFERENCE_OUTPUT_PATH_INVALID")
-            output = root / relative
-            if not output.is_file() or sha256_file(output) != output_hash:
-                raise PacketError("SOURCE_REFERENCE_OUTPUT_HASH_MISMATCH")
-    return {"status": "verified" if status == "verified" else "metadata_pending", "path": str(path.resolve()), "artifact_sha256": sha256_file(path), "executed_image_passes": payload.get("executed_image_passes", 0)}
+        bundle_root = path.parent.resolve()
+        relative = Path(payload["predictions_path"])
+        if relative.is_absolute() or ".." in relative.parts:
+            raise PacketError("SOURCE_REFERENCE_OUTPUT_PATH_INVALID")
+        output = (bundle_root / relative).resolve()
+        if bundle_root not in output.parents or not output.is_file() or sha256_file(output) != payload["predictions_sha256"]:
+            raise PacketError("SOURCE_REFERENCE_OUTPUT_HASH_MISMATCH")
+        try:
+            inventory = json.loads(output.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise PacketError("SOURCE_REFERENCE_OUTPUT_INVENTORY_INVALID") from exc
+        raw_rows = inventory.get("records")
+        if not isinstance(raw_rows, list) or [row.get("image_id") for row in raw_rows] != image_ids:
+            raise PacketError("SOURCE_REFERENCE_OUTPUT_MEMBERSHIP_MISMATCH")
+        allowed = list(allowed_files) if allowed_files is not None else None
+        root = package_root.resolve() if package_root is not None else None
+        for row, raw_row in zip(payload["records"], raw_rows):
+            image_id = row["image_id"]
+            input_hash = row.get("input_sha256")
+            preprocessing = row.get("preprocessing")
+            if (not isinstance(input_hash, str) or len(input_hash) != 64 or
+                    row.get("input_bytes") != 3 * 640 * 640 * 4 or row.get("input_shape") != INPUT_SHAPE or
+                    row.get("input_dtype") != "float32" or row.get("input_byteorder") != "little" or
+                    not isinstance(preprocessing, Mapping) or not isinstance(preprocessing.get("letterbox_transform"), Mapping) or
+                    preprocessing.get("input_sha256") != input_hash or preprocessing.get("input_bytes") != row.get("input_bytes") or
+                    not isinstance(preprocessing.get("original_shape"), list) or
+                    list(preprocessing.get("original_shape", [])[:2]) != row.get("orig_shape") or
+                    not isinstance(row.get("image_sha256"), str) or len(row["image_sha256"]) != 64 or
+                    not isinstance(row.get("image_bytes"), int) or row["image_bytes"] <= 0 or
+                    not isinstance(row.get("image_path"), str) or not row["image_path"] or
+                    not isinstance(row.get("orig_shape"), list) or len(row["orig_shape"]) != 2 or
+                    any(type(value) is not int or value <= 0 for value in row["orig_shape"])):
+                raise PacketError("SOURCE_REFERENCE_INPUT_BINDING_INVALID:" + str(image_id))
+            for key in ("path", "bytes", "sha256", "image_path", "image_bytes", "image_sha256", "orig_shape", "input_sha256", "input_bytes", "input_shape", "input_dtype", "input_byteorder", "preprocessing"):
+                if raw_row.get(key) != row.get(key):
+                    raise PacketError("SOURCE_REFERENCE_OUTPUT_INVENTORY_BINDING_MISMATCH:" + str(image_id))
+            raw_relative = Path(str(row.get("path", "")))
+            if raw_relative.is_absolute() or not raw_relative.parts or ".." in raw_relative.parts:
+                raise PacketError("SOURCE_REFERENCE_RAW_PATH_INVALID:" + str(image_id))
+            raw_output = (bundle_root / raw_relative).resolve()
+            if bundle_root not in raw_output.parents or not raw_output.is_file() or raw_output.stat().st_size != row.get("bytes") or sha256_file(raw_output) != row.get("sha256"):
+                raise PacketError("SOURCE_REFERENCE_RAW_HASH_MISMATCH:" + str(image_id))
+            if root is not None:
+                if root not in raw_output.parents:
+                    raise PacketError("SOURCE_REFERENCE_PACKAGE_BINDING_MISSING")
+                if allowed is not None:
+                    package_relative = raw_output.relative_to(root).as_posix()
+                    if not any(isinstance(item, Mapping) and item.get("path") == package_relative and item.get("bytes") == raw_output.stat().st_size and item.get("sha256") == row.get("sha256") for item in allowed):
+                        raise PacketError("SOURCE_REFERENCE_RAW_FILE_NOT_ALLOWLISTED:" + str(image_id))
+                    output_relative = output.relative_to(root).as_posix()
+                    if not any(isinstance(item, Mapping) and item.get("path") == output_relative and item.get("bytes") == output.stat().st_size and item.get("sha256") == payload["predictions_sha256"] for item in allowed):
+                        raise PacketError("SOURCE_REFERENCE_INVENTORY_NOT_ALLOWLISTED")
+            source_inputs[image_id] = {"sha256": input_hash, "preprocessing": preprocessing, "image_path": row["image_path"], "image_sha256": row["image_sha256"], "image_bytes": row["image_bytes"], "orig_shape": row["orig_shape"]}
+        if test_only:
+            status_result = "test_fixture_verified"
+        else:
+            status_result = "verified"
+    else:
+        status_result = "metadata_pending"
+    return {"status": status_result, "path": str(path.resolve()), "artifact_sha256": sha256_file(path), "predictions_sha256": payload.get("predictions_sha256"), "executed_image_passes": payload.get("executed_image_passes", 0), "test_only": payload.get("test_only", False), "image_ids": payload.get("image_ids", []), "source_input_records": source_inputs}
 
 
 def _letterbox_to_original(box: Sequence[float], record: Mapping[str, Any]) -> List[float]:
     shape = record.get("orig_shape")
     if not isinstance(shape, Sequence) or len(shape) != 2:
         raise PacketError("POSTPROCESS_ORIGINAL_SHAPE_MISSING:" + str(record.get("image_id", record.get("image"))))
-    height, width = int(shape[0]), int(shape[1])
-    resized = record.get("resized_shape", [640, 640])
-    if not isinstance(resized, Sequence) or len(resized) != 2:
-        raise PacketError("POSTPROCESS_RESIZED_SHAPE_INVALID")
-    resized_h, resized_w = float(resized[0]), float(resized[1])
-    scale = min(resized_w / width, resized_h / height)
-    pad_x = (640.0 - resized_w) / 2.0
-    pad_y = (640.0 - resized_h) / 2.0
-    values = [(float(box[0]) - pad_x) / scale, (float(box[1]) - pad_y) / scale, (float(box[2]) - pad_x) / scale, (float(box[3]) - pad_y) / scale]
-    return [max(0.0, min(float(width), values[0])), max(0.0, min(float(height), values[1])), max(0.0, min(float(width), values[2])), max(0.0, min(float(height), values[3]))]
+    preprocessing = record.get("preprocessing")
+    transform = preprocessing.get("letterbox_transform") if isinstance(preprocessing, Mapping) else None
+    if not isinstance(transform, Mapping):
+        raise PacketError("POSTPROCESS_LETTERBOX_TRANSFORM_MISSING:" + str(record.get("image_id", record.get("image"))))
+    ratio, pad = transform.get("gain"), transform.get("pad")
+    if (not isinstance(ratio, Sequence) or len(ratio) != 2 or
+            not isinstance(pad, Sequence) or len(pad) != 2 or
+            any(not isinstance(value, (int, float)) or not math.isfinite(float(value)) for value in list(ratio) + list(pad)) or
+            any(float(value) <= 0 for value in ratio)):
+        raise PacketError("POSTPROCESS_LETTERBOX_TRANSFORM_INVALID")
+    try:
+        import torch
+        from ultralytics.utils.ops import scale_boxes
+    except ImportError as exc:
+        raise PacketError("POSTPROCESS_TRANSFORM_DEPENDENCY_MISSING:" + str(exc)) from exc
+    boxes = torch.tensor([list(box)], dtype=torch.float32)
+    scale_boxes((640, 640), boxes, tuple(int(value) for value in shape), ratio_pad=(tuple(float(value) for value in ratio), tuple(float(value) for value in pad)))
+    return [float(value) for value in boxes[0].tolist()]
 
 
 def postprocess_saved_outputs(raw_manifest_path: Path, raw_root: Path, image_records: Sequence[Mapping[str, Any]], out_dir: Path, *, source_label: str) -> Dict[str, Any]:
@@ -360,10 +481,14 @@ def postprocess_saved_outputs(raw_manifest_path: Path, raw_root: Path, image_rec
         for detection in detection_rows:
             if len(detection) != 6:
                 raise PacketError("POSTPROCESS_DETECTION_SHAPE_INVALID:" + str(image_id))
-            boxes.append(_letterbox_to_original(detection[:4], metadata[image_id]))
+            transform_record = dict(metadata[image_id])
+            transform_record["preprocessing"] = row.get("preprocessing")
+            if not isinstance(row.get("input_sha256"), str) or len(row["input_sha256"]) != 64:
+                raise PacketError("POSTPROCESS_INPUT_HASH_MISSING:" + str(image_id))
+            boxes.append(_letterbox_to_original(detection[:4], transform_record))
             scores.append(float(detection[4]))
             classes.append(int(detection[5]))
-        record = {"image": image_id, "orig_shape": list(metadata[image_id]["orig_shape"]), "xyxy": boxes, "confidence": scores, "class_id": classes, "raw_output_sha256": row["sha256"], "raw_output_bytes": row["bytes"], "postprocess": {"binding": binding, "input_shape": [1, 7, 8400], "input_dtype": str(tensor.dtype), "input_unchanged": True, "anchor_indexes": index_rows}}
+        record = {"image": image_id, "orig_shape": list(metadata[image_id]["orig_shape"]), "xyxy": boxes, "confidence": scores, "class_id": classes, "raw_output_sha256": row["sha256"], "raw_output_bytes": row["bytes"], "input_sha256": row["input_sha256"], "preprocessing": row["preprocessing"], "source_reference_manifest_sha256": payload.get("source_reference_manifest_sha256"), "postprocess": {"binding": binding, "input_shape": [1, 7, 8400], "input_dtype": str(tensor.dtype), "input_unchanged": True, "anchor_indexes": index_rows}}
         records.append(record)
         helper_hashes.append(sha256_bytes(json.dumps(record, sort_keys=True).encode("utf-8")))
     result = {"schema_version": "e2l1-postprocessed-records-v1", "status": "complete", "source": source_label, "records": records, "postprocess_binding": binding, "record_hashes_sha256": sha256_bytes("\n".join(helper_hashes).encode("utf-8"))}
@@ -375,7 +500,7 @@ def write_source_reference_pending(out_path: Path) -> Dict[str, Any]:
     """Publish a truthful source-reference preparation record without a forward."""
     if out_path.exists():
         raise PacketError("OUTPUT_EXISTS")
-    payload = {"schema_version": "e2l1-source-onnx-reference-v1", "status": "pending_not_executed", "source_onnx_sha256": SOURCE_ONNX_SHA256, "producer": "scripts/edge_readiness/e2_dev_evaluation_packet.py:write_source_reference_pending", "planned_image_passes": DEV_IMAGES, "executed_image_passes": 0, "model_forward": False, "cpu_evaluator": EVALUATOR_ID, "provenance_note": "The SERVER TensorRT FP16 prediction hash is retained separately and is not source-ONNX evidence."}
+    payload = {"schema_version": "e2l1-source-onnx-reference-v2", "status": "pending_not_executed", "source_onnx_sha256": SOURCE_ONNX_SHA256, "producer": "scripts/edge_readiness/e2_dev_evaluation_packet.py:write_source_reference_pending", "planned_image_passes": DEV_IMAGES, "executed_image_passes": 0, "model_forward": False, "cpu_evaluator": EVALUATOR_ID, "provenance_note": "The SERVER TensorRT FP16 prediction hash is retained separately and is not source-ONNX evidence."}
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     return payload
@@ -652,7 +777,48 @@ def _write_json_once(path: Path, payload: Mapping[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True, default=_json_default, allow_nan=False) + "\n", encoding="utf-8", newline="\n")
 
 
-def run_source_reference_stage(image_records: Sequence[Mapping[str, Any]], source_root: Path, onnx_path: Path, out_dir: Path, *, permissions: StagePermissions, runtime: Any = None, commit: str = "unknown", expected_onnx_sha256: str = SOURCE_ONNX_SHA256) -> Dict[str, Any]:
+def _validate_source_scope(image_records: Sequence[Mapping[str, Any]], *, test_only: bool) -> List[str]:
+    if not image_records:
+        raise PacketError("SOURCE_IMAGE_RECORDS_EMPTY")
+    image_ids = [str(record.get("image_id")) for record in image_records]
+    if len(set(image_ids)) != len(image_ids) or any(not value or value == "None" for value in image_ids):
+        raise PacketError("SOURCE_IMAGE_IDS_INVALID")
+    if not test_only and (len(image_ids) != DEV_IMAGES or image_ids != sorted(image_ids) or canonical_image_ids_digest(image_ids) != CANONICAL_DEV_IMAGE_IDS_SHA256):
+        raise PacketError("SOURCE_CANONICAL_SCOPE_MISMATCH")
+    if test_only and len(image_ids) > 5:
+        raise PacketError("SOURCE_TEST_FIXTURE_SCOPE_TOO_LARGE")
+    for record in image_records:
+        relative = Path(str(record.get("path", "")))
+        shape = record.get("orig_shape")
+        if relative.is_absolute() or not relative.parts or ".." in relative.parts:
+            raise PacketError("SOURCE_IMAGE_PATH_INVALID:" + str(record.get("image_id")))
+        if (not isinstance(record.get("bytes"), int) or record["bytes"] <= 0 or
+                not isinstance(record.get("sha256"), str) or len(record["sha256"]) != 64 or
+                any(char not in "0123456789abcdef" for char in record["sha256"].lower()) or
+                not isinstance(shape, list) or len(shape) != 2 or
+                any(type(value) is not int or value <= 0 for value in shape)):
+            raise PacketError("SOURCE_IMAGE_METADATA_INVALID:" + str(record.get("image_id")))
+    return image_ids
+
+
+def _validated_input_tensor(tensor: Any, image_id: str) -> Tuple[bytes, Dict[str, Any]]:
+    payload = bytes(getattr(tensor, "payload", b""))
+    if (tuple(getattr(tensor, "shape", ())) != tuple(INPUT_SHAPE) or
+            getattr(tensor, "dtype", None) != "float32" or
+            getattr(tensor, "byteorder", None) != "little" or
+            len(payload) != 3 * 640 * 640 * 4 or
+            getattr(tensor, "finite", False) is not True):
+        raise PacketError("SOURCE_PREPROCESS_CONTRACT_MISMATCH:" + image_id)
+    metadata = getattr(tensor, "metadata", None)
+    if not isinstance(metadata, Mapping) or not isinstance(metadata.get("letterbox_transform"), Mapping):
+        raise PacketError("SOURCE_PREPROCESS_METADATA_MISSING:" + image_id)
+    observed_hash = sha256_bytes(payload)
+    if metadata.get("input_sha256") != observed_hash or metadata.get("input_bytes") != len(payload):
+        raise PacketError("SOURCE_PREPROCESS_HASH_MISMATCH:" + image_id)
+    return payload, dict(metadata)
+
+
+def run_source_reference_stage(image_records: Sequence[Mapping[str, Any]], source_root: Path, onnx_path: Path, out_dir: Path, *, permissions: StagePermissions, runtime: Any = None, commit: str = "unknown", expected_onnx_sha256: str = SOURCE_ONNX_SHA256, test_only: bool = False) -> Dict[str, Any]:
     """Run the pinned ONNX CPU reference through the existing ORT boundary.
 
     This stage deliberately does not load the native PyTorch checkpoint. It
@@ -663,25 +829,45 @@ def run_source_reference_stage(image_records: Sequence[Mapping[str, Any]], sourc
         raise PacketError("SOURCE_FORWARD_NOT_AUTHORIZED")
     if out_dir.exists():
         raise PacketError("OUTPUT_EXISTS:" + str(out_dir))
-    if not image_records:
-        raise PacketError("SOURCE_IMAGE_RECORDS_EMPTY")
-    expected_ids = [str(record.get("image_id")) for record in image_records]
+    expected_ids = _validate_source_scope(image_records, test_only=test_only)
     out_dir.mkdir(parents=True)
     private = out_dir / "private"
     onnx_dir = private / "onnx_reference"
     onnx_dir.mkdir(parents=True)
-    counters = {"source_onnx_forwards_attempted": 0, "source_onnx_forwards_completed": 0, "native_forwards_attempted": 0, "native_forwards_completed": 0}
+    counters = {"source_preprocess_attempted": 0, "source_preprocess_completed": 0, "source_onnx_forwards_attempted": 0, "source_onnx_forwards_completed": 0, "native_forwards_attempted": 0, "native_forwards_completed": 0}
     events: List[Dict[str, Any]] = []
     rows: List[Dict[str, Any]] = []
     runtime = runtime
     cleanup: Dict[str, Any] = {"status": "not_started"}
     error: Optional[Dict[str, Any]] = None
+    status = "failed_partial"
+    ort_session = None
+    onnx_sha256_before: Optional[str] = None
+    onnx_sha256_after: Optional[str] = None
+    ort_session_providers: List[str] = []
     try:
         if not onnx_path.is_file():
             raise PacketError("SOURCE_ONNX_MISSING:" + str(onnx_path))
-        onnx_sha256 = sha256_file(onnx_path)
-        if onnx_sha256 != expected_onnx_sha256:
-            raise PacketError("SOURCE_ONNX_HASH_MISMATCH:" + onnx_sha256)
+        onnx_sha256_before = sha256_file(onnx_path)
+        if onnx_sha256_before != expected_onnx_sha256:
+            raise PacketError("SOURCE_ONNX_HASH_MISMATCH:" + onnx_sha256_before)
+
+        # Validate the complete source scope and each decoded image shape
+        # before opening the ONNX session or issuing the first ORT call.
+        from edge_readiness.e2_image_preprocess import ImagePreprocessError, inspect_image_bytes
+        for record in image_records:
+            image_id = str(record["image_id"])
+            path = source_root / str(record["path"])
+            image_bytes = path.read_bytes()
+            if len(image_bytes) != record["bytes"] or sha256_bytes(image_bytes) != record["sha256"]:
+                raise PacketError("SOURCE_IMAGE_HASH_MISMATCH:" + image_id)
+            try:
+                decoded = inspect_image_bytes(image_bytes, image_id=image_id)
+            except ImagePreprocessError as exc:
+                raise PacketError(str(exc)) from exc
+            if decoded["orig_shape"] != record["orig_shape"]:
+                raise PacketError("SOURCE_IMAGE_SHAPE_MISMATCH:" + image_id)
+
         if runtime is None:
             from edge_readiness.e2_source_bundle import UltralyticsSourceRuntime
             runtime = UltralyticsSourceRuntime()
@@ -690,24 +876,39 @@ def run_source_reference_stage(image_records: Sequence[Mapping[str, Any]], sourc
         ort_session = runtime.open_ort(onnx_path)
         if list(environment.get("ort_providers_required", [])) != ["CPUExecutionProvider"]:
             raise PacketError("SOURCE_ORT_PROVIDER_POLICY_MISMATCH")
+        if not hasattr(ort_session, "get_providers"):
+            raise PacketError("SOURCE_ORT_SESSION_PROVIDER_UNAVAILABLE")
+        ort_session_providers = list(ort_session.get_providers())
+        if ort_session_providers != ["CPUExecutionProvider"]:
+            raise PacketError("SOURCE_ORT_SESSION_PROVIDER_MISMATCH")
         for record in image_records:
-            image_id = record.get("image_id")
-            relative_image = Path(str(record.get("path")))
-            if relative_image.is_absolute() or ".." in relative_image.parts:
-                raise PacketError("SOURCE_IMAGE_PATH_INVALID:" + str(image_id))
-            image_path = source_root / relative_image
+            image_id = str(record["image_id"])
+            image_path = source_root / str(record["path"])
             image_bytes = image_path.read_bytes()
-            if not isinstance(record.get("bytes"), int) or len(image_bytes) != record["bytes"] or sha256_bytes(image_bytes) != record.get("sha256"):
-                raise PacketError("SOURCE_IMAGE_HASH_MISMATCH:" + str(image_id))
+            if len(image_bytes) != record["bytes"] or sha256_bytes(image_bytes) != record["sha256"]:
+                raise PacketError("SOURCE_IMAGE_CHANGED_AFTER_PREFLIGHT:" + image_id)
+            counters["source_preprocess_attempted"] += 1
+            if hasattr(runtime, "preprocess_bytes"):
+                tensor = runtime.preprocess_bytes(image_bytes, image_id=image_id)
+            elif hasattr(runtime, "preprocess"):
+                tensor = runtime.preprocess(image_path)
+            else:
+                from edge_readiness.e2_image_preprocess import preprocess_image_bytes
+                tensor = preprocess_image_bytes(image_bytes, image_id=image_id)
+            input_payload, preprocessing = _validated_input_tensor(tensor, image_id)
+            if preprocessing.get("original_shape", [])[:2] != record["orig_shape"]:
+                raise PacketError("SOURCE_PREPROCESS_SHAPE_BINDING_MISMATCH:" + image_id)
+            counters["source_preprocess_completed"] += 1
+            input_hash = sha256_bytes(input_payload)
+            events.append({"event": "source_input_bound", "image_id": image_id, "input_sha256": input_hash, "preprocessing": preprocessing})
             counters["source_onnx_forwards_attempted"] += 1
             events.append({"event": "source_onnx_forward_attempted", "image_id": image_id})
-            tensor = runtime.preprocess(image_path)
             output = runtime.ort_forward(ort_session, tensor)
             payload = bytes(output.payload)
             validate_output_payload(payload)
             output_path = onnx_dir / (str(image_id) + ".bin")
             output_path.write_bytes(payload)
-            rows.append({"image_id": image_id, "path": str(output_path.relative_to(out_dir).as_posix()), "bytes": len(payload), "sha256": sha256_bytes(payload), "shape": list(getattr(output, "shape", (1, 7, 8400))), "dtype": getattr(output, "dtype", "float32")})
+            rows.append({"image_id": image_id, "image_path": str(record["path"]), "image_bytes": record["bytes"], "image_sha256": record["sha256"], "orig_shape": record["orig_shape"], "input_sha256": input_hash, "input_bytes": len(input_payload), "input_shape": list(INPUT_SHAPE), "input_dtype": "float32", "input_byteorder": "little", "preprocessing": preprocessing, "path": str(output_path.relative_to(out_dir).as_posix()), "bytes": len(payload), "sha256": sha256_bytes(payload), "shape": list(getattr(output, "shape", (1, 7, 8400))), "dtype": getattr(output, "dtype", "float32")})
             counters["source_onnx_forwards_completed"] += 1
             events.append({"event": "source_onnx_forward_completed", "image_id": image_id, "sha256": sha256_bytes(payload)})
         status = "complete"
@@ -716,6 +917,19 @@ def run_source_reference_stage(image_records: Sequence[Mapping[str, Any]], sourc
         error = {"code": type(exc).__name__, "message": str(exc)}
         events.append({"event": "source_failed", "error": error})
     finally:
+        ort_session = None
+        if onnx_path.is_file():
+            try:
+                onnx_sha256_after = sha256_file(onnx_path)
+                if onnx_sha256_before is not None and onnx_sha256_after != onnx_sha256_before:
+                    status = "failed_partial"
+                    error = error or {"code": "SOURCE_ONNX_CHANGED_DURING_RUN", "message": "ONNX bytes changed between before/after hashes"}
+            except OSError as exc:
+                status = "failed_partial"
+                error = error or {"code": "SOURCE_ONNX_AFTER_HASH_FAILED", "message": str(exc)}
+        else:
+            status = "failed_partial"
+            error = error or {"code": "SOURCE_ONNX_MISSING_AFTER_RUN", "message": "ONNX file disappeared during source reference stage"}
         if runtime is not None and hasattr(runtime, "close"):
             try:
                 runtime.close()
@@ -727,13 +941,13 @@ def run_source_reference_stage(image_records: Sequence[Mapping[str, Any]], sourc
         else:
             cleanup = {"status": "not_required"}
     predictions_path = out_dir / "public/raw_predictions.json"
-    prediction_payload = {"schema_version": "e2l1-raw-output-inventory-v1", "source": "onnx_cpu", "source_onnx_sha256": expected_onnx_sha256, "records": rows}
+    prediction_payload = {"schema_version": "e2l1-raw-output-inventory-v2", "source": "onnx_cpu", "source_onnx_sha256": expected_onnx_sha256, "records": rows}
     predictions_hash = None
     if status == "complete":
         predictions_path.parent.mkdir(parents=True, exist_ok=True)
         predictions_path.write_text(json.dumps(prediction_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
         predictions_hash = sha256_file(predictions_path)
-    manifest = {"schema_version": "e2l1-source-onnx-reference-v1", "status": "verified" if status == "complete" else status, "real_device_execution": False, "commit": commit, "source_onnx_sha256": expected_onnx_sha256, "onnx_sha256": onnx_sha256 if 'onnx_sha256' in locals() else None, "onnx_contract": onnx_contract if 'onnx_contract' in locals() else None, "image_ids": expected_ids, "records": rows, "attempted_completed": counters, "executed_image_passes": counters["source_onnx_forwards_completed"], "environment": environment if 'environment' in locals() else None, "cleanup": cleanup, "model_forward": status == "complete", "native_model_forward": False, "predictions_path": str(predictions_path.relative_to(out_dir).as_posix()), "predictions_sha256": predictions_hash, "error": error}
+    manifest = {"schema_version": "e2l1-source-onnx-reference-v2", "status": "verified" if status == "complete" else status, "real_device_execution": False, "test_only": bool(test_only), "scope": "test_fixture" if test_only else "canonical_dev", "commit": commit, "source_onnx_sha256": expected_onnx_sha256, "onnx_sha256": onnx_sha256_after, "onnx_sha256_before": onnx_sha256_before, "onnx_sha256_after": onnx_sha256_after, "onnx_contract": onnx_contract if 'onnx_contract' in locals() else None, "ort_session_providers": ort_session_providers, "image_ids": expected_ids, "records": rows, "attempted_completed": counters, "executed_image_passes": counters["source_onnx_forwards_completed"], "environment": environment if 'environment' in locals() else None, "cleanup": cleanup, "model_forward": status == "complete", "native_model_forward": False, "predictions_path": str(predictions_path.relative_to(out_dir).as_posix()), "predictions_sha256": predictions_hash, "error": error}
     _write_json_once(out_dir / "manifest.json", manifest)
     _write_json_once(out_dir / "index.json", {"schema_version": "e2l1-source-reference-index-v2", "status": status, "public_artifacts": ["manifest.json", "index.json"], "private_policy": "raw source output tensors remain under private/"})
     (out_dir / "events.jsonl").write_text("".join(json.dumps(event, sort_keys=True) + "\n" for event in events), encoding="utf-8", newline="\n")
@@ -794,37 +1008,55 @@ class ImageStreamSource:
     root: Path
     synthetic_inputs: Optional[Dict[str, bytes]] = None
     synthetic_image_bytes: Optional[Dict[str, bytes]] = None
+    source_input_records: Optional[Dict[str, Mapping[str, Any]]] = None
+    source_reference_manifest_sha256: Optional[str] = None
 
-    def iter_inputs(self, image_ids: Sequence[str]) -> Iterable[Tuple[str, bytes]]:
+    def iter_inputs(self, image_ids: Sequence[str], event_sink: Optional[Callable[[Mapping[str, Any]], None]] = None) -> Iterable[Tuple[str, bytes, Dict[str, Any]]]:
         expected = list(image_ids)
-        if self.synthetic_inputs is not None:
-            def load(record: Mapping[str, Any]) -> bytes:
-                image_id = str(record["image_id"])
-                return (self.synthetic_image_bytes or self.synthetic_inputs)[image_id]
-            def preprocess(image_id: str, _image_bytes: bytes) -> bytes:
-                return self.synthetic_inputs[image_id]
-            yield from stream_bound_images(self.image_records, expected, load, preprocess)
-            return
-        from edge_readiness.e2_source_bundle import UltralyticsSourceRuntime
-        runtime = UltralyticsSourceRuntime()
-        runtime.prepare()
-        seen = []
+        if [record.get("image_id") for record in self.image_records] != expected:
+            raise PacketError("STREAM_IMAGE_ORDER_MISMATCH")
+        seen: List[str] = []
         for record in self.image_records:
-            image_id = record.get("image_id")
+            image_id = str(record.get("image_id"))
             if len(seen) >= len(expected) or image_id != expected[len(seen)]:
                 raise PacketError("STREAM_IMAGE_ORDER_MISMATCH")
             relative = Path(str(record.get("path")))
             if relative.is_absolute() or ".." in relative.parts:
                 raise PacketError("STREAM_IMAGE_PATH_INVALID:" + str(image_id))
-            path = self.root / relative
-            image_bytes = path.read_bytes()
+            if event_sink is not None:
+                event_sink({"event": "image_attempt_started", "image_id": image_id})
+            if self.synthetic_inputs is not None:
+                image_bytes = (self.synthetic_image_bytes or self.synthetic_inputs)[image_id]
+            else:
+                image_bytes = (self.root / relative).read_bytes()
             if len(image_bytes) != record.get("bytes") or sha256_bytes(image_bytes) != record.get("sha256"):
                 raise PacketError("STREAM_IMAGE_HASH_MISMATCH:" + str(image_id))
-            tensor = runtime.preprocess(path)
-            if tensor.shape != (1, 3, 640, 640) or tensor.dtype != "float32" or tensor.byteorder != "little" or len(tensor.payload) != 3 * 640 * 640 * 4 or not tensor.finite:
+            if self.synthetic_inputs is not None:
+                tensor_bytes = bytes(self.synthetic_inputs[image_id])
+                preprocessing = record.get("preprocessing")
+                if not isinstance(preprocessing, Mapping):
+                    raise PacketError("STREAM_PREPROCESS_METADATA_MISSING:" + image_id)
+            else:
+                from edge_readiness.e2_image_preprocess import ImagePreprocessError, preprocess_image_bytes
+                try:
+                    tensor = preprocess_image_bytes(image_bytes, image_id=image_id)
+                except ImagePreprocessError as exc:
+                    raise PacketError(str(exc)) from exc
+                tensor_bytes = bytes(tensor.payload)
+                preprocessing = tensor.metadata
+            if (len(tensor_bytes) != 3 * 640 * 640 * 4 or
+                    preprocessing.get("input_sha256") != sha256_bytes(tensor_bytes) or
+                    preprocessing.get("input_bytes") != len(tensor_bytes)):
                 raise PacketError("STREAM_PREPROCESS_CONTRACT_MISMATCH:" + str(image_id))
+            if list(preprocessing.get("original_shape", [])[:2]) != record.get("orig_shape"):
+                raise PacketError("STREAM_IMAGE_SHAPE_MISMATCH:" + str(image_id))
+            source_input = (self.source_input_records or {}).get(image_id)
+            if self.source_input_records is not None and (not isinstance(source_input, Mapping) or source_input.get("sha256") != sha256_bytes(tensor_bytes) or source_input.get("preprocessing") != preprocessing):
+                raise PacketError("STREAM_SOURCE_INPUT_MISMATCH:" + str(image_id))
+            if event_sink is not None:
+                event_sink({"event": "image_input_ready", "image_id": image_id, "input_sha256": sha256_bytes(tensor_bytes), "preprocessing": dict(preprocessing)})
             seen.append(image_id)
-            yield image_id, bytes(tensor.payload)
+            yield image_id, tensor_bytes, dict(preprocessing)
         if seen != expected:
             raise PacketError("STREAM_IMAGE_COUNT_MISMATCH")
 
@@ -834,10 +1066,14 @@ def _target_stage_child_main(image_ids: List[str], image_source: ImageStreamSour
     result_path = Path(result_name)
     private_root = result_path.parent / "private" / "target_reference"
     private_root.mkdir(parents=True, exist_ok=True)
-    counters = {"engine_load_attempted": 0, "engine_load_completed": 0, "target_calls_attempted": 0, "target_calls_completed": 0, "output_copies_completed": 0, "unknown_completions": []}
+    counters = {"engine_load_attempted": 0, "engine_load_completed": 0, "image_inputs_attempted": 0, "image_inputs_completed": 0, "target_calls_attempted": 0, "target_calls_completed": 0, "output_copies_completed": 0, "unknown_completions": []}
     rows: List[Dict[str, Any]] = []
-    result: Dict[str, Any] = {"status": "failed_partial", "counters": counters, "records": rows, "no_retry": True}
-    primary_error: Optional[Dict[str, Any]] = None
+    result: Dict[str, Any] = {"status": "failed_partial", "counters": counters, "records": rows, "no_retry": True, "source_reference_manifest_sha256": image_source.source_reference_manifest_sha256}
+    active_image: Optional[str] = None
+    active_phase: Optional[str] = None
+    if os.name != "nt" and bool(getattr(runtime, "ignore_terminate", False)):
+        import signal
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
     _append_event(events_path, {"event": "child_started", "image_count": len(image_ids), "mock_only": bool(getattr(runtime, "mock_only", False)), "counters": dict(counters), "utc": _utc()})
     try:
         counters["engine_load_attempted"] = 1
@@ -845,8 +1081,24 @@ def _target_stage_child_main(image_ids: List[str], image_source: ImageStreamSour
         runtime.load_engine()
         counters["engine_load_completed"] = 1
         _append_event(events_path, {"event": "engine_load_completed", "counters": dict(counters), "utc": _utc()})
-        for image_id, input_bytes in image_source.iter_inputs(image_ids):
+        image_rows = {str(row.get("image_id")): row for row in image_source.image_records}
+        def stream_event(event: Mapping[str, Any]) -> None:
+            nonlocal active_image, active_phase
+            row = dict(event)
+            if row.get("event") == "image_attempt_started":
+                active_image = str(row.get("image_id"))
+                active_phase = "image_preprocess"
+                counters["image_inputs_attempted"] += 1
+            elif row.get("event") == "image_input_ready":
+                counters["image_inputs_completed"] += 1
+                active_phase = "target_call"
+            row["counters"] = dict(counters)
+            row["utc"] = _utc()
+            _append_event(events_path, row)
+        for image_id, input_bytes, preprocessing in image_source.iter_inputs(image_ids, event_sink=stream_event):
             counters["target_calls_attempted"] += 1
+            active_image = image_id
+            active_phase = "target_call"
             _append_event(events_path, {"event": "target_call_attempted", "image_id": image_id, "counters": dict(counters), "utc": _utc()})
             output = runtime.enqueue(image_id, input_bytes)
             counters["target_calls_completed"] += 1
@@ -855,14 +1107,19 @@ def _target_stage_child_main(image_ids: List[str], image_source: ImageStreamSour
             counters["output_copies_completed"] += 1
             output_path = private_root / (image_id + ".bin")
             output_path.write_bytes(copied)
-            rows.append({"image_id": image_id, "path": str(output_path.relative_to(result_path.parent).as_posix()), "bytes": len(copied), "sha256": sha256_bytes(copied), "payload": copied})
-            _append_event(events_path, {"event": "target_call_completed", "image_id": image_id, "counters": dict(counters), "sha256": sha256_bytes(copied), "utc": _utc()})
+            image_record = image_rows[image_id]
+            record = {"image_id": image_id, "image_path": image_record.get("path"), "image_bytes": image_record.get("bytes"), "image_sha256": image_record.get("sha256"), "orig_shape": image_record.get("orig_shape"), "input_sha256": sha256_bytes(input_bytes), "input_bytes": len(input_bytes), "input_shape": list(INPUT_SHAPE), "input_dtype": "float32", "input_byteorder": "little", "preprocessing": preprocessing, "source_input_sha256": (image_source.source_input_records or {}).get(image_id, {}).get("sha256"), "source_reference_manifest_sha256": image_source.source_reference_manifest_sha256, "path": str(output_path.relative_to(result_path.parent).as_posix()), "bytes": len(copied), "sha256": sha256_bytes(copied), "shape": [1, 7, 8400], "dtype": "float32"}
+            rows.append(dict(record, payload=copied))
+            active_image = None
+            active_phase = None
+            _append_event(events_path, {"event": "target_call_completed", "image_id": image_id, "counters": dict(counters), "record": record, "utc": _utc()})
         result["status"] = "complete"
     except Exception as exc:
-        primary_error = {"code": type(exc).__name__, "message": str(exc)}
-        counters["unknown_completions"].append("target_call:" + str(counters["target_calls_attempted"]))
-        result["error"] = primary_error
-        _append_event(events_path, {"event": "child_failed", "error": primary_error, "counters": dict(counters), "utc": _utc()})
+        error = {"code": type(exc).__name__, "message": str(exc)}
+        if active_phase == "target_call" and counters["target_calls_attempted"] > counters["target_calls_completed"]:
+            counters["unknown_completions"].append("target_call:" + str(active_image))
+        result["error"] = error
+        _append_event(events_path, {"event": "child_failed", "image_id": active_image, "phase": active_phase, "error": error, "counters": dict(counters), "utc": _utc()})
     finally:
         try:
             runtime.close()
@@ -874,24 +1131,105 @@ def _target_stage_child_main(image_ids: List[str], image_source: ImageStreamSour
             _append_event(events_path, {"event": "cleanup_failed", "error": cleanup["error"], "counters": dict(counters), "utc": _utc()})
         result["counters"] = counters
         result["records"] = [{key: value for key, value in row.items() if key != "payload"} for row in rows]
-        result["private_payloads"] = {row["image_id"]: row["payload"] for row in rows}
         result["cleanup"] = cleanup
         result["durable_cleanup_known"] = True
         result["real_device_execution"] = not bool(getattr(runtime, "mock_only", False))
-        result_path.write_bytes(json.dumps({key: value for key, value in result.items() if key != "private_payloads"}, sort_keys=True, default=_json_default).encode("utf-8"))
+        result_path.write_bytes(json.dumps(result, sort_keys=True, default=_json_default).encode("utf-8"))
+        if bool(getattr(runtime, "exit_after_result", False)):
+            os._exit(int(getattr(runtime, "exit_after_result", 17)) if type(getattr(runtime, "exit_after_result", False)) is int else 17)
         _append_event(events_path, {"event": "child_finalized", "status": result["status"], "cleanup": cleanup, "counters": dict(counters), "utc": _utc()})
 
 
-def run_target_execution_stage(input_records: Sequence[Mapping[str, Any]], image_ids: Sequence[str], input_loader: Optional[Callable[[Mapping[str, Any]], bytes]], runtime: Any, out_dir: Path, *, permissions: StagePermissions, image_source: Optional[ImageStreamSource] = None, timeout_seconds: float = 30.0, inventory: Optional[Mapping[str, Any]] = None, package_root: Optional[Path] = None, require_execution_ready: bool = False) -> Dict[str, Any]:
+def _durable_events(path: Path) -> List[Dict[str, Any]]:
+    if not path.is_file():
+        return []
+    events = []
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            value = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(value, Mapping):
+            events.append(dict(value))
+    return events
+
+
+def _event_partial_state(events: Sequence[Mapping[str, Any]], expected_ids: Sequence[str]) -> Dict[str, Any]:
+    counters = {"engine_load_attempted": 0, "engine_load_completed": 0, "image_inputs_attempted": 0, "image_inputs_completed": 0, "target_calls_attempted": 0, "target_calls_completed": 0, "output_copies_completed": 0, "unknown_completions": []}
+    completed_records: Dict[str, Dict[str, Any]] = {}
+    active_image = None
+    active_since_ns = None
+    active_phase = None
+    for event in events:
+        if isinstance(event.get("counters"), Mapping):
+            counters.update(dict(event["counters"]))
+        kind = event.get("event")
+        if kind == "image_attempt_started":
+            active_image = event.get("image_id")
+            active_since_ns = event.get("monotonic_ns")
+            active_phase = "image_preprocess"
+        elif kind == "image_input_ready":
+            active_phase = "target_call"
+        elif kind == "target_call_attempted":
+            active_image = event.get("image_id")
+            if active_since_ns is None:
+                active_since_ns = event.get("monotonic_ns")
+            active_phase = "target_call"
+        elif kind == "target_call_completed":
+            if isinstance(event.get("record"), Mapping):
+                completed_records[str(event.get("image_id"))] = dict(event["record"])
+            if active_image == event.get("image_id"):
+                active_image = None
+                active_since_ns = None
+                active_phase = None
+    if active_image is not None:
+        unknown = list(counters.get("unknown_completions", []))
+        if active_phase == "target_call" and int(counters.get("target_calls_attempted", 0)) > int(counters.get("target_calls_completed", 0)):
+            unknown.append("target_call:" + str(active_image))
+        elif active_phase == "image_preprocess":
+            unknown.append("image_preprocess:" + str(active_image))
+        counters["unknown_completions"] = sorted(set(unknown))
+    ordered_records = [completed_records[image_id] for image_id in expected_ids if image_id in completed_records]
+    return {"counters": counters, "records": ordered_records, "active_image": active_image, "active_since_ns": active_since_ns, "active_phase": active_phase}
+
+
+def _terminate_and_reap(process: Any, grace_seconds: float) -> Dict[str, Any]:
+    termination = {"terminate_requested": False, "kill_escalated": False, "alive_after_grace": False, "reaped": False, "exit_code": None}
+    if process.is_alive():
+        termination["terminate_requested"] = True
+        try:
+            process.terminate()
+        except Exception as exc:
+            termination["terminate_error"] = {"code": type(exc).__name__, "message": str(exc)}
+        process.join(grace_seconds)
+    if process.is_alive():
+        termination["alive_after_grace"] = True
+        if hasattr(process, "kill"):
+            termination["kill_escalated"] = True
+            try:
+                process.kill()
+            except Exception as exc:
+                termination["kill_error"] = {"code": type(exc).__name__, "message": str(exc)}
+            process.join(grace_seconds)
+    termination["reaped"] = not process.is_alive()
+    termination["exit_code"] = process.exitcode
+    return termination
+
+
+def run_target_execution_stage(input_records: Sequence[Mapping[str, Any]], image_ids: Sequence[str], input_loader: Optional[Callable[[Mapping[str, Any]], bytes]], runtime: Any, out_dir: Path, *, permissions: StagePermissions, image_source: Optional[ImageStreamSource] = None, stage_timeout_seconds: Optional[float] = None, per_image_timeout_seconds: Optional[float] = None, termination_grace_seconds: float = 2.0, inventory: Optional[Mapping[str, Any]] = None, package_root: Optional[Path] = None, require_execution_ready: bool = False) -> Dict[str, Any]:
     """Parent-side target stage with mandatory bounded child and durable events."""
     if not permissions.allow_target_inference:
         raise PacketError("TARGET_INFERENCE_NOT_AUTHORIZED")
     if out_dir.exists():
         raise PacketError("OUTPUT_EXISTS:" + str(out_dir))
+    validation = None
     if inventory is not None:
         validation = validate_package_inventory(inventory, package_root)
         if require_execution_ready and validation["status"] != "execution_ready":
             raise PacketError("PACKAGE_NOT_EXECUTION_READY")
+        if require_execution_ready and image_source is not None:
+            if image_source.source_input_records != validation.get("source_input_records") or image_source.source_reference_manifest_sha256 != validation.get("source_reference_manifest_sha256"):
+                raise PacketError("TARGET_SOURCE_REFERENCE_NOT_BOUND")
     if image_source is None:
         if input_loader is None:
             raise PacketError("IMAGE_STREAM_SOURCE_REQUIRED")
@@ -902,25 +1240,104 @@ def run_target_execution_stage(input_records: Sequence[Mapping[str, Any]], image
     out_dir.mkdir(parents=True)
     events_path = out_dir / "events.jsonl"
     child_result = out_dir / "child_result.json"
+    resource_contract = study_contract()["resource_requirements"]
+    stage_timeout_seconds = float(resource_contract["stage_timeout_seconds"] if stage_timeout_seconds is None else stage_timeout_seconds)
+    per_image_timeout_seconds = float(resource_contract["timeout_per_image_seconds"] if per_image_timeout_seconds is None else per_image_timeout_seconds)
+    if (not math.isfinite(stage_timeout_seconds) or not math.isfinite(per_image_timeout_seconds) or
+            not math.isfinite(termination_grace_seconds) or stage_timeout_seconds <= 0 or
+            per_image_timeout_seconds <= 0 or termination_grace_seconds <= 0 or
+            stage_timeout_seconds > float(resource_contract["stage_timeout_seconds"]) or
+            per_image_timeout_seconds > float(resource_contract["timeout_per_image_seconds"])):
+        raise PacketError("TARGET_DEADLINE_INVALID")
     process = multiprocessing.get_context("spawn").Process(target=_target_stage_child_main, args=(list(image_ids), image_source, runtime, str(events_path), str(child_result)))
     process.start()
-    process.join(timeout_seconds)
-    timed_out = process.is_alive()
-    if timed_out:
-        process.terminate()
-        process.join(2.0)
-    if timed_out:
-        result = {"status": "failed_partial", "real_device_execution": not bool(getattr(runtime, "mock_only", False)), "error": {"code": "STAGE_TIMEOUT", "message": "target child exceeded bounded timeout"}, "unknown_completion_state": "unknown", "no_retry": True}
+    stage_started = time.monotonic()
+    timeout_code = None
+    latest_events: List[Dict[str, Any]] = []
+    while process.is_alive():
+        process.join(0.05)
+        latest_events = _durable_events(events_path)
+        partial = _event_partial_state(latest_events, image_ids)
+        if partial["active_since_ns"] is not None and time.monotonic_ns() - int(partial["active_since_ns"]) >= per_image_timeout_seconds * 1_000_000_000:
+            timeout_code = "IMAGE_TIMEOUT"
+            break
+        if time.monotonic() - stage_started >= stage_timeout_seconds:
+            timeout_code = "STAGE_TIMEOUT"
+            break
+    latest_events = _durable_events(events_path)
+    termination = _terminate_and_reap(process, termination_grace_seconds) if timeout_code else {"terminate_requested": False, "kill_escalated": False, "alive_after_grace": False, "reaped": not process.is_alive(), "exit_code": process.exitcode}
+    if timeout_code:
+        # TERM handlers may flush one last event before exiting. Re-read only
+        # after the bounded terminate/kill/reap sequence so partial evidence
+        # includes every event that made it to durable storage.
+        latest_events = _durable_events(events_path)
+    partial = _event_partial_state(latest_events, image_ids)
+    if timeout_code:
+        result = {"schema_version": "e2l1-target-reference-v4", "status": "failed_partial", "real_device_execution": not bool(getattr(runtime, "mock_only", False)), "error": {"code": timeout_code, "message": "bounded target stage or per-image deadline expired"}, "counters": partial["counters"], "records": partial["records"], "unknown_completion_state": "unknown", "cleanup": {"status": "unknown_after_process_termination"}, "durable_cleanup_known": False, "termination": termination, "no_retry": True, "source_reference_manifest_sha256": image_source.source_reference_manifest_sha256}
     elif child_result.is_file():
-        result = json.loads(child_result.read_text(encoding="utf-8"))
-        result.pop("private_payloads", None)
+        try:
+            child_payload = json.loads(child_result.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            child_payload = None
+            result = {"status": "failed_partial", "error": {"code": "CHILD_RESULT_INVALID", "message": str(exc)}, "counters": partial["counters"], "records": partial["records"], "unknown_completion_state": "unknown", "no_retry": True}
+        if child_payload is not None:
+            result = child_payload
+            result["termination"] = termination
+            result["records"] = result.get("records", partial["records"])
+            if process.exitcode != 0:
+                result.update({"status": "failed_partial", "error": {"code": "CHILD_EXIT_NONZERO_WITH_RESULT", "message": "child produced a result then exited abnormally", "details": {"exit_code": process.exitcode}}, "unknown_completion_state": "unknown", "durable_cleanup_known": False})
+            elif result.get("durable_cleanup_known") is not True or not isinstance(result.get("cleanup"), Mapping) or result["cleanup"].get("status") != "completed":
+                result.update({"status": "failed_partial", "error": {"code": "CHILD_CLEANUP_NOT_CONFIRMED", "message": "complete target evidence requires successful recorded cleanup"}, "unknown_completion_state": "unknown"})
+            elif result.get("status") == "complete":
+                finalized = [event for event in latest_events if event.get("event") == "child_finalized"]
+                counters = result.get("counters", {})
+                rows = result.get("records", [])
+                if (not finalized or finalized[-1].get("status") != "complete" or
+                        not latest_events or latest_events[-1].get("event") != "child_finalized" or
+                        counters.get("target_calls_attempted") != len(image_ids) or counters.get("target_calls_completed") != len(image_ids) or
+                        counters.get("output_copies_completed") != len(image_ids) or counters.get("image_inputs_completed") != len(image_ids) or
+                        [row.get("image_id") for row in rows] != list(image_ids)):
+                    result.update({"status": "failed_partial", "error": {"code": "TARGET_TERMINAL_EVIDENCE_INCOMPLETE", "message": "child completion lacks matching terminal event, counters or inventory"}, "unknown_completion_state": "unknown"})
+                else:
+                    for row in rows:
+                        relative_raw_path = Path(str(row.get("path", "")))
+                        raw_path = (out_dir / relative_raw_path).resolve()
+                        if relative_raw_path.is_absolute() or ".." in relative_raw_path.parts or out_dir.resolve() not in raw_path.parents:
+                            result.update({"status": "failed_partial", "error": {"code": "TARGET_ARTIFACT_PATH_INVALID", "message": "target row output path escapes attempt root", "details": {"image_id": row.get("image_id")}}, "unknown_completion_state": "unknown"})
+                            break
+                        expected_input = (image_source.source_input_records or {}).get(row.get("image_id"))
+                        source_image = next((item for item in image_source.image_records if item.get("image_id") == row.get("image_id")), None)
+                        input_binding_ok = (
+                            isinstance(row.get("input_sha256"), str) and len(row["input_sha256"]) == 64 and
+                            row.get("input_bytes") == 3 * 640 * 640 * 4 and row.get("input_shape") == INPUT_SHAPE and
+                            row.get("input_dtype") == "float32" and row.get("input_byteorder") == "little" and
+                            isinstance(row.get("preprocessing"), Mapping) and
+                            row["preprocessing"].get("input_sha256") == row.get("input_sha256") and
+                            row["preprocessing"].get("input_bytes") == row.get("input_bytes")
+                        )
+                        if isinstance(expected_input, Mapping):
+                            input_binding_ok = input_binding_ok and row.get("input_sha256") == expected_input.get("sha256") and row.get("preprocessing") == expected_input.get("preprocessing") and row.get("source_input_sha256") == expected_input.get("sha256") and row.get("source_reference_manifest_sha256") == image_source.source_reference_manifest_sha256
+                        else:
+                            input_binding_ok = input_binding_ok and row.get("source_input_sha256") is None and row.get("source_reference_manifest_sha256") == image_source.source_reference_manifest_sha256
+                        image_binding_ok = isinstance(source_image, Mapping) and all((
+                            row.get("image_path") == source_image.get("path"),
+                            row.get("image_bytes") == source_image.get("bytes"),
+                            row.get("image_sha256") == source_image.get("sha256"),
+                            row.get("orig_shape") == source_image.get("orig_shape"),
+                        ))
+                        output_binding_ok = raw_path.is_file() and not raw_path.is_symlink() and raw_path.stat().st_size == row.get("bytes") and sha256_file(raw_path) == row.get("sha256")
+                        if not output_binding_ok or not input_binding_ok or not image_binding_ok:
+                            result.update({"status": "failed_partial", "error": {"code": "TARGET_ARTIFACT_BINDING_INVALID", "message": "target row does not bind its private output, source image and source input", "details": {"image_id": row.get("image_id")}}, "unknown_completion_state": "unknown"})
+                            break
     else:
-        result = {"status": "failed_partial", "error": {"code": "CHILD_EXIT_WITHOUT_RESULT", "message": "target child exited without durable result"}, "unknown_completion_state": "unknown", "no_retry": True}
-    result["schema_version"] = "e2l1-target-reference-v3"
-    result["attempted_completed"] = result.get("counters", {})
+        result = {"status": "failed_partial", "error": {"code": "CHILD_EXIT_WITHOUT_RESULT", "message": "target child exited before a durable result"}, "counters": partial["counters"], "records": partial["records"], "unknown_completion_state": "unknown", "durable_cleanup_known": False, "no_retry": True, "termination": termination}
+    result["process"] = {"exit_code": process.exitcode, "reaped": not process.is_alive(), "alive_after_bounded_termination": process.is_alive()}
+    result["schema_version"] = "e2l1-target-reference-v4"
+    result["attempted_completed"] = result.get("counters", partial["counters"])
     result["durable_events"] = events_path.name
+    result["no_retry"] = True
     _write_json_once(out_dir / "manifest.json", result)
-    _write_json_once(out_dir / "index.json", {"schema_version": "e2l1-target-reference-index-v3", "status": result.get("status"), "public_artifacts": ["manifest.json", "index.json", "events.jsonl"], "private_policy": "raw target output tensors remain private", "bounded_timeout_seconds": timeout_seconds})
+    _write_json_once(out_dir / "index.json", {"schema_version": "e2l1-target-reference-index-v4", "status": result.get("status"), "public_artifacts": ["manifest.json", "index.json", "events.jsonl"], "private_policy": "raw target output tensors remain private", "stage_timeout_seconds": stage_timeout_seconds, "per_image_timeout_seconds": per_image_timeout_seconds, "termination": termination})
     return result
 
 
@@ -942,13 +1359,15 @@ def run_canonical_analysis_stage(source_records_path: Path, target_records_path:
 class MockRuntime:
     """External runtime double used by tests; no model or CUDA calls."""
 
-    def __init__(self, outputs: Mapping[str, bytes], fail_image: Optional[str] = None, timeout_image: Optional[str] = None, cleanup_error: bool = False, hang_image: Optional[str] = None):
+    def __init__(self, outputs: Mapping[str, bytes], fail_image: Optional[str] = None, timeout_image: Optional[str] = None, cleanup_error: bool = False, hang_image: Optional[str] = None, ignore_terminate: bool = False, exit_after_result: Any = False):
         self.mock_only = True
         self.outputs = dict(outputs)
         self.fail_image = fail_image
         self.timeout_image = timeout_image
         self.cleanup_error = cleanup_error
         self.hang_image = hang_image
+        self.ignore_terminate = ignore_terminate
+        self.exit_after_result = exit_after_result
         self.loaded = False
         self.target_calls = 0
         self.closed = False
@@ -1058,8 +1477,10 @@ def run_mock_study(image_ids: Sequence[str], inputs: Mapping[str, bytes], runtim
 
 
 def _append_event(path: Path, event: Mapping[str, Any]) -> None:
+    payload = dict(event)
+    payload.setdefault("monotonic_ns", time.monotonic_ns())
     with path.open("a", encoding="utf-8", newline="\n") as handle:
-        handle.write(json.dumps(dict(event), sort_keys=True) + "\n")
+        handle.write(json.dumps(payload, sort_keys=True) + "\n")
         handle.flush()
         os.fsync(handle.fileno())
 
@@ -1361,9 +1782,11 @@ path; synthetic inputs exist only for explicit unit tests.
 python scripts/edge_readiness/e2_dev_evaluation_packet.py --validate-package --inventory PACKAGE_ROOT/package_manifest.json --package-root PACKAGE_ROOT
 ```
 
-The only permitted next execution, after the existing conditional GO is
-revalidated by the operator, is the already scoped single E2 smoke. Do not
-start a second smoke or a benchmark from this packet.
+The conditional smoke permission from E2L1-017 was consumed by the build
+timeout. There is no unused smoke authorization. A future prospective dev
+comparison requires integrated review and a separate explicit GO; it is not
+authorized by this packet. Do not run model calls, transfer, build, inference
+or benchmark from this runbook.
 """
     (out_dir / "runbook.md").write_text(runbook, encoding="utf-8", newline="\n")
     index = {
@@ -1378,11 +1801,110 @@ start a second smoke or a benchmark from this packet.
     return {"contract": out_dir / "contract.json", "runbook": out_dir / "runbook.md", "index": out_dir / "index.json"}
 
 
+def p1p4_packet_files(out_dir: Path) -> Dict[str, Path]:
+    """Write the E2L1-029 implementation contract/runbook; never executes a stage."""
+    if out_dir.exists():
+        raise PacketError("OUTPUT_EXISTS:" + str(out_dir))
+    out_dir.mkdir(parents=True)
+    contract = study_contract()
+    contract.update({
+        "schema_version": "e2l1-p1p4-prospective-dev-packet-v1",
+        "terminal_status": "prepared_not_executed_integrated_review_required",
+        "source_reference_status": "pending_not_executed",
+        "real_device_execution": False,
+        "execution_authorization": {"source_forward": False, "target_inference": False, "build": False, "benchmark": False, "unused_e2l1_017_smoke_go": False},
+        "implementation_repairs": {
+            "P1": "record actual LetterBox gain/padding/rounding per image; use scale_boxes with the frozen metadata",
+            "P2": "source and target share numpy/cv2 CPU image-byte preprocessor; target does not execute source runtime preflight",
+            "P3": "real CLI uses 54000-second stage ceiling and 30-second per-image watchdog, durable event reconstruction, bounded terminate/kill/reap",
+            "P4": "verified source manifest binds canonical 1636 IDs, order, actual image hashes/shapes, input hashes/preprocess, ORT providers and ONNX before/after hashes",
+        },
+    })
+    validate_study_contract({**contract, "schema_version": "e2l1-dev-evaluation-packet-v3", "terminal_status": "edge_dev_packet_implementation_review_required"})
+    (out_dir / "contract.json").write_text(json.dumps(contract, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    runbook = """# E2L1-029 P1-P4 prospective dev packet
+
+Status: `prepared_not_executed`; local code/tests only. NO-GO source ONNX
+forward, SSH, transfer, engine build/load, E2 inference or benchmark. The
+single conditional smoke authorized by E2L1-017 was consumed by the 900s
+build timeout; there is no unused smoke permission. This packet adds no GO.
+
+## Frozen prospective scope
+
+The proposed study remains CCTSDB2021/dev, exactly 1,636 canonical image IDs
+in frozen order, pinned source ONNX CPU reference and existing E2 FP16/1 GiB
+engine. Existing confidence/IoU/max-detection and paired AP/CI protocol stays
+unchanged. A new dev comparison is prospective only and requires integrated
+review plus explicit authorization. It is not an additional model call now.
+
+## P1 — transform provenance
+
+Preprocessing persists per-image resize gain, integer left/top padding,
+unpadded dimensions, exact four borders and pinned LetterBox rounding rule.
+Post-NMS boxes return to original-image coordinates through the installed
+`ultralytics.utils.ops.scale_boxes` helper with that recorded ratio/pad. The
+regression matrix covers portrait, landscape, odd rounding, clipping and the
+actual pinned LetterBox output.
+
+## P2 — real target image stream
+
+`ImageStreamSource` reads bytes, verifies the image hash, decodes and validates
+shape, then uses `e2_image_preprocess` (NumPy/OpenCV only) to generate one
+little-endian float32 input at a time. The source ORT/export preflight is not
+called by target preprocessing and CUDA visibility is not queried there.
+Streamed image/input hashes and transform metadata must match the source
+reference manifest before they are associated with target output.
+
+The prior read-only E2 probe observed Python 3.8.10 and no Torch, Ultralytics,
+ONNX or ONNX Runtime in that probed interpreter. NumPy/OpenCV availability was
+not established. Do not install anything under this packet; an authorized
+operator must verify the exact target interpreter's CPU preprocessing
+dependencies before any future execution review.
+
+## P3 — bounded target child
+
+The CLI takes its deadlines from the frozen contract: 54,000 seconds maximum
+for the stage and 30 seconds per image, including preprocessing and target
+work. Every event is append/flush/fsync persisted. Timeout recovery rereads
+events after bounded TERM, KILL escalation and reap, preserving counters,
+completed artifact inventory and unknown in-flight completion. Result success
+requires exit code zero, all expected counts and outputs, terminal event last,
+and confirmed cleanup. No retry or late success is accepted.
+
+## P4 — source and package binding
+
+Production source mode requires the exact canonical 1,636 IDs/order and
+validates every image's bytes/hash/decoded shape before ORT opens. It records
+the actual CPU provider, input hash/transform and ONNX hashes before and after
+the pass. The production package validator joins each image, preprocessing
+fingerprint and saved source output to the actual source-reference manifest;
+test-only subsets (at most five images) cannot pass the production gate.
+
+Future local command templates remain guarded. Do not dispatch them based on
+this packet:
+
+```text
+python scripts/edge_readiness/e2_dev_evaluation_packet.py --validate-package --inventory PACKAGE_ROOT/package_manifest.json --package-root PACKAGE_ROOT
+python scripts/edge_readiness/e2_dev_evaluation_packet.py --stage source --source-root PACKAGE_ROOT --onnx PACKAGE_ROOT/private/onnx_export/best.onnx --image-records PACKAGE_ROOT/image_records.json --out-dir ATTEMPT/source --allow-source-forward --commit CODE_COMMIT
+python scripts/edge_readiness/e2_dev_evaluation_packet.py --stage target --engine PACKAGE_ROOT/private/engine.plan --input-records PACKAGE_ROOT/package_manifest.json --package-root PACKAGE_ROOT --out-dir ATTEMPT/target --allow-target-inference
+```
+
+The final comparison, if separately approved later, is prospective on all
+1,636 dev images. No smoke, source pass, build, inference or benchmark is
+authorized by this runbook.
+"""
+    (out_dir / "runbook.md").write_text(runbook, encoding="utf-8", newline="\n")
+    index = {"schema_version": contract["schema_version"], "status": contract["status"], "terminal_status": contract["terminal_status"], "public_artifacts": ["contract.json", "runbook.md", "index.json"], "execution_authorization": contract["execution_authorization"], "private_policy": "no image, ONNX, engine, input tensor or raw prediction payload"}
+    (out_dir / "index.json").write_text(json.dumps(index, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
+    return {"contract": out_dir / "contract.json", "runbook": out_dir / "runbook.md", "index": out_dir / "index.json"}
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    parser = argparse.ArgumentParser(description="E2L1-027 source/target/analyzer chain with explicit execution guards")
+    parser = argparse.ArgumentParser(description="E2L1-029 prospective dev chain with explicit execution guards")
     parser.add_argument("--write-packet", action="store_true")
     parser.add_argument("--write-closing-packet", action="store_true")
     parser.add_argument("--write-c1c4-packet", action="store_true")
+    parser.add_argument("--write-p1p4-packet", action="store_true")
     parser.add_argument("--write-source-reference-pending", action="store_true")
     parser.add_argument("--validate-contract", action="store_true")
     parser.add_argument("--validate-package", action="store_true")
@@ -1423,6 +1945,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         paths = c1c4_packet_files(args.out_dir)
         print(json.dumps({key: str(value.resolve()) for key, value in paths.items()}, sort_keys=True))
         return 0
+    if args.write_p1p4_packet:
+        if args.out_dir is None:
+            parser.error("--write-p1p4-packet requires --out-dir")
+        paths = p1p4_packet_files(args.out_dir)
+        print(json.dumps({key: str(value.resolve()) for key, value in paths.items()}, sort_keys=True))
+        return 0
     if args.write_source_reference_pending:
         if args.out_dir is None:
             parser.error("--write-source-reference-pending requires --out-dir as the output file")
@@ -1453,9 +1981,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         inventory = records_payload
         image_records = inventory.get("input_producer", {}).get("image_records", [])
         image_ids = [record["image_id"] for record in image_records]
+        validation = validate_package_inventory(inventory, args.package_root)
+        if validation["status"] != "execution_ready":
+            raise PacketError("PACKAGE_NOT_EXECUTION_READY")
         runtime = ExistingE2TargetRuntime(args.engine)
-        source = ImageStreamSource(image_records, args.package_root)
-        result = run_target_execution_stage(image_records, image_ids, None, runtime, args.out_dir, permissions=StagePermissions(allow_target_inference=args.allow_target_inference), image_source=source, timeout_seconds=180.0, inventory=inventory, package_root=args.package_root, require_execution_ready=True)
+        source = ImageStreamSource(image_records, args.package_root, source_input_records=validation["source_input_records"], source_reference_manifest_sha256=validation["source_reference_manifest_sha256"])
+        resource_contract = study_contract()["resource_requirements"]
+        result = run_target_execution_stage(image_records, image_ids, None, runtime, args.out_dir, permissions=StagePermissions(allow_target_inference=args.allow_target_inference), image_source=source, stage_timeout_seconds=resource_contract["stage_timeout_seconds"], per_image_timeout_seconds=resource_contract["timeout_per_image_seconds"], inventory=inventory, package_root=args.package_root, require_execution_ready=True)
         print(json.dumps(result, sort_keys=True, allow_nan=False))
         return 0 if result["status"] == "complete" else 2
     if args.stage == "postprocess":

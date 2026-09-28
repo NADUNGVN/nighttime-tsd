@@ -281,23 +281,20 @@ class UltralyticsSourceRuntime:
         return flags
 
     def preprocess(self, image_path: Path) -> TensorArtifact:
-        np = self.modules["numpy"] if "numpy" in self.modules else importlib.import_module("numpy")
-        cv2 = self.modules["cv2"]
-        augment = importlib.import_module("ultralytics.data.augment")
-        LetterBox = augment.LetterBox
-        image = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
-        if image is None:
-            raise SourceBundleError("SOURCE_IMAGE_DECODE_FAILED", "OpenCV could not decode fixture image", {"path": str(image_path)})
-        letterbox = LetterBox(new_shape=(640, 640), auto=False, scale_fill=False, scaleup=True, center=True, stride=32, padding_value=114, interpolation=cv2.INTER_LINEAR)
-        letterboxed_bgr = letterbox(image=image)
-        rgb = letterboxed_bgr[:, :, ::-1]
-        array = np.ascontiguousarray(rgb.transpose(2, 0, 1)[None, ...], dtype=np.float32) / 255.0
-        array = np.ascontiguousarray(array, dtype=np.dtype("<f4"))
-        metadata = {"original_shape": [int(image.shape[0]), int(image.shape[1]), int(image.shape[2])], "resized_shape": [int(letterboxed_bgr.shape[0]), int(letterboxed_bgr.shape[1]), int(letterboxed_bgr.shape[2])], "letterbox": {"new_shape": [640, 640], "auto": False, "scale_fill": False, "scaleup": True, "center": True, "stride": 32, "padding_value": 114, "interpolation": "cv2.INTER_LINEAR"}, "color": "BGR_to_RGB", "layout": "NCHW", "normalization": "pixel/255.0", "contiguous": bool(array.flags["C_CONTIGUOUS"]), "dtype_endian": "<f4"}
-        payload = array.tobytes(order="C")
-        if payload != array.tobytes(order="C"):
-            raise SourceBundleError("INPUT_FREEZE_MISMATCH", "saved input bytes differ from runtime input array")
-        return TensorArtifact(payload, tuple(int(item) for item in array.shape), "float32", "little", bool(np.isfinite(array).all()), array, metadata)
+        from edge_readiness.e2_image_preprocess import ImagePreprocessError, preprocess_image
+        try:
+            tensor = preprocess_image(image_path)
+        except ImagePreprocessError as exc:
+            raise SourceBundleError(str(exc).split(":", 1)[0], str(exc), {"path": str(image_path)}) from exc
+        return TensorArtifact(tensor.payload, tensor.shape, tensor.dtype, tensor.byteorder, tensor.finite, tensor.value, tensor.metadata)
+
+    def preprocess_bytes(self, image_bytes: bytes, *, image_id: str) -> TensorArtifact:
+        from edge_readiness.e2_image_preprocess import ImagePreprocessError, preprocess_image_bytes
+        try:
+            tensor = preprocess_image_bytes(image_bytes, image_id=image_id)
+        except ImagePreprocessError as exc:
+            raise SourceBundleError(str(exc).split(":", 1)[0], str(exc), {"image_id": image_id}) from exc
+        return TensorArtifact(tensor.payload, tensor.shape, tensor.dtype, tensor.byteorder, tensor.finite, tensor.value, tensor.metadata)
 
     def _numpy_tensor(self, array: Any) -> TensorArtifact:
         np = self.modules["numpy"]

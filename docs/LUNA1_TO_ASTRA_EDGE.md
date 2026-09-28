@@ -2159,3 +2159,66 @@ payload is included. SHA-256 receipts: `contract.json` 6248 bytes /
 The packet terminal is `edge_c1c4_chain_ready_no_execution`. It supplies the
 future guarded commands but does not authorize an additional smoke; historical
 E2 attempts and private evidence remain unchanged.
+
+## L1A-029 — P1-P4 real-image, provenance and deadline repairs (2026-09-28)
+
+**implementation_verified_local; execution remains NO-GO.** P1 now stores the
+actual per-image letterbox scale, integer padding, unpadded dimensions,
+individual borders and rounding rule. `_letterbox_to_original` requires that
+metadata and delegates coordinate restoration to
+`ultralytics.utils.ops.scale_boxes`; it no longer infers padding from the
+already-padded 640x640 image. A portrait/landscape/odd-size/clipping matrix
+was exercised against the installed Ultralytics 8.3.214 helper and passed.
+That installation is not the frozen 8.4.102; the final tests deliberately
+version-gate this matrix and the NMS/full-chain cases, so pinned-helper
+acceptance remains a local dependency prerequisite rather than a claimed
+pass.
+
+**P2/P4.** A new NumPy/OpenCV-only image preprocessor is shared by source and
+target paths. The target stream hashes and decodes the actual image, checks its
+dimensions, creates the frozen little-endian float32 input and binds input
+hash plus preprocessing metadata to the source-reference manifest. It never
+calls source/export/ORT preflight or queries CUDA. Tests exercised a small
+decoded non-square image with `torch.cuda.is_available()` patched to report
+True, plus fake-ORT source production and a package gate that joins actual
+image path/hash/shape, input hash/transform and saved source output files.
+Production source mode requires exactly the canonical 1,636 ordered IDs and
+preflights all image bytes/decoded shapes before opening ORT; subsets require
+explicit test-only scope. The package integration fixture used one test ID
+under patched test constants; it is not a full 1,636-image source pass.
+
+**P3.** Target API/CLI now take the frozen 54,000-second stage ceiling and
+30-second whole-image watchdog (preprocess through output persistence), with
+shorter test overrides only. Durable events are reread after bounded TERM,
+KILL escalation and reap; timeout manifests preserve counters, completed rows
+and unknown in-flight completion. A complete result additionally requires
+zero child exit, the terminal event last, exact counts, bound image/input/output
+artifacts and confirmed cleanup. Tests cover the timeout/partial state,
+default deadline values and a nonzero child exit after durable result creation.
+The TERM-ignore escalation test is platform-gated and skipped on Windows.
+
+**Tests.** `py -3.10 -m unittest discover -s tests -p 'test_edge*.py' -v`:
+**108/108 PASS**. Focused packet plus saved-output diagnostic suites:
+**36 PASS / 4 SKIPPED**. Three skips require the pinned Ultralytics 8.4.102
+(available locally is 8.3.214); one requires POSIX signal semantics. Python
+compile checks passed. No packages were installed. The earlier bounded E2
+probe saw Python 3.8.10 with Torch/Ultralytics/ONNX/ONNX Runtime absent from
+that probed interpreter; NumPy/OpenCV on E2 remain unverified. These latter
+two are the only dependencies for target image preprocessing; do not install
+them under this entry. An authorized operator must verify them before any
+future E2 review.
+
+**Packet ready.** Metadata-only prospective package:
+`results/edge_readiness_v1/e2l1-029-p1p4-packet/` (contract 5,679 bytes,
+`3bc76c4ade0b897a4ba608549508577148f2298b71a6ee4f5486efa578ece1cc`;
+index 521 bytes,
+`00d8e6d3fb8a3c50df25277dd8ae998e66a6282d3c360dccb3b4861e8e881aa6`;
+runbook 4,017 bytes,
+`fa64145016b71484a8b7162d21b3ef9591a970534232c09766a9a36a25457943`).
+The runbook explicitly records that E2L1-017's one-smoke permission was
+consumed by the build timeout; no smoke, source ONNX forward, SSH, transfer,
+build, inference or benchmark was run here. Real source reference remains
+`0/1636`; only external-runtime CPU doubles ran. The proposed comparison stays
+prospective, with zero build budget, and needs integrated review plus a new
+explicit GO before source/E2 model calls. Terminal status:
+`prepared_not_executed_integrated_review_required`.
