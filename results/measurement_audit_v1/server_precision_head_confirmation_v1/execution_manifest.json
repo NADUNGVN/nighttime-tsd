@@ -1,0 +1,176 @@
+{
+  "expected_captures": 78,
+  "expected_jobs": 84,
+  "jobs": [
+    {
+      "exit_code": 1,
+      "job": {
+        "arm": "baseline_int8",
+        "calibration_cache_creation": true,
+        "capture_required": false,
+        "model": "yolov8n",
+        "phase": "auxiliary_calibration",
+        "repeat": null,
+        "round": null,
+        "scored": false,
+        "selection": "U42",
+        "sequence": 1,
+        "timing_cache_policy": "private_not_reused_by_scored"
+      },
+      "state": {
+        "builder_attempted": true,
+        "builder_completed": false,
+        "calibration_batches": 0,
+        "calibration_read_calls": 0,
+        "calibration_write_calls": 0,
+        "capture_attempted": false,
+        "capture_completed": false,
+        "cleanup_completed": false,
+        "cleanup_started": true,
+        "engine_published": false,
+        "error": "TensorRT builder returned no engine",
+        "error_type": "RuntimeError",
+        "gpu_identity": {
+          "device": "0",
+          "driver_version": "595.71.05",
+          "name": "Quadro RTX 8000",
+          "uuid": "GPU-9850d121-55dc-e752-ffaa-df19e7585eb4"
+        },
+        "input_identity": {
+          "checkpoint_sha256": "b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b",
+          "onnx_sha256": "e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603"
+        },
+        "job": {
+          "arm": "baseline_int8",
+          "calibration_cache_creation": true,
+          "capture_required": false,
+          "model": "yolov8n",
+          "phase": "auxiliary_calibration",
+          "repeat": null,
+          "round": null,
+          "scored": false,
+          "selection": "U42",
+          "sequence": 1,
+          "timing_cache_policy": "private_not_reused_by_scored"
+        },
+        "no_retry": true,
+        "owner_release_status": "cleanup_failed_or_unknown",
+        "plan_sha256": "ae0c88a4af353861c8d3221a281f55d08a71e90356ca426fdf0e0ec7fc1508be",
+        "precision_constraints": [],
+        "precision_inspector": {
+          "effective_engine_precision": "not_inferred_from_layer_flags",
+          "effective_precision": "unknown",
+          "requested_layer_settings": {},
+          "requested_only": true,
+          "requested_targets": []
+        },
+        "raw_tensors_published": false,
+        "runtime": {
+          "cuda": "12.1",
+          "gpu": "Quadro RTX 8000",
+          "gpu_identity": {
+            "device": "0",
+            "driver_version": "595.71.05",
+            "name": "Quadro RTX 8000",
+            "uuid": "GPU-9850d121-55dc-e752-ffaa-df19e7585eb4"
+          },
+          "tensorrt": "10.16.1.11",
+          "torch": "2.5.1+cu121",
+          "ultralytics": "8.4.102"
+        },
+        "schema_version": 1,
+        "stage": "build",
+        "stage_history": [
+          {
+            "stage": "telemetry_before_build",
+            "utc": "2026-09-28T14:30:18.301204+00:00"
+          },
+          {
+            "stage": "runtime_loaded",
+            "utc": "2026-09-28T14:30:18.355033+00:00"
+          },
+          {
+            "stage": "build",
+            "utc": "2026-09-28T14:30:22.740415+00:00"
+          }
+        ],
+        "status": "failed",
+        "synchronization_completed": 0,
+        "telemetry": {
+          "before_build": {
+            "device": "GPU-9850d121-55dc-e752-ffaa-df19e7585eb4, Quadro RTX 8000, 595.71.05, P8, 34, 11.15 W, 300 MHz, 405 MHz, 29 MiB",
+            "process_details": [
+              {
+                "allowed": true,
+                "allowlist_exception": "snapd-desktop-integration",
+                "classification": "allowed_desktop_operator_confirmed",
+                "desktop_allowlist_id": "snapd-desktop-integration",
+                "operator_confirmed": true,
+                "pid": 644963,
+                "process_name": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration",
+                "raw": "644963, /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration, 5 MiB",
+                "reason": "exact current nvidia-smi PID/path row was explicitly confirmed by operator; /proc was not read",
+                "resolved_executable": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration",
+                "used_gpu_memory": "5 MiB"
+              },
+              {
+                "allowed": true,
+                "allowlist_exception": "snapd-desktop-integration",
+                "classification": "allowed_desktop_operator_confirmed",
+                "desktop_allowlist_id": "snapd-desktop-integration",
+                "operator_confirmed": true,
+                "pid": 644977,
+                "process_name": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration",
+                "raw": "644977, /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration, 5 MiB",
+                "reason": "exact current nvidia-smi PID/path row was explicitly confirmed by operator; /proc was not read",
+                "resolved_executable": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration",
+                "used_gpu_memory": "5 MiB"
+              }
+            ],
+            "process_guard": {
+              "allowlist": {
+                "gnome-session": "/usr/bin/gnome-session-binary or /usr/libexec/gnome-session-binary",
+                "gnome-shell": "/usr/bin/gnome-shell or /usr/libexec/gnome-shell",
+                "snapd-desktop-integration": "/snap/snapd-desktop-integration/<numeric-revision>/usr/bin/snapd-desktop-integration",
+                "xorg": "/usr/lib/xorg/Xorg or /usr/bin/Xorg"
+              },
+              "background_operator_confirmation": {
+                "confirmed_processes": [],
+                "method": "--confirm-background-process PID=COMMAND"
+              },
+              "background_workload": [],
+              "blocked_processes": [],
+              "disclaimer": "Allowed desktop processes remain visible; this is not proof of zero GPU interference.",
+              "external_workload_authorized": false,
+              "external_workload_detected": false,
+              "operator_confirmation": {
+                "confirmed_processes": [
+                  {
+                    "pid": 644963,
+                    "reported_path": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration"
+                  },
+                  {
+                    "pid": 644977,
+                    "reported_path": "/snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration"
+                  }
+                ],
+                "method": "--confirm-desktop-process PID=PATH"
+              },
+              "telemetry_limitation": "nvidia-smi output is the available workload telemetry; it cannot prove zero interference between snapshots",
+              "telemetry_status": "complete",
+              "unmatched_confirmations": [],
+              "verification_method": "exact PID/path comparison against this snapshot nvidia-smi output plus explicit operator CLI confirmation; /proc/<pid>/exe was not read",
+              "version": "operator-confirmed-nvidia-smi-path-v1"
+            },
+            "processes": "644963, /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration, 5 MiB\n644977, /snap/snapd-desktop-integration/391/usr/bin/snapd-desktop-integration, 5 MiB"
+          }
+        }
+      }
+    }
+  ],
+  "plan_sha256": "ae0c88a4af353861c8d3221a281f55d08a71e90356ca426fdf0e0ec7fc1508be",
+  "schema_version": 1,
+  "started_utc": "2026-09-28T14:29:56.781231+00:00",
+  "status": "incomplete_blocked",
+  "study": "precision_head_confirmation_v1"
+}
