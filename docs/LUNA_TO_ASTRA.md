@@ -3438,9 +3438,11 @@ unchanged.
   cache; scored INT8 reads the cache without consuming batches or writing it.
 - The capture double instantiates the injected backend base, invokes the
   production no-warmup wrapper once per canonical dev record, and exercises
-  synchronization/completion accounting. Tests assert output shape, target
-  precision names/flags, fresh timing-cache handling, public inspector
-  publication, release and zero warmup forwards.
+  synchronization/completion accounting. Tests assert output shape, the
+  baseline arm's empty target set, INT8/FP16 builder flags, fresh timing-cache
+  handling, public inspector publication, cleanup state transitions and zero
+  warmup forwards. They do not independently exercise a nonempty precision
+  override or actual TensorRT resource release.
 - Added normal-path parser and capture failure cases. They assert failed child
   state and primary errors rather than accepting phase labels or simulator
   counters. Existing schedule/analyzer and lifecycle tests remain
@@ -3460,7 +3462,9 @@ Using `D:/Research/paper/local/measurement_audit_env/Scripts/python.exe`:
 
 These results are CPU test evidence with synthetic external-library doubles.
 They do not establish TensorRT/GPU execution, frozen-model forward correctness
-or server resource isolation.
+or server resource isolation. Capture runtime and some numerical verification
+functions are replaced by doubles; real backend metadata, effective arithmetic
+precision and numerical equivalence are not established.
 
 ### R5 gate and handoff
 
@@ -3537,3 +3541,86 @@ git diff --check PASS. The readiness suite still reports two pre-existing
 local data-inventory failures because this local checkout lacks the full dev
 image inventory; this is not claimed as a pass. No local TensorRT/GPU/export
 was run.
+
+## L2A-053 server attempt 1 — audited partial failure
+
+2026-09-28. Pulled and audited the user's artifact commit
+`0e7650f9a8512c79b4b87048b60f341072872eec` (parent
+`3f3280ff3a5d1792412caf133402122c2e82c1ea`). The commit contains exactly five
+nonbinary files: confirmation plan, schedule, execution manifest, and the
+first job's child state and log. It contains no engine, cache, capture,
+prediction, or metrics artifact.
+
+### Observed run state
+
+- `execution_manifest.status` is `incomplete_blocked`; it has one returned job
+  with exit code 1, zero completed jobs, and no `finished_utc`. The failed job
+  is sequence 1: YOLOv8n auxiliary calibration, U42, baseline INT8. The 84-job
+  schedule remains in the plan; only the first job was dispatched.
+- The child records `builder_attempted=true`, `builder_completed=false`, no
+  capture, no engine publication, and generic error `TensorRT builder returned
+  no engine`. The manifest and child plan SHA-256 values match
+  `ae0c88a4af353861c8d3221a281f55d08a71e90356ca426fdf0e0ec7fc1508be`.
+- The child log gives the originating callback error:
+  `ContractError: calibration order mismatch at batch 1: 18709.jpg !=
+  00006.jpg`. The accepted U42 manifest and materialized binding both begin
+  with `00006.jpg`; `18709.jpg` is also selected, at zero-based manifest index
+  1007 (the 1,008th entry). Thus the observed failure is a positional order
+  mismatch between the dataloader's first yielded sample and the locked
+  manifest sequence. The log does not establish the full 1,024-item yielded
+  sequence, so membership/order beyond this first sample remains unverified.
+- The TensorRT builder's generic no-engine error followed the exception from
+  `get_batch`. The evidence points to the strict calibration-order callback
+  guard, not an observed OOM or missing GPU resource. No engine/cache was
+  produced, no scored INT8/FP16 build or dev capture ran, and no accuracy/AP
+  analysis is possible.
+- The state reports `calibration_batches=0`, while the log proves the callback
+  fetched a batch and raised during its first invocation. The callback's
+  in-memory counter is not persisted when the builder fails, so the durable
+  failure state undercounts that attempted callback. It also records
+  `cleanup_started=true`, `cleanup_completed=false`, and
+  `owner_release_status=cleanup_failed_or_unknown`. The child exited with code
+  1; explicit runtime-owner cleanup was not evidenced as completed.
+- Recorded before-build telemetry identifies the expected RTX 8000 UUID,
+  driver and runtime. Only the two explicitly confirmed Snap desktop rows were
+  present in that snapshot; telemetry is sampled and does not prove isolation.
+  Checkpoint and ONNX hashes match their accepted values.
+- The plan's `status=implementation_incomplete_remediation_in_progress` is the
+  stale plan label called out in A2L-051, not the live run verdict. The live
+  verdict is the execution manifest's `incomplete_blocked`.
+- The plan binds `repo_head=3f3280ff3a5d1792412caf133402122c2e82c1ea`,
+  and its seven recorded helper SHA-256 values match that Git tree. The
+  operator's pre-run `git status` showed only unrelated dirty paths, so the
+  executable files were clean at that snapshot. The artifact does not contain
+  the complete per-file hash output requested by the GO. The hashes below are
+  reconstructed from the exact Git tree, not represented as independently
+  sampled server digests:
+
+  | File | SHA-256 at `repo_head` |
+  | --- | --- |
+  | `configs/precision_head_confirmation_execution_v1.json` | `43c67b6fbc8b56e16d63ff779a1723997d03db5a03330579c79f77494f666e58` |
+  | `configs/precision_head_confirmation_v1.json` | `2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8` |
+  | `scripts/precision_head_confirmation_contract.py` | `4397f9fe4b7d750d5047db05e14b909bc09b3fe77e9531e5b43b4a7f60e86c31` |
+  | `scripts/run_precision_head_confirmation.py` | `ee9493ee993b55e80893ab5fd5e8a430ee9e7ce0599e11baf526a616ac406473` |
+  | `scripts/run_precision_head_confirmation_server.py` | `4cb252d5e96322a676eed36a16014d92834bdf6f075b999142b11e2ade15c04e` |
+  | `scripts/analyze_precision_head_confirmation.py` | `1e3ee17138ff1c27ad730bbfcbc275c861baa192941d6848b9355959df2b3ce6` |
+  | `scripts/prepare_precision_head_confirmation.py` | `ad3b8788bf947b16c39808fbfb45e8bce59b2459d2c16b6faa531cc4b69b0159` |
+  | `scripts/prepare_precision_head_confirmation_graph.py` | `40dfa34cf7396e405922f9ffc0bde3caa3029ee02f71b44f9d7426064e9ba72a` |
+  | `scripts/capture_cctsdb_validator.py` | `12e762f30fbd166ad570734defb92882599a14561c15007b93c05d187aca567c` |
+  | `scripts/verify_cctsdb_capture.py` | `a673abd029c872d6d1f3eee0c213d2eb5359f2f1dd950f892dc664f866bc2192` |
+  | `scripts/analyze_dev_quantization.py` | `99156d651c096cb5d99fbf88db0430e17172953a461d844d6f937726dfbe2ffa` |
+  | `scripts/audit_cctsdb_measurement.py` | `8f417e49d13eb2dbe76b77477589a604f368017cff3c9ca6aad1a7fb21ec587b` |
+  | `scripts/run_architecture_matrix.py` | `edba58449e782986374b557ea7a44c63d04416408ccbab3071e36dd7d7d24bf0` |
+  | `scripts/uniform_build_repeat.py` | `afdbe1549c71dc8db6b486388646604b28a6de55e60b1b47526665303e1b3994` |
+
+### Status and requested reviewer decision
+
+The attempt is preserved as a failed partial execution. The current GO forbids
+retry/replacement and the locked cap is 84 builder invocations. A new complete
+run would repeat this attempted first builder and would exceed the cap unless
+the reviewer explicitly changes the accounting/protocol. The order correction
+also changes executable behavior and requires review before any new server
+dispatch. Request one decision from Astra: either close this study as
+incomplete with no scientific comparison, or authorize a reviewed correction
+and specify a fresh-root replacement/budget rule. Until that decision, no new
+plan/scored command is issued and no numerical results are inferred.
