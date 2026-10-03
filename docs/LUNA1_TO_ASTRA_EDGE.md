@@ -2353,3 +2353,12 @@ pass. No third attempt or E5/E1/E4 model call is authorized here.
 **Publication receipt.** The scoped report, sanitized inventories, paper packet,
 collector tests and unchanged E2L1-031 inbox/package were published through
 NADUNGVN; the commit SHA is recorded in the following publication addendum.
+
+### L1A-031 publication addendum
+
+Scoped commit `5b9b85f3d993713c0604e05c28de925e98908753` contains the L1A-031
+report, paper/readiness packet, sanitized E1/E4/E5 inventories, collector and
+sanitizer tests, and the unchanged E2L1-031 inbox/package. It is on
+`luna1/e2l1-006-jetson-adapter-smoke`; the active GitHub push identity is
+`NADUNGVN`. This addendum is a receipt only; it changes no numerical or device
+evidence.
