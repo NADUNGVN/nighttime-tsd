@@ -3825,3 +3825,48 @@ submission review. After server artifacts arrive, audit all scheduled cells,
 run the locked pooled-AP/paired-interval/variation analysis, update this L2A-053
 milestone and hand Astra the integrated manuscript packet. The current status
 is not `confirmation_completed` and not submission-ready.
+
+### Publication receipt — scoped documentation and evidence tables
+
+Committed and pushed to `NADUNGVN/nighttime-tsd` as
+`d99c18c26e6ba2c900103ce2d1b3f16973ba0204`; `origin/master` matches. This
+commit contains the unchanged A2L-054 inbox, Astra GO and long-run package,
+updated active runbook, corrected prospective insert, L2A-053 milestone,
+paper-core draft/ledger/related work/readiness, evidence-export code and six
+source-derived CSVs. Only these scoped paths were staged. The checkpoint remains
+the sole dirty path and was not staged.
+
+`python -m py_compile scripts/export_paper_core_evidence.py`, the exporter,
+row/schema/value assertions and `git diff --check HEAD^ HEAD` all pass. The
+primary stored paired contrast rechecks at +8.506713 pp, CI [+7.710367,
+8.999865], 1,000 valid draws. The tables contain 40 point rows, 120 contrast
+rows, 12 build-variability rows, 5 latency rows, 2 bridge rows and 1 smoke
+scope row. These are copied/reformatted existing results, not a new analysis.
+The exporter revision SHA-256 is
+`ca33492497bf288a495a8235900fd5d3ee96169ccc2e5f83ff538707e0e31bff`; its
+canonical Git blob is `710117c12ef52b9e27629c54e742d922f79330af`. The source
+and output file hashes and all 8 source canonical blob IDs are in
+`results/paper_core_v1/tables/evidence_source_manifest.json`; raw-worktree
+SHA-256 is distinguished from canonical Git object identity there.
+
+Key canonical Git blob OIDs in commit `d99c18c26e6ba2c900103ce2d1b3f16973ba0204`:
+
+| Path | Canonical blob OID |
+|---|---|
+| `docs/ASTRA_TO_LUNA.md` (A2L-054 inbox) | `306ab43be7740404501f7ececf6b5f67f73b95e7` |
+| `docs/ST_SERVER_01_RECOVERY_GO_20261004.md` | `98384967fed9e6ba1e9e5229368bd96242249f70` |
+| `docs/LUNA_SERVER_LONG_RUN_PACKAGE_20261004.md` | `dba24706cccdc7c268290c97852c390948531e08` |
+| `results/paper_core_v1/tables/evidence_source_manifest.json` | `91434a487b412e963c258a81abb222cfd20d65e7` |
+| `results/paper_core_v1/tables/precision_head_contrasts.csv` | `13190ca60f07acfe94cd6f19ebf23ae2eba184f2` |
+| `results/paper_core_v1/tables/precision_head_points.csv` | `c53e7e142e05c93ab37489cc54f578e3c05ae4e9` |
+| `results/paper_core_v1/tables/build_variability.csv` | `13bb1d9070c90b0bc9ba8ace54444da60ad6e933` |
+| `results/paper_core_v1/tables/latency_summary.csv` | `eb9d81c7546bf9a8057e05c7a3fff996cf010963` |
+| `results/paper_core_v1/tables/source_export_bridge.csv` | `dfe6df791e253183011875c0e9dcc1830a18171a` |
+| `results/paper_core_v1/tables/trt_feasibility.csv` | `268bb72bb4f83ae754d4c696023e630ea50c297a` |
+
+The server runner/config/imported helper paths reviewed at `57faee0` remain
+byte-unchanged in this documentation/evidence commit (`git diff --exit-code`
+against those paths passed). Operator preflight is still pending; no v2 plan or
+scored execution has been performed from this workstation. The single approved
+v2 attempt remains the next server action after the user returns current
+snapshot evidence.
