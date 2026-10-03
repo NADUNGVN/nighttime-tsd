@@ -1,0 +1,201 @@
+{
+  "collector_sha256": "ff756bae1c3a03189c47ee93fcd50942d7fcc5f653acca7b2db4c862d5dc5ba5",
+  "commands": {
+    "architecture": {
+      "output": "aarch64",
+      "raw_output_bytes": 7,
+      "raw_output_sha256": "ac257dd72ce8d4d5e988d4a1c823e6c19b848de2dd211c5c0c0d1147c55dba45",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "backend_package_inventory": {
+      "output": "nvidia-l4t-core\t36.5.2-20260716114719\nlibcudnn8=missing\ntensorrt\t10.3.0.30-1+cuda12.5\npython3-libnvinfer\t10.3.0.30-1+cuda12.5\nlibnvinfer8=missing\nlibnvinfer-plugin8=missing\nhailort=missing\nhailo-all=missing\nqairt-libs=missing\nqairt-dsp-binaries=missing\nqairt-tools=missing",
+      "raw_output_bytes": 272,
+      "raw_output_sha256": "8b78adcc5bff8a32a9b4bf8c385ed0982b87dce4ed7268f1bf6ab76656143d66",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "clock_state": {
+      "output": "SOC family:tegra234  Machine:NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super\nError: Run this script(/usr/bin/jetson_clocks) as a root user",
+      "raw_output_bytes": 156,
+      "raw_output_sha256": "f149a9776760071d185c80c2a50c918053614b89d07af171191f44abd83479a2",
+      "returncode": 1,
+      "status": "unavailable"
+    },
+    "current_workloads": {
+      "output": "pulseaudio      24.5  0.2\nsystemd         11.0  0.1\ncli-proxy-api    5.0  0.3\nsshd             1.3  0.1\nnvmap-bz         0.5  0.0\npipewire         0.5  0.0\npipewire-media-  0.5  0.0\nrustdesk         0.4  0.4\nsystemd-udevd    0.3  0.0\ntailscaled       0.3  1.0\navahi-daemon     0.2  0.0\ndbus-daemon      0.2  0.0",
+      "raw_output_bytes": 311,
+      "raw_output_sha256": "fb5bc25cb35ec37c0589b6da10694415c6a9ece1d60777754e393eca32466a46",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "hailo_identify": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "hailortcli_version": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "l4t_package": {
+      "output": "nvidia-l4t-core\t36.5.2-20260716114719\nlibcudnn8=missing\ntensorrt\t10.3.0.30-1+cuda12.5\npython3-libnvinfer\t10.3.0.30-1+cuda12.5",
+      "raw_output_bytes": 125,
+      "raw_output_sha256": "28fa1d05a8a3a0ac67c61619533e642055a0dea50a65512fd78b0ef2f4e220d1",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "l4t_release_file": {
+      "output": "# R36 (release), REVISION: 5.2, GCID: 46426093, BOARD: generic, EABI: aarch64, DATE: Thu Jul 16 18:56:22 UTC 2026\n# KERNEL_VARIANT: oot\nTARGET_USERSPACE_LIB_DIR=nvidia\nTARGET_USERSPACE_LIB_DIR_PATH=usr/lib/aarch64-linux-gnu/nvidia",
+      "raw_output_bytes": 230,
+      "raw_output_sha256": "49a81c5e59288616d18d42064da6b9ae110edafa9638fc653c96e3324a3746b1",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "lscpu": {
+      "output": "Architecture:                            aarch64\nCPU(s):                                  6\nOn-line CPU(s) list:                     0-5\nVendor ID:                               ARM\nModel name:                              Cortex-A78AE\nSocket(s):                               -\nCPU max MHz:                             1728.0000\nCPU min MHz:                             115.2000",
+      "raw_output_bytes": 2259,
+      "raw_output_sha256": "03ae4d2fec0b5fd41736e87d5ec30b4c25585bdac46c2410995e5f19e8cabb52",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "memory": {
+      "output": "total        used        free      shared  buff/cache   available\nMem:           7.4Gi       1.9Gi       3.8Gi       5.0Mi       1.7Gi       5.3Gi\nSwap:          3.7Gi          0B       3.7Gi",
+      "raw_output_bytes": 191,
+      "raw_output_sha256": "1c5f1b422c3497242b5fa9b486e21d391737a530cb6331a096de8db4df222ebc",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "model": {
+      "output": "NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super",
+      "raw_output_bytes": 65,
+      "raw_output_sha256": "4568ed0bc46758d5a3f8a798c8c0de4a7fd2ff036309b1525c80bae4c205b660",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "mounts": {
+      "output": "/dev/nvme0n1p1 ext4   914.4G 76.9G  791G /",
+      "raw_output_bytes": 42,
+      "raw_output_sha256": "671ef6b0741d27efb1bbdd42606e76201ba585275cc0fb680023c1e00997d3b9",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "nvcc": {
+      "output": "Cuda compilation tools, release 12.6, V12.6.68",
+      "raw_output_bytes": 207,
+      "raw_output_sha256": "1bd7efc0e94dd3ae2f8835f8eba20f374ad591743902b8760e0327c1c11e8c3a",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "nvidia_driver_proc": {
+      "output": "NVRM driver version=540.5.0",
+      "raw_output_bytes": 229,
+      "raw_output_sha256": "5e2e7a4c7576b4a7b3a059150eff0bbe5628ba6a3a54a920f9cc80bcfc220684",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "nvidia_smi": {
+      "output": "Orin (nvgpu), 540.5.0, [N/A], [N/A], [N/A]",
+      "raw_output_bytes": 42,
+      "raw_output_sha256": "3084075e492102199f01b361d3fb507bd415a37c02dbad86b7e7f12680e7c788",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "os_release": {
+      "output": "PRETTY_NAME=\"Ubuntu 22.04.5 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"22.04\"\nVERSION=\"22.04.5 LTS (Jammy Jellyfish)\"\nVERSION_CODENAME=jammy\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=jammy",
+      "raw_output_bytes": 385,
+      "raw_output_sha256": "9aee7ad401e7ec00a4399844bdc5def23c6e72c1dd4c0421101efac89ffeccdb",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "power_mode": {
+      "output": "NV Power Mode: MAXN_SUPER\n2",
+      "raw_output_bytes": 27,
+      "raw_output_sha256": "aa653d3e3d7d04b49967814bfffd8d4a29f466870705335f83341bb6a06dd1d1",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "python": {
+      "output": "Python 3.10.12",
+      "raw_output_bytes": 14,
+      "raw_output_sha256": "ec47f587923c8b9e26ae2eb68cf3377aee946d8bcc8bc1e8afacec603c38ae4f",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "python_numpy_opencv": {
+      "output": "numpy=1.21.5\nopencv=missing",
+      "raw_output_bytes": 27,
+      "raw_output_sha256": "2f41c7dde2904b752341796cc0822b4cd93524ccf69ca2132de8d0312d00e297",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "python_runtime_packages": {
+      "output": "tensorrt=10.3.0",
+      "raw_output_bytes": 15,
+      "raw_output_sha256": "78602765e93c58c93e19988bb01521cf0b7432fba983eb499b7a2a9a43fdef97",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "root_filesystem": {
+      "output": "Filesystem     Type  Size  Used Avail Use% Mounted on\n/dev/nvme0n1p1 ext4  915G   77G  792G   9% /",
+      "raw_output_bytes": 98,
+      "raw_output_sha256": "61be54ffab3bccb12ca3b8db253b094706ee7ad5b13f385c818a9363038a9c0f",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "telemetry_and_power_sources": {
+      "output": "command:tegrastats=/usr/bin/tegrastats\ncommand:jtop=missing\ncommand:vcgencmd=missing\ncommand:sensors=missing\ncommand:ipmitool=missing\npath:/sys/class/powercap=missing\npath:/sys/bus/iio/devices=present",
+      "raw_output_bytes": 200,
+      "raw_output_sha256": "8a3b64ae0f0ad31cc01926a27871ac3e6808878aad31d6132c756f0182c69799",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "thermal_sources": {
+      "output": "/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone1/type: gpu-thermal\n/sys/class/thermal/thermal_zone2/type: cv0-thermal\n/sys/class/thermal/thermal_zone3/type: cv1-thermal\n/sys/class/thermal/thermal_zone4/type: cv2-thermal\n/sys/class/thermal/thermal_zone5/type: soc0-thermal\n/sys/class/thermal/thermal_zone6/type: soc1-thermal\n/sys/class/thermal/thermal_zone7/type: soc2-thermal\n/sys/class/thermal/thermal_zone8/type: tj-thermal\n/sys/class/thermal/thermal_zone0/temp: 51156\n/sys/class/thermal/thermal_zone1/temp: 51218\n/sys/class/thermal/thermal_zone2/temp: cat: /sys/class/thermal/thermal_zone2/temp: No data available\n/sys/class/thermal/thermal_zone3/temp: cat: /sys/class/thermal/thermal_zone3/temp: No data available\n/sys/class/thermal/thermal_zone4/temp: cat: /sys/class/thermal/thermal_zone4/temp: No data available\n/sys/class/thermal/thermal_zone5/temp: 49812\n/sys/class/thermal/thermal_zone6/temp: 51687\n/sys/class/thermal/thermal_zone7/temp: 50343\n/sys/class/thermal/thermal_zone8/temp: 51875",
+      "raw_output_bytes": 1033,
+      "raw_output_sha256": "618f43c4d807c079c82c7b047e843186a9d380f61c0273c87d9005c57087088f",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "trtexec": {
+      "output": "&&&& RUNNING TensorRT.trtexec [TensorRT v100300] # /usr/src/tensorrt/bin/trtexec --help",
+      "raw_output_bytes": 26256,
+      "raw_output_sha256": "713181d851e8b38c6ef618fafeb48d62cd8dc42544e170c96be24d0af1457f9e",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "uname": {
+      "output": "Linux ubuntu 5.15.199-tegra #1 SMP PREEMPT Thu Jul 16 11:27:38 PDT 2026 aarch64 aarch64 aarch64 GNU/Linux",
+      "raw_output_bytes": 105,
+      "raw_output_sha256": "33b37bcc9eecbca702f33128bfe5ab88a5ea565383e3669ce638601edfd72672",
+      "returncode": 0,
+      "status": "ok"
+    }
+  },
+  "created_utc": "2026-10-03T18:19:39.137320+00:00",
+  "inventory_completeness": {
+    "expected_count": 27,
+    "missing_commands": [],
+    "parse_error": null,
+    "recorded_count": 27,
+    "status": "complete"
+  },
+  "sanitization": {
+    "policy": "allowlisted read-only outputs; hostname/SSH route omitted; IP/MAC/device identifiers redacted",
+    "raw_command_output_retained": false
+  },
+  "schema_version": "e2l1-edge-inventory-v1",
+  "target": "E5",
+  "transport": {
+    "returncode": 0,
+    "status": "ok",
+    "timed_out": false,
+    "unmarked_output_bytes": 0,
+    "unmarked_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

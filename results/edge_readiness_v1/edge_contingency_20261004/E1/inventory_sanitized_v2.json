@@ -1,0 +1,201 @@
+{
+  "collector_sha256": "ff756bae1c3a03189c47ee93fcd50942d7fcc5f653acca7b2db4c862d5dc5ba5",
+  "commands": {
+    "architecture": {
+      "output": "aarch64",
+      "raw_output_bytes": 7,
+      "raw_output_sha256": "ac257dd72ce8d4d5e988d4a1c823e6c19b848de2dd211c5c0c0d1147c55dba45",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "backend_package_inventory": {
+      "output": "nvidia-l4t-core=missing\nlibcudnn8=missing\ntensorrt=missing\npython3-libnvinfer=missing\nlibnvinfer8=missing\nlibnvinfer-plugin8=missing\nhailort\t4.23.0\nhailo-all\t5.1.1\nqairt-libs=missing\nqairt-dsp-binaries=missing\nqairt-tools=missing",
+      "raw_output_bytes": 229,
+      "raw_output_sha256": "b15779fc9b962655ac06b0d68ad464fea090b20091407c1aa98ca5203013add4",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "clock_state": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "current_workloads": {
+      "output": "sshd-session     0.4  0.1\ntailscaled       0.2  0.6\nkworker/0:1-eve  0.0  0.0\nwf-panel-pi      0.0  0.6\nkworker/u17:0-b  0.0  0.0\nkworker/0:3-eve  0.0  0.0\nlabwc            0.0  1.3\nNetworkManager   0.0  0.2\nhailort_service  0.0  0.0\ndbus-daemon      0.0  0.0\nsystemd-journal  0.0  0.2\nkworker/2:0-eve  0.0  0.0",
+      "raw_output_bytes": 311,
+      "raw_output_sha256": "3be18cb48646eeb98b4b1e5a2d1552138b5b70213524e87fcf019826bf5430e4",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "hailo_identify": {
+      "output": "Executing on device: 0001:01:00.0\nIdentifying board\nControl Protocol Version: 2\nFirmware Version: 4.23.0 (release,app,extended context switch buffer)\nLogger Version: 0\nBoard Name: Hailo-8\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\u0000\nDevice Architecture: HAILO8",
+      "raw_output_bytes": 240,
+      "raw_output_sha256": "eef40aad28147465a1443211175acef80ca0bb81ec842d8436ed171c152a2bfb",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "hailortcli_version": {
+      "output": "HailoRT-CLI version 4.23.0",
+      "raw_output_bytes": 26,
+      "raw_output_sha256": "45bf3b1d46270aa0b88b9a50e581410721711f2290d0af93b1d24e3eb5ba233a",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "l4t_package": {
+      "output": "nvidia-l4t-core=missing\nlibcudnn8=missing\ntensorrt=missing\npython3-libnvinfer=missing",
+      "raw_output_bytes": 85,
+      "raw_output_sha256": "b50faf22fcd1d2e22b6d405ae1487c0c19eee8b42e0709550b47a668ebfda79c",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "l4t_release_file": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "lscpu": {
+      "output": "Architecture:                            aarch64\nCPU(s):                                  4\nOn-line CPU(s) list:                     0-3\nVendor ID:                               ARM\nModel name:                              Cortex-A76\nSocket(s):                               -\nCPU max MHz:                             2400.0000\nCPU min MHz:                             1500.0000",
+      "raw_output_bytes": 2745,
+      "raw_output_sha256": "f68ac2dc7667e43be5a4c0d41b726839a32d65d7be4859d19bff197be6841a22",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "memory": {
+      "output": "total        used        free      shared  buff/cache   available\nMem:           7.9Gi       576Mi       3.6Gi       115Mi       3.9Gi       7.3Gi\nSwap:          2.0Gi          0B       2.0Gi",
+      "raw_output_bytes": 191,
+      "raw_output_sha256": "67ded9ffc621e3effacb2cdd286218cac700284480cc1cdf5d17943111d458de",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "model": {
+      "output": "Raspberry Pi 5 Model B Rev 1.1",
+      "raw_output_bytes": 30,
+      "raw_output_sha256": "b9766c6f1c9836c863a9171ce781567f7484ff66c423675ffc2ba33cfe16da42",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "mounts": {
+      "output": "/dev/mmcblk0p2 ext4 28.7G 25.4G  2.1G /",
+      "raw_output_bytes": 39,
+      "raw_output_sha256": "0518c01f6b4830a85cf788c9cac785c5e68e438473df9f16110ec325ccb134a2",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "nvcc": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "nvidia_driver_proc": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "nvidia_smi": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "os_release": {
+      "output": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.5\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"",
+      "raw_output_bytes": 285,
+      "raw_output_sha256": "76a2c4cfbd59ae96db88f7a35cb4e2e58d406d0d086bcb2aa577029f413f5494",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "power_mode": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "python": {
+      "output": "Python 3.13.5",
+      "raw_output_bytes": 13,
+      "raw_output_sha256": "a639fd07e60d63c13d6173d980851368047264ab754bada3e4c54a4f6710f31f",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "python_numpy_opencv": {
+      "output": "numpy=2.2.4\nopencv=4.10.0",
+      "raw_output_bytes": 25,
+      "raw_output_sha256": "4ad73d576321cded6a480f83cc3546f56a0abd6fd1ee45924b1e71c9a29d7952",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "python_runtime_packages": {
+      "output": "hailort=4.23.0",
+      "raw_output_bytes": 14,
+      "raw_output_sha256": "30651dad4c0989f98a1c95af7521b13529f3ef5a613d1c35fd35e34732e066f7",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "root_filesystem": {
+      "output": "Filesystem     Type  Size  Used Avail Use% Mounted on\n/dev/mmcblk0p2 ext4   29G   26G  2.1G  93% /",
+      "raw_output_bytes": 98,
+      "raw_output_sha256": "8895ecbb0fb39e7774b4c2c04f64200b4a12e9fa85733d1f632de2a4d20fba21",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "telemetry_and_power_sources": {
+      "output": "command:tegrastats=missing\ncommand:jtop=missing\ncommand:vcgencmd=/usr/bin/vcgencmd\ncommand:sensors=missing\ncommand:ipmitool=missing\npath:/sys/class/powercap=missing\npath:/sys/bus/iio/devices=missing",
+      "raw_output_bytes": 198,
+      "raw_output_sha256": "8fd5034ebaf97b5d59d2a2223858590ed77203d13a01805afe0302991e3d3032",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "thermal_sources": {
+      "output": "/sys/class/thermal/thermal_zone0/type: cpu-thermal\n/sys/class/thermal/thermal_zone0/temp: 47950",
+      "raw_output_bytes": 95,
+      "raw_output_sha256": "03ce27158901ad04b3f87ead23c8f8f4ff94db45c994a081ca22e718779e576b",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "trtexec": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "uname": {
+      "output": "Linux raspberrypi 6.18.34+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.18.34-1+rpt1 (2026-06-09) aarch64 GNU/Linux",
+      "raw_output_bytes": 108,
+      "raw_output_sha256": "f1b49d0e448f2967c81f4d267f0573b6682c0555e18f9ba06a6f9e1850a3002d",
+      "returncode": 0,
+      "status": "ok"
+    }
+  },
+  "created_utc": "2026-10-03T18:19:39.136945+00:00",
+  "inventory_completeness": {
+    "expected_count": 27,
+    "missing_commands": [],
+    "parse_error": null,
+    "recorded_count": 27,
+    "status": "complete"
+  },
+  "sanitization": {
+    "policy": "allowlisted read-only outputs; hostname/SSH route omitted; IP/MAC/device identifiers redacted",
+    "raw_command_output_retained": false
+  },
+  "schema_version": "e2l1-edge-inventory-v1",
+  "target": "E1",
+  "transport": {
+    "returncode": 0,
+    "status": "ok",
+    "timed_out": false,
+    "unmarked_output_bytes": 0,
+    "unmarked_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

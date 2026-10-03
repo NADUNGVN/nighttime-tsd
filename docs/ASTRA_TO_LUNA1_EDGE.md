@@ -740,3 +740,25 @@ Continue the SAME E2L1-030 supertask. Give the user the full existing source CPU
 Bundle the remaining POSIX CPU/mock termination test with the user-operated Linux handoff. Use the existing dependency-complete server Python, CUDA hidden and the edge detached worktree; run only `E2DevEvaluationPacketTests.test_target_timeout_escalates_to_kill_when_child_ignores_terminate` from `tests/test_e2_dev_evaluation_packet.py`. Record testsRun=1, zero failures/errors and zero skips; unittest exit zero with a skip is NOT a passed prerequisite. This is a mock process test, not another source/target forward or a reason to install packages. It must pass before E2 dispatch but need not block the source CPU pass.
 
 E2 target stays operational HOLD until the source/package, POSIX test and fresh bounded nx identity/dependency/resource checks pass. Ask the user to confirm VPN/lab connectivity when needed; no automatic SSH retry loop, alternate-host scan, install or device changes. Then continue under the existing conditional GO without seeking another smoke authorization. Preserve zero build budget, one target pass, no retry/resume/benchmark and historical FAILs. Append the next L1A-030 milestone with actual evidence and commit/push this addendum unchanged through NADUNGVN. Astra did not SSH or execute any model in this review.
+
+## Session identity and concise reporting — 2026-10-04
+
+User-facing session name: **LUNA-EDGE** (Luna1; Jetson E2 lane). Existing E2L1/L1A task IDs and inbox/outbox paths remain valid. This session owns approved E2 work; the user runs its source-reference commands on SERVER-01. No SERVER-01 SSH by this session.
+
+Every chat progress/final report must use at most two lines, starting with the session name. Full evidence, tests, prerequisites, artifact inventory and commands belong in `docs/LUNA1_TO_ASTRA_EDGE.md` or its linked runbook. Keep actual source/target counters visible; local completion does not establish dev execution.
+
+Required chat format:
+
+`[LUNA-EDGE] <task> | <actual phase/status> | commit <short SHA> | source <n>/1636; E2 <n>/1636.`
+
+`Next: <owner + concrete action>; blocker: <specific blocker or none>. Details: docs/LUNA1_TO_ASTRA_EDGE.md (<entry>).`
+
+Immediate next action: give the user the complete already-approved `docs/E2L1-030_SOURCE_CPU_RUNBOOK.md` foreground command, including the POSIX mock prerequisite handoff, and audit the returned source artifacts. Source CPU can proceed independently of main-lane review and E2 networking. Continue the E2 stage under the existing conditional GO when source/package/POSIX/network/resource prerequisites pass; no new build or smoke task is created. Commit/push this administrative entry with the next scoped handoff through NADUNGVN.
+
+## E2L1-031 — long-run edge package while E2/E3 are offline
+
+2026-10-04: read `docs/LUNA_EDGE_LONG_RUN_PACKAGE_20261004.md` fully and execute it as one sustained assignment alongside existing E2L1-030. User reports E1/pi5, E4/rubik and E5/nano reachable; E2/nx and E3/agx timeout. **GO immediate source operator handoff, CPU saved-evidence/analysis/private-package preparation, manuscript edge section and one bounded read-only inventory on each currently reachable approved alias.** Prioritize an E5 readiness/compatibility proposal; E1/E4 receive brief assessments, not new model programs.
+
+Maintain the original E2 source/target call budget and conditional GO. Source CPU does not wait for E2 networking or main Luna; the user runs source servers. Finish the independent paper/readiness queue while the network is down. Actual E2 execution waits for its existing prerequisite checks; a future E5 model/build study needs one material scope decision and must not silently replace E2. No new installs, exports, engine builds, device model calls or benchmarks are authorized for E1/E4/E5 by this entry.
+
+Deliver `paper_edge_v1` task board/evidence/section and the sanitized contingency inventory, then continue actual source audit/private transfer/E2 analysis when inputs arrive. Record E2L1-030 milestones in L1A-030 and this package in L1A-031; chat stays two lines starting `[LUNA-EDGE]`. Commit/push unchanged inbox/package and scoped work via NADUNGVN. Return a complete research/preparation packet or concrete operational hold with independent deliverables finished, not merely another local test summary.

@@ -2291,3 +2291,65 @@ authorized source CPU pass. No source command was run by Luna1; actual counts
 remain source `0/1636`, target `0/1636`. Source-stage output still requires
 operator audit before any package/target decision. No E2 SSH retry, alternate
 host probe, binary transfer, inference, build or benchmark was performed.
+
+## L1A-031 — long-run source/E2, paper-edge and alternative readiness packet (2026-10-04)
+
+**edge_research_packet_review_required; E2L1-030 operational_hold.** Read
+E2L1-031 and `docs/LUNA_EDGE_LONG_RUN_PACKAGE_20261004.md` in full. Completed
+the independent saved-evidence paper packet, paired-AP layouts, CPU recipe and
+bounded current readiness checks. The user-operated full-dev source run is
+still pending; source and E2 target counts remain `0/1636` each. E2/E3 were
+reported offline. No `nx` retry/probe was made, no SERVER-01 SSH was made, and
+there was no new source/model call, target inference, engine build, benchmark,
+installation or device-state change.
+
+**Online-device inventory.** One bounded host-key-verified SSH inventory was
+run for each approved online alias `pi5`, `rubik` and `nano` at
+`2026-10-03T18:19:39Z`. Each transport exited 0 and recorded 27/27 command
+markers. The sanitized evidence is under
+`results/edge_readiness_v1/edge_contingency_20261004/`; raw captures remain
+outside Git. Sanitized inventory SHA-256 values:
+
+| Device | Observed identity / relevant state | Sanitized inventory SHA-256 |
+| --- | --- | --- |
+| E1 | Pi 5 Model B Rev 1.1 + Hailo-8; Debian 13; NumPy 2.2.4, OpenCV 4.10.0, HailoRT 4.23.0; 7.3 GiB RAM available, 2.1 GiB root free. | `8f367f65106d31359c914cae1c9f88e1194690c1bf95d0fa728eaf93aa5f7b6b` |
+| E4 | RUBIK Pi 3 / QAIRT 2.46.0; Ubuntu 24.04.4; NumPy 1.26.4, OpenCV 4.6.0; 6.3 GiB RAM available, 26 GiB root free. | `a2aa9d1cbf83ab2b13493da13d38d7345e11529c3b40ec125a527f1b89c63ad3` |
+| E5 | Orin Nano Super, L4T R36.5.2, CUDA 12.6.68, TensorRT 10.3.0.30; OpenCV import missing; 5.3 GiB RAM available, 792 GiB root free. | `e56a570f38e97ee8ce313b2dad5155da9d3a441943b88ed7057df550002a45c1` |
+
+The adapter contains an E5 TensorRT 10.3/named-I/O/v3 profile and `[1,7,8400]`
+output contract, but this is not real E5 validation. The concrete CUDA owner
+only searches CUDA 11.4 libraries, and E5 OpenCV is missing. E5 remains a
+prospective, separately scoped option, not an E2 replacement. E1/Hailo and
+E4/QAIRT remain distinct readiness-only backends. Current temperatures,
+workload snapshots and power-mode/source availability were not controlled
+benchmark measurements.
+
+**Local checks.** The updated bounded collector, sanitizer and CPU fixture
+suite pass **13/13** under Python 3.10. Four selected synthetic/source-package/
+image-binding/target-preprocess tests pass. Two pinned-helper boundary tests
+skip because the workstation lacks Ultralytics 8.4.102 CPU ORT/NMS dependencies;
+no packages were installed. The pre-existing dependency-rich 108-test result
+is cited as earlier acceptance, not rerun. Full chain is not called verified
+on this host.
+
+**Paper/preparation artifacts.** Added
+`docs/paper_edge_v1/{task_board,evidence_ledger,edge_section,alternative_device_readiness}.md`,
+`results/paper_edge_v1/{paired_ap_tables,cpu_reproduction_recipe}.md`, and the
+sanitized device inventories. The evidence ledger separates source-export
+from TensorRT box disagreement; score tolerance compliance is explicitly not
+exact equality, and no accuracy impact is claimed from three diagnostic
+fixtures. Both paired AP tables remain pending. Attempt-1 timeout and attempt-2
+build/three-inference results remain separately counted; user's reported
+31,109-second two-attempt aggregate is recorded as user-reported, not a new
+benchmark or a reconstructed duration.
+
+**Next action.** User: run the exact foreground source CPU + POSIX prerequisite
+block in `docs/E2L1-030_SOURCE_CPU_RUNBOOK.md` and return sanitized counters,
+provider, no-skip POSIX summary and hashes. Luna-EDGE: audit source artifacts,
+then continue private packaging and CPU analysis while E2 remains offline;
+after restored E2 access, proceed only if all existing conditional-GO gates
+pass. No third attempt or E5/E1/E4 model call is authorized here.
+
+**Publication receipt.** The scoped report, sanitized inventories, paper packet,
+collector tests and unchanged E2L1-031 inbox/package were published through
+NADUNGVN; the commit SHA is recorded in the following publication addendum.

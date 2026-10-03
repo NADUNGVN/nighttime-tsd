@@ -1,0 +1,39 @@
+# LUNA-EDGE: source/E2 evaluation, edge evidence and infrastructure contingency
+
+Owner LUNA-EDGE; coordinator/reviewer Astra; source-server operator the user. Issued 2026-10-04. Continue E2L1-030 through final analysis; use L1A-030 for that study and L1A-031 for this coordinating package. Read `ST_EDGE_03_P1P4_INTEGRATED_GO.md` and the full source CPU runbook. Existing study permissions and call budget remain in force.
+
+## Current connectivity and task goal
+
+User reports on 2026-10-04: E1/pi5 responds as raspberrypi/aarch64; E4/rubik responds as ubuntu/aarch64; E5/nano responds as ubuntu/aarch64; E2/nx and E3/agx time out. This establishes reachability only. Shared infrastructure identifies E5 as Orin Nano Super, E4 as Qualcomm RUBIK Pi 3 and E1 as Pi5/Hailo; confirm actual models through a current read-only inventory before any compatibility conclusion. Host architecture alone does not validate a runtime.
+
+Complete the source/E2 full-dev comparison when operationally possible, and independently deliver a manuscript-ready edge evidence section and a practical alternative-device readiness packet. E2 downtime must not leave this session idle. E1/E4/E5 readiness is preparation, not permission for extra model experiments or a change of the E2 comparison.
+
+## Work immediately, without waiting for main Luna or E2
+
+**Source operator handoff.** Send the user the full already-approved foreground source ONNX CPU command and the POSIX mock test from `E2L1-030_SOURCE_CPU_RUNBOOK.md`. Bind the actual accepted source, canonical 1636 dev IDs/2706 instances, reviewed executable revision, eleven helper hashes, provider and output paths. The user runs source servers; this session never SSHs SERVER-01. Source CPU can proceed alongside the server GPU study, with reasonable thread/RAM allocation. If another user-operated CPU server is preferable, adapt administrative paths only and verify actual source bytes/runtime; keep its identity in the receipt.
+
+**Prepare analysis and paper material now.** Consolidate existing accepted E2 readiness, build-timeout/second-attempt, copy-lifetime and saved-output diagnostic evidence into `docs/paper_edge_v1/evidence_ledger.md` and `docs/paper_edge_v1/edge_section.md`. Record what was actually observed, the raw box discrepancy and unchanged score-domain tolerances, the five saved detections/IoU diagnostics, device/runtime identities and the limits of three fixtures. Distinguish source export agreement from target/source agreement. These saved outputs already exist; no new model calls are needed. Keep timing/energy readiness separate from measured benchmark results.
+
+Prepare final paired-AP table layouts and the CPU reproduction recipe under `results/paper_edge_v1/`, using existing accepted evaluator/postprocessing with saved data. Check the real source->package->target->postprocess->analysis boundary with existing tests; fix routine report/packaging problems locally. Preserve the reviewed numerical implementation and do not repeat already passed tests solely to stay busy. Write expected counter/artifact checks and publishable/private allowlists so returned source outputs can be audited and transferred promptly. Leave full-dev metrics explicitly pending until actually obtained.
+
+**Read-only availability/compatibility package.** GO one bounded SSH inventory per currently reachable approved alias pi5, rubik and nano. Collect actual board model, OS/Python, versions of existing NumPy/OpenCV and declared backend libraries/packages, available memory/storage, current workloads and telemetry availability. Use existing inventory utilities where suitable; no installation, accelerator model load, CUDA allocation, compiler/build/inference/benchmark, power/clock modification or other-process control. Avoid secret/network identifiers in public evidence. Preserve sanitized reports and hashes in `results/edge_readiness_v1/edge_contingency_20261004/`.
+
+Prioritize E5: it is the closest prospective TensorRT path to E2. Prepare `docs/paper_edge_v1/alternative_device_readiness.md` describing whether the existing adapter can support the observed TensorRT API/output contracts, what CPU/mock cases are still needed, disk/time requirements, backend limitations and the exact prospective changes/call budget that a separate device study would require. E1/Hailo and E4/Qualcomm require distinct toolchains; limit them to a short evidence-backed readiness assessment. Do not start a three-device implementation/benchmark program. E2 engine binaries are device/runtime-bound; do not transfer one to E5 as an assumed portable engine.
+
+No new E2/E3 timeout loop is needed while the user reports them offline. When the user announces restored access, perform the already authorized bounded current prerequisite check and continue E2L1-030. If access stays unavailable, submit the completed readiness packet with a specific recommendation to Astra; a change to E5 is a material experimental decision to review once, not something to silently perform.
+
+## After user returns source/POSIX evidence
+
+Audit all source counters, canonical IDs, image/input/output hashes, actual CPU provider, immutable ONNX and cleanup. A skipped POSIX test is not a passed prerequisite. Source expected count is 1636 ONNX forwards and zero native forwards; stop and preserve a failed/partial stage without retry. Then create the exact scoped private transfer package from verified outputs/images/manifests, pin hashes and verify members using the approved private HF/local workflow. Raw tensors/images/models stay out of public Git. Private packaging and source saved-output postprocessing can proceed while E2 is offline.
+
+Only after current E2 identity/resource/engine/dependencies, source/package and POSIX conditions pass, execute the original single E2 full-dev pass with the existing FP16 engine: at most 1636 target calls, no build/warmup/extra smoke/retry/benchmark. Each input must match source preprocessing bytes before enqueue. Keep existing stage/per-image timeouts and durable partial evidence. No second full-dev attempt under this assignment.
+
+After target evidence exists, run canonical source/target postprocessing, pooled COCO/XML size AP and the existing paired 1000-resample analysis. Audit actual 1636 rows per side and per-image input bindings. Fill the manuscript tables/section, preserving historical raw FAILs and all limitations. Hand core-paper report/data links to Astra and LUNA-SERVER through repository documents; avoid editing their core manuscript or server code.
+
+## Queue, milestones and scope
+
+Maintain `docs/paper_edge_v1/task_board.md` with owner, status, dependency, evidence link and concrete next action. Keep these independent queues active: source operator handoff; saved-evidence paper writing; private package/analysis preparation; bounded alternative-device readiness. Complete the CPU/writing/readiness deliverables even if E2 remains unreachable. No administrative approval per helper is required; existing authorized runtime calls continue once gates pass.
+
+Terminal E2L1-030 state is analyzed_review_required, actual failed_partial, or documented operational_hold. Separately finish the edge manuscript/readiness package with `edge_research_packet_review_required`. Never mark full-dev complete from local code/tests. Chat reports stay two lines beginning `[LUNA-EDGE]`, including actual source/E2 counts and the actionable blocker. Full details belong in `LUNA1_TO_ASTRA_EDGE.md` with links; commit/push scoped work and Astra inbox entries unchanged through NADUNGVN.
+
+No retraining, additional model export, new engine build, new device inference, accuracy threshold change, energy/latency benchmark or public upload of private bytes is granted by this package. A missing energy sensor does not block the current accuracy study. Future multi-device performance studies can be proposed from the readiness evidence after the nearest scope is complete.

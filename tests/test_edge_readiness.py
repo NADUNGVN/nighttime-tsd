@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -10,6 +11,7 @@ from edge_readiness.collect_inventory import (  # noqa: E402
     BEGIN,
     END,
     REMOTE_SCRIPT,
+    REMOTE_COMMANDS,
     command_status,
     parse_remote_output,
     validate_ssh_alias,
@@ -21,6 +23,7 @@ from edge_readiness.collect_telemetry import (  # noqa: E402
     parse_sample_blocks,
     summarize_samples,
 )
+from edge_readiness.sanitize_inventory import ALLOWED_COMMANDS, sanitize_inventory  # noqa: E402
 
 
 class EdgeReadinessTests(unittest.TestCase):
@@ -102,6 +105,61 @@ class EdgeReadinessTests(unittest.TestCase):
         for token in forbidden:
             with self.subTest(token=token):
                 self.assertNotIn(token, script)
+
+    def test_inventory_includes_package_versions_workloads_and_backend_probes(self):
+        names = {name for name, _ in REMOTE_COMMANDS}
+        self.assertTrue(
+            {
+                "python_numpy_opencv",
+                "backend_package_inventory",
+                "current_workloads",
+                "telemetry_and_power_sources",
+            }.issubset(names)
+        )
+        self.assertTrue(set(ALLOWED_COMMANDS).issubset(names))
+        self.assertEqual(names - set(ALLOWED_COMMANDS), {"hostname", "pci"})
+        script = REMOTE_SCRIPT.lower()
+        self.assertIn("importlib", script)
+        self.assertIn("ps -eo comm=,pcpu=,pmem=", script)
+        for token in ("apt", "pip", "sudo", "kill", "pkill", "systemctl", "nvpmodel -m", "jetson_clocks --fan"):
+            with self.subTest(token=token):
+                self.assertNotIn(token, script)
+
+    def test_inventory_sanitizer_redacts_route_and_device_identifiers_but_binds_raw_bytes(self):
+        fixture = {
+            "schema_version": "e2l1-edge-inventory-v1",
+            "created_utc": "2026-10-04T00:00:00+00:00",
+            "target": "E1",
+            "ssh_alias": "pi5",
+            "ssh_command": ["ssh", "pi5"],
+            "collector_sha256": "a" * 64,
+            "transport": {
+                "status": "ok", "returncode": 0, "timed_out": False,
+                "stderr_or_unmarked_output": "route 192.0.2.1",
+            },
+            "inventory_completeness": {
+                "status": "complete", "expected_count": 1, "recorded_count": 1,
+                "missing_commands": [], "parse_error": None,
+            },
+            "commands": {
+                "model": {"status": "ok", "returncode": 0, "output": "Board Model\nSerial Number: ABC123"},
+                "nvidia_driver_proc": {"status": "ok", "returncode": 0, "output": "NVRM version: NVIDIA Open Kernel Module for aarch64 540.5.0 (buildbrain@2028b486-7cd5-47d1-a7b1-8c0183b08dcf)"},
+                "python_numpy_opencv": {"status": "ok", "returncode": 0, "output": "numpy=2.0\nopencv=4.0"},
+                "current_workloads": {"status": "ok", "returncode": 0, "output": "ps 100 0\npython 1.0 2.0"},
+                "thermal_sources": {"status": "ok", "returncode": 0, "output": "route 192.0.2.1"},
+                "hostname": {"status": "ok", "returncode": 0, "output": "private-host"},
+            },
+        }
+        safe = sanitize_inventory(fixture)
+        self.assertEqual(safe["commands"]["model"]["output"], "Board Model\n[REDACTED DEVICE IDENTIFIER]")
+        self.assertEqual(safe["commands"]["nvidia_driver_proc"]["output"], "NVRM driver version=540.5.0")
+        self.assertEqual(safe["commands"]["python_numpy_opencv"]["output"], "numpy=2.0\nopencv=4.0")
+        self.assertEqual(safe["commands"]["current_workloads"]["output"], "python 1.0 2.0")
+        self.assertEqual(safe["commands"]["thermal_sources"]["output"], "route [REDACTED IP]")
+        self.assertNotIn("192.0.2.1", json.dumps(safe))
+        self.assertNotIn("private-host", json.dumps(safe))
+        self.assertNotIn("ssh_command", safe)
+        self.assertEqual(safe["commands"]["model"]["raw_output_bytes"], len("Board Model\nSerial Number: ABC123".encode()))
 
     def test_telemetry_parser_preserves_raw_sources_and_device_timestamps(self):
         raw = "\n".join(

@@ -66,6 +66,24 @@ REMOTE_COMMANDS: tuple[tuple[str, str], ...] = (
         "python_runtime_packages",
         "python3 -c 'import importlib.metadata as m; names=(\"torch\",\"torchvision\",\"ultralytics\",\"onnxruntime\",\"tensorrt\",\"hailort\"); d={str(x.metadata.get(\"Name\",\"\")).lower(): x.version for x in m.distributions()}; print(\"\\n\".join(f\"{n}={d[n]}\" for n in names if n in d))'",
     ),
+    (
+        "python_numpy_opencv",
+        "python3 -c 'import importlib as i, importlib.util as u; f=lambda n: getattr(i.import_module(n), \"__version__\", \"unknown\") if u.find_spec(n) else \"missing\"; print(\"numpy=\"+str(f(\"numpy\"))); print(\"opencv=\"+str(f(\"cv2\")))'",
+    ),
+    (
+        "backend_package_inventory",
+        "sh -c 'command -v dpkg-query >/dev/null || exit 127; for p in nvidia-l4t-core libcudnn8 tensorrt python3-libnvinfer libnvinfer8 libnvinfer-plugin8 hailort hailo-all qairt-libs qairt-dsp-binaries qairt-tools; do dpkg-query -W -f=\""
+        + chr(92)
+        + "${Package}"
+        + "\\t"
+        + chr(92)
+        + "${Version}"
+        + "\\n\" \"$p\" 2>/dev/null || printf \"%s=missing\\n\" \"$p\"; done'",
+    ),
+    (
+        "current_workloads",
+        "sh -c 'command -v ps >/dev/null || exit 127; ps -eo comm=,pcpu=,pmem= --sort=-pcpu | head -n 12'",
+    ),
     ("power_mode", "sh -c 'command -v nvpmodel >/dev/null || exit 127; nvpmodel -q'"),
     ("clock_state", "sh -c 'command -v jetson_clocks >/dev/null || exit 127; jetson_clocks --show'"),
     (

@@ -1,0 +1,201 @@
+{
+  "collector_sha256": "ff756bae1c3a03189c47ee93fcd50942d7fcc5f653acca7b2db4c862d5dc5ba5",
+  "commands": {
+    "architecture": {
+      "output": "aarch64",
+      "raw_output_bytes": 7,
+      "raw_output_sha256": "ac257dd72ce8d4d5e988d4a1c823e6c19b848de2dd211c5c0c0d1147c55dba45",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "backend_package_inventory": {
+      "output": "nvidia-l4t-core=missing\nlibcudnn8=missing\ntensorrt=missing\npython3-libnvinfer=missing\nlibnvinfer8=missing\nlibnvinfer-plugin8=missing\nhailort=missing\nhailo-all=missing\nqairt-libs\t2.46.0-0ubuntu1~bpo24.04.1\nqairt-dsp-binaries\t2.46.0-0ubuntu1~bpo24.04.1\nqairt-tools\t2.46.0-0ubuntu1~bpo24.04.1",
+      "raw_output_bytes": 289,
+      "raw_output_sha256": "eb61a03579bbe3c6d643857d699628f9813c87445a1c19a1c3f9a2a369ffebfd",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "clock_state": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "current_workloads": {
+      "output": "systemd          7.3  0.1\nuser-session-he  3.0  0.0\nwireplumber      1.7  0.2\ntailscaled       1.4  0.6\nsshd             0.7  0.1\npipewire-pulse   0.5  0.1\npipewire         0.5  0.1\nxdg-document-po  0.4  0.0\ndbus-daemon      0.4  0.0\nxdg-permission-  0.2  0.0\npipewire         0.2  0.0",
+      "raw_output_bytes": 311,
+      "raw_output_sha256": "c5c2e27d5ee39a19b9bd2bae1040f6c6b28c7783ed4a36d0eaf6ad418dabe6b4",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "hailo_identify": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "hailortcli_version": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "l4t_package": {
+      "output": "nvidia-l4t-core=missing\nlibcudnn8=missing\ntensorrt=missing\npython3-libnvinfer=missing",
+      "raw_output_bytes": 85,
+      "raw_output_sha256": "b50faf22fcd1d2e22b6d405ae1487c0c19eee8b42e0709550b47a668ebfda79c",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "l4t_release_file": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "lscpu": {
+      "output": "Architecture:                            aarch64\nCPU(s):                                  8\nOn-line CPU(s) list:                     0-7\nVendor ID:                               ARM\nModel name:                              Cortex-A55\nCore(s) per socket:                      4\nSocket(s):                               1\nCPU max MHz:                             1958.4000\nCPU min MHz:                             300.0000\nModel name:                              Cortex-A78\nCore(s) per socket:                      4\nSocket(s):                               1\nCPU max MHz:                             2707.2000\nCPU min MHz:                             691.2000",
+      "raw_output_bytes": 2583,
+      "raw_output_sha256": "001288709e990f1afb94e55352c1738a6897b9d06bb83b94aa7e74724c24c1d2",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "memory": {
+      "output": "total        used        free      shared  buff/cache   available\nMem:           7.1Gi       843Mi       5.1Gi        54Mi       1.4Gi       6.3Gi\nSwap:             0B          0B          0B",
+      "raw_output_bytes": 191,
+      "raw_output_sha256": "9f0a29ac3555e3a534728055968fa447f1aaf70696ac7149e56020eecacd8fed",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "model": {
+      "output": "Thundercomm, Inc. RUBIK Pi 3",
+      "raw_output_bytes": 28,
+      "raw_output_sha256": "c49fdec29e2b88387a12ed04ec4d7a9b7452336c088e946866f3dd155674987a",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "mounts": {
+      "output": "/dev/sda3 ext4   111.9G 81.8G 25.5G /",
+      "raw_output_bytes": 37,
+      "raw_output_sha256": "bb83f4b4f467b95596fc697cfb3f6097620f567a7d5dd2d5d71cd24c8c9f116d",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "nvcc": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "nvidia_driver_proc": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "nvidia_smi": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "os_release": {
+      "output": "PRETTY_NAME=\"Ubuntu 24.04.4 LTS\"\nNAME=\"Ubuntu\"\nVERSION_ID=\"24.04\"\nVERSION=\"24.04.4 LTS (Noble Numbat)\"\nVERSION_CODENAME=noble\nID=ubuntu\nID_LIKE=debian\nHOME_URL=\"https://www.ubuntu.com/\"\nSUPPORT_URL=\"https://help.ubuntu.com/\"\nBUG_REPORT_URL=\"https://bugs.launchpad.net/ubuntu/\"\nPRIVACY_POLICY_URL=\"https://www.ubuntu.com/legal/terms-and-policies/privacy-policy\"\nUBUNTU_CODENAME=noble\nLOGO=ubuntu-logo",
+      "raw_output_bytes": 399,
+      "raw_output_sha256": "adf9b086d00509187f87ae72d4b385a0de7a8463e87b4f96d2761ed9b64585f3",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "power_mode": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "python": {
+      "output": "Python 3.12.3",
+      "raw_output_bytes": 13,
+      "raw_output_sha256": "0fa8af6c2b2a63d274b1a244f0b2244fb2eb1ec4656455025f3d8edba9c0009c",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "python_numpy_opencv": {
+      "output": "numpy=1.26.4\nopencv=4.6.0",
+      "raw_output_bytes": 25,
+      "raw_output_sha256": "ab27a375756f326e1355064e62dec55cf88401279d79481525d3b89edc816165",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "python_runtime_packages": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "root_filesystem": {
+      "output": "Filesystem     Type  Size  Used Avail Use% Mounted on\n/dev/sda3      ext4  112G   82G   26G  77% /",
+      "raw_output_bytes": 98,
+      "raw_output_sha256": "2666bf5d5735068808793b5fe16c134bdfeaf27268cf425b9c5d859e3d9430b1",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "telemetry_and_power_sources": {
+      "output": "command:tegrastats=missing\ncommand:jtop=missing\ncommand:vcgencmd=missing\ncommand:sensors=/usr/bin/sensors\ncommand:ipmitool=missing\npath:/sys/class/powercap=present\npath:/sys/bus/iio/devices=present",
+      "raw_output_bytes": 197,
+      "raw_output_sha256": "f394eebf9ad64ffdd5cb14788895bdc39d3b63e219fde88fca78571175d9d0a4",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "thermal_sources": {
+      "output": "/sys/class/thermal/thermal_zone0/type: vbat\n/sys/class/thermal/thermal_zone1/type: pm7250b-ibat-lvl0\n/sys/class/thermal/thermal_zone10/type: cpu0-thermal\n/sys/class/thermal/thermal_zone11/type: cpu1-thermal\n/sys/class/thermal/thermal_zone12/type: cpu2-thermal\n/sys/class/thermal/thermal_zone13/type: cpu3-thermal\n/sys/class/thermal/thermal_zone14/type: cpuss0-thermal\n/sys/class/thermal/thermal_zone15/type: cpuss1-thermal\n/sys/class/thermal/thermal_zone16/type: cpu4-thermal\n/sys/class/thermal/thermal_zone17/type: cpu5-thermal\n/sys/class/thermal/thermal_zone18/type: cpu6-thermal\n/sys/class/thermal/thermal_zone19/type: cpu7-thermal\n/sys/class/thermal/thermal_zone2/type: pm7250b-ibat-lvl1\n/sys/class/thermal/thermal_zone20/type: cpu8-thermal\n/sys/class/thermal/thermal_zone21/type: pm8350c-thermal\n/sys/class/thermal/thermal_zone22/type: cpu9-thermal\n/sys/class/thermal/thermal_zone23/type: cpu10-thermal\n/sys/class/thermal/thermal_zone24/type: cpu11-thermal\n/sys/class/thermal/thermal_zone25/type: aoss1-thermal\n/sys/class/thermal/thermal_zone26/type: gpuss0-thermal\n/sys/class/thermal/thermal_zone27/type: gpuss1-thermal\n/sys/class/thermal/thermal_zone28/type: nspss0-thermal\n/sys/class/thermal/thermal_zone29/type: nspss1-thermal\n/sys/class/thermal/thermal_zone3/type: pm7250b-bcl-lvl0\n/sys/class/thermal/thermal_zone30/type: video-thermal\n/sys/class/thermal/thermal_zone31/type: xo-thermal\n/sys/class/thermal/thermal_zone32/type: ddr-thermal\n/sys/class/thermal/thermal_zone33/type: quiet-thermal\n/sys/class/thermal/thermal_zone34/type: sdm-skin-thermal\n/sys/class/thermal/thermal_zone35/type: mdmss0-thermal\n/sys/class/thermal/thermal_zone36/type: mdmss1-thermal\n/sys/class/thermal/thermal_zone37/type: mdmss2-thermal\n/sys/class/thermal/thermal_zone38/type: mdmss3-thermal\n/sys/class/thermal/thermal_zone39/type: pm7250b-thermal\n/sys/class/thermal/thermal_zone4/type: pm7250b-bcl-lvl1\n/sys/class/thermal/thermal_zone40/type: camera0-thermal\n/sys/class/thermal/thermal_zone41/type: pm7325-thermal\n/sys/class/thermal/thermal_zone42/type: qcom-battmgr-bat\n/sys/class/thermal/thermal_zone5/type: pm7250b-bcl-lvl2\n/sys/class/thermal/thermal_zone6/type: pm8350c-bcl-lvl0\n/sys/class/thermal/thermal_zone7/type: pm8350c-bcl-lvl1\n/sys/class/thermal/thermal_zone8/type: pm8350c-bcl-lvl2\n/sys/class/thermal/thermal_zone9/type: aoss0-thermal\n/sys/class/thermal/thermal_zone0/temp: 4035\n/sys/class/thermal/thermal_zone1/temp: 546\n/sys/class/thermal/thermal_zone10/temp: 48800\n/sys/class/thermal/thermal_zone11/temp: 49200\n/sys/class/thermal/thermal_zone12/temp: 49600\n/sys/class/thermal/thermal_zone13/temp: 48800\n/sys/class/thermal/thermal_zone14/temp: 48400\n/sys/class/thermal/thermal_zone15/temp: 49600\n/sys/class/thermal/thermal_zone16/temp: 48400\n/sys/class/thermal/thermal_zone17/temp: 48000\n/sys/class/thermal/thermal_zone18/temp: 47700\n/sys/class/thermal/thermal_zone19/temp: 47700\n/sys/class/thermal/thermal_zone2/temp: 546\n/sys/class/thermal/thermal_zone20/temp: 47700\n/sys/class/thermal/thermal_zone21/temp: 37000\n/sys/class/thermal/thermal_zone22/temp: 46900\n/sys/class/thermal/thermal_zone23/temp: 48000\n/sys/class/thermal/thermal_zone24/temp: 46500\n/sys/class/thermal/thermal_zone25/temp: 47100\n/sys/class/thermal/thermal_zone26/temp: 44800\n/sys/class/thermal/thermal_zone27/temp: 44400\n/sys/class/thermal/thermal_zone28/temp: 44400\n/sys/class/thermal/thermal_zone29/temp: 44400\n/sys/class/thermal/thermal_zone3/temp: 0\n/sys/class/thermal/thermal_zone30/temp: 44800\n/sys/class/thermal/thermal_zone31/temp: 39120\n/sys/class/thermal/thermal_zone32/temp: 46700\n/sys/class/thermal/thermal_zone33/temp: 42460\n/sys/class/thermal/thermal_zone34/temp: 41922\n/sys/class/thermal/thermal_zone35/temp: 44800\n/sys/class/thermal/thermal_zone36/temp: 43200\n/sys/class/thermal/thermal_zone37/temp: 43600\n/sys/class/thermal/thermal_zone38/temp: 44400\n/sys/class/thermal/thermal_zone39/temp: 42485\n/sys/class/thermal/thermal_zone4/temp: 0\n/sys/class/thermal/thermal_zone40/temp: 46700\n/sys/class/thermal/thermal_zone41/temp: 43711\n/sys/class/thermal/thermal_zone42/temp: 25000\n/sys/class/thermal/thermal_zone5/temp: 0\n/sys/class/thermal/thermal_zone6/temp: 0\n/sys/class/thermal/thermal_zone7/temp: 0\n/sys/class/thermal/thermal_zone8/temp: 0\n/sys/class/thermal/thermal_zone9/temp: 46500",
+      "raw_output_bytes": 4275,
+      "raw_output_sha256": "0d621d4988c2b03434e2da061c26328986ff0c201be2899b0daefc6f0b05bac8",
+      "returncode": 0,
+      "status": "ok"
+    },
+    "trtexec": {
+      "output": null,
+      "raw_output_bytes": 0,
+      "raw_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "returncode": 127,
+      "status": "missing"
+    },
+    "uname": {
+      "output": "Linux ubuntu 6.8.0-1077-qcom #81-Ubuntu SMP PREEMPT_DYNAMIC Mon May 25 09:36:45 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux",
+      "raw_output_bytes": 122,
+      "raw_output_sha256": "6f7d2027994b3d1bd15b0a7e75e7769191ff20354056ebdaa0c37ab64e8cfd3e",
+      "returncode": 0,
+      "status": "ok"
+    }
+  },
+  "created_utc": "2026-10-03T18:19:39.135173+00:00",
+  "inventory_completeness": {
+    "expected_count": 27,
+    "missing_commands": [],
+    "parse_error": null,
+    "recorded_count": 27,
+    "status": "complete"
+  },
+  "sanitization": {
+    "policy": "allowlisted read-only outputs; hostname/SSH route omitted; IP/MAC/device identifiers redacted",
+    "raw_command_output_retained": false
+  },
+  "schema_version": "e2l1-edge-inventory-v1",
+  "target": "E4",
+  "transport": {
+    "returncode": 0,
+    "status": "ok",
+    "timed_out": false,
+    "unmarked_output_bytes": 0,
+    "unmarked_output_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}
