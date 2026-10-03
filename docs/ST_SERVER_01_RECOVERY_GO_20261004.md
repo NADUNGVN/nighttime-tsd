@@ -1,0 +1,19 @@
+# Server confirmation v2: recovery accepted
+
+Reviewer Astra, 2026-10-04. Reviewed executable commit `57faee011413686792ff654727418909371580f5`.
+
+The production dependency adapter now binds check_det_dataset, build_yolo_dataset and build_dataloader into the actual shared manifest-ordered loader. The normal auxiliary path invokes this adapter for both model contracts. Accept the A2L-053 fix and the previously accepted U42/U43/U44 real-image CPU order receipts.
+
+Astra independently ran three targeted production-path tests: adapter/both model routes PASS, swallowed calibration-callback error PASS, both models across auxiliary/INT8/FP16 paths PASS. Loader integration 5/5 PASS; TensorRT-feasibility mock regression 30/30 PASS. This review uses the existing dependency-complete CPU environment with CUDA hidden. The earlier accepted pre-binding super-suite was 24/24; this decision does not claim a fresh complete super-suite on the final revision. A broader invocation was interrupted by user steering and is not counted as completed verification. These are CPU/library-double tests, not a real TensorRT build.
+
+**Conditional GO for exactly one fresh v2 confirmation attempt**, carrying the existing supertask through audit, analysis and reporting. This supersedes the GPU HOLD in A2L-052/A2L-053 for the reviewed code. No new Astra response is required for each command, model, arm or repeat when prerequisites pass.
+
+LUNA-SERVER supplies complete foreground commands; only the user runs the server. Before dispatch, verify actual executable/config/helper bytes, immutable checkpoint/ONNX/calibration/dev/XML bindings, existing pinned runtime, fresh GPU identity/resource/process snapshot, and absence of old study-owned survivors. Preserve the unrelated dirty checkpoint. Current desktop exceptions require exact current PID/path rows. The confirmation workload policy remains unchanged; other users' workloads must not be altered.
+
+Use only `results/measurement_audit_v1/server_precision_head_confirmation_v2`. It must be absent before CPU plan creation; scored dispatch may encounter only its newly bound plan/schedule. Historical v1 remains immutable. Plan labels are provenance, not a live progress source; do not rewrite them after creation. Publish actual executed-file hash receipts and full revision before dispatch. Documentation-only handoff commits may follow the reviewed code if executable bytes match; material code/scientific changes require review.
+
+Budget: v2 at most 84 builders, 78 captures, 127608 dev image passes. Across failed v1 plus v2, at most 85 attempted builders. Keep the same selections, four INT8 arms, three repeats, FP16 controls, estimator, rotation, fresh timing inputs and read-only per-model/selection caches. The existing GO token may be used for this bounded attempt. First scheduled jobs already exercise the integration; no additional canary, smoke, warmup forwards, export, retraining or benchmark is required or authorized.
+
+Any execution failure stops the parent and preserves partial counts/errors/cleanup uncertainty. No automatic retry, resume, replacement cell or third attempt. A busy machine or unmet input prerequisite means operator/resource pending; continue the independent CPU/paper queue. Valid unfavorable results still complete the scientific study. The current runner is single-host; CPU source/reference/analysis tasks may use other suitable user-operated servers without splitting the GPU matrix or silently changing its hardware contract.
+
+After artifacts return, execute the original locked audit and pooled AP/paired CI/variation analysis; preserve all cells and all historical FAILs. Deliver manuscript methods, results, limitations and one supported/mixed/incomplete claim decision. No server, SSH, GPU, export or model forward was performed by Astra during this review.

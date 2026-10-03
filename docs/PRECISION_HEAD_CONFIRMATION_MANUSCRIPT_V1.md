@@ -1,31 +1,37 @@
-# Manuscript insert — precision-head confirmation (draft)
+# Manuscript insert — precision-head confirmation (prospective protocol)
+
+**Execution status:** approved conditional GO; no v2 scored run has been
+audited. This text describes a planned protocol, not completed work.
 
 ## Methods
 
-We evaluated two frozen, task-specific checkpoints, YOLOv8n and YOLO26n, on
-the CCTSDB2021 development split under a pre-registered TensorRT build
-contract. Uniform train-only calibration selections U42/U43/U44 each contained
-1,024 images and used the same MinMax recipe. For each model we built three
-independent plans for each selection and arm: baseline INT8, bbox FP32,
-classification FP32 and both FP32. Three architecture-specific FP16 controls
-were also built. Each model's 42 builders were executed as one block, with
+The approved protocol will evaluate two frozen, task-specific checkpoints,
+YOLOv8n and YOLO26n, on the CCTSDB2021 development split under the locked
+TensorRT build contract. Uniform train-only calibration selections U42/U43/U44
+each contain 1,024 manifest-ordered images and use the same MinMax recipe. For
+each model, the schedule includes three repeats for each selection and INT8
+arm (baseline, bbox FP32, classification FP32 and both FP32), plus the
+architecture-specific FP16 controls. If the single authorized run proceeds,
+each model's 42 scheduled builders will remain one contiguous block with
 rotated 13-cell rounds and fresh timing inputs.
 
-The v8 decoded head and v26 end-to-end top-k head were evaluated with their
-locked, different postprocessing routes. Predictions were linked to the
-identical 1,636-image dev inventory and XML annotations. The primary contrast
-was both-FP32 minus baseline-INT8 full AP50-95. We report full, XS and S
-endpoints, image-paired PCG64 bootstrap intervals (seed 20260916, 1,000
-draws), within-selection build SD, and between-selection-mean SD.
+The plan binds the v8 decoded head and v26 end-to-end Top-K head to their
+different locked postprocessing routes. Captures will be checked against the
+same 1,636-image dev inventory and XML annotations. The primary contrast is
+both-FP32 minus baseline-INT8 full AP50–95. The planned analysis reports full,
+XS and S endpoints, image-paired PCG64 bootstrap intervals (seed 20260916,
+1,000 draws), within-selection build SD, and between-selection-mean SD.
 
 ## Results
 
-This section remains a template until the complete server artifact set is
-audited. No estimate is inserted from the historical YOLO11n discovery,
-feasibility smoke, CPU bridge, or partial confirmation output. The final table
-will list all 78 scored cells, cache/build identity, full/XS/S metrics,
-primary/control/FP16 contrasts, image-bootstrap intervals, and the two
-distinct variability summaries.
+No cross-model confirmation estimate is available. This section will be
+completed only after the user-operated artifact is pushed and all scheduled
+cells, hashes, counters, lifecycle evidence and dataset bindings are audited.
+Historical YOLO11n discovery, feasibility smoke, CPU bridge and failed partial
+v1 are not substitutes. The final table is expected to include all 78 capture
+cells, cache/build identity, full/XS/S metrics, primary/control/FP16
+contrasts, image-bootstrap intervals and both variability summaries; any
+missing/invalid cells will be reported as incomplete, with no replacement run.
 
 ## Limitations
 

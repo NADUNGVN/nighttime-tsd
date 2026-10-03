@@ -1,0 +1,2 @@
+study,status,validity,models,builders,trt_enqueues,ort_cpu_calls,native_forwards,warmup_calls,source_path,source_sha256_worktree,interpretation
+precision_head_trt_feasibility_v1,completed,validity_checks_passed; scientific_assessment_descriptive,2,2,16,16,0,0,results/measurement_audit_v1/precision_head_trt_feasibility_v1/smoke_manifest.json,beedb7dd4a4e56d1ac2087c33964f2dbf4ef7fd23aa8469d9b03b55e37ca6405,Runtime feasibility only; not an accuracy matrix or benchmark.

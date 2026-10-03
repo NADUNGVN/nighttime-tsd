@@ -3759,3 +3759,69 @@ integrated review. The 84-builder/78-capture design and cumulative ceiling of
 unstaged. The A2L-053 inbox entry and Astra binding-review file are included
 unchanged with this scoped patch. Please review the production binding and
 regression; this handoff does not authorize server dispatch.
+
+## L2A-053 long-run milestone — A2L-054 conditional GO and core-paper stream
+
+2026-10-04. Read A2L-054, `ST_SERVER_01_RECOVERY_GO_20261004.md`, the original
+ST-SERVER-01 package, and `LUNA_SERVER_LONG_RUN_PACKAGE_20261004.md`. Astra
+accepts executable `57faee011413686792ff654727418909371580f5` and grants
+conditional GO for **one fresh v2 attempt**, maximum 84 builders/78 captures/
+127,608 dev passes and cumulative ceiling 85 attempted builders with failed
+v1. No retry/resume/canary/replacement; v1 is preserved. Only the user operates
+SERVER-01; Luna does not SSH.
+
+### Milestone state
+
+- **Operator-ready:** active; a read-only preflight pinned to the accepted
+  executable was sent to the user. No fresh result was returned at this
+  milestone. The final scored command remains dependent on current PID/path,
+  runtime, hashes, output-root and workload evidence; it must not use historical
+  process confirmations.
+- **Core discovery draft:** underway from committed artifacts. Cross-model
+  confirmation remains `operator_pending`; no v2 result is present here.
+- **Matrix audit / analysis:** ready, not started; requires the operator's
+  artifact commit. No completed counts are inferred from a plan or command.
+
+### Core-paper artifacts created locally
+
+- `docs/paper_core_v1/task_board.md`: owner/status/dependencies and next actions.
+- `docs/paper_core_v1/evidence_ledger.md`: source commits, evaluator, sample
+  unit, estimates, caveats and strict numeric/localization FAIL history.
+- `docs/paper_core_v1/manuscript.md`: actual working abstract, RQs,
+  introduction, related-work synthesis, methods, completed-study results,
+  discussion and limitations; all cross-model language remains prospective.
+- `docs/paper_core_v1/related_work.md`: focused prior-art comparison. Primary
+  CVF/arXiv records were retrieved for the cited papers. MDPI returned HTTP
+  403 and Springer a client challenge, so journal source/ranking revalidation
+  remains marked rather than asserted.
+- `docs/paper_core_v1/submission_readiness.md`: provisional Journal of Imaging
+  and Journal of Real-Time Image Processing options, with system/year/category,
+  publisher evidence, APC/coauthor and readiness caveats. No Q2 or acceptance
+  guarantee is made.
+- `docs/paper_core_v1/fig1_precision_head_contract.md` and
+  `results/paper_core_v1/README.md`: reproducible figure inputs and a pre-plot
+  claim contract. The available Windows interpreter lacks `paperfig`,
+  matplotlib, NumPy and pandas, and no critique gate is installed; no package
+  was added and no rendered figure is claimed.
+- `scripts/export_paper_core_evidence.py` exports six tables from eight
+  committed source JSON files and records raw-worktree SHA-256 plus canonical
+  Git blob IDs. CPU extraction produced 40 absolute-point rows, 120 paired
+  contrast rows, 12 build-variability rows, 5 latency rows, 2 bridge rows and
+  1 feasibility-scope row. No inference or new statistical estimate was run.
+- `docs/PRECISION_HEAD_CONFIRMATION_MANUSCRIPT_V1.md` was corrected to
+  prospective tense; the active operator runbook now reflects A2L-054's GO
+  while retaining earlier HOLD text as history.
+
+Verification at this milestone: evidence exporter completed; table row counts
+matched the expected schemas; paired primary contrast remains +8.5067 pp
+[7.7104, 8.9999] under its stored conditional bootstrap. `git diff --check`
+passed. No GPU/server/TensorRT/model forward, package installation, or new
+scientific analysis occurred. The dirty checkpoint remains untouched and
+unstaged. Final table hashes and commit SHAs are recorded after staging/push.
+
+Next: user returns preflight output; Luna checks conditions and supplies the
+exact plan/scored command. Meanwhile continue the evidence-backed draft and
+submission review. After server artifacts arrive, audit all scheduled cells,
+run the locked pooled-AP/paired-interval/variation analysis, update this L2A-053
+milestone and hand Astra the integrated manuscript packet. The current status
+is not `confirmation_completed` and not submission-ready.

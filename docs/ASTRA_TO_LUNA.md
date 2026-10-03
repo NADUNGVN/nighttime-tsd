@@ -1683,3 +1683,25 @@ Prospectively reserve a fresh `server_precision_head_confirmation_v2` root and e
 Read `docs/ST_SERVER_01_RECOVERY_BINDING_REVIEW.md` fully. Review of `0b030bd4df4e879e583469cea9ccea468b57fe04`: Astra confirms loader 5/5, super-suite 24/24 and feasibility 30/30 PASS, and canonical hashes/order of all three 1024-image CPU receipts. Accept that evidence with its recorded local runtime/materialization limits; do not repeat it unnecessarily.
 
 **NO-GO server GPU remains for one reproduced production error.** `load_production_dependencies` returns the unbound shared loader; `build_real` omits its required `check_det_dataset`, `build_yolo_dataset`, `build_dataloader` arguments. The audit supplies them, but the normal-path test fake hides the mismatch. Fix the actual callable binding and add a regression covering it without replacing this seam. Preserve all accepted producer/numerical behavior, v1 evidence, v2 budget and dirty checkpoint. GO one autonomous local closure package; no GPU/forward/export. Append the L2A-053 recovery closure and push unchanged inbox/review with scoped fixes via NADUNGVN; return for targeted integrated review, not a new scientific proposal.
+
+## Session identity and concise reporting — 2026-10-04
+
+User-facing session name: **LUNA-SERVER** (main Luna; server confirmation lane). Existing A2L/L2A task IDs and inbox/outbox paths remain valid. Astra reviews; Luna implements/tests locally and supplies commands; the user executes servers and returns artifacts. No SERVER-01 SSH by this session.
+
+Every chat progress/final report must use at most two lines, starting with the session name. Put the full technical evidence, tests, limitations, artifact inventory and commands in `docs/LUNA_TO_ASTRA.md` or its linked runbook. Do not omit failures from that record or describe local completion as completed server research.
+
+Required chat format:
+
+`[LUNA-SERVER] <task> | <actual phase/status> | commit <short SHA> | <one verified result/count>.`
+
+`Next: <owner + concrete action>; blocker: <specific blocker or none>. Details: docs/LUNA_TO_ASTRA.md (<entry>).`
+
+Immediate state: binding repair is pushed at `57faee011413686792ff654727418909371580f5`; Astra's targeted review is pending. No further repair or GPU dispatch is requested merely by this naming/reporting entry. After acceptance, Luna supplies one complete user-operated v2 runbook, then audits/analyses results under the existing supertask. Preserve review and budget conditions. Commit/push this administrative entry with the next scoped handoff through NADUNGVN; no separate research task is created.
+
+## A2L-054 — recovery accepted; execute the long-run core research package
+
+2026-10-04: read `docs/ST_SERVER_01_RECOVERY_GO_20261004.md` and `docs/LUNA_SERVER_LONG_RUN_PACKAGE_20261004.md` fully. Astra accepts `57faee011413686792ff654727418909371580f5`: three targeted production-boundary tests, loader 5/5 and feasibility mock regression 30/30 independently PASS. **Conditional GO for the existing fresh v2 84-builder/78-capture attempt**, with the previously declared 85 cumulative attempted-builder ceiling and all operator/input/resource conditions. This supersedes A2L-053's GPU HOLD for the reviewed executable. Documentation handoff commits with unchanged executable bytes do not require another code review.
+
+LUNA-SERVER must deliver complete foreground operator commands now and carry the original supertask through real audit/analysis. In parallel, begin the existing-evidence ledger, actual core manuscript, related-work comparison, reproducible tables/figure inputs and submission-readiness document. These CPU/writing tasks are GO immediately; do not wait for the GPU study, edge network or a permission per file. Keep an independent ready queue during operator/resource waits. Coordinate source CPU work with LUNA-EDGE/user; no shared numerical state or splitting of the single-host matrix.
+
+Use the long-run package's task board and L2A-053 milestones. Two-line reports begin `[LUNA-SERVER]`; full evidence belongs in documents. Commit/push unchanged inbox/decision/package plus scoped work via NADUNGVN, preserve dirty checkpoint and v1. Final handoff is a research/manuscript packet, or actual failed experimental evidence with completed independent deliverables; a code push alone does not finish the assignment.

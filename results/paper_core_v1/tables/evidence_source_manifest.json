@@ -1,0 +1,72 @@
+{
+  "generated_utc": "2026-10-03T18:34:03.289490+00:00",
+  "generator": "scripts/export_paper_core_evidence.py",
+  "generator_sha256": "ca33492497bf288a495a8235900fd5d3ee96169ccc2e5f83ff538707e0e31bff",
+  "git_revision_at_generation": "57faee011413686792ff654727418909371580f5",
+  "hash_semantics": "SHA-256 fields cover raw worktree bytes; source files also record canonical Git blob object IDs at the generation revision.",
+  "outputs": {
+    "build_variability.csv": {
+      "sha256_worktree_bytes": "9592a98d03f83413d7cde5aec3d264298727fdcc225f0f212dad6b48d8bc9f68"
+    },
+    "latency_summary.csv": {
+      "sha256_worktree_bytes": "fcc210acbbf03dc29bd445618d3fc77cc4038791b66f4818acaa1edbc9054569"
+    },
+    "precision_head_contrasts.csv": {
+      "sha256_worktree_bytes": "95c1810797a624ad7bd5361b3f68e8cfdb03c2d72ce166f172dd5ebebf2c741a"
+    },
+    "precision_head_points.csv": {
+      "sha256_worktree_bytes": "c7c384174930d5ec3850ecf89b6c9d4a318ad0e8c888fd98993d03d9d66ca31e"
+    },
+    "source_export_bridge.csv": {
+      "sha256_worktree_bytes": "2228ca424525751e51988aae668f6a9a9ec2bf2dcd8115429f44c0c56ebfe86c"
+    },
+    "trt_feasibility.csv": {
+      "sha256_worktree_bytes": "42db8d5bd3c0c0fec0a83d76add0da38a76a9f95d1b69812d0f3b6a34b90a7af"
+    }
+  },
+  "schema_version": 1,
+  "scope": "Existing committed evidence only; no inference, build, or new statistical estimation.",
+  "source_files": {
+    "ablation_points": {
+      "canonical_git_blob_oid_at_generation": "558e2b361943a03bc387be6594faf176e11302f7",
+      "path": "results/measurement_audit_v1/precision_head_paired_analysis_v1/point_estimates.json",
+      "sha256_worktree_bytes": "c3b6c58979116b39e788b8145f7a6e0c8b08bda3a1106ce1e40d7d79d8e497d5"
+    },
+    "bridge_26": {
+      "canonical_git_blob_oid_at_generation": "83f73290421dc8e30413d22775211a9bc2002560",
+      "path": "results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1/models/yolo26n/model_report.json",
+      "sha256_worktree_bytes": "8d1a4be9de52f71c8f2e16c6a4b850842c9aa36c1f7ab1cb2dddaf1bc82f076c"
+    },
+    "bridge_v8": {
+      "canonical_git_blob_oid_at_generation": "ecf25339d631c3f45777af6ff14e4a9103f51d2d",
+      "path": "results/measurement_audit_v1/precision_head_source_export_dev_bridge_v1/models/yolov8n/model_report.json",
+      "sha256_worktree_bytes": "93fc17e8ac72a3ca1f58ad16025f68d7907f3d219b167de0b5adaa414b8d0531"
+    },
+    "build_repeat": {
+      "canonical_git_blob_oid_at_generation": "d659a1dfd8e71f65a67dee39e2be15430a4c03bb",
+      "path": "results/measurement_audit_v1/server_uniform_build_repeat_v1/repeat_summary.json",
+      "sha256_worktree_bytes": "bac77b1fae3ce1ef718dc79fde9e4d3e14afe2ca4c751bf0bbe762119368a2a5"
+    },
+    "feasibility": {
+      "canonical_git_blob_oid_at_generation": "92ef2daa37f203d018301ec8ac9dc7567c8f9f65",
+      "path": "results/measurement_audit_v1/precision_head_trt_feasibility_v1/smoke_manifest.json",
+      "sha256_worktree_bytes": "beedb7dd4a4e56d1ac2087c33964f2dbf4ef7fd23aa8469d9b03b55e37ca6405"
+    },
+    "latency": {
+      "canonical_git_blob_oid_at_generation": "aef392a939efa916da30383960c2609208967523",
+      "path": "results/measurement_audit_v1/server_yolo11n_precision_head_latency_v1/latency_summary.json",
+      "sha256_worktree_bytes": "aba9696111cfcee263c4d9466c4ccef4be09110d3dad20f7fc3023a67526cadd"
+    },
+    "paired_ci": {
+      "canonical_git_blob_oid_at_generation": "d9191ab8a0837cb54e64444158219a5e609a173f",
+      "path": "results/measurement_audit_v1/precision_head_paired_analysis_v1/contrast_ci.json",
+      "sha256_worktree_bytes": "3144e54cf811d1d553d7dd4bc6b5bfa551e2910e566a002281d8ab9f250281af"
+    },
+    "paired_summary": {
+      "canonical_git_blob_oid_at_generation": "7736949156117d0be85af635dfe809f2717a101c",
+      "path": "results/measurement_audit_v1/precision_head_paired_analysis_v1/analysis_summary.json",
+      "sha256_worktree_bytes": "c47b2fb4a1dd6cbe4ed18fbfe4fe4bce059a54a7ac3de50646d5234d0bdaa9bf"
+    }
+  },
+  "status": "generated_from_committed_sources"
+}
