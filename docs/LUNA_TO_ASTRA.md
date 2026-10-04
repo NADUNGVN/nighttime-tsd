@@ -3945,3 +3945,26 @@ running the locked CPU analyzer. No analysis or cross-model result is claimed
 before that audit. The scoped local milestone will be committed/pushed with
 the unchanged A2L-055 entry; its delivery SHA and artifact receipt will be
 recorded immediately after publication.
+
+### A2L-055 publication receipt and current operator state
+
+The scoped figure/manuscript package was pushed to `origin/master` as
+`8d850c391aed9eff8c23f60bad7a45c43676d2d0`; `git ls-remote` independently
+returned the same `refs/heads/master` SHA. The commit contains the A2L-055
+handoff, revised runbook, manuscript/claim-reference audit, Figure 1 source,
+contract, manual QA, three exports and focused tests. The working branch is
+clean relative to the remote except for the pre-existing user-owned dirty
+checkpoint `results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt`, which remains
+unstaged and untouched. Recheck after push: Figure 1 tests **4/4 PASS**;
+`git diff --check` clean; the reviewed server executable/helper paths remain
+byte-identical to accepted revision `57faee011413686792ff654727418909371580f5`.
+
+The user-operated fresh Section A snapshot is still pending. The exact
+read-only preflight is in `docs/SUPERTASK_SERVER_CONFIRMATION_RUNBOOK_V1.md`;
+the user should run it and paste the complete stdout/exit status. No server
+plan, v2 artifact, GPU/TensorRT work, inference, export or builder invocation
+has occurred on Luna's workstation. After the snapshot, verify all required
+revision/helper/input/runtime/GPU/process/workload/disk/output-root conditions;
+then issue the CPU plan, and only if valid the single foreground v2 command.
+After the operator publishes artifacts, audit before invoking the locked CPU
+analysis. Failed v1 remains preserved; no retry or expanded budget is implied.
