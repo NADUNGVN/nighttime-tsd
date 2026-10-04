@@ -3995,3 +3995,10 @@ run the CPU plan only if those checks pass, then use the single existing
 foreground v2 attempt only if the plan and conditional-GO prerequisites pass.
 After operator publication, audit all 84/78 evidence before running the locked
 analysis. No retry or added budget is authorized.
+
+Publication receipt: the unchanged A2L-055 reviewer receipt, corrected active
+runbook and L2A-053 handoff were committed and pushed to `origin/master` as
+`81dac78` (full revision `81dac7872ec7b2280ec3442486c8dc5e7f4ab7db`). The
+Section A Bash block passed local `bash -n`; `git diff --check` passed. This
+does not substitute for the operator's SERVER-01 snapshot, which remains
+pending; no v2 plan or scored execution was started.
