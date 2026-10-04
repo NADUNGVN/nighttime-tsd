@@ -453,7 +453,9 @@ The adapter and existing edge modules also pass `py_compile`, and
 `git diff --check` passes. No GPU runtime was imported; no SSH connection,
 device command, engine build, model load, forward pass, or benchmark was run
 for L1A-006. The accepted L1A-005 telemetry artifacts remain immutable,
-including the disclosed E2 cumulative 31.109-second two-attempt deviation.
+including the disclosed E2 cumulative 31.109-second telemetry-collection
+duration across two attempts (not a build duration; provenance correction is
+recorded in L1A-032).
 
 ### Remaining prerequisites and handoff
 
@@ -2339,9 +2341,9 @@ sanitized device inventories. The evidence ledger separates source-export
 from TensorRT box disagreement; score tolerance compliance is explicitly not
 exact equality, and no accuracy impact is claimed from three diagnostic
 fixtures. Both paired AP tables remain pending. Attempt-1 timeout and attempt-2
-build/three-inference results remain separately counted; user's reported
-31,109-second two-attempt aggregate is recorded as user-reported, not a new
-benchmark or a reconstructed duration.
+build/three-inference results remain separately counted. A previous sentence
+misattributed `31,109 seconds` to the two E2 build attempts; see the explicit
+provenance correction in L1A-032 below.
 
 **Next action.** User: run the exact foreground source CPU + POSIX prerequisite
 block in `docs/E2L1-030_SOURCE_CPU_RUNBOOK.md` and return sanitized counters,
@@ -2362,3 +2364,85 @@ sanitizer tests, and the unchanged E2L1-031 inbox/package. It is on
 `luna1/e2l1-006-jetson-adapter-smoke`; the active GitHub push identity is
 `NADUNGVN`. This addendum is a receipt only; it changes no numerical or device
 evidence.
+
+## L1A-032 — dependency-complete CPU QA, telemetry provenance correction, and isolated E5 readiness (2026-10-04)
+
+**Status:** `e5_cpu_mock_readiness_review_required`; E2L1-030 remains
+`operational_hold`. E2 and full-dev source counts remain **0/1636 each**. No
+source output was present at
+`results/edge_readiness_v1/e2l1-030-source-reference-v1/`; the existing
+`e2l1-026-source-reference-pending/source_reference.json` still says
+`pending_not_executed` / zero passes. No private source package could be
+prepared from absent output. The user-operated SERVER-01 run remains the next
+source dependency; Luna1 made no SERVER-01 SSH connection. No E2 connection
+probe was made while offline.
+
+### E2L1-005 duration provenance correction
+
+The earlier L1A-031 sentence calling `31,109 seconds` a user-reported,
+two-attempt aggregate of E2 build time was incorrect. The immutable canonical
+telemetry JSONs record `transport.local_duration_ns` of `15,594,000,000 ns`
+for `E2/20260916T163147328463Z` (transport unavailable, exit 1) and
+`15,515,000,000 ns` for `E2/20260916T163228269358Z` (transport OK, exit 0).
+Their sum is **31.109 seconds spent in two telemetry/SSH collection
+attempts**, not engine-build duration. The JSON SHA-256 values are respectively
+`a2c079721850cff315df69f57519c1b2c66049483f428d8d87400dfc83da31bf` and
+`527117584767b18ac3fc07224ac49ceb2703d58a0ff9fd79575e3456031af3c3`.
+Historical telemetry files were not changed. No two-attempt aggregate build
+duration is available or inferred. The first build's 900-second timeout and
+the later successful build / three-inference receipt remain separate events.
+
+### Dependency-complete CPU QA
+
+Used the existing
+`D:/Research/paper/local/measurement_audit_env/Scripts/python.exe`; no package
+was installed. Observed Python 3.11.9, NumPy 2.4.2, Pillow 12.3.0,
+pycocotools 2.0.10, ONNX Runtime 1.24.3, Ultralytics 8.4.102,
+Torch 2.8.0+cu129, and OpenCV import available.
+
+- `python -m unittest discover -s tests -p 'test_e2_dev_evaluation_packet.py' -v`:
+  32 tests, **31 passed, 1 skipped**. The skip is only the POSIX
+  SIGTERM-ignore/escalation test on Windows. The previously skipped pinned
+  helper boundaries `test_raw_output_postprocess_feeds_canonical_record_schema`
+  and `test_letterbox_transform_matches_ultralytics_helper_for_nonsquare_rounding_and_clipping`
+  both passed. The mocked full-chain fixture/evaluator and synthetic paired
+  bootstrap tests passed; no model forward occurred.
+- `python -m unittest discover -s tests -p 'test_e2_output_diagnostic.py' -v`:
+  **8/8 passed**.
+- `python -m unittest discover -s tests -p 'test_e5_tensorrt_compat.py' -v`:
+  **15/15 passed** using CPU doubles only.
+
+The Windows run does not satisfy the required separate Linux/POSIX
+termination prerequisite. No dependency installation, build, inference,
+benchmark, target access, or device change occurred.
+
+### E5 and paper packet
+
+Added the isolated module `scripts/edge_readiness/e5_tensorrt_compat.py`, its
+CPU/mock suite `tests/test_e5_tensorrt_compat.py`, and
+[`docs/e5_cpu_mock_readiness.md`](e5_cpu_mock_readiness.md). Coverage includes
+TensorRT 10.3 named-I/O mode/dtype/location/shape, v3 address and dispatch
+order, synchronized fresh output, partial/error cleanup, source/input/engine
+hash bindings, fail-closed missing OpenCV, and CUDA 12.x candidate selection
+through injected filesystem/library doubles. No E5 library was loaded. Based
+on the inventory, TensorRT package metadata is 10.3.0.30 (+CUDA 12.5), `nvcc`
+is 12.6.68, driver metadata is 540.5.0, and OpenCV import is missing; the
+actual runtime ABI/library paths remain unknown. E5 stays
+`e5_cpu_mock_readiness_review_required`, not validated, and has zero build or
+inference authorization. The proposal is exactly one device-native build plus
+one pass over three frozen fixtures, for a separately approved future smoke;
+it is not an E2 substitute or an AP/performance study.
+
+Audited the current manuscript and paper artifacts: raw TensorRT/source-ONNX
+differences stay distinct from post-NMS diagnostics; tolerance compliance is
+not equality; three fixtures do not establish ground-truth accuracy impact;
+both paired AP tables remain pending because source and target are 0/1636.
+Updated the evidence ledger, reproduction recipe, task board and E5 readiness
+assessment with the correction and current CPU evidence. No table was filled
+from smoke fixtures, and no historical telemetry or engine artifact changed.
+
+**Next actions:** user runs the approved E2L1-030 source CPU + POSIX prerequisite
+block on SERVER-01 and returns sanitized counters/hashes; then Luna audits the
+real output and prepares its private package. After E2 connectivity returns,
+continue only under the existing conditional GO and gates. E5 requires a
+separate scope decision. No third E2 build or extra smoke is authorized.
