@@ -3980,12 +3980,15 @@ it is not a v2 dispatch route. Competing or unidentified compute therefore
 keeps the v2 attempt `operator_pending`; do not add a background flag, relabel
 compute as desktop, kill a process, or alter runner behavior.
 
-The copyable Section A command now prints the full checked-out HEAD and
-compares every frozen runner/config/helper path to accepted executable
+The Section A command is shortened to a fast-forward pull and
+`bash scripts/snapshot_precision_head_confirmation_preflight.sh`. The
+committed helper prints the full checked-out HEAD and compares all frozen
+runner/config/helper paths to accepted executable
 `57faee011413686792ff654727418909371580f5`, including
 `scripts/run_precision_head_source_export_dev_bridge.py`, in both the byte
-comparison and SHA-256 inventory. It pulls fast-forward only and does not
-discard local modifications. The full command is in the active runbook.
+comparison and SHA-256 inventory. It also captures current host/GPU/process,
+runtime, disk, input hashes and v1/v2 root state; it creates no output and
+starts no GPU work. Pull remains fast-forward only and preserves local edits.
 
 This is documentation/preflight work only: no server access, v2 plan, GPU,
 TensorRT, export, model forward or builder invocation occurred. The fresh
@@ -3999,6 +4002,7 @@ analysis. No retry or added budget is authorized.
 Publication receipt: the unchanged A2L-055 reviewer receipt, corrected active
 runbook and L2A-053 handoff were committed and pushed to `origin/master` as
 `81dac78` (full revision `81dac7872ec7b2280ec3442486c8dc5e7f4ab7db`). The
-Section A Bash block passed local `bash -n`; `git diff --check` passed. This
-does not substitute for the operator's SERVER-01 snapshot, which remains
-pending; no v2 plan or scored execution was started.
+The full Section A command passed local `bash -n`; `git diff --check` passed.
+The short preflight helper is added as a documentation usability follow-up;
+this does not substitute for the pending operator snapshot. No v2 plan or
+scored execution was started.
