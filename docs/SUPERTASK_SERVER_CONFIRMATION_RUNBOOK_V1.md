@@ -10,22 +10,74 @@ for a second attempt. Luna does not SSH; the user alone runs SERVER-01 commands.
 Preserve v1 and the unrelated dirty checkpoint. For this confirmation runner,
 desktop PID/path confirmations identify known desktop processes only; they do
 not authorize competing background/GPU compute. An unknown workload or
-unassessed contention blocks dispatch. The narrow shared-workload path already
-allowed by A2L-044 remains available only when the operator identifies and
-explicitly confirms the exact current background PID/command, resource
-compatibility is assessed, and the run is retained and reported as shared.
-Desktop confirmations alone do not grant that exception. Keep the historical
-feasibility-smoke workload policy separate from this repeated-build
-confirmation.
+unassessed contention blocks dispatch. The accepted confirmation executable
+explicitly rejects any nonempty `--confirm-background-process` list; operator
+confirmation cannot bypass that check. A2L-044's shared-workload exception
+belongs to the completed feasibility smoke only and is not applicable to this
+repeated-build confirmation. Do not alter code, kill another user's process,
+or mislabel compute as desktop to obtain dispatch.
 
-### A. Operator preflight — sent; return the complete output
+### A. Operator preflight — run and return the complete output
 
 This read-only command checks the reviewed executable/helper bytes, current
 GPU/process paths, runtime, disk, frozen inputs, v1 presence and v2 absence.
 It creates no output directory and starts no GPU work.
 
 ```bash
-cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse 57faee011413686792ff654727418909371580f5)" = "57faee011413686792ff654727418909371580f5" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git diff --exit-code 57faee011413686792ff654727418909371580f5 -- configs/precision_head_confirmation_v1.json configs/precision_head_confirmation_execution_v1.json scripts/precision_head_confirmation_contract.py scripts/precision_head_calibration_order.py scripts/run_precision_head_confirmation.py scripts/run_precision_head_confirmation_server.py scripts/analyze_precision_head_confirmation.py scripts/prepare_precision_head_confirmation.py scripts/prepare_precision_head_confirmation_graph.py scripts/capture_cctsdb_validator.py scripts/verify_cctsdb_capture.py scripts/analyze_dev_quantization.py scripts/audit_cctsdb_measurement.py scripts/run_architecture_matrix.py scripts/uniform_build_repeat.py && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch && hostname && nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader && for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | awk '$1 ~ /^[0-9]+$/ {print $1}'); do printf 'PID %s | ' "$p"; ps -o user=,comm=,args= -p "$p"; done && df -h /home/ubuntu && conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python -c "import importlib.metadata as m,numpy as np,torch,ultralytics,tensorrt as trt; print({'torch':torch.__version__,'ultralytics':ultralytics.__version__,'tensorrt':trt.__version__,'numpy':np.__version__,'pycocotools':m.version('pycocotools'),'cuda':torch.version.cuda,'available':torch.cuda.is_available(),'gpu':torch.cuda.get_device_name(0) if torch.cuda.is_available() else None})" && sha256sum configs/precision_head_confirmation_v1.json configs/precision_head_confirmation_execution_v1.json results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx scripts/precision_head_confirmation_contract.py scripts/precision_head_calibration_order.py scripts/run_precision_head_confirmation.py scripts/run_precision_head_confirmation_server.py scripts/analyze_precision_head_confirmation.py scripts/prepare_precision_head_confirmation.py scripts/prepare_precision_head_confirmation_graph.py scripts/capture_cctsdb_validator.py scripts/verify_cctsdb_capture.py scripts/audit_cctsdb_measurement.py && test -f results/measurement_audit_v1/server_precision_head_confirmation_v1/execution_manifest.json && test ! -e results/measurement_audit_v1/server_precision_head_confirmation_v2 && echo OUTPUT_ABSENT
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && \
+env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && \
+env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse HEAD && \
+test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse 57faee011413686792ff654727418909371580f5)" = "57faee011413686792ff654727418909371580f5" && \
+env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git diff --exit-code 57faee011413686792ff654727418909371580f5 -- \
+  configs/precision_head_confirmation_v1.json \
+  configs/precision_head_confirmation_execution_v1.json \
+  scripts/precision_head_confirmation_contract.py \
+  scripts/precision_head_calibration_order.py \
+  scripts/run_precision_head_confirmation.py \
+  scripts/run_precision_head_confirmation_server.py \
+  scripts/analyze_precision_head_confirmation.py \
+  scripts/prepare_precision_head_confirmation.py \
+  scripts/prepare_precision_head_confirmation_graph.py \
+  scripts/run_precision_head_source_export_dev_bridge.py \
+  scripts/capture_cctsdb_validator.py \
+  scripts/verify_cctsdb_capture.py \
+  scripts/analyze_dev_quantization.py \
+  scripts/audit_cctsdb_measurement.py \
+  scripts/run_architecture_matrix.py \
+  scripts/uniform_build_repeat.py && \
+env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch && \
+hostname && \
+nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && \
+nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader && \
+for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | awk '$1 ~ /^[0-9]+$/ {print $1}'); do printf 'PID %s | ' "$p"; ps -o user=,comm=,args= -p "$p"; done && \
+df -h /home/ubuntu && \
+conda activate nighttime-tsd && \
+cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && \
+local/g0_size_env/bin/python -c "import importlib.metadata as m,numpy as np,torch,ultralytics,tensorrt as trt; print({'torch':torch.__version__,'ultralytics':ultralytics.__version__,'tensorrt':trt.__version__,'numpy':np.__version__,'pycocotools':m.version('pycocotools'),'cuda':torch.version.cuda,'available':torch.cuda.is_available(),'gpu':torch.cuda.get_device_name(0) if torch.cuda.is_available() else None})" && \
+sha256sum \
+  configs/precision_head_confirmation_v1.json \
+  configs/precision_head_confirmation_execution_v1.json \
+  results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt \
+  results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt \
+  results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx \
+  results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx \
+  scripts/precision_head_confirmation_contract.py \
+  scripts/precision_head_calibration_order.py \
+  scripts/run_precision_head_confirmation.py \
+  scripts/run_precision_head_confirmation_server.py \
+  scripts/analyze_precision_head_confirmation.py \
+  scripts/prepare_precision_head_confirmation.py \
+  scripts/prepare_precision_head_confirmation_graph.py \
+  scripts/run_precision_head_source_export_dev_bridge.py \
+  scripts/capture_cctsdb_validator.py \
+  scripts/verify_cctsdb_capture.py \
+  scripts/analyze_dev_quantization.py \
+  scripts/audit_cctsdb_measurement.py \
+  scripts/run_architecture_matrix.py \
+  scripts/uniform_build_repeat.py && \
+test -f results/measurement_audit_v1/server_precision_head_confirmation_v1/execution_manifest.json && \
+test ! -e results/measurement_audit_v1/server_precision_head_confirmation_v2 && \
+echo OUTPUT_ABSENT
 ```
 
 Required frozen hashes: config `2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8`; YOLOv8n checkpoint `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b`; YOLO26n checkpoint `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e`; accepted ONNX v8n `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603`; v26n `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc`. Any mismatch, missing runtime, existing v2 root, unknown/incompatible compute workload or inadequate resources stops dispatch. Do not clean, kill or alter another user's workload. Record current desktop PID/path identities if present, but their confirmation does not authorize competing compute.
@@ -45,11 +97,10 @@ failure; do not overwrite or rerun it.
 
 Luna will return the complete foreground command with exact current
 confirmations after reading the user's output. Do not run the placeholder
-below. A `--confirm-background-process PID=COMMAND` flag may be included only
-if the already-authorized A2L-044 shared-workload path applies, the operator
-confirms the exact current process, and resource compatibility is assessed;
-the evidence must retain shared-workload status. Desktop confirmations are not
-that authorization. If any workload is unknown or incompatible, remain
+below. Do not include `--confirm-background-process`: the reviewed runner
+rejects it, and the historical smoke exception is not part of this study.
+Desktop confirmations identify desktop processes only. If competing compute
+is present or any workload is unknown or incompatible, remain
 `operator_pending`; do not retry on another device or kill processes.
 
 ```bash

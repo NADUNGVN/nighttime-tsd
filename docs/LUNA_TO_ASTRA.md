@@ -3916,10 +3916,12 @@ GPU, TensorRT, export, inference, or build operation.
   explicitly unresolved. Archive-specific CCTSDB version/terms still require
   confirmation against the exact XML release.
 - Corrected the active runbook so A2L-054’s GO controls and older A2L-052 HOLD
-  prose is visibly labeled historical. The existing A2L-044 shared-workload
-  exception remains narrow: exact current operator confirmation, resource
-  compatibility assessment, and shared-status reporting; desktop PID/path
-  confirmations alone do not authorize compute.
+  prose is visibly labeled historical. The A2L-044 shared-workload exception
+  applies only to the completed feasibility smoke; it cannot authorize the v2
+  confirmation run. The reviewed v2 runner rejects every nonempty
+  `--confirm-background-process` list, so competing or unknown compute blocks
+  dispatch regardless of operator confirmation. Desktop PID/path confirmations
+  identify desktop processes only and never authorize compute.
 
 Full manuscript state is in `docs/paper_core_v1/manuscript.md`,
 `evidence_ledger.md`, `related_work.md`, `submission_readiness.md` and
@@ -3942,9 +3944,8 @@ After the user publishes artifacts, Luna will verify canonical blobs,
 84-builder/78-capture schedule, input/XML bindings, counters, raw/output
 hashes, telemetry, failure/cleanup/lifetime records and inventory before
 running the locked CPU analyzer. No analysis or cross-model result is claimed
-before that audit. The scoped local milestone will be committed/pushed with
-the unchanged A2L-055 entry; its delivery SHA and artifact receipt will be
-recorded immediately after publication.
+before that audit. The scoped local milestone was committed/pushed with the
+unchanged A2L-055 entry; the delivery SHA and receipt are recorded below.
 
 ### A2L-055 publication receipt and current operator state
 
@@ -3968,3 +3969,29 @@ revision/helper/input/runtime/GPU/process/workload/disk/output-root conditions;
 then issue the CPU plan, and only if valid the single foreground v2 command.
 After the operator publishes artifacts, audit before invoking the locked CPU
 analysis. Failed v1 remains preserved; no retry or expanded budget is implied.
+
+### A2L-055 reviewer-receipt correction — v2 workload policy and Section A
+
+Read Astra's reviewer receipt in `docs/ASTRA_TO_LUNA.md`. The active runbook
+now states the actual production contract: the v2 confirmation runner rejects
+any nonempty `--confirm-background-process` list. A2L-044's shared-workload
+exception is historical and applies only to the completed feasibility smoke;
+it is not a v2 dispatch route. Competing or unidentified compute therefore
+keeps the v2 attempt `operator_pending`; do not add a background flag, relabel
+compute as desktop, kill a process, or alter runner behavior.
+
+The copyable Section A command now prints the full checked-out HEAD and
+compares every frozen runner/config/helper path to accepted executable
+`57faee011413686792ff654727418909371580f5`, including
+`scripts/run_precision_head_source_export_dev_bridge.py`, in both the byte
+comparison and SHA-256 inventory. It pulls fast-forward only and does not
+discard local modifications. The full command is in the active runbook.
+
+This is documentation/preflight work only: no server access, v2 plan, GPU,
+TensorRT, export, model forward or builder invocation occurred. The fresh
+snapshot remains pending from the user. Once returned, verify all input,
+revision/helper, runtime, GPU/process/workload, disk and output-root receipts;
+run the CPU plan only if those checks pass, then use the single existing
+foreground v2 attempt only if the plan and conditional-GO prerequisites pass.
+After operator publication, audit all 84/78 evidence before running the locked
+analysis. No retry or added budget is authorized.
