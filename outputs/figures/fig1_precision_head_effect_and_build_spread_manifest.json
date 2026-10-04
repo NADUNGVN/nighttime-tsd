@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "figure_id": "fig1_precision_head_effect_and_build_spread",
+  "status": "rendered_draft_review_required",
+  "core_claim": "In the exploratory YOLO11n captures, both-branch FP32 exceeded baseline INT8 across the registered COCO/XML AP50–95 size strata; the separate three-build Uniform range is descriptive and is not a confidence interval.",
+  "contract": {
+    "path": "docs/paper_core_v1/fig1_precision_head_contract.md",
+    "sha256": "afe5ed1c2486c4f9964a51c5d3ac469013d11b35f3868c13d8b0d3ad17f7ee5e"
+  },
+  "generator": {
+    "path": "scripts/fig1_precision_head_effect_and_build_spread.py",
+    "sha256": "1dff08f56fd6a7e7490cb9725735a4e2cab007e3984d425467e8363669f0cf4e"
+  },
+  "shared_style_export_helper": {
+    "path": "scripts/_style.py",
+    "sha256": "6ff43ca153bf2fd01d73dfc3c557d48cd730f935f8c90f53f9fdc6d909327218",
+    "status": "repository_local_fallback_not_canonical_icarus_style"
+  },
+  "inputs": [
+    {
+      "path": "results/paper_core_v1/tables/precision_head_contrasts.csv",
+      "sha256": "95c1810797a624ad7bd5361b3f68e8cfdb03c2d72ce166f172dd5ebebf2c741a",
+      "bytes": 40115
+    },
+    {
+      "path": "results/paper_core_v1/tables/build_variability.csv",
+      "sha256": "9592a98d03f83413d7cde5aec3d264298727fdcc225f0f212dad6b48d8bc9f68",
+      "bytes": 5018
+    }
+  ],
+  "outputs": {
+    "pdf": {
+      "path": "outputs/figures/fig1_precision_head_effect_and_build_spread.pdf",
+      "sha256": "7efce86f3938c35e870ecb670b07469ff6796364858aeb1f845770c485d59c4c",
+      "bytes": 29102
+    },
+    "svg": {
+      "path": "outputs/figures/fig1_precision_head_effect_and_build_spread.svg",
+      "sha256": "797d3ee4790c75e582ba730cec19286248166c13691570e92600af79c4f26a72",
+      "bytes": 23191
+    },
+    "png": {
+      "path": "outputs/figures/fig1_precision_head_effect_and_build_spread.png",
+      "sha256": "2d4f8a50f0c9f61e202bbe831af14e34b1af7d8ae046eb53fdeef0bedb40f6bd",
+      "bytes": 303476
+    }
+  },
+  "render": {
+    "backend": "matplotlib",
+    "formats": [
+      "pdf",
+      "svg",
+      "png"
+    ],
+    "png_dpi": 600,
+    "vector_text": "editable SVG text; PDF uses TrueType font embedding"
+  },
+  "environment": {
+    "python": "3.11.9",
+    "numpy": "2.4.2",
+    "pandas": "3.0.1",
+    "matplotlib": "3.10.8",
+    "Pillow": "12.3.0"
+  },
+  "checks": {
+    "data_contract": "pass",
+    "three_format_export": "pass",
+    "png_resolution": "pass_600_dpi",
+    "canonical_icarus_critique_gate": "unavailable_not_run",
+    "manual_four_axis_review": "recorded_in_docs/paper_core_v1/fig1_precision_head_qa.md",
+    "release_label": "rendered_draft_review_required"
+  }
+}

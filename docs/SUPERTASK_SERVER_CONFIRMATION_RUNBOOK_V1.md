@@ -7,7 +7,16 @@ superseded by the accepted `docs/ST_SERVER_01_RECOVERY_GO_20261004.md`.
 Astra accepted reviewed executable `57faee011413686792ff654727418909371580f5`
 and granted conditional GO for **one** fresh v2 attempt. This is not permission
 for a second attempt. Luna does not SSH; the user alone runs SERVER-01 commands.
-Preserve v1 and the unrelated dirty checkpoint.
+Preserve v1 and the unrelated dirty checkpoint. For this confirmation runner,
+desktop PID/path confirmations identify known desktop processes only; they do
+not authorize competing background/GPU compute. An unknown workload or
+unassessed contention blocks dispatch. The narrow shared-workload path already
+allowed by A2L-044 remains available only when the operator identifies and
+explicitly confirms the exact current background PID/command, resource
+compatibility is assessed, and the run is retained and reported as shared.
+Desktop confirmations alone do not grant that exception. Keep the historical
+feasibility-smoke workload policy separate from this repeated-build
+confirmation.
 
 ### A. Operator preflight — sent; return the complete output
 
@@ -19,7 +28,7 @@ It creates no output directory and starts no GPU work.
 cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git pull --ff-only origin master && test "$(env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git rev-parse 57faee011413686792ff654727418909371580f5)" = "57faee011413686792ff654727418909371580f5" && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git diff --exit-code 57faee011413686792ff654727418909371580f5 -- configs/precision_head_confirmation_v1.json configs/precision_head_confirmation_execution_v1.json scripts/precision_head_confirmation_contract.py scripts/precision_head_calibration_order.py scripts/run_precision_head_confirmation.py scripts/run_precision_head_confirmation_server.py scripts/analyze_precision_head_confirmation.py scripts/prepare_precision_head_confirmation.py scripts/prepare_precision_head_confirmation_graph.py scripts/capture_cctsdb_validator.py scripts/verify_cctsdb_capture.py scripts/analyze_dev_quantization.py scripts/audit_cctsdb_measurement.py scripts/run_architecture_matrix.py scripts/uniform_build_repeat.py && env -u LD_LIBRARY_PATH -u LD_PRELOAD PATH=/usr/bin:/bin /usr/bin/git status --short --branch && hostname && nvidia-smi --query-gpu=uuid,name,driver_version,pstate,temperature.gpu,power.draw,clocks.sm,clocks.mem,memory.used --format=csv,noheader && nvidia-smi --query-compute-apps=pid,process_name,used_gpu_memory --format=csv,noheader && for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader,nounits | awk '$1 ~ /^[0-9]+$/ {print $1}'); do printf 'PID %s | ' "$p"; ps -o user=,comm=,args= -p "$p"; done && df -h /home/ubuntu && conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python -c "import importlib.metadata as m,numpy as np,torch,ultralytics,tensorrt as trt; print({'torch':torch.__version__,'ultralytics':ultralytics.__version__,'tensorrt':trt.__version__,'numpy':np.__version__,'pycocotools':m.version('pycocotools'),'cuda':torch.version.cuda,'available':torch.cuda.is_available(),'gpu':torch.cuda.get_device_name(0) if torch.cuda.is_available() else None})" && sha256sum configs/precision_head_confirmation_v1.json configs/precision_head_confirmation_execution_v1.json results/yolov8n_cctsdb_clean_s42_v1/weights/best.pt results/yolo26n_cctsdb_clean_s42_v1/weights/best.pt results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolov8n/model.onnx results/measurement_audit_v1/precision_head_confirmation_graph_prep_v2/models/yolo26n/model.onnx scripts/precision_head_confirmation_contract.py scripts/precision_head_calibration_order.py scripts/run_precision_head_confirmation.py scripts/run_precision_head_confirmation_server.py scripts/analyze_precision_head_confirmation.py scripts/prepare_precision_head_confirmation.py scripts/prepare_precision_head_confirmation_graph.py scripts/capture_cctsdb_validator.py scripts/verify_cctsdb_capture.py scripts/audit_cctsdb_measurement.py && test -f results/measurement_audit_v1/server_precision_head_confirmation_v1/execution_manifest.json && test ! -e results/measurement_audit_v1/server_precision_head_confirmation_v2 && echo OUTPUT_ABSENT
 ```
 
-Required frozen hashes: config `2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8`; YOLOv8n checkpoint `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b`; YOLO26n checkpoint `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e`; accepted ONNX v8n `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603`; v26n `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc`. Any mismatch, missing runtime, output root, unknown/incompatible compute workload or inadequate resources stops dispatch. Do not clean, kill or alter another user's workload. Use only desktop/background PID/path confirmations visible in this fresh snapshot.
+Required frozen hashes: config `2a7f07e145d7561fd929e53eb930309e54a952da150d1e0b87f3eeb1412baca8`; YOLOv8n checkpoint `b2b7a1c77a19499ded33c9cc11c621757077aa871f4e7f7a1fcdbf94f53b383b`; YOLO26n checkpoint `2bb49f85f581469fc7942652d5fda4da44278d57fa8363e8f7295daa49f0d01e`; accepted ONNX v8n `e22d53bbeb333f44783535d911d5e318ebb7d500e8fcb3d1cbb1284f5248d603`; v26n `1b2467ccd62bd1e53f3bde3e3f22e1b42129711d3e368a4b4666d025099ce5cc`. Any mismatch, missing runtime, existing v2 root, unknown/incompatible compute workload or inadequate resources stops dispatch. Do not clean, kill or alter another user's workload. Record current desktop PID/path identities if present, but their confirmation does not authorize competing compute.
 
 ### B. Fresh v2 plan — CPU-only after preflight passes
 
@@ -34,10 +43,14 @@ failure; do not overwrite or rerun it.
 
 ### C. Scored command — fill only after returned snapshot and valid plan
 
-Luna will return the complete foreground command with the exact current
-desktop/background confirmations after reading the user's output. Do not run
-the placeholder below. If the machine or any process is unknown/incompatible,
-remain `operator_pending`; do not retry on another device or kill processes.
+Luna will return the complete foreground command with exact current
+confirmations after reading the user's output. Do not run the placeholder
+below. A `--confirm-background-process PID=COMMAND` flag may be included only
+if the already-authorized A2L-044 shared-workload path applies, the operator
+confirms the exact current process, and resource compatibility is assessed;
+the evidence must retain shared-workload status. Desktop confirmations are not
+that authorization. If any workload is unknown or incompatible, remain
+`operator_pending`; do not retry on another device or kill processes.
 
 ```bash
 conda activate nighttime-tsd && cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && test -f results/measurement_audit_v1/server_precision_head_confirmation_v2/confirmation_plan.json && test ! -f results/measurement_audit_v1/server_precision_head_confirmation_v2/execution_manifest.json && local/g0_size_env/bin/python scripts/run_precision_head_confirmation.py --phase scored --go-token ASTRA_INTEGRATED_GO_REQUIRED --out-dir results/measurement_audit_v1/server_precision_head_confirmation_v2 --device 0 --confirm-desktop-process CURRENT_PID=CURRENT_EXACT_PATH
@@ -47,6 +60,9 @@ The authorized ceiling is one attempt: 84 builders / 78 captures / 127,608
 passes; cumulative ceiling including the failed v1 builder attempt is 85.
 Foreground only. No resume, retry, canary, replacement cell, new export,
 training, native forward or benchmark. Any failure stops and preserves partials.
+The `--confirm-desktop-process` values bind only the exact current desktop
+process identity. They are not a workload exception and do not permit
+competing background compute.
 
 ### D. Read-only progress and terminal evidence
 
@@ -86,14 +102,14 @@ cd /home/ubuntu/Dung_TDTU/nighttime-tsd-new && local/g0_size_env/bin/python scri
 An incomplete/invalid cell remains incomplete; no replacement run is started.
 Update L2A-053 and the task board/manuscript only from audited evidence.
 
-Luna does not SSH and does not run TensorRT locally. This document now records
-the recovery protocol, not permission to dispatch. Astra's A2L-052 supersedes
-the prior R5 conditional GO: **do not run any scored/GPU command until Astra
-reviews the corrected implementation and the real-image CPU receipts**. Do
-not use `nohup`. Preserve the failed v1 root byte-for-byte; use only a new v2
-root after review.
+Luna does not SSH and does not run TensorRT locally. The HOLD statement in this
+historical A2L-052 record was superseded by A2L-054, which accepted the reviewed
+executable and granted conditional GO for one fresh v2 attempt. It is not the
+current dispatch decision; use the active addendum and Sections A–E above.
+Do not use `nohup`. Preserve the failed v1 root byte-for-byte; use only the
+fresh v2 root after current preflight and plan checks pass.
 
-## Pull and immutable preflight
+## Historical A2L-052 recovery notes — superseded by the active A2L-054 dispatch above
 
 After Astra review, replace `FULL_COMMIT` with the full SHA printed in the
 current L2A-053 handoff. The pre-review revision is not a dispatch revision.
@@ -113,7 +129,7 @@ Desktop exceptions use the current exact PID/path confirmation. Unknown or
 non-desktop compute remains a block; do not kill, pause, reprioritize, or
 change another user's process. A sampled idle state is not isolation proof.
 
-## Read-only plan preparation
+## Read-only plan preparation (historical A2L-052 wording; current command is in section B above)
 
 Do not rerun graph preparation or export. The accepted ONNX and graph-audit
 artifacts are read-only inputs. Only after Astra accepts this recovery packet,
@@ -129,7 +145,7 @@ This command must finish before the scored command, must verify the XML archive
 against the exact 1,636-image/2,706-instance dev contract, and must not create ONNX,
 engine, calibration or timing binaries.
 
-## Scored execution — HOLD
+## Scored execution — historical HOLD, superseded by the active A2L-054 conditional GO above
 
 There is deliberately no scored command in this recovery handoff. The old R5
 command points at immutable failed v1 and must not be reused. After Astra's

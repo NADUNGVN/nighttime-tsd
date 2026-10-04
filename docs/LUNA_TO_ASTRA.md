@@ -3870,3 +3870,78 @@ against those paths passed). Operator preflight is still pending; no v2 plan or
 scored execution has been performed from this workstation. The single approved
 v2 attempt remains the next server action after the user returns current
 snapshot evidence.
+
+## L2A-053 continuation — A2L-055 figure render, manuscript audit, operator pending
+
+2026-10-04. Read A2L-055 and the complete long-run package. A2L-054’s
+conditional GO remains exactly one fresh v2 attempt; no additional builder,
+capture, model, device, or retry budget was created. The A2L-055 inbox text is
+preserved unchanged for this handoff. Luna did not SSH SERVER-01 or run any
+GPU, TensorRT, export, inference, or build operation.
+
+### Figure and paper audit completed locally
+
+- Reused the existing CPU interpreter
+  `D:/Research/paper/local/measurement_audit_env/Scripts/python.exe`; no
+  environment installation/change. Re-rendered Figure 1 from the two committed
+  CSV sources into PDF, editable SVG and 600-dpi PNG, then inspected color and
+  grayscale previews. The focused figure suite is **4/4 PASS**, including
+  byte-stable export on a repeated render and clean SVG whitespace. The local
+  `_style.py` is a scoped shared fallback; canonical `paperfig` and
+  `scripts/critique.py` are unavailable. Consequently the figure remains
+  `rendered_draft_review_required`, not a canonical gate pass or publication
+  approval. Four-axis manual review is in
+  `docs/paper_core_v1/fig1_precision_head_qa.md`.
+- Rechecked all 8 source JSON SHA-256 values and all 6 exported CSV SHA-256
+  values against `evidence_source_manifest.json`; they match. CSV row counts
+  are 40 points, 120 paired contrasts, 12 build-variability rows, 5 latency
+  rows, 2 source/export bridge rows and 1 feasibility accounting row.
+- Added `docs/paper_core_v1/manuscript_audit_20261004.md`, a claim/table/source
+  crosswalk for the abstract, Table 1, Figure 1, timing, bridge, strict
+  numeric/localization results, FP16 smoke and failed v1. Key checks include
+  the paired full AP50–95 delta +8.506713 pp (95% CI [+7.710367,+8.999865],
+  1,000/1,000 valid draws); the three-build full range 1.931478 pp; 39 timing
+  sessions / 39,000 timed calls; CPU bridge counts of 1,636 native + 1,636
+  ONNX calls per model; and smoke counts of exactly 2 builds / 16 TRT enqueues
+  / 16 ORT CPU references. Sampling units, evaluators and uncertainty types
+  remain separate; unfavorable contrasts and strict FAIL history remain
+  visible.
+- The preserved v1 child log confirms the calibration order mismatch at batch
+  1 (`18709.jpg != 00006.jpg`), with builder attempted/incomplete and no scored
+  capture. It remains an implementation failure, not an accuracy result.
+- Bibliography corrections: TIDE DOI/pages now match DOI-registry metadata;
+  Reg-PTQ DOI/pages are made consistent across the draft and related-work
+  record. Added verified CCTSDB2021 repository metadata citation and COCO
+  evaluation reference. Journal rank/APC and some preprint venue facts remain
+  explicitly unresolved. Archive-specific CCTSDB version/terms still require
+  confirmation against the exact XML release.
+- Corrected the active runbook so A2L-054’s GO controls and older A2L-052 HOLD
+  prose is visibly labeled historical. The existing A2L-044 shared-workload
+  exception remains narrow: exact current operator confirmation, resource
+  compatibility assessment, and shared-status reporting; desktop PID/path
+  confirmations alone do not authorize compute.
+
+Full manuscript state is in `docs/paper_core_v1/manuscript.md`,
+`evidence_ledger.md`, `related_work.md`, `submission_readiness.md` and
+`task_board.md`. The complete claim and reference crosswalk is in
+`manuscript_audit_20261004.md`; exports and hashes are in the figure manifest.
+The paper remains mixed/incomplete for cross-model transfer and not
+submission-ready.
+
+### Operator and next milestones
+
+The fresh Section A SERVER-01 output is still **pending**. The local v2 output
+root is absent; failed v1 is present and preserved. The user is the only server
+operator. After the user returns the complete fresh snapshot, Luna will verify
+the bound revision/helper/input hashes, runtime, GPU identity, current
+process/workload paths, disk and v2 absence; then provide the CPU plan and,
+only if that passes, the one foreground scored command. The exact current
+process identities—not historical PIDs—must bind any CLI confirmations.
+
+After the user publishes artifacts, Luna will verify canonical blobs,
+84-builder/78-capture schedule, input/XML bindings, counters, raw/output
+hashes, telemetry, failure/cleanup/lifetime records and inventory before
+running the locked CPU analyzer. No analysis or cross-model result is claimed
+before that audit. The scoped local milestone will be committed/pushed with
+the unchanged A2L-055 entry; its delivery SHA and artifact receipt will be
+recorded immediately after publication.

@@ -1,15 +1,17 @@
 # Quantization Variability and Detection-Head Precision in TensorRT Traffic-Sign Detectors
 
-**Working manuscript — evidence-integrated draft v1**
+**Working manuscript — claim-audited evidence-integrated draft v2**
 Status: cross-model confirmation pending; do not treat the following as a final
 abstract or submission-ready claim.
 
 ## Abstract
 
-Post-training INT8 quantization can reduce inference cost, but aggregate
-accuracy alone does not show whether a measured change is stable across engine
-builds or concentrated in localization-sensitive outputs. We study this
-measurement problem using frozen YOLO traffic-sign detectors on CCTSDB2021.
+Post-training INT8 quantization is used to reduce numerical precision for
+deployment, but end-to-end efficiency depends on the platform and workload
+[1, 2, 6]. Aggregate accuracy alone does not show whether a measured change is
+stable across engine builds or concentrated in localization-sensitive
+outputs. We study this measurement problem using frozen YOLO traffic-sign
+detectors on CCTSDB2021.
 In an exploratory YOLO11n experiment, three repeated Uniform-calibration
 TensorRT builds showed an observed full-set COCO/XML AP50–95 range of 1.93
 percentage points (pp), while the extra-small-sign AP50 range was 7.82 pp.
@@ -30,15 +32,17 @@ TensorRT; build variability; detection head; paired bootstrap.
 
 ## 1. Introduction
 
-Quantization is commonly assessed by comparing a floating-point reference to
-one INT8 engine. For deployed object detectors, that comparison can conflate
+Post-training quantization is commonly evaluated against a floating-point
+reference, while detector-specific methods also treat regression branches and
+reliability under data variation as important design questions [2, 3]. A
+single INT8 engine comparison can conflate
 the quantization policy with calibration sample, compiler behavior, tactic
 selection, export path and the task evaluator. A single mAP value therefore
 does not identify the source of a change, and a single successful engine does
 not characterize build-to-build variation. These distinctions matter when
 objects are small: a modest coordinate or ranking perturbation can alter
-matching at stricter IoU thresholds even when aggregate detection counts look
-similar.
+IoU-based matching at stricter thresholds even when aggregate detection counts
+look similar [5].
 
 This paper focuses on what the present evidence can support about TensorRT
 precision choices for frozen YOLO traffic-sign detectors. The initial
@@ -68,20 +72,23 @@ head sensitivity, quantization robustness, or deployment superiority.
 
 Prior detector PTQ studies have considered regression-sensitive branches,
 calibration under input degradations, reliability and adverse-case behavior,
-task-aware calibration, and embedded deployment measurement. In particular,
-Reg-PTQ shows that regression-specialized detector quantization is an
-established method direction; sensitivity of localization alone is not a new
-algorithmic contribution. Work on degradation-aware YOLO calibration also
-overlaps with multi-scale detector and calibration-distribution questions.
-Recent inlier-centric PTQ further cautions against treating global activation
-or image diversity as a sufficient calibration objective. TIDE motivates
-prediction-level error analysis, while recent TensorRT/Jetson studies show
-that timing boundary and power measurement must be stated explicitly.
+task-aware calibration, and embedded deployment measurement [1–6]. In
+particular, Reg-PTQ establishes regression-specialized detector quantization
+as an existing method direction; localization sensitivity alone is not a new
+algorithmic contribution [2]. Degradation-aware YOLO calibration studies
+multiple model scales and synthetic input degradations, while reporting that
+its calibration change did not improve robustness consistently across most
+tested conditions [1]. Reliability work explicitly evaluates calibration
+distribution and adverse-case behavior [3]. InlierQ instead uses
+gradient-aware volume saliency to distinguish informative inliers from
+anomalies [4]. TIDE motivates prediction-level error analysis [5], and
+AgriJetsonBench demonstrates why deployment timing boundaries, precision,
+power measurement and sustained-run validity should be explicit [6].
 
-Our narrower distinction is a fixed-checkpoint, architecture-specific
-measurement of head-precision constraints alongside observed engine variation,
-with evaluator identity and sampling unit made explicit. The two-model
-confirmation must be completed before making a cross-architecture claim.
+Our current completed evidence is a fixed-checkpoint YOLO11n measurement of
+head-precision constraints alongside observed engine variation, with evaluator
+identity and sampling unit made explicit. A prespecified two-model
+confirmation is pending; no cross-architecture finding is yet supported.
 Further related-work detail and primary-source verification status are in
 [`related_work.md`](related_work.md).
 
@@ -89,8 +96,9 @@ Further related-work detail and primary-source verification status are in
 
 ### 3.1 Dataset, checkpoints and scope
 
-The evidence uses the CCTSDB2021 train/dev organization and the three detection
-classes in the accepted checkpoint/data contract. The development evaluation
+The evidence uses the CCTSDB2021 benchmark [7] in the project’s train/dev
+organization and the three detection classes in the accepted checkpoint/data
+contract. The development evaluation
 contains 1,636 images and 2,706 XML instances. YOLO11n is the exploratory
 checkpoint; YOLOv8n and YOLO26n are frozen confirmation checkpoints. No
 checkpoint was retrained or replaced for these studies. Input resolution was
@@ -101,7 +109,7 @@ included in the results below.
 ### 3.2 Evaluators and precision conditions
 
 We preserve two metric channels. The first is the recorded Ultralytics
-validation output. The second is a versioned COCO evaluator over original
+validation output. The second is a versioned COCO evaluator [8] over original
 CCTSDB XML boxes and original-coordinate predictions (`pycocotools` 2.0.10),
 including AP50, AP50–95 and the registered CCTSDB size bins. COCO/XML and
 Ultralytics values are not interchangeable. Confidence intervals in the
@@ -146,12 +154,14 @@ similar application AP.
 
 The approved confirmation uses three fixed Uniform selections (U42/U43/U44),
 1,024 manifest-ordered train images per selection, four INT8 arms and three
-repeats per model-selection-arm, plus one FP16 control per model-selection
-cell. Its budget is six auxiliary cache builders + 72 INT8 builds + six FP16
-builds = 84 builder invocations, 78 dev captures and 127,608 dev
-image-model passes. No retry, resume, replacement cell, canary, test-set
-capture or benchmark is authorized. At the time of this draft, the operator
-preflight is pending and no v2 confirmation result is available.
+repeats per model-selection-arm. Separately, it schedules three FP16 reference
+builds per model, one in each round (six total); these FP16 repeats are not
+one calibration-dependent control for every model-selection cell. The budget
+is six auxiliary cache builders + 72 INT8 builds + six FP16 builds = 84
+builder invocations, 78 dev captures and 127,608 dev image-model passes. No
+retry, resume, replacement cell, canary, test-set capture or benchmark is
+authorized. At this draft snapshot, fresh operator preflight is pending and
+no v2 confirmation result is available.
 
 ## 4. Results
 
@@ -161,6 +171,10 @@ Across three YOLO11n builds, full COCO/XML AP50 ranged by 0.68 pp and AP50–95
 by 1.93 pp. The XS AP50 range was 7.82 pp, larger than the full-set range.
 These are observed ranges, not uncertainty intervals or estimates of
 calibration-selection variance.
+
+**Table 1.** Three-build descriptive results for one frozen YOLO11n checkpoint
+and one Uniform calibration selection. Build SD and min–max span builds; they
+are not calibration-selection intervals.
 
 | COCO/XML endpoint | Mean (%) | Build SD (pp) | Observed range (pp) |
 |---|---:|---:|---:|
@@ -197,6 +211,24 @@ Branch contrasts are not independent causal effects. Their sum need not equal
 the both-branch contrast, and their observed interaction can depend on
 compiler behavior and the single build per condition. These values motivate
 the cross-model confirmation but do not establish transfer.
+
+As summarized in Fig. 1, the conditional image-paired contrast sits beside the
+separate three-build range without treating the two uncertainty summaries as
+interchangeable. The positive discovery intervals support an association in
+these captures, not a mechanism; the cross-model question remains pending.
+
+![Figure 1. Exploratory YOLO11n precision-head contrast and separate build-repeat spread.](../../outputs/figures/fig1_precision_head_effect_and_build_spread.png)
+
+**Figure 1.** Both-FP32 minus baseline-INT8 COCO/XML AP50–95 was positive in
+the one-selection YOLO11n discovery across all six registered size strata;
+the full-set contrast was +8.51 percentage points (pp; paired image-bootstrap
+95% percentile interval +7.71 to +9.00 pp). Panel (a) shows conditional
+intervals from 1,000 shared-image PCG64 draws (seed 20260916; 1,636 images,
+2,706 XML instances) with one captured build per condition. Panel (b) shows
+the observed max-minus-min span across three builds in a separate Uniform
+repeat study (n=3), with labels giving the absolute AP endpoints; these spans
+are descriptive, not confidence intervals.
+Cross-model confirmation remains pending.
 
 ### 4.3 Timing and source/export bridges
 
@@ -292,3 +324,41 @@ positive deployment recommendation.
 - Task board: [`task_board.md`](task_board.md)
 - CSV extraction and source hashes: [`results/paper_core_v1/README.md`](../../results/paper_core_v1/README.md)
 - Table generator: `scripts/export_paper_core_evidence.py`
+- Claim/table/reference crosswalk: [`manuscript_audit_20261004.md`](manuscript_audit_20261004.md)
+
+## References
+
+1. T. Karimov, H. Imani, and A. Kazakov, “Quantization Robustness to Input
+   Degradations for Object Detection,” arXiv:2508.19600, version 3, updated
+   May 1, 2026. https://arxiv.org/abs/2508.19600v3
+2. Y. Ding, W. Feng, C. Chen, J. Guo, and X. Liu, “Reg-PTQ:
+   Regression-specialized Post-training Quantization for Fully Quantized
+   Object Detector,” in *Proc. IEEE/CVF Conference on Computer Vision and
+   Pattern Recognition (CVPR)*, 2024, pp. 16174–16184,
+   doi:10.1109/CVPR52733.2024.01531.
+3. Z. Yuan et al., “Benchmarking the Reliability of Post-training
+   Quantization: a Particular Focus on Worst-case Performance,”
+   arXiv:2303.13003, 2023. Venue/DOI not verified in this source check.
+   https://arxiv.org/abs/2303.13003
+4. M. Kim et al., “Inlier-Centric Post-Training Quantization for Object
+   Detection Models,” arXiv:2602.03472, 2026. Publication status not verified.
+   https://arxiv.org/abs/2602.03472
+5. D. Bolya, S. Foley, J. Hays, and J. Hoffman, “TIDE: A General Toolbox for
+   Identifying Object Detection Errors,” in *Computer Vision – ECCV 2020*,
+   Lecture Notes in Computer Science, pp. 558–573, 2020,
+   doi:10.1007/978-3-030-58580-8_33. DOI-registry metadata was checked; the
+   Springer landing page remained behind a cookie redirect in this pass.
+   https://arxiv.org/abs/2008.08115
+6. H. Jahanifar et al., “AgriJetsonBench: External-Power-Referenced TensorRT
+   Benchmarking of Agricultural Vision Models on Jetson Edge Platforms,”
+   arXiv:2608.00927, 2026. Publication status not verified.
+   https://arxiv.org/abs/2608.00927
+7. J. Zhang et al., “CCTSDB 2021: A More Comprehensive Traffic Sign Detection
+   Benchmark,” *Human-centric Computing and Information Sciences*, vol. 12,
+   2022, doi:10.22967/HCIS.2022.12.023. Dataset record and release repository:
+   https://centaur.reading.ac.uk/106129/ and
+   https://github.com/csust7zhangjm/CCTSDB2021.
+8. T.-Y. Lin et al., “Microsoft COCO: Common Objects in Context,” in
+   *Computer Vision – ECCV 2014*, pp. 740–755, 2014,
+   doi:10.1007/978-3-319-10602-1_48. This paper’s evaluator uses COCO matching
+   with the project’s registered CCTSDB area-bin configuration.

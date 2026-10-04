@@ -16,7 +16,7 @@ Use docs/PRECISION_HEAD_CONFIRMATION_PLAN_V1.md, its D3 schedule, configs/precis
 
 - Frozen models: YOLOv8n and YOLO26n; accepted per-model ONNX hashes, no new export/training/checkpoint replacement.
 - Train-only Uniform U42/U43/U44,1024 images each, manifest order, same declared MinMax recipe. No calibration-policy search.
-- Four arms: baseline_int8, bbox_fp32, classification_fp32, both_fp32; three builds per selection/arm. Three FP16 references/model.
+- Four arms: baseline_int8, bbox_fp32, classification_fp32, both_fp32; three builds per selection/arm. Three FP16 reference builds per model, one in each round (six total), not a calibration-dependent FP16 control for every model-selection cell.
 - Total future confirmation budget:6 auxiliary cache-generation builder invocations plus72 scored INT8 plus6 scored FP16 builds = **84 builder invocations**, **78 dev captures**, **127,608 dev image-model passes**. The completed feasibility smoke is historical and not one of these scored cells. No extra canary builds or hidden warmup/reference forwards outside the approved accounting.
 - Per-model schedule: three auxiliary jobs, then three rotated13-cell rounds, shifts0/4/8. Preserve all cells and observations; no best-build selection or AP-based stopping/reordering.
 - One model/selection calibration cache shared read-only across its12 scored INT8 builds; zero consuming calibration batches/writes. Fresh empty timing input for every build; record outputs but never reuse them. No cross-model cache or engine reuse.

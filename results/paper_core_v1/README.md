@@ -29,7 +29,16 @@ Use the CSVs as inputs for plots/tables, not as a substitute for the linked
 JSON source artifacts. AP and latency units/endpoints are not commensurate.
 Do not interpret the 39,000 timed image calls as 39,000 independent engine
 builds. No confirmation-v2 values are included until the operator artifact has
-been audited. The pre-plot claim, panel hierarchy and caption are in
-`docs/paper_core_v1/fig1_precision_head_contract.md`; its render gate is open
-because this local environment lacks the shared figure package and critique
-tool.
+been audited. Figure 1 is reproducibly rendered from the paired-contrast and
+build-variability CSVs with:
+
+```powershell
+& 'D:\Research\paper\local\measurement_audit_env\Scripts\python.exe' scripts/fig1_precision_head_effect_and_build_spread.py
+```
+
+The generator writes PDF, editable SVG, 600-dpi PNG and a hash-bearing
+manifest under `outputs/figures/`. It uses the committed repository-local
+style/export fallback because canonical `paperfig`/`critique.py` are absent.
+The status is `rendered_draft_review_required`, not a canonical Icarus-gate
+pass or publication-ready figure. See the figure contract and manual four-axis
+QA record in `docs/paper_core_v1/`.

@@ -11,7 +11,9 @@ TensorRT build contract. Uniform train-only calibration selections U42/U43/U44
 each contain 1,024 manifest-ordered images and use the same MinMax recipe. For
 each model, the schedule includes three repeats for each selection and INT8
 arm (baseline, bbox FP32, classification FP32 and both FP32), plus the
-architecture-specific FP16 controls. If the single authorized run proceeds,
+three architecture-specific FP16 reference builds per model, one in each round
+(six total). These repeats are not calibration-dependent FP16 controls for
+every model-selection cell. If the single authorized run proceeds,
 each model's 42 scheduled builders will remain one contiguous block with
 rotated 13-cell rounds and fresh timing inputs.
 
